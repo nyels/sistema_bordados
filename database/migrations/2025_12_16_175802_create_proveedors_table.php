@@ -23,11 +23,10 @@ return new class extends Migration
             $table->string('persona_contacto')->nullable();
             $table->string('telefono_contacto')->nullable();
 
-            $table->string('activo')->default('1');
+            $table->boolean('activo')->default(true);
             $table->date('fecha_baja')->nullable();
             $table->string('motivo_baja')->nullable();
-            $table->unsignedBigInteger('estado_id');
-            $table->foreign('estado_id')->references('id')->on('estados');
+            $table->foreignId('estado_id')->constrained('estados')->restrictOnDelete();
 
             $table->timestamps();
         });
@@ -38,6 +37,8 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::disableForeignKeyConstraints();
         Schema::dropIfExists('proveedors');
+        Schema::enableForeignKeyConstraints();
     }
 };
