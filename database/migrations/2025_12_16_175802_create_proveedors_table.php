@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('proveedors', function (Blueprint $table) {
             $table->id();
             $table->string('nombre_proveedor');
-            $table->string('tipo_proveedor')->nullable();
+
             $table->string('direccion')->nullable();
             $table->string('codigo_postal')->nullable();
             $table->string('telefono')->nullable();
@@ -28,7 +28,7 @@ return new class extends Migration
             $table->date('fecha_baja')->nullable();
             $table->string('motivo_baja')->nullable();
             $table->foreignId('estado_id')->constrained('estados')->restrictOnDelete();
-
+            $table->foreignId('giro_id')->constrained('giros')->restrictOnDelete();
             $table->timestamps();
         });
     }

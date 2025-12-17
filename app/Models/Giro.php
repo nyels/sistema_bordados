@@ -2,20 +2,20 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-class Estado extends Model
+class Giro extends Model
 {
     use HasFactory;
-    protected $table = 'estados';
-    //protected
+    protected $table = 'giros';
     protected $fillable = [
-        'nombre',
+        'nombre_giro',
+        'descripcion',
         'activo',
         'fecha_baja',
-        'motivo_baja',
     ];
+
     public function proveedores()
     {
         return $this->hasMany(Proveedor::class);

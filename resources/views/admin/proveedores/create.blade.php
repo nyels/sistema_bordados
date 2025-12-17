@@ -32,9 +32,9 @@
                                 name="nombre_proveedor" placeholder="Ej: Textiles del Norte S.A." required>
                         </div>
                         <div class="form-group">
-                            <label for="tipo_proveedor">Tipo de proveedor <span style="color: red;">*</span></label>
-                            <select name="tipo_proveedor" id="tipo_proveedor" class="form-control form-control-sm" required>
-                                <option value="">Selecciona un tipo</option>
+                            <label for="giro_id">Giro<span style="color: red;">*</span></label>
+                            <select name="giro_id" id="giro_id" class="form-control form-control-sm" required>
+                                <option value="">Selecciona un Giro</option>
                                 <option value="1">TELAS</option>
                                 <option value="2">ACCESORIOS</option>
                                 <option value="3">TELAS Y ACCESORIOS</option>

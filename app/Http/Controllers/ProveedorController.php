@@ -14,7 +14,7 @@ class ProveedorController extends Controller
      */
     public function index()
     {
-        $proveedores = Proveedor::with('estado')->get();
+        $proveedores = Proveedor::with('estado', 'giro')->get();
         return view('admin.proveedores.index', compact('proveedores'));
     }
 

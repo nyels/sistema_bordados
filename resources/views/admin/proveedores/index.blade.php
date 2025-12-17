@@ -25,8 +25,8 @@
                 <table id="example1" class="table table-bordered table-hover ">
                     <thead class="thead-dark">
                         <tr>
-                            <th>Nombre</th>
-                            <th>Tipo proveedor</th>
+                            <th>Nombre proveedor</th>
+                            <th>Giro</th>
                             <th>Telefono</th>
                             <th>Correo</th>
                             <th>Estado</th>
@@ -38,7 +38,7 @@
                         @foreach ($proveedores as $proveedor)
                             <tr>
                                 <td>{{ $proveedor->nombre_proveedor }}</td>
-                                <td>{{ $proveedor->tipo_proveedor }}</td>
+                                <td>{{ $proveedor->giro->nombre_giro }}</td>
                                 <td>{{ $proveedor->telefono }}</td>
                                 <td>{{ $proveedor->email }}</td>
                                 <td>{{ $proveedor->estado->nombre }}</td>

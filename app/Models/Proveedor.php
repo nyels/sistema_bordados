@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Proveedor extends Model
 {
+    use HasFactory;
+    protected $table = 'proveedors';
     //protected
     protected $fillable = [
         'nombre',
@@ -27,5 +30,10 @@ class Proveedor extends Model
     public function estado()
     {
         return $this->belongsTo(Estado::class);
+    }
+
+    public function giro()
+    {
+        return $this->belongsTo(Giro::class);
     }
 }
