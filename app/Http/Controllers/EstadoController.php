@@ -12,7 +12,7 @@ class EstadoController extends Controller
      */
     public function index()
     {
-        //
+        return view('admin.estados.index'); //direccion de la vista
     }
 
     /**

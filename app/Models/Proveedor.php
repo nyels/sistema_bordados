@@ -17,6 +17,7 @@ class Proveedor extends Model
         'ciudad',
         'persona_contacto',
         'telefono_contacto',
+        'correo_contacto',
         'activo',
         'fecha_baja',
         'motivo_baja',
