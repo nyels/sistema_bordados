@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Estado;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class EstadoController extends Controller
 {
@@ -12,7 +13,8 @@ class EstadoController extends Controller
      */
     public function index()
     {
-        return view('admin.estados.index'); //direccion de la vista
+        $estados = Estado::all()->where('activo', true);
+        return view('admin.estados.index', compact('estados'));
     }
 
     /**
@@ -20,7 +22,7 @@ class EstadoController extends Controller
      */
     public function create()
     {
-        //
+        return view('admin.estados.create');
     }
 
     /**
@@ -28,7 +30,25 @@ class EstadoController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $request->validate([
+            'nombre_estado' => [
+                'required',
+                'string',
+                'max:255',
+                'regex:/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/',
+                'unique:estados,nombre_estado'
+            ],
+        ]);
+
+        try {
+            $estado = new Estado();
+            $estado->nombre_estado = strtoupper(trim($request->nombre_estado));
+            $estado->save();
+
+            return redirect()->route('admin.estados.index')->with('success', 'Estado creado exitosamente');
+        } catch (\Exception $e) {
+            return redirect()->route('admin.estados.index')->with('error', 'Error al crear el estado');
+        }
     }
 
     /**
@@ -42,24 +62,81 @@ class EstadoController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Estado $estado)
+    public function edit($id)
     {
-        //
+        $estado = Estado::where('id', $id)
+            ->where('activo', true)
+            ->firstOrFail();
+        if (!$estado) {
+            return redirect()->route('admin.estados.index')->with('error', 'Estado no encontrado');
+        }
+        return view('admin.estados.edit', compact('estado'));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Estado $estado)
+    public function update(Request $request, $id)
     {
-        //
+        $request->validate([
+            'nombre_estado' => [
+                'required',
+                'string',
+                'max:255',
+                'regex:/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/',
+                'unique:estados,nombre_estado,' . $id,
+            ],
+        ]);
+        try {
+            $estado = Estado::where('id', $id)
+                ->where('activo', true)
+                ->firstOrFail();
+            $estado->nombre_estado = strtoupper(trim($request->nombre_estado));
+
+            //validamos si hubo algun cambio o modificacion en el valor del campo nombre_estado, si no hubo cambios, no se actualiza
+            if (! $estado->isDirty()) {
+                // return back()->with('info', 'No se realizaron cambios');
+                return redirect()->route('admin.estados.index')->with('info', 'No se realizaron cambios');
+            }
+
+            $estado->save();
+            return redirect()->route('admin.estados.index')->with('success', 'Estado actualizado exitosamente');
+        } catch (\Exception $e) {
+            Log::error('Error al actualizar el estado: ' . $e->getMessage());
+            return redirect()->route('admin.estados.index')->with('error', 'Error al actualizar el estado');
+        }
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Estado $estado)
+    public function confirm_delete($id)
     {
-        //
+        //validando que existe el estado
+        $estado = Estado::where('id', $id)
+            ->where('activo', true)
+            ->firstOrFail();
+        if (!$estado) {
+            return redirect()->route('admin.estados.index')->with('error', 'Estado no encontrado');
+        }
+        return view('admin.estados.delete', compact('estado'));
+    }
+
+    public function destroy($id)
+    {
+        $estado = Estado::where('id', $id)
+            ->where('activo', true)
+            ->firstOrFail();
+        if (!$estado) {
+            return redirect()->route('admin.estados.confirm_delete', $id)->with('error', 'Estado no encontrado');
+        }
+        try {
+            $estado->activo = false;
+            $estado->save();
+            return redirect()->route('admin.estados.index')->with('success', 'Estado eliminado exitosamente');
+        } catch (\Exception $e) {
+            Log::error('Error al eliminar el estado: ' . $e->getMessage());
+            return redirect()->route('admin.estados.index')->with('error', 'Error al eliminar el estado');
+        }
     }
 }

@@ -107,7 +107,7 @@
                                 <div class="text-right">
                                     <a href="{{ route('admin.proveedores.index') }}" class="btn btn-secondary"
                                         style="margin-right: 10px; padding: 8px 20px;">
-                                        <i class="fas fa-times-circle"></i> Cancelar
+                                        <i class="fas fa-times-circle"></i> Regresar
                                     </a>
                                     <button type="submit" class="btn btn-primary" style="padding: 8px 20px;">
                                         <i class="fas fa-save"></i> Guardar

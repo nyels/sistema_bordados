@@ -346,8 +346,8 @@ return [
             'icon' => 'fas fa-fw fa-cog',
             'submenu' => [
                 [
-                    'text' => 'Categorias',
-                    'url' => 'categorias',
+                    'text' => 'Giro',
+                    'url' => 'giros',
                     'icon' => 'fas fa-fw fa-list',
                     /*'classes' => 'bg-blue text-white'*/
                 ],

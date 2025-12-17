@@ -1,6 +1,6 @@
 @extends('adminlte::page')
 
-@section('title', 'Proveedores')
+@section('title', 'GIROS')
 
 @section('content_header')
 @stop
@@ -11,41 +11,36 @@
 
         <div class="card-header" bis_skin_checked="1">
 
-            <h3 class="card-title" style="font-weight: bold;font-size: 20px;"> PROVEEDORES</h3>
+            <h3 class="card-title" style="font-weight: bold;font-size: 20px;"> GIROS</h3>
             <!-- /.card-tools -->
         </div>
         <!-- /.card-header -->
         <div class="card-body" bis_skin_checked="1">
             <div class="row">
-                <a href="{{ route('admin.proveedores.create') }}" type="button" class="btn btn-info">
+                <a href="{{ route('admin.giros.create') }}" type="button" class="btn btn-info">
                     Nuevo <i class="fas fa-plus"></i></a>
             </div>
             <hr>
             <div class="col-12">
-                <table id="example1" class="table table-bordered table-hover ">
+                <table id="example1" class="table table-bordered table-hover table-condensed">
                     <thead class="thead-dark">
-                        <tr>
-                            <th>Nombre proveedor</th>
-                            <th>Giro</th>
-                            <th>Telefono</th>
-                            <th>Correo</th>
-                            <th>Estado</th>
+                        <tr style="text-align: center;">
+                            <th>#</th>
+                            <th>Nombre del giro</th>
                             <th style="text-align: center;">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
 
-                        @foreach ($proveedores as $proveedor)
-                            <tr>
-                                <td>{{ $proveedor->nombre_proveedor }}</td>
-                                <td>{{ $proveedor->giro->nombre_giro }}</td>
-                                <td>{{ $proveedor->telefono }}</td>
-                                <td>{{ $proveedor->email }}</td>
-                                <td>{{ $proveedor->estado->nombre }}</td>
+                        @foreach ($giros as $giro)
+                            <tr style="text-align: center;">
+                                <td>{{ $loop->iteration }}</td>
+                                <td>{{ $giro->nombre_giro }}</td>
                                 <td style="text-align: center;">
-                                    <button type="button" class="btn btn-info"><i class="fas fa-eye"></i></button>
-                                    <button type="button" class="btn btn-warning"><i class="fas fa-edit"></i></button>
-                                    <button type="button" class="btn btn-danger"><i class="fas fa-trash"></i></button>
+                                    <a class="btn btn-warning" href="{{ route('admin.giros.edit', $giro->id) }}"><i
+                                            class="fas fa-edit"></i></a>
+                                    <a class="btn btn-danger" href="{{ route('admin.giros.confirm_delete', $giro->id) }}"><i
+                                            class="fas fa-trash"></i></a>
                                 </td>
                             </tr>
                         @endforeach
@@ -124,10 +119,10 @@
                 "pageLength": 10,
                 "language": {
                     "emptyTable": "No hay informacion",
-                    "info": "Mostrando _START_ a _END_ de _TOTAL_ Proveedores",
-                    "infoEmpty": "Mostrando 0 a 0 de 0 Proveedores",
-                    "infoFiltered": "(Filtrado de _MAX_ total Proveedores)",
-                    "lengthMenu": "Mostrar _MENU_ Proveedores",
+                    "info": "Mostrando _START_ a _END_ de _TOTAL_ Giros",
+                    "infoEmpty": "Mostrando 0 a 0 de 0 Giros",
+                    "infoFiltered": "(Filtrado de _MAX_ total Giros)",
+                    "lengthMenu": "Mostrar _MENU_ Giros",
                     "loadingRecords": "Cargando...",
                     "processing": "Procesando...",
                     "search": "Buscador:",

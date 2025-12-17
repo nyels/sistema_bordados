@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('estados', function (Blueprint $table) {
             $table->id();
-            $table->string('nombre');
+            $table->string('nombre_estado');
             $table->boolean('activo')->default(true);
             $table->date('fecha_baja')->nullable();
             $table->string('motivo_baja')->nullable();

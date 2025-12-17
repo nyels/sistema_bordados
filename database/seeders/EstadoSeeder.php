@@ -50,7 +50,7 @@ class EstadoSeeder extends Seeder
 
         foreach ($estados as $estado) {
             Estado::create([
-                'nombre' => $estado,
+                'nombre_estado' => $estado,
                 'activo' => true,
             ]);
         }
