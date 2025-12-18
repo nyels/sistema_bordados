@@ -95,3 +95,51 @@ Route::get('/proveedores/nuevo', [App\Http\Controllers\ProveedorController::clas
 Route::post('/proveedores/create', [App\Http\Controllers\ProveedorController::class, 'store'])
     ->name('admin.proveedores.store')
     ->middleware('auth');
+//edita los datos del formulario
+Route::get('/proveedores/edit/{id}', [App\Http\Controllers\ProveedorController::class, 'edit'])
+    ->name('admin.proveedores.edit')
+    ->middleware('auth');
+//guarda los datos del formulario
+Route::put('/proveedores/edit/{id}', [App\Http\Controllers\ProveedorController::class, 'update'])
+    ->name('admin.proveedores.update')
+    ->middleware('auth');
+//va al formulario para confirmar la eliminacion
+Route::get('/proveedores/confirm_delete/{id}', [App\Http\Controllers\ProveedorController::class, 'confirm_delete'])
+    ->name('admin.proveedores.confirm_delete')
+    ->middleware('auth');
+//elimina los datos del formulario
+Route::delete('/proveedores/delete/{id}', [App\Http\Controllers\ProveedorController::class, 'destroy'])
+    ->name('admin.proveedores.destroy')
+    ->middleware('auth');
+
+//FALTA RUTA SHOW DE PROVEEDORES PARA USAR MODAL
+
+//RUTAS RECOMENDACIONES
+//redirige a la ruta de nuevo con el formulario
+Route::get('/recomendaciones', [App\Http\Controllers\RecomendacionController::class, 'index'])
+    ->name('admin.recomendaciones.index')
+    ->middleware('auth');
+//manda al formulario para agregar nueva recomendacion
+Route::get('/recomendaciones/nuevo', [App\Http\Controllers\RecomendacionController::class, 'create'])
+    ->name('admin.recomendaciones.create')
+    ->middleware('auth');
+//guarda los datos del formulario
+Route::post('/recomendaciones/create', [App\Http\Controllers\RecomendacionController::class, 'store'])
+    ->name('admin.recomendaciones.store')
+    ->middleware('auth');
+//edita los datos del formulario
+Route::get('/recomendaciones/edit/{id}', [App\Http\Controllers\RecomendacionController::class, 'edit'])
+    ->name('admin.recomendaciones.edit')
+    ->middleware('auth');
+//guarda los datos del formulario
+Route::put('/recomendaciones/edit/{id}', [App\Http\Controllers\RecomendacionController::class, 'update'])
+    ->name('admin.recomendaciones.update')
+    ->middleware('auth');
+//va al formulario para confirmar la eliminacion
+Route::get('/recomendaciones/confirm_delete/{id}', [App\Http\Controllers\RecomendacionController::class, 'confirm_delete'])
+    ->name('admin.recomendaciones.confirm_delete')
+    ->middleware('auth');
+//elimina los datos del formulario
+Route::delete('/recomendaciones/delete/{id}', [App\Http\Controllers\RecomendacionController::class, 'destroy'])
+    ->name('admin.recomendaciones.destroy')
+    ->middleware('auth');

@@ -1,6 +1,6 @@
 @extends('adminlte::page')
 
-@section('title', 'Nuevo Proveedor')
+@section('title', 'Eliminar Proveedor')
 
 @section('content_header')
 @stop
@@ -35,14 +35,15 @@
         </div>
     @endif
 
-    <div class="card card-primary">
+    <div class="card card-danger">
         <div class="card-header">
-            <h3 class="card-title" style="font-weight: bold;font-size: 20px;"> NUEVO PROVEEDOR</h3>
+            <h3 class="card-title" style="font-weight: bold;  font-size: 20px;"> ELIMINAR PROVEEDOR</h3>
         </div>
 
         <div class="card-body">
-            <form method="post" action="{{ route('admin.proveedores.store') }}">
+            <form method="post" action="{{ route('admin.proveedores.destroy', $proveedor->id) }}">
                 @csrf
+                @method('DELETE')
 
                 <div class="row">
                     {{-- DATOS DEL PROVEEDOR --}}
@@ -59,7 +60,8 @@
                             <label>Nombre Proveedor <span style="color: red;">*</span></label>
                             <input type="text" name="nombre_proveedor"
                                 class="form-control form-control-sm @error('nombre_proveedor') is-invalid @enderror"
-                                value="{{ old('nombre_proveedor') }}" required placeholder="Nombre del proveedor">
+                                value="{{ old('nombre_proveedor', $proveedor->nombre_proveedor) }}"
+                                placeholder="Nombre del proveedor" disabled>
                             @error('nombre_proveedor')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -69,10 +71,11 @@
                         <div class="form-group">
                             <label>Giro <span style="color: red;">*</span></label>
                             <select name="giro_id"
-                                class="form-control form-control-sm @error('giro_id') is-invalid @enderror" required>
+                                class="form-control form-control-sm @error('giro_id') is-invalid @enderror" disabled>
                                 <option value="">Selecciona un Giro</option>
                                 @foreach ($giros as $giro)
-                                    <option value="{{ $giro->id }}" {{ old('giro_id') == $giro->id ? 'selected' : '' }}>
+                                    <option value="{{ $giro->id }}"
+                                        {{ old('giro_id', $proveedor->giro_id) == $giro->id ? 'selected' : '' }}>
                                         {{ $giro->nombre_giro }}
                                     </option>
                                 @endforeach
@@ -88,7 +91,8 @@
                                 <div class="form-group">
                                     <label>Dirección</label>
                                     <input type="text" name="direccion" class="form-control form-control-sm"
-                                        value="{{ old('direccion') }}" placeholder="Dirección">
+                                        value="{{ old('direccion', $proveedor->direccion) }}" placeholder="Dirección"
+                                        disabled>
                                 </div>
                             </div>
                             <div class="col-md-2">
@@ -96,9 +100,9 @@
                                     <label>C.P.</label>
                                     <input type="text" name="codigo_postal"
                                         class="form-control form-control-sm @error('codigo_postal') is-invalid @enderror"
-                                        value="{{ old('codigo_postal') }}" maxlength="5"
-                                        oninput="this.value = this.value.replace(/[^0-9]/g, '')" pattern="[0-9]{5}"
-                                        placeholder="Ej: 97000">
+                                        value="{{ old('codigo_postal', $proveedor->codigo_postal) }}" placeholder="C.P"
+                                        maxlength="5" oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                                        pattern="[0-9]{5}" disabled>
                                     @error('codigo_postal')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -113,7 +117,8 @@
                                     <label>Teléfono <span style="color: red;">*</span></label>
                                     <input type="tel" name="telefono"
                                         class="form-control form-control-sm @error('telefono') is-invalid @enderror"
-                                        value="{{ old('telefono') }}" required placeholder="Ej: 2233445566" maxlength="10"
+                                        value="{{ old('telefono', $proveedor->telefono) }}" disabled
+                                        placeholder="Ej: 2233445566" maxlength="10"
                                         oninput="this.value = this.value.replace(/[^0-9]/g, '')" pattern="[0-9]{10}">
                                     @error('telefono')
                                         <div class="invalid-feedback">{{ $message }}</div>
@@ -125,7 +130,8 @@
                                     <label>Correo <span style="color: red;" for="email">*</span></label>
                                     <input type="email" name="email"
                                         class="form-control form-control-sm @error('email') is-invalid @enderror"
-                                        value="{{ old('email') }}" placeholder="Ej: correo@correo.com">
+                                        value="{{ old('email', $proveedor->email) }}" placeholder="Ej: correo@correo.com"
+                                        disabled>
                                     @error('email')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -138,11 +144,11 @@
                             <div class="col-md-6">
                                 <label>Estado <span style="color: red;">*</span></label>
                                 <select name="estado_id"
-                                    class="form-control form-control-sm @error('estado_id') is-invalid @enderror" required>
+                                    class="form-control form-control-sm @error('estado_id') is-invalid @enderror" disabled>
                                     <option value="">Selecciona un estado</option>
                                     @foreach ($estados as $estado)
                                         <option value="{{ $estado->id }}"
-                                            {{ old('estado_id') == $estado->id ? 'selected' : '' }}>
+                                            {{ old('estado_id', $proveedor->estado_id) == $estado->id ? 'selected' : '' }}>
                                             {{ $estado->nombre_estado }}
                                         </option>
                                     @endforeach
@@ -154,8 +160,8 @@
 
                             <div class="col-md-6">
                                 <label>Ciudad <span style="color: red;">*</span></label>
-                                <input type="text" name="ciudad" class="form-control form-control-sm"
-                                    value="{{ old('ciudad') }}" placeholder="Ej: Mérida">
+                                <input type="text" name="ciudad" class="form-control form-control-sm" disabled
+                                    value="{{ old('ciudad', $proveedor->ciudad) }}" placeholder="Ej: Merida">
                             </div>
                         </div>
 
@@ -164,8 +170,8 @@
                             <a href="{{ route('admin.proveedores.index') }}" class="btn btn-secondary">
                                 <i class="fas fa-times-circle"></i> Regresar
                             </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Guardar
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> Eliminar
                             </button>
                         </div>
                     </div>
@@ -181,24 +187,25 @@
                         <div class="form-group">
                             <label>Nombre del contacto</label>
                             <input type="text" name="nombre_contacto" class="form-control form-control-sm"
-                                value="{{ old('nombre_contacto') }}" placeholder="Ej: Juan Perez">
+                                value="{{ old('nombre_contacto', $proveedor->nombre_contacto) }}"
+                                placeholder="Nombre del contacto" disabled>
                         </div>
 
                         <div class="row">
                             <div class="col-md-6">
                                 <label>Teléfono</label>
                                 <input type="tel" name="telefono_contacto" class="form-control form-control-sm"
-                                    value="{{ old('telefono_contacto') }}" maxlength="10"
-                                    oninput="this.value = this.value.replace(/[^0-9]/g, '')" pattern="[0-9]{10}"
-                                    placeholder="Ej: 2233445566">
+                                    value="{{ old('telefono_contacto', $proveedor->telefono_contacto) }}"
+                                    placeholder="Ej: 2233445566" maxlength="10"
+                                    oninput="this.value = this.value.replace(/[^0-9]/g, '')" pattern="[0-9]{10}" disabled>
                             </div>
                             <div class="col-md-6">
                                 <label for="email_contacto">Correo</label>
                                 <input type="email" name="email_contacto" class="form-control form-control-sm"
-                                    value="{{ old('email_contacto') }}" placeholder="Ej: correo@correo.com">
+                                    value="{{ old('email_contacto', $proveedor->email_contacto) }}"
+                                    placeholder="Ej: correo@correo.com" disabled>
                             </div>
                         </div>
-
                     </div>
                 </div>
             </form>

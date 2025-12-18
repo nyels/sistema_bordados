@@ -1,6 +1,6 @@
 @extends('adminlte::page')
 
-@section('title', 'Proveedores')
+@section('title', 'RECOMENDACIONES')
 
 @section('content_header')
 @stop
@@ -11,45 +11,38 @@
 
         <div class="card-header" bis_skin_checked="1">
 
-            <h3 class="card-title" style="font-weight: bold;font-size: 20px;"> PROVEEDORES</h3>
+            <h3 class="card-title" style="font-weight: bold;font-size: 20px;"> RECOMENDACIONES</h3>
             <!-- /.card-tools -->
         </div>
         <!-- /.card-header -->
         <div class="card-body" bis_skin_checked="1">
             <div class="row">
-                <a href="{{ route('admin.proveedores.create') }}" type="button" class="btn btn-info">
+                <a href="{{ route('admin.recomendaciones.create') }}" type="button" class="btn btn-info">
                     Nuevo <i class="fas fa-plus"></i></a>
             </div>
             <hr>
             <div class="col-12">
-                <table id="example1" class="table table-bordered table-hover ">
+                <table id="example1" class="table table-bordered table-hover table-condensed">
                     <thead class="thead-dark">
-                        <tr>
+                        <tr style="text-align: center;">
                             <th>#</th>
-                            <th>Nombre proveedor</th>
-                            <th>Giro</th>
-                            <th>Telefono</th>
-                            <th>Correo</th>
-                            <th>Estado</th>
+                            <th>Nombre de la recomendacion</th>
                             <th style="text-align: center;">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
 
-                        @foreach ($proveedores as $proveedor)
-                            <tr>
+                        @foreach ($recomendaciones as $recomendacion)
+                            <tr style="text-align: center;">
                                 <td>{{ $loop->iteration }}</td>
-                                <td>{{ $proveedor->nombre_proveedor }}</td>
-                                <td>{{ $proveedor->giro->nombre_giro }}</td>
-                                <td>{{ $proveedor->telefono }}</td>
-                                <td>{{ $proveedor->email }}</td>
-                                <td>{{ $proveedor->estado->nombre_estado }}</td>
+                                <td>{{ $recomendacion->nombre_recomendacion }}</td>
                                 <td style="text-align: center;">
-                                    <a href="#" type="button" class="btn btn-info"><i class="fas fa-eye"></i></a>
-                                    <a href="{{ route('admin.proveedores.edit', $proveedor->id) }}" type="button"
-                                        class="btn btn-warning"><i class="fas fa-edit"></i></a>
-                                    <a href="{{ route('admin.proveedores.confirm_delete', $proveedor->id) }}" type="button"
-                                        class="btn btn-danger"><i class="fas fa-trash"></i></a>
+                                    <a class="btn btn-warning"
+                                        href="{{ route('admin.recomendaciones.edit', $recomendacion->id) }}"><i
+                                            class="fas fa-edit"></i></a>
+                                    <a class="btn btn-danger"
+                                        href="{{ route('admin.recomendaciones.confirm_delete', $recomendacion->id) }}"><i
+                                            class="fas fa-trash"></i></a>
                                 </td>
                             </tr>
                         @endforeach
@@ -128,10 +121,10 @@
                 "pageLength": 10,
                 "language": {
                     "emptyTable": "No hay informacion",
-                    "info": "Mostrando _START_ a _END_ de _TOTAL_ Proveedores",
-                    "infoEmpty": "Mostrando 0 a 0 de 0 Proveedores",
-                    "infoFiltered": "(Filtrado de _MAX_ total Proveedores)",
-                    "lengthMenu": "Mostrar _MENU_ Proveedores",
+                    "info": "Mostrando _START_ a _END_ de _TOTAL_ Recomendaciones",
+                    "infoEmpty": "Mostrando 0 a 0 de 0 Recomendaciones",
+                    "infoFiltered": "(Filtrado de _MAX_ total Recomendaciones)",
+                    "lengthMenu": "Mostrar _MENU_ Recomendaciones",
                     "loadingRecords": "Cargando...",
                     "processing": "Procesando...",
                     "search": "Buscador:",

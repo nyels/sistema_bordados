@@ -11,12 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('giros', function (Blueprint $table) {
+        Schema::create('recomendacion', function (Blueprint $table) {
             $table->id();
-            $table->string('nombre_giro');
-            $table->string('descripcion')->nullable();
+            $table->string('nombre_recomendacion');
+            $table->string('descripcion_recomendacion')->nullable();
             $table->boolean('activo')->default(true);
             $table->timestamp('fecha_baja')->nullable();
+            $table->string('motivo_baja')->nullable();
             $table->timestamps();
         });
     }
@@ -26,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('giros');
+        Schema::dropIfExists('recomendacion');
     }
 };

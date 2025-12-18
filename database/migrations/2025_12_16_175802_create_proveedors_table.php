@@ -25,7 +25,7 @@ return new class extends Migration
             $table->string('email_contacto')->nullable();
 
             $table->boolean('activo')->default(true);
-            $table->date('fecha_baja')->nullable();
+            $table->timestamp('fecha_baja')->nullable();
             $table->string('motivo_baja')->nullable();
             $table->foreignId('estado_id')->constrained('estados')->restrictOnDelete();
             $table->foreignId('giro_id')->constrained('giros')->restrictOnDelete();

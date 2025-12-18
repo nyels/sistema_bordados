@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Proveedor;
 use App\Models\User;
+use App\Models\Recomendacion;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -28,6 +29,7 @@ class DatabaseSeeder extends Seeder
 
         $this->call(EstadoSeeder::class);
         $this->call(GiroSeeder::class);
+        $this->call(RecomendacionSeeder::class);
 
         Proveedor::create([
             'nombre_proveedor' => 'IGNIS SOLUCIONES INTEGRALES, S.A. DE C.V.',

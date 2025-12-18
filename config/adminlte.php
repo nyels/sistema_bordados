@@ -328,11 +328,16 @@ return [
             'label_color' => 'success',
         ],*/
         ['header' => 'MENU'],
-
+        [
+            'text' => 'Clientes',
+            'url' => 'clientes',
+            'icon' => 'fas fa-fw fa-user-tie',
+            /*'classes' => 'bg-blue text-white'*/
+        ],
         [
             'text' => 'Proveedores',
             'url' => 'proveedores',
-            'icon' => 'fas fa-fw fa-list',
+            'icon' => 'fas fa-fw fa-building',
             /*'classes' => 'bg-blue text-white'*/
         ],
 
@@ -346,16 +351,22 @@ return [
             'icon' => 'fas fa-fw fa-cog',
             'submenu' => [
                 [
+                    'text' => 'Estados',
+                    'url' => 'estados',
+                    'icon' => 'fas fa-fw fa-list',
+                ],
+                [
                     'text' => 'Giro',
                     'url' => 'giros',
                     'icon' => 'fas fa-fw fa-list',
                     /*'classes' => 'bg-blue text-white'*/
                 ],
                 [
-                    'text' => 'Estados',
-                    'url' => 'estados',
+                    'text' => 'Recomendaciones',
+                    'url' => 'recomendaciones',
                     'icon' => 'fas fa-fw fa-list',
                 ],
+
 
                 /*[
                     'text' => 'level_one',
