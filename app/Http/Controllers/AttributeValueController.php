@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Diseno;
+use App\Models\AttributeValue;
 use Illuminate\Http\Request;
 
-class DisenoController extends Controller
+class AttributeValueController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -34,7 +34,7 @@ class DisenoController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Diseno $diseno)
+    public function show(AttributeValue $attributeValue)
     {
         //
     }
@@ -42,7 +42,7 @@ class DisenoController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Diseno $diseno)
+    public function edit(AttributeValue $attributeValue)
     {
         //
     }
@@ -50,7 +50,7 @@ class DisenoController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Diseno $diseno)
+    public function update(Request $request, AttributeValue $attributeValue)
     {
         //
     }
@@ -58,7 +58,7 @@ class DisenoController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Diseno $diseno)
+    public function destroy(AttributeValue $attributeValue)
     {
         //
     }

@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Categoria;
+use App\Models\DesignVariant;
 use Illuminate\Http\Request;
 
-class CategoriaController extends Controller
+class DesignVariantController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -34,7 +34,7 @@ class CategoriaController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Categoria $categoria)
+    public function show(DesignVariant $designVariant)
     {
         //
     }
@@ -42,7 +42,7 @@ class CategoriaController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Categoria $categoria)
+    public function edit(DesignVariant $designVariant)
     {
         //
     }
@@ -50,7 +50,7 @@ class CategoriaController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Categoria $categoria)
+    public function update(Request $request, DesignVariant $designVariant)
     {
         //
     }
@@ -58,7 +58,7 @@ class CategoriaController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Categoria $categoria)
+    public function destroy(DesignVariant $designVariant)
     {
         //
     }

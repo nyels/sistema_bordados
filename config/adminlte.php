@@ -340,6 +340,12 @@ return [
             'icon' => 'fas fa-fw fa-building',
             /*'classes' => 'bg-blue text-white'*/
         ],
+        [
+            'text' => 'Diseños',
+            'url' => 'diseños',
+            'icon' => 'fas fa-fw fa-image',
+            /*'classes' => 'bg-blue text-white'*/
+        ],
 
         /*[
             'text' => 'change_password',

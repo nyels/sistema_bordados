@@ -173,3 +173,17 @@ Route::get('/clientes/confirm_delete/{id}', [App\Http\Controllers\ClienteControl
 Route::delete('/clientes/delete/{id}', [App\Http\Controllers\ClienteController::class, 'destroy'])
     ->name('admin.clientes.destroy')
     ->middleware('auth');
+
+//RUTAS DISENOS
+//redirige a la ruta de nuevo con el formulario
+Route::get('/diseños', [App\Http\Controllers\DesignController::class, 'index'])
+    ->name('admin.diseno.index')
+    ->middleware('auth');
+//manda al formulario para agregar nuevo diseño
+Route::get('/diseños/nuevo', [App\Http\Controllers\DesignController::class, 'create'])
+    ->name('admin.disenos.create')
+    ->middleware('auth');
+//guarda los datos del formulario
+Route::post('/diseños/create', [App\Http\Controllers\DesignController::class, 'store'])
+    ->name('admin.disenos.store')
+    ->middleware('auth');
