@@ -16,6 +16,10 @@ class Estado extends Model
         'fecha_baja',
         'motivo_baja',
     ];
+    public function clientes()
+    {
+        return $this->hasMany(Cliente::class);
+    }
     public function proveedores()
     {
         return $this->hasMany(Proveedor::class);

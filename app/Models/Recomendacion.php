@@ -17,4 +17,8 @@ class Recomendacion extends Model
         'fecha_baja',
         'motivo_baja',
     ];
+    public function clientes()
+    {
+        return $this->hasMany(Cliente::class);
+    }
 }

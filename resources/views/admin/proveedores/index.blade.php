@@ -44,12 +44,22 @@
                                 <td>{{ $proveedor->telefono }}</td>
                                 <td>{{ $proveedor->email }}</td>
                                 <td>{{ $proveedor->estado->nombre_estado }}</td>
-                                <td style="text-align: center;">
-                                    <a href="#" type="button" class="btn btn-info"><i class="fas fa-eye"></i></a>
-                                    <a href="{{ route('admin.proveedores.edit', $proveedor->id) }}" type="button"
-                                        class="btn btn-warning"><i class="fas fa-edit"></i></a>
-                                    <a href="{{ route('admin.proveedores.confirm_delete', $proveedor->id) }}" type="button"
-                                        class="btn btn-danger"><i class="fas fa-trash"></i></a>
+                                <td class="text-center">
+                                    <div class="d-flex justify-content-center align-items-center gap-1">
+                                        <a href="#" class="btn btn-info btn-sm" title="Ver">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+
+                                        <a href="{{ route('admin.proveedores.edit', $proveedor->id) }}"
+                                            class="btn btn-warning btn-sm" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+
+                                        <a href="{{ route('admin.proveedores.confirm_delete', $proveedor->id) }}"
+                                            class="btn btn-danger btn-sm" title="Eliminar">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach

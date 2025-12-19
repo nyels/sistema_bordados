@@ -164,7 +164,7 @@
                         </div>
 
                         {{-- Botones --}}
-                        <div class="text-right mt-4">
+                        <div class="text-center mt-4">
                             <a href="{{ route('admin.proveedores.index') }}" class="btn btn-secondary">
                                 <i class="fas fa-times-circle"></i> Regresar
                             </a>

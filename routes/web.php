@@ -143,3 +143,33 @@ Route::get('/recomendaciones/confirm_delete/{id}', [App\Http\Controllers\Recomen
 Route::delete('/recomendaciones/delete/{id}', [App\Http\Controllers\RecomendacionController::class, 'destroy'])
     ->name('admin.recomendaciones.destroy')
     ->middleware('auth');
+
+//RUTAS CLIENTES
+//redirige a la ruta de nuevo con el formulario
+Route::get('/clientes', [App\Http\Controllers\ClienteController::class, 'index'])
+    ->name('admin.clientes.index')
+    ->middleware('auth');
+//manda al formulario para agregar nuevo cliente
+Route::get('/clientes/nuevo', [App\Http\Controllers\ClienteController::class, 'create'])
+    ->name('admin.clientes.create')
+    ->middleware('auth');
+//guarda los datos del formulario
+Route::post('/clientes/create', [App\Http\Controllers\ClienteController::class, 'store'])
+    ->name('admin.clientes.store')
+    ->middleware('auth');
+//edita los datos del formulario
+Route::get('/clientes/edit/{id}', [App\Http\Controllers\ClienteController::class, 'edit'])
+    ->name('admin.clientes.edit')
+    ->middleware('auth');
+//guarda los datos del formulario
+Route::put('/clientes/edit/{id}', [App\Http\Controllers\ClienteController::class, 'update'])
+    ->name('admin.clientes.update')
+    ->middleware('auth');
+//va al formulario para confirmar la eliminacion
+Route::get('/clientes/confirm_delete/{id}', [App\Http\Controllers\ClienteController::class, 'confirm_delete'])
+    ->name('admin.clientes.confirm_delete')
+    ->middleware('auth');
+//elimina los datos del formulario
+Route::delete('/clientes/delete/{id}', [App\Http\Controllers\ClienteController::class, 'destroy'])
+    ->name('admin.clientes.destroy')
+    ->middleware('auth');

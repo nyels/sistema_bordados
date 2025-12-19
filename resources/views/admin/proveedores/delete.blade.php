@@ -164,9 +164,12 @@
                                     value="{{ old('ciudad', $proveedor->ciudad) }}" placeholder="Ej: Merida">
                             </div>
                         </div>
-
+                        <div style="font-weight: bold;font-size: 25px;text-align: center;padding: 0px;margin: 0px;">
+                            ¿Deseas
+                            eliminar el
+                            proveedor?</div>
                         {{-- Botones --}}
-                        <div class="text-right mt-4">
+                        <div class="text-center mt-4">
                             <a href="{{ route('admin.proveedores.index') }}" class="btn btn-secondary">
                                 <i class="fas fa-times-circle"></i> Regresar
                             </a>
