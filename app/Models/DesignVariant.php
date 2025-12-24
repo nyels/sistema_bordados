@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class DesignVariant extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'design_id',
         'sku',
@@ -23,27 +26,28 @@ class DesignVariant extends Model
         'is_default' => 'boolean'
     ];
 
-    // Relación: Una variante pertenece a un diseño
+    // Una variante pertenece a un diseño
     public function design()
     {
         return $this->belongsTo(Design::class);
     }
 
-    // Relación: Una variante tiene muchos valores de atributos
+    // Valores de atributos (tallas, colores, etc.)
     public function attributeValues()
     {
         return $this->belongsToMany(AttributeValue::class, 'design_variant_attributes');
     }
 
-    // Relación polimórfica: Una variante tiene muchas imágenes
+    // 📸 Imágenes polimórficas
     public function images()
     {
         return $this->morphMany(Image::class, 'imageable');
     }
 
-    // Imagen principal de la variante
+    // ⭐ Imagen principal
     public function primaryImage()
     {
-        return $this->morphOne(Image::class, 'imageable')->where('is_primary', true);
+        return $this->morphOne(Image::class, 'imageable')
+            ->where('is_primary', true);
     }
 }

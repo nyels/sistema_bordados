@@ -342,9 +342,31 @@ return [
         ],
         [
             'text' => 'Diseños',
-            'url' => 'diseños',
-            'icon' => 'fas fa-fw fa-image',
+            'route'  => 'admin.designs.index',
+            'icon' => 'fas fa-fw fa-palette',
+            'active' => ['admin/designs*'],
             /*'classes' => 'bg-blue text-white'*/
+            /* 'submenu' => [
+                [
+                    'text' => 'Listado de Diseños',
+                    'icon' => 'fas fa-list',
+                    'url'  => 'admin/designs',
+                ],
+                [
+                    'text' => 'Nuevo Diseño',
+                    'icon' => 'fas fa-plus-circle',
+                    'url'  => 'admin/designs/create',
+                ],
+            ],*/
+        ],
+
+
+        ['header' => 'BÚSQUEDA Y FILTROS'],
+
+        [
+            'text' => 'Búsqueda Avanzada',
+            'icon' => 'fas fa-search',
+            'url'  => '/admin/search',
         ],
 
         /*[
@@ -355,7 +377,14 @@ return [
         [
             'text' => 'Configuraciones',
             'icon' => 'fas fa-fw fa-cog',
-            'submenu' => [
+            'submenu' =>
+            [
+                [
+                    'text' => 'Categorias',
+                    'url' => 'categorias',
+                    'icon' => 'fas fa-fw fa-list',
+                    /*'classes' => 'bg-blue text-white'*/
+                ],
                 [
                     'text' => 'Estados',
                     'url' => 'estados',
