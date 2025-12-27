@@ -394,8 +394,8 @@
         }
 
         /* ============================================
-                                                                                                   ESTILOS DEL SPINNER PREMIUM (AGREGADOS)
-                                                                                                   ============================================ */
+                                                                                                       ESTILOS DEL SPINNER PREMIUM (AGREGADOS)
+                                                                                                       ============================================ */
         .modal-loading-overlay {
             position: fixed;
             top: 0;
@@ -453,8 +453,8 @@
         }
 
         /* ============================================
-                                                                                                   BARRA DE PROGRESO PREMIUM
-                                                                                                   ============================================ */
+                                                                                                       BARRA DE PROGRESO PREMIUM
+                                                                                                       ============================================ */
         .progress-container-premium {
             width: 100%;
             max-width: 320px;

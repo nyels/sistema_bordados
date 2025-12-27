@@ -401,6 +401,11 @@ return [
                     'url' => 'recomendaciones',
                     'icon' => 'fas fa-fw fa-list',
                 ],
+                [
+                    'text' => 'Tipos de aplicacion',
+                    'url' => 'tipos_aplicacion',
+                    'icon' => 'fas fa-fw fa-list',
+                ],
 
 
                 /*[

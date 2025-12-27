@@ -81,6 +81,7 @@
                         <div class="design-card" data-design-id="{{ $design->id }}"
                             data-description="{{ $design->description ?? 'Sin descripción' }}"
                             data-name="{{ ucfirst($design->name) }}" data-variants="{{ $design->variants->count() }}"
+                            data-exports="{{ $design->exports_count ?? 0 }}"
                             data-image="{{ $design->primaryImage ? asset('storage/' . $design->primaryImage->file_path) : '' }}"
                             data-edit-url="{{ route('admin.designs.edit', $design) }}"
                             data-delete-url="{{ route('admin.designs.destroy', $design) }}">
@@ -108,6 +109,13 @@
                                     {{ $design->variants->count() }}
                                     variante{{ $design->variants->count() != 1 ? 's' : '' }}
                                 </div>
+                                {{-- Contador de exportaciones con clase para actualización --}}
+                                <div class="design-exports" data-design-id="{{ $design->id }}">
+                                    <i class="fas fa-industry"></i>
+                                    <span class="exports-number">{{ $design->exports_count ?? 0 }}</span>
+                                    <span
+                                        class="exports-text">exportación{{ ($design->exports_count ?? 0) != 1 ? 'es' : '' }}</span>
+                                </div>
                             </div>
 
                         </div>
@@ -129,8 +137,8 @@
         </div>
     </div>
 
-    {{-- MODAL PRINCIPAL DEL DISEÑO --}}
-    <div class="modal fade" id="designModal" tabindex="-1" role="dialog" aria-hidden="true">
+    {{-- MODAL PRINCIPAL DEL DISEÑO - CON data-backdrop="static" --}}
+    <div class="modal fade" id="designModal" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
         <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
             <div class="modal-content modal-premium">
 
@@ -144,6 +152,10 @@
                 <div class="modal-body p-0 position-relative">
                     <div class="modal-content-wrapper shadow-lg" style="border-radius: 30px; overflow: hidden;">
                         <div class="row no-gutters modal-row-responsive">
+
+                            {{-- Campos ocultos para IDs (usados por el script de producción) --}}
+                            <input type="hidden" id="modalDesignId" value="">
+                            <input type="hidden" id="modalVariantId" value="">
 
                             {{-- ============================================
                             COLUMNA IZQUIERDA: IMAGEN PRINCIPAL
@@ -204,7 +216,7 @@
                                 </div>
 
                                 {{-- ACCIONES (Fitts's Law: Botones grandes y accesibles) --}}
-                                <div class="design-actions center">
+                                <div class="design-actions">
                                     <a href="#" id="btnEditDesign" class="btn-action-primary">
                                         <i class="fas fa-pencil-alt"></i>
                                         Editar Diseño
@@ -218,72 +230,105 @@
                             </div>
 
                             {{-- ============================================
-                            COLUMNA DERECHA: VARIANTES
-                            Gestalt: Proximidad y agrupación lógica
+                            COLUMNA DERECHA: VARIANTES Y PRODUCCIÓN
                             ============================================ --}}
                             <div class="col-lg-6 modal-right-column">
 
-                                {{-- SECCIÓN VARIANTES --}}
-                                <div class="variants-section">
-                                    <div class="section-header">
-                                        <div class="variant-nav-arrows">
-                                            <button type="button" class="btn-nav-sm" onclick="navigateVariant(-1)"
-                                                title="Variante anterior">
-                                                <i class="fas fa-chevron-left"></i>
-                                            </button>
-                                            <button type="button" class="btn-nav-sm" onclick="navigateVariant(1)"
-                                                title="Variante siguiente">
-                                                <i class="fas fa-chevron-right"></i>
-                                            </button>
-                                        </div>
-                                        <h5 class="section-title">Variantes
-                                            <span id="variantsTotalCount" class="variants-total-badge">0</span>
-                                        </h5>
-                                    </div>
-
-                                    {{-- Tabs de Variantes --}}
-                                    <div class="variant-tabs-wrapper">
-                                        <div id="variantTabs" class="variant-tabs-scroll">
-                                            {{-- Se llena dinámicamente --}}
-                                        </div>
-                                    </div>
+                                {{-- TABS PARA VARIANTES Y PRODUCCIÓN --}}
+                                <div class="modal-tabs-container mb-3">
+                                    <ul class="nav nav-tabs" id="designModalTabs" role="tablist">
+                                        <li class="nav-item" role="presentation">
+                                            <a class="nav-link active" id="variants-tab" data-toggle="tab"
+                                                href="#variants-content" role="tab">
+                                                <i class="fas fa-layer-group mr-1"></i> Variantes
+                                                <span id="variantsTotalCount" class="badge badge-light ml-1">0</span>
+                                            </a>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <a class="nav-link" id="production-tab" data-toggle="tab"
+                                                href="#production-content" role="tab">
+                                                <i class="fas fa-industry mr-1"></i> Producción
+                                                <span id="productionTotalCount" class="badge badge-light ml-1">0</span>
+                                            </a>
+                                        </li>
+                                    </ul>
                                 </div>
 
-                                {{-- INFO VARIANTE SELECCIONADA --}}
-                                <div class="variant-selected-info">
-                                    <div class="variant-name-price">
-                                        <h6 id="variantName">Selecciona una variante</h6>
-                                        <span id="variantPrice" class="price-badge">$0.00</span>
-                                    </div>
-                                    <span id="variantSku" class="sku-text" hidden>SKU: ---</span>
+                                {{-- CONTENIDO DE LOS TABS --}}
+                                <div class="tab-content tab-content-flex">
+                                    {{-- PESTAÑA DE VARIANTES (CONTENIDO EXISTENTE) --}}
+                                    <div class="tab-pane fade show active" id="variants-content" role="tabpanel">
+                                        {{-- SECCIÓN VARIANTES --}}
+                                        <div class="variants-section">
+                                            <div class="section-header">
+                                                <div class="variant-nav-arrows">
+                                                    <button type="button" class="btn-nav-sm"
+                                                        onclick="navigateVariant(-1)" title="Variante anterior">
+                                                        <i class="fas fa-chevron-left"></i>
+                                                    </button>
+                                                    <button type="button" class="btn-nav-sm"
+                                                        onclick="navigateVariant(1)" title="Variante siguiente">
+                                                        <i class="fas fa-chevron-right"></i>
+                                                    </button>
+                                                </div>
+                                                <h5 class="section-title">Variantes
+                                                    <span id="variantsContentCount" class="variants-total-badge">0</span>
+                                                </h5>
+                                            </div>
 
-                                </div>
+                                            {{-- Tabs de Variantes --}}
+                                            <div class="variant-tabs-wrapper">
+                                                <div id="variantTabs" class="variant-tabs-scroll">
+                                                    {{-- Se llena dinámicamente --}}
+                                                </div>
+                                            </div>
+                                        </div>
 
-                                {{-- GALERÍA --}}
-                                <div class="gallery-section">
-                                    <div class="gallery-header">
-                                        <span class="gallery-label">Galería</span>
-                                        <span id="galleryCount" class="gallery-badge">0</span>
-                                    </div>
+                                        {{-- INFO VARIANTE SELECCIONADA --}}
+                                        <div class="variant-selected-info">
+                                            <div class="variant-name-price">
+                                                <h6 id="variantName">Selecciona una variante</h6>
+                                                <span id="variantPrice" class="price-badge">$0.00</span>
+                                            </div>
+                                            <span id="variantSku" class="sku-text" hidden>SKU: ---</span>
+                                        </div>
 
-                                    <div class="gallery-grid-container">
-                                        <div id="variantGallery" class="gallery-grid">
-                                            {{-- Se llena dinámicamente --}}
+                                        {{-- GALERÍA --}}
+                                        <div class="gallery-section">
+                                            <div class="gallery-header">
+                                                <span class="gallery-label">Galería</span>
+                                                <span id="galleryCount" class="gallery-badge">0</span>
+                                            </div>
+
+                                            <div class="gallery-grid-container">
+                                                <div id="variantGallery" class="gallery-grid">
+                                                    {{-- Estado vacío inicial --}}
+                                                    <div class="gallery-empty-state">
+                                                        <i class="fas fa-images"></i>
+                                                        <p>No hay imágenes.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {{-- ACCIONES VARIANTES --}}
+                                        <div class="variant-actions">
+                                            <a href="#" id="btnAddVariant" class="btn-add-variant">
+                                                <i class="fas fa-plus"></i>
+                                                Nueva Variante
+                                            </a>
+                                            <a href="#" id="btnEditVariants" class="btn-edit-variant disabled"
+                                                style="pointer-events: none; opacity: 0.5;">
+                                                <i class="fas fa-pencil-alt"></i>
+                                                Editar Variante
+                                            </a>
                                         </div>
                                     </div>
-                                </div>
 
-                                {{-- ACCIONES VARIANTES --}}
-                                <div class="variant-actions">
-                                    <a href="#" id="btnAddVariant" class="btn-add-variant">
-                                        <i class="fas fa-plus"></i>
-                                        Nueva Variante
-                                    </a>
-                                    <a href="#" id="btnEditVariants" class="btn-edit-variant disabled"
-                                        style="pointer-events: none; opacity: 0.5;">
-                                        <i class="fas fa-pencil-alt"></i>
-                                        Editar Variante
-                                    </a>
+                                    {{-- PESTAÑA DE PRODUCCIÓN (NUEVA) --}}
+                                    <div class="tab-pane fade" id="production-content" role="tabpanel">
+                                        @include('admin.designs.partials.production-tab')
+                                    </div>
                                 </div>
 
                             </div>
@@ -363,8 +408,8 @@
 @section('css')
     <style>
         /* ============================================
-                                                                                                                                                    PLACEHOLDERS Y UTILIDADES
-                                                                                                                                                    ============================================ */
+                                        PLACEHOLDERS Y UTILIDADES
+                                        ============================================ */
         .no-img-placeholder {
             width: 45px;
             height: 45px;
@@ -379,8 +424,8 @@
         }
 
         /* ============================================
-                                                                                                                                                    MODAL PREMIUM - ESTRUCTURA BASE
-                                                                                                                                                    ============================================ */
+                                        MODAL PREMIUM - ESTRUCTURA BASE
+                                        ============================================ */
         .modal-premium {
             border-radius: 30px;
             border: none;
@@ -416,12 +461,29 @@
         }
 
         /* ============================================
-                                                                                                                                                    APPLE HIG MODAL - SISTEMA DE DISEÑO PREMIUM
-                                                                                                                                                    8pt Grid System | Claridad | Deferencia | Profundidad
-                                                                                                                                                    ============================================ */
+                                        APPLE HIG MODAL - SISTEMA DE DISEÑO PREMIUM
+                                        8pt Grid System | Claridad | Deferencia | Profundidad
+                                        ============================================ */
 
-        /* COLUMNA IZQUIERDA - REDUCIDA A 60% */
+        /* COLUMNA IZQUIERDA */
+        .modal-left-column {
+            display: flex;
+            flex-direction: column;
+            background: #ffffff;
+            padding: 24px;
+            position: relative;
+            border-right: 1px solid #f1f5f9;
+        }
 
+        /* COLUMNA DERECHA - CON PADDING CORRECTO */
+        .modal-right-column {
+            display: flex;
+            flex-direction: column;
+            background: #f9fafb;
+            overflow: hidden;
+            padding: 24px;
+            max-height: 600px;
+        }
 
         .modal-loader-overlay {
             position: absolute;
@@ -613,18 +675,24 @@
             transform: scale(0.95);
         }
 
-        /* BOTONES DE ACCIÓN - Fitts's Law */
-        .design-actions {
+        /* ============================================
+                                        BOTONES DE ACCIÓN - SISTEMA UNIFICADO PREMIUM
+                                        Ambas columnas usan el mismo sistema
+                                        ============================================ */
+
+        /* Contenedor de acciones - BASE COMÚN */
+        .design-actions,
+        .variant-actions {
             display: flex;
             gap: 12px;
-            text-align: center;
-            justify-content: center;
-            padding-top: 16px;
+            padding: 16px 0 0 0;
             margin-top: auto;
+            border-top: 1px solid #e5e7eb;
         }
 
+        /* Botón Primario - Editar Diseño (Negro) */
         .btn-action-primary {
-            flex: 0 0 180px;
+            flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -649,8 +717,9 @@
             box-shadow: 0 4px 12px rgba(17, 24, 39, 0.3);
         }
 
+        /* Botón Peligro - Eliminar (Rojo outline) */
         .btn-action-danger {
-            flex: 0 0 180px;
+            flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -678,31 +747,159 @@
             background: #fee2e2;
         }
 
-        /* ============================================
-                                                                                                                                                    COLUMNA DERECHA - VARIANTES - AUMENTADA A 40%
-                                                                                                                                                    ============================================ */
-        .modal-right-column {
+        /* Botón Azul - Nueva Variante */
+        .btn-add-variant {
+            flex: 1;
             display: flex;
-            flex-direction: column;
-            background: #f9fafb;
-            overflow: hidden;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 20px;
+            background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 14px;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+            min-height: 52px;
         }
 
-        .modal-left-column {
+        .btn-add-variant:hover {
+            background: linear-gradient(180deg, #1d4ed8 0%, #1e40af 100%);
+            color: white;
+            text-decoration: none;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+        }
+
+        /* Botón Negro - Editar Variante */
+        .btn-edit-variant {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 20px;
+            background: linear-gradient(180deg, #111827 0%, #1f2937 100%);
+            color: white;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 14px;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(17, 24, 39, 0.25);
+            min-height: 52px;
+        }
+
+        .btn-edit-variant:hover:not(.disabled) {
+            background: linear-gradient(180deg, #1f2937 0%, #374151 100%);
+            color: white;
+            text-decoration: none;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(17, 24, 39, 0.35);
+        }
+
+        .btn-edit-variant.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        /* ============================================
+                                        COLUMNA DERECHA - VARIANTES Y PRODUCCIÓN
+                                        ============================================ */
+
+        /* Tabs del Modal */
+        .modal-tabs-container {
+            border-bottom: 1px solid #e5e7eb;
+            margin-bottom: 15px;
+            flex-shrink: 0;
+        }
+
+        .modal-tabs-container .nav-tabs {
+            border-bottom: none;
+        }
+
+        .modal-tabs-container .nav-tabs .nav-item {
+            margin-bottom: -1px;
+        }
+
+        .modal-tabs-container .nav-tabs .nav-link {
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: #6b7280;
+            font-weight: 600;
+            font-size: 14px;
+            padding: 10px 15px;
+            transition: all 0.2s;
+        }
+
+        .modal-tabs-container .nav-tabs .nav-link:hover {
+            color: #2563eb;
+            border-bottom-color: #d1d5db;
+        }
+
+        .modal-tabs-container .nav-tabs .nav-link.active {
+            color: #2563eb;
+            border-bottom-color: #2563eb;
+            background: transparent;
+        }
+
+        /* Contenedor de tabs con flexbox */
+        .tab-content-flex {
+            flex: 1;
             display: flex;
             flex-direction: column;
-            background: #ffffff;
-            padding: 24px;
+            overflow: hidden;
+            min-height: 0;
+        }
 
-            position: relative;
-            border-right: 1px solid #f1f5f9;
+        .tab-content-flex>.tab-pane {
+            flex: 1;
+            display: none !important;
+            flex-direction: column;
+            min-height: 0;
+            overflow-y: auto;
+        }
+
+        .tab-content-flex>.tab-pane.active.show {
+            display: flex !important;
+        }
+
+        /* Pestaña Variantes */
+        #variants-content {
+            flex: 1;
+            display: flex !important;
+            flex-direction: column;
+        }
+
+        #variants-content:not(.active) {
+            display: none !important;
+        }
+
+        /* Pestaña Producción */
+        #production-content {
+            flex: 1;
+            padding: 0;
+        }
+
+        #production-content:not(.active) {
+            display: none !important;
+        }
+
+        #production-content.active.show {
+            display: flex !important;
+            flex-direction: column;
         }
 
         /* Sección Variantes */
         .variants-section {
-            padding: 20px 20px 12px;
+            padding: 0 0 12px;
             background: white;
             border-bottom: 1px solid #e5e7eb;
+            flex-shrink: 0;
         }
 
         .section-header {
@@ -830,9 +1027,10 @@
 
         /* Info Variante Seleccionada */
         .variant-selected-info {
-            padding: 12px 20px;
+            padding: 12px 0;
             background: white;
             border-bottom: 1px solid #e5e7eb;
+            flex-shrink: 0;
         }
 
         .variant-name-price {
@@ -872,8 +1070,9 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-
-            padding: 12px 20px 0;
+            padding: 12px 0 0;
+            min-height: 120px;
+            overflow: hidden;
         }
 
         .gallery-header {
@@ -882,6 +1081,7 @@
             justify-content: center;
             gap: 8px;
             margin-bottom: 12px;
+            flex-shrink: 0;
         }
 
         .gallery-label {
@@ -905,23 +1105,27 @@
             justify-content: center;
         }
 
-        /* GRID DE GALERÍA - CUADRADO PERFECTO */
-        /* GRID DE GALERÍA - LIMITADO A 2 FILAS */
+        /* GRID DE GALERÍA - ALTURA FIJA */
         .gallery-grid-container {
-            flex: none;
-            /* Evita que flexbox intente estirarlo */
+            flex: 1;
             width: 100%;
-            /* Ajustamos la altura para que quepan exactamente 2 filas + el gap */
-            /* El cálculo: (ancho_item * 2) + gap */
-            max-height: 260px;
+            min-height: 80px;
+            max-height: 150px;
             overflow-y: auto;
-            padding-right: 8px;
-            margin-bottom: 10px;
+            overflow-x: hidden;
+            padding: 4px;
+        }
+
+        /* Cuando la galería está vacía, centrar contenido */
+        .gallery-grid-container:has(.gallery-empty-state) {
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         /* Personalización del scrollbar para que sea sutil (estilo Apple) */
         .gallery-grid-container::-webkit-scrollbar {
-            width: 18px;
+            width: 6px;
         }
 
         .gallery-grid-container::-webkit-scrollbar-track {
@@ -929,50 +1133,56 @@
         }
 
         .gallery-grid-container::-webkit-scrollbar-thumb {
-            background: #9b9fa1;
+            background: #d1d5db;
             border-radius: 10px;
         }
 
         .gallery-grid-container::-webkit-scrollbar-thumb:hover {
-            background: #cbd5e1;
+            background: #9ca3af;
         }
 
         .gallery-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
-            padding-bottom: 12px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            width: 100%;
+        }
+
+        /* Cuando la galería está vacía, centrar contenido */
+        .gallery-grid:has(.gallery-empty-state) {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 80px;
         }
 
         .gallery-item {
             position: relative;
             width: 100%;
-            padding-top: 100%;
-            /* Aspect ratio 1:1 - CUADRADO PERFECTO */
-            background: #f1f5f9;
-            border-radius: 10px;
+            aspect-ratio: 1 / 1;
+            background: #f8fafc;
+            border-radius: 8px;
             overflow: hidden;
             cursor: pointer;
-            border: 2px solid transparent;
+            border: 2px solid #e5e7eb;
             transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .gallery-item img {
-            position: absolute;
-            top: 0;
-            left: 0;
             width: 100%;
             height: 100%;
-            object-fit: cover;
-            /* Cambiado a COVER para imágenes cuadradas */
+            object-fit: contain;
             object-position: center;
-            /* Centrado perfecto */
-            border: 1px solid #e5e7eb;
+            padding: 2px;
             transition: transform 0.3s ease;
         }
 
         .gallery-item:hover {
             border-color: #93c5fd;
+            transform: scale(1.02);
         }
 
         .gallery-item:hover img {
@@ -981,369 +1191,57 @@
 
         .gallery-item.active {
             border-color: #2563eb;
-            border-width: 2px;
-            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
         }
 
         .gallery-item.active::after {
             content: '✓';
             position: absolute;
-            top: 6px;
-            right: 6px;
-            width: 20px;
-            height: 20px;
+            top: 2px;
+            right: 2px;
+            width: 16px;
+            height: 16px;
             background: #2563eb;
             color: white;
             border-radius: 50%;
-            font-size: 11px;
+            font-size: 9px;
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 2;
         }
 
-        /* Estado Vacío Galería */
-        .gallery-grid .empty-state-minimal {
-            grid-column: 1 / -1;
+        /* Estado Vacío Galería - Diseño Premium */
+        .gallery-empty-state {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 32px;
+            width: 100%;
+            height: 100%;
+            min-height: 80px;
+            padding: 16px;
             color: #9ca3af;
+            text-align: center;
         }
 
-        .gallery-grid .empty-state-minimal i {
-            font-size: 32px;
-            margin-bottom: 8px;
-            opacity: 0.5;
-        }
-
-        .gallery-grid .empty-state-minimal p {
-            font-size: 13px;
-            margin: 0;
-        }
-
-        /* ACCIONES VARIANTES */
-        .variant-actions {
-            display: flex;
-            gap: 8px;
-            padding: 16px 20px;
-            background: white;
-            border-top: 1px solid #e5e7eb;
-        }
-
-        .btn-add-variant {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 12px 16px;
-            background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
-            color: white;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 13px;
-            text-decoration: none;
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
-            min-height: 48px;
-        }
-
-        .btn-add-variant:hover {
-            background: linear-gradient(180deg, #1d4ed8 0%, #1e40af 100%);
-            color: white;
-            text-decoration: none;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
-        }
-
-        .btn-edit-variant {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 12px 16px;
-            background: linear-gradient(180deg, #111827 0%, #1f2937 100%);
-            color: white;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 13px;
-            text-decoration: none;
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 8px rgba(17, 24, 39, 0.25);
-            min-height: 48px;
-        }
-
-        .btn-edit-variant:hover:not(.disabled) {
-            background: linear-gradient(180deg, #1f2937 0%, #374151 100%);
-            color: white;
-            text-decoration: none;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(17, 24, 39, 0.35);
-        }
-
-        .btn-edit-variant.disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            pointer-events: none;
-        }
-
-        /* RESPONSIVE */
-        @media (max-width: 991px) {
-            .modal-left-column {
-                border-right: none;
-                border-bottom: 1px solid #f1f5f9;
-            }
-
-            .main-image-wrapper {
-                height: 280px;
-            }
-
-            .gallery-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
-        }
-
-        @media (max-width: 768px) {
-            .gallery-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        /* ============================================
-                                                                                                                                                    ESTILOS LEGACY (compatibilidad)
-                                                                                                                                                    ============================================ */
-        .btn-main-nav-arrow {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: #ffffff;
-            border: 2px solid #e5e7eb;
-            color: #374151;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 15px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08),
-                0 1px 2px rgba(0, 0, 0, 0.06);
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .btn-main-nav-arrow:hover {
-            background: #f9fafb;
-            border-color: #2563eb;
-            color: #2563eb;
-            transform: scale(1.1);
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2),
-                0 2px 4px rgba(37, 99, 235, 0.1);
-        }
-
-        .btn-main-nav-arrow:active {
-            transform: scale(0.98);
-            background: #eff6ff;
-            box-shadow: inset 0 2px 4px rgba(37, 99, 235, 0.15);
-        }
-
-        .btn-main-nav-arrow:disabled {
-            opacity: 0.35;
-            cursor: not-allowed;
-            background: #f9fafb;
-            border-color: #e5e7eb;
-            color: #9ca3af;
-        }
-
-        .btn-main-nav-arrow:disabled:hover {
-            transform: none;
-            border-color: #e5e7eb;
-            color: #9ca3af;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08),
-                0 1px 2px rgba(0, 0, 0, 0.06);
-        }
-
-        /* ============================================
-                                                                                                                                                    MODAL DE CONFIRMACIÓN ELIMINAR - ESTILO APPLE
-                                                                                                                                                    ============================================ */
-        .modal-delete-apple {
-            border-radius: 24px;
-            border: none;
-            padding: 32px 28px 24px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25),
-                0 0 1px rgba(0, 0, 0, 0.1);
-            background: #ffffff;
-        }
-
-        .modal-delete-icon {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-
-        .modal-delete-icon .icon-wrapper {
-            width: 64px;
-            height: 64px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 12px rgba(252, 211, 77, 0.3);
-        }
-
-        .modal-delete-icon i {
+        .gallery-empty-state i {
             font-size: 28px;
-            color: #d97706;
+            margin-bottom: 8px;
+            opacity: 0.4;
+            color: #cbd5e1;
         }
 
-        .modal-delete-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #1f2937;
-            text-align: center;
-            margin-bottom: 16px;
-            letter-spacing: -0.5px;
-            line-height: 1.3;
-        }
-
-        .variants-warning {
-            background: #fef3c7;
-            border: 1.5px solid #fde68a;
-            border-radius: 12px;
-            padding: 14px 16px;
-            margin-bottom: 16px;
-        }
-
-        .variants-message {
+        .gallery-empty-state p {
+            font-size: 12px;
+            font-weight: 500;
             margin: 0;
-            font-size: 0.95rem;
-            color: #92400e;
-            text-align: center;
-            line-height: 1.5;
-        }
-
-        .variants-message strong {
-            color: #78350f;
-            font-weight: 700;
-        }
-
-        .modal-delete-description {
-            font-size: 0.95rem;
-            color: #6b7280;
-            text-align: center;
-            margin-bottom: 24px;
-            line-height: 1.6;
-        }
-
-        .modal-delete-actions {
-            display: flex;
-            gap: 12px;
-            flex-direction: column;
-        }
-
-        .btn-cancel-apple {
-            background: #969aa172;
-            border: 1.5px solid #e5e7eb;
-            color: #374151bd;
-            font-weight: 600;
-            font-size: 1rem;
-            padding: 14px 24px;
-            border-radius: 12px;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-            letter-spacing: 0.2px;
-        }
-
-        .btn-cancel-apple:hover {
-            background: #e5e7eb;
-            border-color: #d1d5db;
-            transform: translateY(-1px);
-        }
-
-        .btn-cancel-apple:active {
-            transform: translateY(0);
-            background: #d1d5db;
-        }
-
-        .btn-delete-apple {
-            background: linear-gradient(180deg, #dc2626 0%, #b91c1c 100%);
-            border: none;
-            color: #ffffff;
-            font-weight: 600;
-            font-size: 1rem;
-            padding: 14px 24px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25),
-                inset 0 1px 0 rgba(255, 255, 255, 0.15);
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-            letter-spacing: 0.2px;
-        }
-
-        .btn-delete-apple:hover {
-            background: linear-gradient(180deg, #b91c1c 0%, #991b1b 100%);
-            transform: translateY(-1px);
-            box-shadow: 0 6px 16px rgba(220, 38, 38, 0.3),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2);
-        }
-
-        .btn-delete-apple:active {
-            transform: translateY(0);
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+            color: #9ca3af;
         }
 
         /* ============================================
-                                                                                                                                                    ANIMACIONES SUAVES PARA TRANSICIONES
-                                                                                                                                                    ============================================ */
-        .fade-in {
-            animation: fadeIn 0.3s ease-in-out;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .shake {
-            animation: shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
-        }
-
-        @keyframes shake {
-
-            10%,
-            90% {
-                transform: translateX(-1px);
-            }
-
-            20%,
-            80% {
-                transform: translateX(2px);
-            }
-
-            30%,
-            50%,
-            70% {
-                transform: translateX(-3px);
-            }
-
-            40%,
-            60% {
-                transform: translateX(3px);
-            }
-        }
-
-        /* ============================================
-                                                                                                                                                    ESTILOS GENERALES (Grid, Cards, Search)
-                                                                                                                                                    ============================================ */
+                                        ESTILOS DEL GRID DE TARJETAS
+                                        ============================================ */
         .surface {
             background: #fff;
             border-radius: 16px;
@@ -1434,9 +1332,203 @@
             gap: 20px;
         }
 
+        .design-body {
+            padding: 16px;
+        }
+
+        .design-body .design-title {
+            font-size: 1rem;
+            margin-bottom: 4px;
+        }
+
+        .design-variants {
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        /* Badge de exportaciones en tarjeta - MEJORADO */
+        .design-exports {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 8px;
+            padding: 6px 12px;
+            background: #f3f4f6;
+            border-radius: 20px;
+            transition: all 0.2s ease;
+        }
+
+        .design-exports i {
+            font-size: 11px;
+            color: #2563eb;
+        }
+
+        .design-card:hover .design-exports {
+            background: #e0e7ff;
+        }
+
+        /* Animación de actualización */
+        .design-exports.updated {
+            animation: pulse-exports 0.4s ease;
+        }
+
+        @keyframes pulse-exports {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+                background: #dbeafe;
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
         /* ============================================
-                                                                                                                                                    ESTADOS DE CARGA PREMIUM - APPLE STYLE
-                                                                                                                                                    ============================================ */
+                                        MODAL DE CONFIRMACIÓN ELIMINAR
+                                        ============================================ */
+        .modal-delete-apple {
+            border-radius: 24px;
+            border: none;
+            padding: 32px 28px 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25),
+                0 0 1px rgba(0, 0, 0, 0.1);
+            background: #ffffff;
+        }
+
+        .modal-delete-icon {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-delete-icon .icon-wrapper {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(252, 211, 77, 0.3);
+        }
+
+        .modal-delete-icon i {
+            font-size: 28px;
+            color: #d97706;
+        }
+
+        .modal-delete-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1f2937;
+            text-align: center;
+            margin-bottom: 16px;
+            letter-spacing: -0.5px;
+            line-height: 1.3;
+        }
+
+        .variants-warning {
+            background: #fef3c7;
+            border: 1.5px solid #fde68a;
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 16px;
+        }
+
+        .variants-message {
+            margin: 0;
+            font-size: 0.95rem;
+            color: #92400e;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .variants-message strong {
+            color: #78350f;
+            font-weight: 700;
+        }
+
+        .modal-delete-description {
+            font-size: 0.95rem;
+            color: #6b7280;
+            text-align: center;
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+
+        .modal-delete-actions {
+            display: flex;
+            gap: 12px;
+            flex-direction: column;
+        }
+
+        .btn-cancel-apple {
+            background: #f3f4f6;
+            border: 1.5px solid #e5e7eb;
+            color: #374151;
+            font-weight: 600;
+            font-size: 1rem;
+            padding: 14px 24px;
+            border-radius: 12px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            letter-spacing: 0.2px;
+        }
+
+        .btn-cancel-apple:hover {
+            background: #e5e7eb;
+            border-color: #d1d5db;
+            transform: translateY(-1px);
+        }
+
+        .btn-delete-apple {
+            background: linear-gradient(180deg, #dc2626 0%, #b91c1c 100%);
+            border: none;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 1rem;
+            padding: 14px 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .btn-delete-apple:hover {
+            background: linear-gradient(180deg, #b91c1c 0%, #991b1b 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(220, 38, 38, 0.3);
+        }
+
+        .btn-delete-apple.loading {
+            position: relative;
+            color: transparent;
+        }
+
+        .btn-delete-apple.loading::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        /* ============================================
+                                        ESTADOS DE CARGA
+                                        ============================================ */
         .modal-loading-overlay {
             position: absolute;
             top: 0;
@@ -1445,7 +1537,6 @@
             bottom: 0;
             background: rgba(255, 255, 255, 0.92);
             backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
             z-index: 9999;
             display: none;
             flex-direction: column;
@@ -1485,7 +1576,6 @@
             font-weight: 600;
             color: #1f2937;
             margin-bottom: 8px;
-            letter-spacing: 0.3px;
         }
 
         .modal-loading-subtitle {
@@ -1494,67 +1584,82 @@
             line-height: 1.5;
         }
 
-        /* Estado deshabilitado del modal */
-        .modal-premium.disabled .modal-content-wrapper {
-            opacity: 0.6;
-            filter: grayscale(0.3);
-            pointer-events: none;
-            transition: all 0.3s ease;
-        }
-
-        /* Spinner para el botón de eliminar durante carga */
-        .btn-delete-apple.loading {
-            position: relative;
-            color: transparent;
-        }
-
-        .btn-delete-apple.loading::after {
-            content: '';
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            width: 20px;
-            height: 20px;
-            margin: -10px 0 0 -10px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-top-color: white;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
         /* ============================================
-                                                                                                                                                    BOTÓN DE DESCARGA DE IMAGEN
-                                                                                                                                                    ============================================ */
-        .btn-download-image {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            width: 40px;
-            height: 40px;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #2563eb;
-            font-size: 18px;
-            text-decoration: none;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            transition: all 0.3s ease;
-            z-index: 20;
-            border: 2px solid #e5e7eb;
+                                        RESPONSIVE
+                                        ============================================ */
+        @media (max-width: 991px) {
+            .modal-left-column {
+                border-right: none;
+                border-bottom: 1px solid #f1f5f9;
+            }
+
+            .modal-right-column {
+                padding: 20px;
+                max-height: none;
+            }
+
+            .main-image-wrapper {
+                height: 280px;
+            }
         }
 
-        .btn-download-image:hover {
-            background: #2563eb;
-            color: white;
-            transform: scale(1.1);
-            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
-            border-color: #2563eb;
+        @media (max-width: 768px) {
+            .modal-dialog.modal-xl {
+                max-width: 95%;
+                margin: 10px auto;
+            }
+
+            .main-image-wrapper {
+                height: 240px;
+            }
+
+            .design-actions,
+            .variant-actions {
+                flex-direction: row;
+                gap: 10px;
+            }
+
+            .btn-action-primary,
+            .btn-action-danger,
+            .btn-add-variant,
+            .btn-edit-variant {
+                padding: 12px 14px;
+                font-size: 13px;
+                min-height: 48px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .modal-dialog.modal-xl {
+                max-width: 100%;
+                margin: 5px;
+            }
+
+            .modal-left-column,
+            .modal-right-column {
+                padding: 16px;
+            }
+
+            .main-image-wrapper {
+                height: 200px;
+            }
+
+            .design-actions,
+            .variant-actions {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .btn-action-primary,
+            .btn-action-danger,
+            .btn-add-variant,
+            .btn-edit-variant {
+                width: 100%;
+                flex: none;
+            }
         }
     </style>
 @stop
-
 @section('js')
     <script>
         // ============================================
@@ -1562,7 +1667,7 @@
         // ============================================
         let currentDesign = null;
         let currentVariants = [];
-        let currentVariantIndex = -1; // Cambiado a -1 para NO tener variante seleccionada inicialmente
+        let currentVariantIndex = -1;
         let currentGalleryImages = [];
         let currentGalleryIndex = 0;
         let pendingDeleteUrl = null;
@@ -1587,7 +1692,7 @@
                     loader.style.opacity = '1';
                 }
 
-                // Limpiar vista anterior
+                // Limpiar vista anterior  
                 clearModal();
 
                 // Fetch diseño completo
@@ -1621,17 +1726,26 @@
             document.getElementById('mainDisplayImage').src = '';
             document.getElementById('mainDisplayImage').style.display = 'none';
             document.getElementById('variantTabs').innerHTML = '';
-            document.getElementById('variantGallery').innerHTML = '';
             document.getElementById('variantName').innerText = 'Selecciona una variante';
             document.getElementById('variantPrice').innerText = '$0.00';
             document.getElementById('variantSku').innerText = 'SKU: ---';
             document.getElementById('galleryCount').innerText = '0';
             document.getElementById('variantsTotalCount').innerText = '0';
+            document.getElementById('variantsContentCount').innerText = '0';
+            document.getElementById('productionTotalCount').innerText = '0';
             document.getElementById('noImageLabel').style.setProperty('display', 'none', 'important');
             document.getElementById('imageDescription').innerText = 'Imagen Principal del Diseño';
 
+            // Limpiar campos ocultos para pestaña de producción
+            document.getElementById('modalDesignId').value = '';
+            document.getElementById('modalVariantId').value = '';
+
             // Ocultar botón de descarga
             document.getElementById('downloadImageBtn').style.display = 'none';
+
+            // Mostrar estado vacío de galería
+            document.getElementById('variantGallery').innerHTML =
+                '<div class="gallery-empty-state"><i class="fas fa-images"></i><p>No hay imágenes.</p></div>';
 
             // Deshabilitar botón editar variante
             const btnEditVariants = document.getElementById('btnEditVariants');
@@ -1640,6 +1754,19 @@
                 btnEditVariants.style.pointerEvents = 'none';
                 btnEditVariants.style.opacity = '0.5';
                 btnEditVariants.href = '#';
+            }
+
+            // RESETEAR TABS - Siempre volver a pestaña de Variantes
+            const variantsTab = document.getElementById('variants-tab');
+            const productionTab = document.getElementById('production-tab');
+            const variantsContent = document.getElementById('variants-content');
+            const productionContent = document.getElementById('production-content');
+
+            if (variantsTab && productionTab && variantsContent && productionContent) {
+                variantsTab.classList.add('active');
+                productionTab.classList.remove('active');
+                variantsContent.classList.add('show', 'active');
+                productionContent.classList.remove('show', 'active');
             }
 
             // Reset índices
@@ -1657,7 +1784,6 @@
             if (!btnEditVariants || !currentDesign) return;
 
             if (!currentVariants.length) {
-                // Sin variantes - deshabilitado
                 btnEditVariants.classList.add('disabled');
                 btnEditVariants.style.pointerEvents = 'none';
                 btnEditVariants.style.opacity = '0.5';
@@ -1668,14 +1794,12 @@
             const activeVariant = currentVariants[currentVariantIndex];
 
             if (activeVariant && activeVariant.id && currentVariantIndex !== -1) {
-                // Variante seleccionada - HABILITAR
                 btnEditVariants.classList.remove('disabled');
                 btnEditVariants.style.pointerEvents = 'auto';
                 btnEditVariants.style.opacity = '1';
                 btnEditVariants.href =
                     `/admin/designs/${currentDesign.id}/variants/${activeVariant.id}/edit`;
             } else {
-                // No hay variante seleccionada - DESHABILITAR
                 btnEditVariants.classList.add('disabled');
                 btnEditVariants.style.pointerEvents = 'none';
                 btnEditVariants.style.opacity = '0.5';
@@ -1684,7 +1808,7 @@
         }
 
         // ============================================
-        // FUNCIÓN: MOSTRAR IMAGEN PRINCIPAL (FIX TOTAL)
+        // FUNCIÓN: MOSTRAR IMAGEN PRINCIPAL
         // ============================================
         function displayMainImage({
             src,
@@ -1701,17 +1825,14 @@
             const backBtn = document.getElementById('btnBackToMainImage');
             const thumbnail = document.getElementById('mainImageThumbnail');
 
-            // RESET TOTAL (CLAVE) - Forzar ocultación
             img.style.display = 'none';
             img.src = '';
             noImg.style.setProperty('display', 'none', 'important');
             downloadBtn.style.display = 'none';
 
-            // Textos - TÍTULO SIEMPRE EN MAYÚSCULAS
             if (title) titleEl.innerText = title.toUpperCase();
             descEl.innerText = subtitle;
 
-            // Control del botón "Volver a imagen principal"
             if (showBackButton && currentDesign?.primaryImage?.file_path) {
                 thumbnail.src = `/storage/${currentDesign.primaryImage.file_path}`;
                 backBtn.style.display = 'block';
@@ -1751,7 +1872,10 @@
             isViewingDesignImage = true;
             currentGalleryImages = [];
             currentGalleryIndex = 0;
-            currentVariantIndex = -1; // Reset variant index
+            currentVariantIndex = -1;
+
+            document.getElementById('modalVariantId').value = '';
+            updateProductionContext();
 
             if (currentDesign.primaryImage?.file_path) {
                 const ext = currentDesign.primaryImage.file_path.split('.').pop();
@@ -1772,28 +1896,50 @@
                 });
             }
 
-            // FOCUS RESET: Remover clase active de TODOS los variant tabs
             document.querySelectorAll('.variant-tab').forEach(tab => {
                 tab.classList.remove('active');
             });
 
-            // LIMPIAR GALERÍA COMPLETAMENTE - Mostrar estado vacío
             const gallery = document.getElementById('variantGallery');
             if (gallery) {
                 gallery.innerHTML =
-                    '<div class="empty-state-minimal"><i class="fas fa-images"></i><p>No hay imágenes.</p></div>';
+                    '<div class="gallery-empty-state"><i class="fas fa-images"></i><p>No hay imágenes.</p></div>';
             }
             document.getElementById('galleryCount').innerText = '0';
 
-            // Restaurar info del diseño principal
             updateVariantInfoForDesign();
-
-            // Deshabilitar botón editar variante
             updateEditVariantsButton();
+
+            // Si la pestaña de producción está activa, recargar los datos del diseño principal
+            if ($('#production-tab').hasClass('active') || $('#production-content').hasClass('active show')) {
+                // Disparar evento para que production-tab.blade.php recargue los datos
+                if (typeof loadProductionData === 'function') {
+                    loadProductionData();
+                }
+            }
         }
 
         // ============================================
-        // FUNCIÓN: MOSTRAR IMAGEN DE VARIANTE (FOTO 1, 2, 3…)
+        // FUNCIÓN: ACTUALIZAR CONTEXTO DE PRODUCCIÓN
+        // ============================================
+        function updateProductionContext() {
+            const contextEl = document.getElementById('productionContext');
+            if (!contextEl) return;
+
+            const variantId = document.getElementById('modalVariantId').value;
+
+            if (variantId && variantId !== '') {
+                const variantName = document.getElementById('variantName').innerText;
+                contextEl.innerHTML = 'Variante: <strong>' + variantName + '</strong>';
+            } else if (currentDesign) {
+                contextEl.innerHTML = 'Diseño: <strong>' + currentDesign.name.toUpperCase() + '</strong>';
+            } else {
+                contextEl.innerHTML = 'Cargando...';
+            }
+        }
+
+        // ============================================
+        // FUNCIÓN: MOSTRAR IMAGEN DE VARIANTE
         // ============================================
         function showVariantImage(variant, images, index) {
             const img = images[index];
@@ -1820,15 +1966,12 @@
                 showBackButton: true
             });
 
-            // Actualizar clase active en galería
             updateGalleryActiveState(index);
-
-            // Hacer scroll automático a la imagen activa en la galería
             scrollGalleryItemIntoView(index);
         }
 
         // ============================================
-        // FUNCIÓN: HACER SCROLL A ITEM DE GALERÍA
+        // FUNCIÓN: SCROLL A ITEM DE GALERÍA
         // ============================================
         function scrollGalleryItemIntoView(index) {
             const gallery = document.getElementById('variantGallery');
@@ -1839,7 +1982,6 @@
 
             const item = items[index];
             if (item) {
-                // Usar scrollIntoView con comportamiento suave
                 item.scrollIntoView({
                     behavior: 'smooth',
                     block: 'nearest',
@@ -1863,28 +2005,33 @@
         }
 
         // ============================================
-        // FUNCIÓN: RENDERIZAR MODAL COMPLETO - MODIFICADO PARA NO TENER FOCUS INICIAL
+        // FUNCIÓN: RENDERIZAR MODAL COMPLETO
         // ============================================
         function renderModal(design) {
             currentDesign = design;
             currentVariants = design.variants || [];
-            currentVariantIndex = -1; // Mantenemos -1 para indicar que NO hay variante seleccionada inicialmente
+            currentVariantIndex = -1;
             currentGalleryImages = [];
             currentGalleryIndex = 0;
             isViewingDesignImage = true;
 
-            // 1. DATOS DEL DISEÑO
+            // Datos del diseño
             document.getElementById('modalDesignTitle').innerText = design.name;
             document.getElementById('modalDesignDesc').innerText = design.description || 'Sin descripción';
 
-            // 2. BOTONES DE ACCIÓN DISEÑO
+            // Campos ocultos para producción
+            document.getElementById('modalDesignId').value = design.id;
+            document.getElementById('modalVariantId').value = '';
+
+            updateProductionContext();
+
+            // Botones de acción
             document.getElementById('btnEditDesign').href = `/admin/designs/${design.id}/edit`;
             const deleteBtn = document.getElementById('btnDeleteDesign');
             deleteBtn.onclick = () => confirmDeleteDesign(`/admin/designs/${design.id}`);
-
             document.getElementById('btnAddVariant').href = `/admin/designs/${design.id}/variants/create`;
 
-            // ¡¡¡PUNTO CRÍTICO CORREGIDO!!! - SIEMPRE MOSTRAR IMAGEN PRINCIPAL
+            // Imagen principal
             if (design.primaryImage?.file_path) {
                 const ext = design.primaryImage.file_path.split('.').pop();
                 displayMainImage({
@@ -1902,10 +2049,15 @@
                 });
             }
 
-            // 3. ACTUALIZAR CONTADOR DE VARIANTES (NUEVO)
-            document.getElementById('variantsTotalCount').innerText = currentVariants.length;
+            // Contadores
+            const variantsCount = currentVariants.length;
+            document.getElementById('variantsTotalCount').innerText = variantsCount;
+            document.getElementById('variantsContentCount').innerText = variantsCount;
 
-            // 4. RENDERIZAR TABS DE VARIANTES
+            const exportsCount = design.exports_count || 0;
+            document.getElementById('productionTotalCount').innerText = exportsCount;
+
+            // Renderizar tabs de variantes
             const tabsContainer = document.getElementById('variantTabs');
 
             if (currentVariants.length > 0) {
@@ -1913,7 +2065,6 @@
                     let thumbSrc = '';
                     let hasImage = false;
 
-                    // Usar la primera imagen de la variante o imagen principal del diseño
                     if (variant.images && variant.images.length > 0 && variant.images[0].file_path) {
                         thumbSrc = `/storage/${variant.images[0].file_path}`;
                         hasImage = true;
@@ -1944,19 +2095,18 @@
                     tabsContainer.appendChild(tab);
                 });
 
-                // ¡¡¡IMPORTANTE!!! NO marcar ningún tab como activo inicialmente
-                // Solo se marcará como activo cuando el usuario haga clic o use las flechas
+                document.getElementById('variantGallery').innerHTML =
+                    '<div class="gallery-empty-state"><i class="fas fa-images"></i><p>No hay imágenes.</p></div>';
 
-                // Actualizar información para mostrar que estamos viendo el diseño
                 updateVariantInfoForDesign();
             } else {
                 tabsContainer.innerHTML =
-                    '<div class="empty-state-minimal d-flex flex-column align-items-center justify-content-center text-center w-100" style="min-height: 120px; padding: 10px; color: #94a3b8;">' +
+                    '<div class="empty-state-minimal d-flex flex-column align-items-center justify-content-center text-center w-100" style="min-height: 100px; padding: 10px; color: #94a3b8;">' +
                     '<i class="fas fa-layer-group mb-2" style="font-size: 18px; opacity: 0.5;"></i>' +
                     '<p class="m-0" style="font-size: 13px; font-weight: 400;">Sin variantes. Añade una.</p>' +
                     '</div>';
                 document.getElementById('variantGallery').innerHTML =
-                    '<div class="empty-state-minimal"><i class="fas fa-images"></i><p>No hay imágenes.</p></div>';
+                    '<div class="gallery-empty-state"><i class="fas fa-images"></i><p>No hay imágenes.</p></div>';
                 document.getElementById('galleryCount').innerText = '0';
                 document.getElementById('variantName').innerText = 'Sin variantes';
                 document.getElementById('variantPrice').innerText = '$0.00';
@@ -1964,7 +2114,6 @@
                 currentGalleryImages = [];
             }
 
-            // Inicializar botón editar variante como deshabilitado
             updateEditVariantsButton();
         }
 
@@ -1975,8 +2124,6 @@
             document.getElementById('variantName').innerText = 'Diseño Principal';
             document.getElementById('variantPrice').innerText = '$0.00';
             document.getElementById('variantSku').innerText = 'SKU: ---';
-
-            // Actualizar contador de galería a 0 (porque no hay variante seleccionada)
             document.getElementById('galleryCount').innerText = '0';
         }
 
@@ -1992,13 +2139,12 @@
             currentVariantIndex = index;
             isViewingDesignImage = false;
 
-            // 1. Actualizar UI de Tabs
+            // Actualizar UI de Tabs
             const tabs = document.querySelectorAll('.variant-tab');
             tabs.forEach((t, i) => {
                 t.classList.toggle('active', i === index);
             });
 
-            // Auto-scroll al tab activo
             if (tabs[index]) {
                 tabs[index].scrollIntoView({
                     behavior: 'smooth',
@@ -2007,27 +2153,26 @@
                 });
             }
 
-            // 2. Actualizar Información de Variante (UPPERCASE)
+            // Actualizar info de variante
             document.getElementById('variantName').innerText = variant.name.toUpperCase();
             document.getElementById('variantPrice').innerText = variant.price ? `$${parseFloat(variant.price).toFixed(2)}` :
                 '$0.00';
             document.getElementById('variantSku').innerText = `SKU: ${variant.sku || '---'}`;
 
-            // 3. Actualizar Galería de Imágenes
-            const images = variant.images || [];
+            // Actualizar campo oculto para producción
+            document.getElementById('modalVariantId').value = variant.id;
+            updateProductionContext();
 
-            // ACTUALIZAR ESTADO GLOBAL
+            // Actualizar galería
+            const images = variant.images || [];
             currentGalleryImages = images;
             currentGalleryIndex = 0;
-
-            // Actualizar contador de galería (solo número para el badge)
             document.getElementById('galleryCount').innerText = images.length;
 
             const gallery = document.getElementById('variantGallery');
             gallery.innerHTML = '';
 
             if (images.length > 0) {
-                // PRIMERO: Renderizar grid de galería
                 images.forEach((img, imgIndex) => {
                     if (img && img.file_path) {
                         const item = document.createElement('div');
@@ -2049,13 +2194,10 @@
                     }
                 });
 
-                // DESPUÉS: Mostrar primera imagen en principal (ahora sí marca activa)
                 showVariantImage(variant, images, 0);
             } else {
-                // No hay imágenes en la variante
                 gallery.innerHTML =
-                    '<div class="empty-state-minimal col-12"><i class="fas fa-images"></i><p>No hay imágenes.</p></div>';
-                // Mostrar imagen principal del diseño
+                    '<div class="gallery-empty-state"><i class="fas fa-images"></i><p>No hay imágenes.</p></div>';
                 if (currentDesign.primaryImage?.file_path) {
                     const ext = currentDesign.primaryImage.file_path.split('.').pop();
                     displayMainImage({
@@ -2075,25 +2217,22 @@
                 currentGalleryImages = [];
             }
 
-            // Actualizar botón editar variante (ahora debería estar habilitado)
             updateEditVariantsButton();
         }
 
         // ============================================
-        // FUNCIÓN: NAVEGAR ENTRE VARIANTES (TABS) - EFECTO CIRCULAR CORREGIDO
+        // FUNCIÓN: NAVEGAR ENTRE VARIANTES
         // ============================================
         function navigateVariant(direction) {
             if (isProcessingDelete || currentVariants.length === 0) return;
 
             let newIndex;
 
-            // Si no hay variante seleccionada (currentVariantIndex = -1), comenzar en el primer item (índice 0)
             if (currentVariantIndex === -1) {
                 newIndex = 0;
             } else {
                 newIndex = currentVariantIndex + direction;
 
-                // Efecto circular
                 if (newIndex < 0) {
                     newIndex = currentVariants.length - 1;
                 } else if (newIndex >= currentVariants.length) {
@@ -2105,25 +2244,15 @@
         }
 
         // ============================================
-        // FUNCIÓN: NAVEGAR ENTRE IMÁGENES DE GALERÍA - SOLO IMÁGENES (NO VARIANTES)
+        // FUNCIÓN: NAVEGAR ENTRE IMÁGENES
         // ============================================
         function navigateGalleryImage(direction) {
             if (isProcessingDelete) return;
+            if (isViewingDesignImage) return;
+            if (currentGalleryImages.length <= 1) return;
 
-            // Si estamos viendo la imagen del diseño, no hacer nada (las flechas de galería no aplican)
-            if (isViewingDesignImage) {
-                return;
-            }
-
-            // Si no hay imágenes en la galería o solo hay una, no navegar
-            if (currentGalleryImages.length <= 1) {
-                return;
-            }
-
-            // Navegar entre imágenes de la galería con efecto circular
             let newIndex = currentGalleryIndex + direction;
 
-            // Efecto circular
             if (newIndex < 0) {
                 newIndex = currentGalleryImages.length - 1;
             } else if (newIndex >= currentGalleryImages.length) {
@@ -2131,73 +2260,45 @@
             }
 
             currentGalleryIndex = newIndex;
-
             const variant = currentVariants[currentVariantIndex];
             showVariantImage(variant, currentGalleryImages, currentGalleryIndex);
         }
 
         // ============================================
-        // FUNCIÓN: MOSTRAR ESTADO DE CARGA
+        // FUNCIONES DE CARGA
         // ============================================
         function showLoadingState() {
             isProcessingDelete = true;
-
-            const modal = document.getElementById('designModal');
             const loadingOverlay = document.getElementById('loadingOverlay');
             const confirmBtn = document.getElementById('confirmDeleteBtn');
 
-            if (modal) {
-                modal.classList.add('disabled');
-            }
-
             if (loadingOverlay) {
                 loadingOverlay.style.display = 'flex';
-                loadingOverlay.classList.add('fade-in');
             }
 
             if (confirmBtn) {
                 confirmBtn.classList.add('loading');
                 confirmBtn.disabled = true;
             }
-
-            // Deshabilitar todas las interacciones del modal principal
-            document.querySelectorAll('#designModal button, #designModal a').forEach(el => {
-                el.style.pointerEvents = 'none';
-            });
         }
 
-        // ============================================
-        // FUNCIÓN: OCULTAR ESTADO DE CARGA
-        // ============================================
         function hideLoadingState() {
             isProcessingDelete = false;
-
-            const modal = document.getElementById('designModal');
             const loadingOverlay = document.getElementById('loadingOverlay');
             const confirmBtn = document.getElementById('confirmDeleteBtn');
 
-            if (modal) {
-                modal.classList.remove('disabled');
-            }
-
             if (loadingOverlay) {
                 loadingOverlay.style.display = 'none';
-                loadingOverlay.classList.remove('fade-in');
             }
 
             if (confirmBtn) {
                 confirmBtn.classList.remove('loading');
                 confirmBtn.disabled = false;
             }
-
-            // Rehabilitar todas las interacciones del modal principal
-            document.querySelectorAll('#designModal button, #designModal a').forEach(el => {
-                el.style.pointerEvents = 'auto';
-            });
         }
 
         // ============================================
-        // FUNCIÓN: ABRIR MODAL DE CONFIRMACIÓN ELIMINAR
+        // FUNCIONES DE ELIMINACIÓN
         // ============================================
         function confirmDeleteDesign(url) {
             if (isProcessingDelete) return;
@@ -2218,25 +2319,17 @@
             $('#deleteConfirmModal').modal('show');
         }
 
-        // ============================================
-        // FUNCIÓN: EJECUTAR ELIMINACIÓN
-        // ============================================
         function executeDelete() {
             if (!pendingDeleteUrl || isProcessingDelete) return;
 
-            // Cerrar modal de confirmación
             $('#deleteConfirmModal').modal('hide');
-
-            // Mostrar estado de carga premium
             showLoadingState();
 
-            // Crear formulario tradicional (manteniendo compatibilidad)
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = pendingDeleteUrl;
             form.style.display = 'none';
 
-            // Agregar CSRF token y método DELETE
             const csrfToken = document.querySelector('meta[name="csrf-token"]');
             if (csrfToken) {
                 const csrfInput = document.createElement('input');
@@ -2252,30 +2345,13 @@
             methodInput.value = 'DELETE';
             form.appendChild(methodInput);
 
-            // Agregar formulario al DOM y enviar
             document.body.appendChild(form);
 
-            // Pequeño delay para mostrar el estado de carga
             setTimeout(() => {
                 form.submit();
-
-                // Si por algún motivo el submit no redirige, mostrar mensaje después de 10 segundos
-                setTimeout(() => {
-                    if (isProcessingDelete) {
-                        hideLoadingState();
-                        showErrorAlert(
-                            'Tiempo de espera agotado',
-                            'La eliminación está tomando más tiempo de lo esperado. Por favor intenta nuevamente.'
-                        );
-                    }
-                }, 10000);
-
             }, 500);
         }
 
-        // ============================================
-        // FUNCIÓN: MOSTRAR ALERTA DE ERROR
-        // ============================================
         function showErrorAlert(title, message) {
             Swal.fire({
                 icon: 'error',
@@ -2283,18 +2359,65 @@
                 text: message,
                 showConfirmButton: true,
                 confirmButtonColor: '#2563eb',
-                confirmButtonText: 'Entendido',
-                customClass: {
-                    confirmButton: 'btn-premium-primary'
-                }
+                confirmButtonText: 'Entendido'
             });
         }
 
         // ============================================
-        // EVENT LISTENERS AL CARGAR EL DOM
+        // ACTUALIZACIÓN EN TIEMPO REAL DE EXPORTACIONES
+        // ============================================
+        function updateExportsCounter(designId) {
+            fetch(`/admin/designs/${designId}/exports-count`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const count = data.count || 0;
+
+                        // Actualizar tarjeta en el grid
+                        const card = document.querySelector(`.design-card[data-design-id="${designId}"]`);
+                        if (card) {
+                            card.dataset.exports = count;
+
+                            const exportsDiv = card.querySelector('.design-exports');
+                            if (exportsDiv) {
+                                exportsDiv.querySelector('.exports-number').textContent = count;
+                                exportsDiv.querySelector('.exports-text').textContent =
+                                    count !== 1 ? 'exportaciones' : 'exportación';
+
+                                // Animación
+                                exportsDiv.classList.add('updated');
+                                setTimeout(() => exportsDiv.classList.remove('updated'), 400);
+                            }
+                        }
+
+                        // Actualizar contador en el tab de producción
+                        const productionCount = document.getElementById('productionTotalCount');
+                        if (productionCount) {
+                            productionCount.innerText = count;
+                        }
+
+                        // Actualizar currentDesign
+                        if (currentDesign && currentDesign.id == designId) {
+                            currentDesign.exports_count = count;
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error actualizando contador:', error);
+                });
+        }
+
+        // Escuchar eventos de exportación
+        $(document).on('exportCreated exportDeleted exportUpdated', function(event, data) {
+            if (data && data.designId) {
+                updateExportsCounter(data.designId);
+            }
+        });
+
+        // ============================================
+        // EVENT LISTENERS
         // ============================================
         document.addEventListener('DOMContentLoaded', function() {
-            // Listener para confirmar eliminación
             const confirmBtn = document.getElementById('confirmDeleteBtn');
             if (confirmBtn) {
                 confirmBtn.addEventListener('click', function() {
@@ -2302,7 +2425,6 @@
                 });
             }
 
-            // Listener para teclas de navegación
             document.addEventListener('keydown', function(e) {
                 if ($('#designModal').hasClass('show') && !isProcessingDelete) {
                     if (e.key === 'ArrowLeft') {
@@ -2313,7 +2435,6 @@
                 }
             });
 
-            // Prevenir cierre del modal durante procesamiento
             $('#designModal').on('hide.bs.modal', function(e) {
                 if (isProcessingDelete) {
                     e.preventDefault();
@@ -2321,7 +2442,6 @@
                 }
             });
 
-            // Resetear estado cuando se cierra el modal de confirmación
             $('#deleteConfirmModal').on('hidden.bs.modal', function() {
                 if (!isProcessingDelete) {
                     pendingDeleteUrl = null;
@@ -2333,10 +2453,33 @@
                 }
             });
 
-            // Resetear estado cuando se cierra el modal principal
             $('#designModal').on('hidden.bs.modal', function() {
                 hideLoadingState();
                 pendingDeleteUrl = null;
+            });
+
+            // ============================================
+            // CORRECCIÓN DE ACCESIBILIDAD PARA MODALES
+            // ============================================
+            // Prevenir el warning de accesibilidad en modales
+            // Se maneja dinámicamente el atributo aria-hidden en el wrapper
+            $('#designModal').on('show.bs.modal', function() {
+                // Remover aria-hidden del wrapper cuando el modal se abre
+                $('.wrapper').removeAttr('aria-hidden');
+            });
+
+            $('#designModal').on('hidden.bs.modal', function() {
+                // Restaurar aria-hidden cuando el modal se cierra
+                $('.wrapper').attr('aria-hidden', 'true');
+            });
+
+            // También aplicar al modal de confirmación de eliminación
+            $('#deleteConfirmModal').on('show.bs.modal', function() {
+                $('.wrapper').removeAttr('aria-hidden');
+            });
+
+            $('#deleteConfirmModal').on('hidden.bs.modal', function() {
+                $('.wrapper').attr('aria-hidden', 'true');
             });
         });
     </script>
@@ -2349,10 +2492,7 @@
                 title: '¡Éxito!',
                 text: "{{ session('success') }}",
                 timer: 4000,
-                showConfirmButton: false,
-                customClass: {
-                    popup: 'fade-in'
-                }
+                showConfirmButton: false
             });
         </script>
     @endif
@@ -2365,11 +2505,7 @@
                 title: '¡Error!',
                 text: "{{ session('error') }}",
                 showConfirmButton: true,
-                confirmButtonColor: '#2563eb',
-                customClass: {
-                    popup: 'shake',
-                    confirmButton: 'btn-premium-primary'
-                }
+                confirmButtonColor: '#2563eb'
             });
         </script>
     @endif
