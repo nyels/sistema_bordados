@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Image;
 use App\Services\DesignService;
 use App\Services\ImageService;
+use App\Services\Search\SearchService;
 use App\Http\Requests\StoreDesignRequest;
 use App\Http\Requests\UpdateDesignRequest;
 use Illuminate\Http\Request;
@@ -20,11 +21,13 @@ class DesignController extends Controller
 {
     protected $designService;
     protected $imageService;
+    protected $searchService;
 
-    public function __construct(DesignService $designService, ImageService $imageService)
+    public function __construct(DesignService $designService, ImageService $imageService, SearchService $searchService)
     {
         $this->designService = $designService;
         $this->imageService = $imageService;
+        $this->searchService = $searchService;
         $this->middleware('secure.file.upload')->only(['store', 'update']);
     }
 
@@ -35,8 +38,32 @@ class DesignController extends Controller
                 ->with(['categories', 'primaryImage', 'variants', 'variants.primaryImage'])
                 ->where('is_active', true);
 
+            // Variable para almacenar IDs de búsqueda (usada también en conteo de categorías)
+            $matchingIds = [];
+
+            // Búsqueda avanzada con normalización española
             if ($request->filled('search')) {
-                $baseQuery->where('name', 'like', '%' . $request->search . '%');
+                $searchTerm = $request->search;
+
+                // Obtener IDs que coinciden con búsqueda normalizada
+                $matchingIds = $this->searchService->getMatchingIds(
+                    $searchTerm,
+                    Design::class,
+                    ['limit' => 500]
+                );
+
+                if (!empty($matchingIds)) {
+                    // Usar los IDs encontrados, mantener relevancia
+                    $idsString = implode(',', $matchingIds);
+                    $baseQuery->whereIn('id', $matchingIds)
+                              ->orderByRaw("FIELD(id, {$idsString})");
+                } else {
+                    // Fallback: búsqueda LIKE tradicional si el índice no tiene resultados
+                    $baseQuery->where(function ($q) use ($searchTerm) {
+                        $q->where('name', 'like', "%{$searchTerm}%")
+                          ->orWhere('description', 'like', "%{$searchTerm}%");
+                    });
+                }
             }
 
             $activeCategory = null;
@@ -66,8 +93,14 @@ class DesignController extends Controller
                 $countQuery = Design::query()
                     ->where('is_active', true);
 
-                if ($request->filled('search')) {
-                    $countQuery->where('name', 'like', '%' . $request->search . '%');
+                // Usar misma lógica de búsqueda avanzada para el conteo
+                if ($request->filled('search') && !empty($matchingIds)) {
+                    $countQuery->whereIn('id', $matchingIds);
+                } elseif ($request->filled('search')) {
+                    $countQuery->where(function ($q) use ($request) {
+                        $q->where('name', 'like', '%' . $request->search . '%')
+                          ->orWhere('description', 'like', '%' . $request->search . '%');
+                    });
                 }
 
                 $categoryCounts[$category->id] = $countQuery
