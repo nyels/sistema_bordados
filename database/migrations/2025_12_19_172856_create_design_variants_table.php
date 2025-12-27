@@ -52,6 +52,8 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::disableForeignKeyConstraints();
         Schema::dropIfExists('design_variants');
+        Schema::enableForeignKeyConstraints();
     }
 };

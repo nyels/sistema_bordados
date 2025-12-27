@@ -1,6 +1,6 @@
 @extends('adminlte::page')
 
-@section('title', 'GIRO')
+@section('title', 'EDITAR GIRO')
 
 @section('content_header')
 @stop
