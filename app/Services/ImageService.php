@@ -7,10 +7,16 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use ColorThief\ColorThief; // <--- SE ADAPTA: Importación de la librería instalada
+use ColorThief\ColorThief;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 
 class ImageService
 {
+    // Configuración de thumbnails
+    const THUMBNAIL_SMALL = 150;   // Para listados/grids
+    const THUMBNAIL_MEDIUM = 400;  // Para galerías/modales
+    const WEBP_QUALITY = 85;       // Calidad WebP (80-90 es óptimo)
     /**
      * Mapeo de tipos MIME a extensiones correctas
      */
@@ -232,6 +238,18 @@ class ImageService
             }
 
             Log::info('Imagen registrada con ID: ' . $image->id);
+
+            // Generar thumbnails optimizados (en segundo plano, no bloquea)
+            if ($detectedType === 'image' && $imageSize !== false) {
+                try {
+                    $this->generateThumbnails($image, $fullPath);
+                    Log::info('Thumbnails generados para imagen ID: ' . $image->id);
+                } catch (\Exception $e) {
+                    Log::warning('No se pudieron generar thumbnails: ' . $e->getMessage());
+                    // No lanzar excepción - la imagen original ya está guardada
+                }
+            }
+
             Log::info('=== FIN SUBIDA DE IMAGEN EXITOSA ===');
 
             return $image;
@@ -333,6 +351,17 @@ class ImageService
     private function deleteThumbnails(Image $image): void
     {
         try {
+            // Eliminar thumbnails nuevos (WebP)
+            if ($image->thumbnail_small) {
+                Storage::disk('public')->delete($image->thumbnail_small);
+                Log::info('Thumbnail small eliminado: ' . $image->thumbnail_small);
+            }
+            if ($image->thumbnail_medium) {
+                Storage::disk('public')->delete($image->thumbnail_medium);
+                Log::info('Thumbnail medium eliminado: ' . $image->thumbnail_medium);
+            }
+
+            // Compatibilidad con thumbnails antiguos
             $pathInfo = pathinfo($image->file_path);
             $sizes = ['small', 'medium', 'large'];
 
@@ -340,11 +369,64 @@ class ImageService
                 $thumbnailPath = "designs/thumbnails/{$size}/" . $pathInfo['basename'];
                 if (Storage::disk('public')->exists($thumbnailPath)) {
                     Storage::disk('public')->delete($thumbnailPath);
-                    Log::info('Thumbnail eliminado: ' . $thumbnailPath);
+                    Log::info('Thumbnail legacy eliminado: ' . $thumbnailPath);
                 }
             }
         } catch (\Exception $e) {
             Log::warning('Error al eliminar thumbnails: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Genera thumbnails optimizados en formato WebP.
+     * Se mantiene la imagen original intacta para descargas.
+     */
+    private function generateThumbnails(Image $image, string $originalFullPath): void
+    {
+        try {
+            $manager = new ImageManager(new Driver());
+            $img = $manager->read($originalFullPath);
+
+            $directory = dirname($image->file_path);
+            $baseName = pathinfo($image->file_name, PATHINFO_FILENAME);
+            $timestamp = time();
+            $storagePath = Storage::disk('public')->path($directory);
+
+            // Asegurar que el directorio existe
+            if (!is_dir($storagePath)) {
+                mkdir($storagePath, 0755, true);
+            }
+
+            // Thumbnail pequeño (150px) - para grids/listados
+            $smallFileName = "{$baseName}_{$timestamp}_thumb_sm.webp";
+            $smallPath = "{$directory}/{$smallFileName}";
+            $smallImage = clone $img;
+            $smallImage->scaleDown(width: self::THUMBNAIL_SMALL);
+            $smallImage->toWebp(self::WEBP_QUALITY)->save("{$storagePath}/{$smallFileName}");
+
+            // Thumbnail mediano (400px) - para galerías/modales
+            $mediumFileName = "{$baseName}_{$timestamp}_thumb_md.webp";
+            $mediumPath = "{$directory}/{$mediumFileName}";
+            $mediumImage = clone $img;
+            $mediumImage->scaleDown(width: self::THUMBNAIL_MEDIUM);
+            $mediumImage->toWebp(self::WEBP_QUALITY)->save("{$storagePath}/{$mediumFileName}");
+
+            // Actualizar modelo con rutas de thumbnails
+            $image->update([
+                'thumbnail_small' => $smallPath,
+                'thumbnail_medium' => $mediumPath,
+                'original_size' => filesize($originalFullPath),
+                'is_optimized' => true,
+            ]);
+
+            Log::info('Thumbnails generados', [
+                'image_id' => $image->id,
+                'small' => $smallPath,
+                'medium' => $mediumPath,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error generando thumbnails: ' . $e->getMessage());
+            throw $e;
         }
     }
 }

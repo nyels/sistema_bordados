@@ -6,6 +6,51 @@
 @section('adminlte_css')
     @stack('css')
     @yield('css')
+    <style>
+        /* Universal Premium Modal Close Button (Apple Style) */
+        .modal-close-premium {
+            position: absolute;
+            top: -15px;
+            right: -15px;
+            width: 45px;
+            height: 45px;
+            background: #2563eb;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1070;
+            padding: 0;
+        }
+
+        .modal-close-premium:hover {
+            background: #1d4ed8;
+            transform: scale(1.1) rotate(90deg);
+            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.5);
+            color: #fff;
+        }
+
+        .modal-close-premium:focus {
+            outline: none;
+        }
+
+        /* Responsive adjustments for mobile */
+        @media (max-width: 576px) {
+            .modal-close-premium {
+                width: 38px;
+                height: 38px;
+                top: -10px;
+                right: -10px;
+                font-size: 16px;
+            }
+        }
+    </style>
 @stop
 
 @section('classes_body', $layoutHelper->makeBodyClasses())

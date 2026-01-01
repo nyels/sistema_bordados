@@ -123,6 +123,57 @@ class DesignController extends Controller
         }
     }
 
+    /**
+     * Obtener listado de diseños vía AJAX (para búsqueda sin reload).
+     * Soporta filtro por categoría.
+     */
+    public function ajaxList(Request $request)
+    {
+        try {
+            $query = Design::with(['primaryImage', 'categories', 'variants', 'exports'])
+                ->where('is_active', true);
+
+            // Filtro por categoría si se especifica
+            if ($request->filled('category')) {
+                $query->whereHas('categories', function ($q) use ($request) {
+                    $q->where('slug', $request->category);
+                });
+            }
+
+            $designs = $query->orderByDesc('created_at')
+                ->limit(100)
+                ->get();
+
+            $formattedDesigns = $designs->map(function ($design) {
+                return [
+                    'id' => $design->id,
+                    'name' => $design->name,
+                    'slug' => $design->slug,
+                    'description' => $design->description,
+                    'image' => $design->primaryImage
+                        ? asset('storage/' . $design->primaryImage->file_path)
+                        : null,
+                    'categories' => $design->categories->pluck('name')->toArray(),
+                    'variants_count' => $design->variants->count(),
+                    'exports_count' => $design->exports->count(),
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $formattedDesigns,
+                'total' => $formattedDesigns->count(),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error en ajaxList: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al cargar diseños',
+                'data' => [],
+            ], 500);
+        }
+    }
+
     public function show(Design $design)
     {
         try {
@@ -135,15 +186,22 @@ class DesignController extends Controller
                 'variants.attributeValues'
             ]);
 
+            // Cargar conteos de exports (todas las exportaciones del diseño)
+            $design->loadCount('exports');
+
             $formattedDesign = [
                 'id' => $design->id,
                 'name' => $design->name,
                 'slug' => $design->slug,
                 'description' => $design->description,
                 'is_active' => $design->is_active,
+                'variants_count' => $design->variants->count(),
+                'exports_count' => $design->exports_count ?? 0,
                 'primaryImage' => $design->primaryImage ? [
                     'id' => $design->primaryImage->id,
                     'file_path' => $design->primaryImage->file_path,
+                    'thumbnail_small' => $design->primaryImage->thumbnail_small,
+                    'thumbnail_medium' => $design->primaryImage->thumbnail_medium,
                     'alt_text' => $design->primaryImage->alt_text,
                     'is_primary' => $design->primaryImage->is_primary,
                     'order' => $design->primaryImage->order
@@ -161,6 +219,8 @@ class DesignController extends Controller
                             return [
                                 'id' => $image->id,
                                 'file_path' => $image->file_path,
+                                'thumbnail_small' => $image->thumbnail_small,
+                                'thumbnail_medium' => $image->thumbnail_medium,
                                 'alt_text' => $image->alt_text,
                                 'is_primary' => $image->is_primary,
                                 'order' => $image->order

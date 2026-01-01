@@ -1,19 +1,18 @@
 @extends('adminlte::page')
 
-@section('title', 'Editar Variante - ' . $design->name)
-
+@section('title', 'Editar Variante - ' . str_replace('_', ' ', strtoupper($design->name)))
 @section('content_header')
     <div class="d-flex justify-content-between align-items-center mb-2">
         <div>
             <h1 class="text-2xl font-weight-semibold text-gray-800">
-                Editar Variante <small class="text-muted">{{ $variant->sku }}</small>
+                Editar Variante <small class="text-muted">{{ str_replace('_', ' ', $variant->sku) }}</small>
             </h1>
             <p class="text-sm text-muted mb-0">
                 Diseño: <a href="{{ route('admin.designs.index') }}">{{ $design->name }}</a>
             </p>
         </div>
-        <div class="d-flex gap-2">
-            <a id="back-btn" href="{{ route('admin.designs.index') }}" class="btn btn-secondary btn-md px-3 mr-2">
+        <div class="flex gap-2">
+            <a id="back-btn" href="{{ route('admin.designs.index') }}" class="btn btn-secondary btn-md px-3">
                 <i class="fas fa-arrow-left"></i> Regresar
             </a>
             <button id="submitBtn" form="variant-form" type="submit" class="btn btn-primary btn-md px-3">
@@ -25,7 +24,7 @@
 
 @section('content')
     {{-- ============================================
-         SPINNER PREMIUM CON BARRA DE PROGRESO (NUEVO)
+         SPINNER PREMIUM CON BARRA DE PROGRESO
          ============================================ --}}
     <div class="modal-loading-overlay" id="loadingOverlay">
         <div class="modal-loading-content">
@@ -58,14 +57,12 @@
             {{-- COLUMNA IZQUIERDA: GALERÍA CON SISTEMA PREMIUM --}}
             <div class="col-lg-5">
                 <div class="surface">
-                    <h5 class="mb-3">
+                    <h5 class="section-title mb-3">
                         <i class="fas fa-images text-primary"></i> Galería de la variante
                     </h5>
 
-                    {{-- ============================================
-                         DROPZONE COMPACTO PREMIUM (ACTUALIZADO)
-                         ============================================ --}}
-                    <div class="alert alert-info mb-3" style="font-size: 13px; padding: 10px;">
+                    {{-- DROPZONE COMPACTO PREMIUM --}}
+                    <div class="alert alert-info alert-modern mb-3">
                         <i class="fas fa-info-circle"></i>
                         Puedes agregar hasta 10 imágenes nuevas (máx. 10MB c/u) para esta variante.
                     </div>
@@ -86,13 +83,6 @@
                         </div>
                     </div>
 
-                    {{-- Contenedor scrolleable para las imágenes con analizador --}}
-                    <div id="imagesScrollContainer" class="images-scroll-container">
-                        <div id="imagesGrid" class="images-analysis-grid">
-                            {{-- Aquí se agregan las imágenes nuevas con su info --}}
-                        </div>
-                    </div>
-
                     {{-- Resumen de archivos nuevos --}}
                     <div id="filesSummary" class="files-summary" style="display: none;">
                         <div class="summary-header">
@@ -109,6 +99,13 @@
                         </div>
                     </div>
 
+                    {{-- Contenedor scrolleable para las imágenes con analizador --}}
+                    <div id="imagesScrollContainer" class="images-scroll-container">
+                        <div id="imagesGrid" class="images-analysis-grid">
+                            {{-- Aquí se agregan las imágenes nuevas con su info --}}
+                        </div>
+                    </div>
+
                     {{-- Toast para mensajes --}}
                     <div id="appleToast" class="apple-toast">
                         <i class="fas fa-exclamation-circle"></i>
@@ -117,113 +114,91 @@
 
                     <hr class="my-4">
 
-                    {{-- ============================================
-                         IMÁGENES EXISTENTES (MANTENIDO CON FUNCIONALIDAD ORIGINAL)
-                         ============================================ --}}
-                    <h6 class="mb-3 text-muted">Imágenes Actuales ({{ $variant->images->count() }})</h6>
-                    <div class="existing-images-grid">
-                        @foreach ($variant->images as $image)
-                            <div class="image-card {{ $image->is_primary ? 'primary' : '' }}">
-                                <img src="{{ asset('storage/' . $image->file_path) }}" alt="Variante">
+                    {{-- SELECTOR DE IMAGEN PRINCIPAL (IMÁGENES EXISTENTES) --}}
+                    @if ($variant->images->count() > 0)
+                        <div class="mb-4">
+                            <label class="label">
+                                <i class="fas fa-star text-warning"></i> Imagen principal de la variante
+                            </label>
+                            <small class="hint mt-2">
+                                <i class="fas fa-info-circle text-info"></i> Haz clic en una imagen para establecerla como
+                                principal.
+                            </small>
+                            <input type="hidden" id="primary_image_id" name="primary_image_id"
+                                value="{{ $variant->images->firstWhere('is_primary', true)?->id ?? $variant->images->first()?->id }}">
 
-                                <div class="image-actions">
-                                    {{-- Botón Eliminar (FUNCIONALIDAD ORIGINAL MANTENIDA) --}}
-                                    <button type="button" class="btn btn-sm btn-danger btn-circle"
-                                        onclick="confirmDeleteImage('{{ route('admin.designs.variants.images.destroy', [$design, $variant, $image->id]) }}')"
-                                        title="Eliminar imagen">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                            <div class="primary-image-grid mt-2">
+                                @foreach ($variant->images as $image)
+                                    <div class="primary-image-option {{ $image->is_primary ? 'selected' : '' }}"
+                                        data-image-id="{{ $image->id }}"
+                                        onclick="selectExistingPrimaryImage({{ $image->id }})">
+                                        <img src="{{ $image->thumbnail_small ? asset('storage/' . $image->thumbnail_small) : asset('storage/' . $image->file_path) }}"
+                                            alt="{{ $image->alt_text ?? 'Imagen variante' }}">
 
-                                    {{-- Indicador Principal --}}
-                                    @if ($image->is_primary)
-                                        <span class="badge badge-primary primary-badge">Principal</span>
-                                    @endif
-                                </div>
+                                        <span class="image-number">{{ $loop->iteration }}</span>
+                                        <span class="selected-badge"><i class="fas fa-check"></i></span>
+                                        <span class="image-name">{{ $image->file_name }}</span>
+
+                                        {{-- Botón eliminar --}}
+                                        <button type="button" class="btn-delete-image"
+                                            onclick="event.stopPropagation(); confirmDeleteImage('{{ route('admin.designs.variants.images.destroy', [$design, $variant, $image->id]) }}')"
+                                            title="Eliminar imagen">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                @endforeach
                             </div>
-                        @endforeach
-                    </div>
+
+                        </div>
+                        <hr class="my-3">
+                    @endif
 
                 </div>
             </div>
 
-            {{-- COLUMNA DERECHA: DATOS (MANTENIDO SIN CAMBIOS) --}}
+            {{-- COLUMNA DERECHA: DATOS - ACTUALIZADO CON SKU IDÉNTICO AL CREATE --}}
             <div class="col-lg-7">
                 <div class="surface">
-                    <h5 class="mb-4 text-secondary">Información General</h5>
+                    <h5 class="section-title mb-4">
+                        <i class="fas fa-info-circle text-primary"></i> Información General
+                    </h5>
 
-                    {{-- SKU y Nombre --}}
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <label class="label">SKU (Código)</label>
-                            <input type="text" name="sku" class="input @error('sku') is-invalid @enderror"
-                                value="{{ old('sku', $variant->sku) }}" required>
-                            @error('sku')
-                                <span class="text-danger small">{{ $message }}</span>
-                            @enderror
-                        </div>
-                        <div class="col-md-8 mb-3">
-                            <label class="label">Nombre la variante</label>
-                            <input type="text" name="name" class="input @error('name') is-invalid @enderror"
-                                placeholder="Ej. Azul Marino XL" value="{{ old('name', $variant->name) }}" required>
-                            @error('name')
-                                <span class="text-danger small">{{ $message }}</span>
-                            @enderror
-                        </div>
+                    {{-- ============================================
+                         ACTUALIZADO: Campo de nombre IDÉNTICO al create
+                         ============================================ --}}
+                    <div class="mb-4">
+                        <label class="label">
+                            Nombre de la variante <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" id="variant_name" name="name"
+                            class="input @error('name') is-invalid @enderror" value="{{ old('name', $variant->name) }}"
+                            placeholder="Ej. Sentado, Edición Especial, etc." required>
+                        <div id="name-error" class="text-danger small mt-1" style="display: none;"></div>
+                        @error('name')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
                     </div>
 
-                    {{-- Precio y Stock --}}
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="label">Precio ($)</label>
-                            <input type="number" step="0.01" name="price"
-                                class="input @error('price') is-invalid @enderror"
-                                value="{{ old('price', $variant->price) }}" placeholder="0.00">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="label">Stock Actual</label>
-                            <input type="number" name="stock" class="input @error('stock') is-invalid @enderror"
-                                value="{{ old('stock', $variant->stock) }}" placeholder="0">
-                        </div>
-                    </div>
-
-                    <hr class="my-4">
-
-                    {{-- Atributos Dinámicos --}}
-                    <h5 class="mb-3 text-secondary">Especificaciones</h5>
-                    <div class="attributes-grid">
-                        @foreach ($attributes as $attribute)
-                            <div class="mb-3">
-                                <label class="label">{{ $attribute->name }}</label>
-                                <select name="attribute_values[]" class="input select2">
-                                    <option value="">Seleccionar {{ $attribute->name }}</option>
-                                    @foreach ($attribute->values as $value)
-                                        <option value="{{ $value->id }}"
-                                            {{ in_array($value->id, old('attribute_values', $selectedAttributeValues)) ? 'selected' : '' }}>
-                                            {{ $value->value }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        @endforeach
-                    </div>
-
-                    <hr class="my-4">
-
-                    {{-- Opciones --}}
-                    <div class="d-flex justify-content-between">
-                        <div class="custom-control custom-switch">
-                            <input type="hidden" name="is_active" value="0">
-                            <input type="checkbox" class="custom-control-input" id="is_active" name="is_active"
-                                value="1" {{ old('is_active', $variant->is_active) ? 'checked' : '' }}>
-                            <label class="custom-control-label" for="is_active">Variante Activa</label>
-                        </div>
-
-                        <div class="custom-control custom-switch">
-                            <input type="hidden" name="is_default" value="0">
-                            <input type="checkbox" class="custom-control-input" id="is_default" name="is_default"
-                                value="1" {{ old('is_default', $variant->is_default) ? 'checked' : '' }}>
-                            <label class="custom-control-label" for="is_default">Variante Principal (Default)</label>
-                        </div>
+                    {{-- ============================================
+                         ACTUALIZADO: Campo SKU EXACTAMENTE IGUAL al create
+                         - readonly
+                         - tabindex="-1"
+                         - Clase sku-readonly
+                         - Misma estructura HTML
+                         ============================================ --}}
+                    <div class="mb-4">
+                        <label class="label">SKU (Código único) </label>
+                        <input type="text" id="variant_sku" name="sku"
+                            class="input sku-readonly @error('sku') is-invalid @enderror" placeholder="SKU_AUTOMATICO"
+                            value="{{ old('sku', $variant->sku) }}" readonly tabindex="-1">
+                        <div id="sku-error" class="text-danger small mt-1" style="display: none;"></div>
+                        {{-- ============================================
+                             AGREGADO: Texto de ayuda IDÉNTICO al create
+                             ============================================ --}}
+                        <small class="hint">Código automático jerárquico profesional</small>
+                        @error('sku')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
                     </div>
 
                 </div>
@@ -231,111 +206,303 @@
         </div>
     </form>
 
-    {{-- Formulario para eliminar imagen existente (MANTENIDO) --}}
+    {{-- Formulario para eliminar imagen existente --}}
     <form id="deleteImageForm" method="POST" style="display: none;">
         @csrf
         @method('DELETE')
     </form>
+
+    {{-- ============================================
+         MODAL DE CONFIRMACIÓN ELIMINAR IMAGEN CON BOTÓN X AZUL PREMIUM
+         ============================================ --}}
+    <div class="modal fade" id="deleteImageConfirmModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+            <div class="modal-content modal-delete-apple">
+
+                {{-- Botón Cerrar Flotante - X AZUL PREMIUM --}}
+                <div style="position: absolute; top: 15px; right: 15px; z-index: 1060;">
+                    <button type="button" class="modal-close-premium" data-dismiss="modal" aria-label="Close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                {{-- Icono de advertencia --}}
+                <div class="modal-delete-icon">
+                    <div class="icon-wrapper">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                </div>
+
+                {{-- Título --}}
+                <h3 class="modal-delete-title">
+                    ¿Eliminar esta imagen?
+                </h3>
+
+                {{-- Descripción --}}
+                <p class="modal-delete-description">
+                    Esta acción no se puede deshacer. La imagen será eliminada permanentemente del sistema.
+                </p>
+
+                {{-- Botones de acción --}}
+                <div class="modal-delete-actions">
+                    <button type="button" class="btn-cancel-apple" data-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn-delete-apple" id="confirmDeleteImageBtn">
+                        Eliminar imagen
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
 
 @stop
 
 @section('css')
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <style>
-        /* ESTILOS ORIGINALES (MANTENIDOS) */
+        /* ============================================
+                                                                                       VARIABLES Y ESTILOS BASE DEL PRIMER CÓDIGO
+                                                                                       ============================================ */
+        :root {
+            --primary: #2563eb;
+            --primary-light: #3b82f6;
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --font-size-xs: 11px;
+            --font-size-sm: 13px;
+            --font-size-base: 15px;
+            --font-size-lg: 17px;
+            --font-size-xl: 20px;
+        }
+
+        /* ============================================
+                                                                                       ESTILOS DE SUPERFICIE Y SECCIONES (DEL PRIMER CÓDIGO)
+                                                                                       ============================================ */
         .surface {
-            background: #ffffff;
-            border-radius: 16px;
+            background: #fff;
+            border-radius: var(--radius-lg);
             padding: 28px;
-            box-shadow: 0 4px 30px rgba(0, 0, 0, .04);
-            height: 100%;
+            box-shadow: var(--shadow-md);
+        }
+
+        .section-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--gray-700);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title i {
+            font-size: var(--font-size-base);
         }
 
         .label {
             font-weight: 600;
-            color: #4b5563;
+            color: var(--gray-700);
             margin-bottom: 6px;
             display: block;
-            font-size: 14px;
+            font-size: var(--font-size-base);
         }
 
         .input {
             width: 100%;
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 12px 14px;
-            font-size: 14px;
-            transition: all .2s;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-md);
+            padding: 14px 16px;
+            font-size: var(--font-size-base);
+            background: var(--gray-50);
+            transition: all 0.2s ease;
         }
 
         .input:focus {
             outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            border-color: var(--primary);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
 
-        /* Grid de imágenes existentes (MANTENIDO) */
-        .existing-images-grid {
+        .is-invalid {
+            border-color: var(--danger) !important;
+            background: #fef2f2;
+        }
+
+        .hint {
+            font-size: var(--font-size-sm);
+            color: var(--gray-500);
+            display: block;
+            margin-top: 4px;
+        }
+
+        /* ============================================
+                                                                                       ALERTA MODERNA DEL PRIMER CÓDIGO
+                                                                                       ============================================ */
+        .alert-modern {
+            font-size: var(--font-size-sm);
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            border: none;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .alert-modern i {
+            margin-top: 2px;
+        }
+
+        /* ============================================
+                                                                                       AGREGADO: ESTILO PARA SKU READONLY (IDÉNTICO AL CREATE)
+                                                                                       ============================================ */
+        .sku-readonly {
+            background-color: #f1f1f2 !important;
+            color: #86868b;
+            cursor: not-allowed;
+        }
+
+        /* ============================================
+                                                                                       ESTILOS EXISTENTES DEL SEGUNDO CÓDIGO (MANTENIDOS)
+                                                                                       ============================================ */
+
+        /* SELECTOR VISUAL DE IMAGEN PRINCIPAL */
+        .primary-image-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+            margin-bottom: 8px;
         }
 
-        .image-card {
+        .primary-image-option {
             position: relative;
-            border-radius: 10px;
+            border: 3px solid var(--gray-200);
+            border-radius: var(--radius-md);
             overflow: hidden;
-            border: 1px solid #e5e7eb;
+            cursor: pointer;
+            transition: all 0.2s ease;
             aspect-ratio: 1;
+            background: var(--gray-50);
         }
 
-        .image-card img {
+        .primary-image-option:hover {
+            border-color: #93c5fd;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+
+        .primary-image-option.selected {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2), 0 4px 12px rgba(37, 99, 235, 0.25);
+        }
+
+        .primary-image-option img {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
 
-        .image-card.primary {
-            border: 2px solid #3b82f6;
-        }
-
-        .image-actions {
+        .primary-image-option .image-number {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transition: opacity 0.2s;
+            top: 6px;
+            left: 6px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 10px;
         }
 
-        .image-card:hover .image-actions {
-            opacity: 1;
-        }
-
-        .primary-badge {
+        .primary-image-option .selected-badge {
             position: absolute;
-            top: 5px;
-            left: 5px;
-        }
-
-        .btn-circle {
-            width: 32px;
-            height: 32px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: var(--primary);
+            color: white;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 5px;
+            font-size: 18px;
+            transition: transform 0.2s ease;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+        }
+
+        .primary-image-option.selected .selected-badge {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .primary-image-option .image-name {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+            color: white;
+            font-size: 10px;
+            padding: 20px 6px 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .primary-image-option .btn-delete-image {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--danger);
+            color: white;
+            border: 2px solid white;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            opacity: 0;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .primary-image-option:hover .btn-delete-image {
+            opacity: 1;
+        }
+
+        .primary-image-option .btn-delete-image:hover {
+            background: #dc2626;
+            transform: scale(1.1);
         }
 
         /* ============================================
-                       SISTEMA PREMIUM - DROPZONE Y ANALIZADOR (ACTUALIZADO)
-                       ============================================ */
+                                                                                       SISTEMA PREMIUM - DROPZONE Y ANALIZADOR
+                                                                                       ============================================ */
 
         /* DROPZONE COMPACTO */
         .dropzone.dropzone-compact {
@@ -364,42 +531,42 @@
         }
 
         .dropzone {
-            border: 2px dashed #d1d5db;
-            border-radius: 12px;
+            border: 2px dashed var(--gray-300);
+            border-radius: var(--radius-lg);
             padding: 30px 20px;
             text-align: center;
             cursor: pointer;
-            background: #f9fafb;
+            background: var(--gray-50);
             transition: all .2s;
         }
 
         .dropzone:hover {
-            border-color: #3b82f6;
+            border-color: var(--primary);
             background: #eff6ff;
         }
 
         .dropzone-icon {
             font-size: 48px;
-            color: #9ca3af;
+            color: var(--gray-400);
             margin-bottom: 15px;
         }
 
         .dropzone-title {
             font-weight: 600;
             font-size: 18px;
-            color: #111827;
+            color: var(--gray-800);
             margin-bottom: 5px;
         }
 
         .dropzone-sub {
             font-size: 14px;
-            color: #6b7280;
+            color: var(--gray-600);
             margin-bottom: 5px;
         }
 
         .dropzone-formats {
             font-size: 12px;
-            color: #9ca3af;
+            color: var(--gray-400);
             margin-top: 10px;
         }
 
@@ -416,17 +583,17 @@
         }
 
         .images-scroll-container::-webkit-scrollbar-track {
-            background: #f1f1f1;
+            background: var(--gray-100);
             border-radius: 10px;
         }
 
         .images-scroll-container::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
+            background: var(--gray-300);
             border-radius: 10px;
         }
 
         .images-scroll-container::-webkit-scrollbar-thumb:hover {
-            background: #a1a1a1;
+            background: var(--gray-400);
         }
 
         /* GRID DE IMÁGENES CON ANÁLISIS (2 COLUMNAS) */
@@ -439,19 +606,19 @@
         /* CARD DE IMAGEN CON ANÁLISIS */
         .image-analysis-card {
             background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-md);
             overflow: hidden;
             transition: all 0.2s ease;
         }
 
         .image-analysis-card:hover {
-            border-color: #2563eb;
+            border-color: var(--primary);
             box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
         }
 
         .image-analysis-card.selected {
-            border-color: #2563eb;
+            border-color: var(--primary);
             border-width: 2px;
         }
 
@@ -460,7 +627,7 @@
             position: relative;
             width: 100%;
             height: 100px;
-            background: #f8fafc;
+            background: var(--gray-50);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -481,7 +648,7 @@
             width: 24px;
             height: 24px;
             border-radius: 50%;
-            background: #ef4444;
+            background: var(--danger);
             color: white;
             border: 2px solid white;
             cursor: pointer;
@@ -503,14 +670,14 @@
         /* Info del análisis */
         .image-card-info {
             padding: 10px;
-            border-top: 1px solid #f1f5f9;
-            background: #fafafa;
+            border-top: 1px solid var(--gray-100);
+            background: var(--gray-50);
         }
 
         .image-card-name {
             font-size: 11px;
             font-weight: 600;
-            color: #333;
+            color: var(--gray-800);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -521,7 +688,7 @@
             display: flex;
             justify-content: space-between;
             font-size: 10px;
-            color: #6b7280;
+            color: var(--gray-600);
             margin-bottom: 4px;
         }
 
@@ -530,7 +697,7 @@
             align-items: center;
             gap: 4px;
             font-size: 10px;
-            color: #059669;
+            color: var(--success);
             font-weight: 500;
         }
 
@@ -550,15 +717,15 @@
         }
 
         .image-card-warning i {
-            color: #d97706;
+            color: var(--warning);
             margin-right: 3px;
         }
 
         /* Resumen de archivos */
         .files-summary {
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 10px;
+            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-md);
             padding: 12px 14px;
             margin-top: 12px;
         }
@@ -568,7 +735,7 @@
             align-items: center;
             gap: 8px;
             font-weight: 600;
-            color: #333;
+            color: var(--gray-800);
             margin-bottom: 6px;
         }
 
@@ -576,7 +743,7 @@
             display: flex;
             justify-content: space-between;
             font-size: 12px;
-            color: #6b7280;
+            color: var(--gray-600);
             margin-bottom: 6px;
         }
 
@@ -585,13 +752,13 @@
             align-items: center;
             gap: 6px;
             font-size: 12px;
-            color: #059669;
+            color: var(--success);
             font-weight: 500;
         }
 
         /* Para archivos de bordado */
         .embroidery-preview {
-            background: linear-gradient(45deg, #1e40af, #3b82f6);
+            background: linear-gradient(45deg, #1e40af, var(--primary));
             color: white;
             text-align: center;
             padding: 15px;
@@ -640,13 +807,13 @@
 
         /* Dropzone con error */
         .dropzone.border-danger {
-            border-color: #dc2626 !important;
+            border-color: var(--danger) !important;
             background: #fef2f2;
         }
 
         /* ============================================
-                       ESTILOS DEL SPINNER PREMIUM (MANTENIDOS)
-                       ============================================ */
+                                                                                       ESTILOS DEL SPINNER PREMIUM
+                                                                                       ============================================ */
         .modal-loading-overlay {
             position: fixed;
             top: 0;
@@ -674,7 +841,7 @@
             height: 64px;
             border: 3px solid rgba(59, 130, 246, 0.1);
             border-radius: 50%;
-            border-top-color: #2563eb;
+            border-top-color: var(--primary);
             animation: spin 1s linear infinite;
             margin: 0 auto 24px;
         }
@@ -692,20 +859,20 @@
         .modal-loading-title {
             font-size: 1.25rem;
             font-weight: 600;
-            color: #1f2937;
+            color: var(--gray-800);
             margin-bottom: 8px;
             letter-spacing: 0.3px;
         }
 
         .modal-loading-subtitle {
             font-size: 0.95rem;
-            color: #6b7280;
+            color: var(--gray-600);
             line-height: 1.5;
         }
 
         /* ============================================
-                       BARRA DE PROGRESO PREMIUM
-                       ============================================ */
+                                                                                       BARRA DE PROGRESO PREMIUM
+                                                                                       ============================================ */
         .progress-container-premium {
             width: 100%;
             max-width: 320px;
@@ -729,7 +896,7 @@
             height: 100%;
             width: 0%;
             background: linear-gradient(90deg,
-                    #2563eb 0%,
+                    var(--primary) 0%,
                     #3b82f6 25%,
                     #60a5fa 50%,
                     #93c5fd 75%,
@@ -775,14 +942,14 @@
         .progress-text {
             font-size: 1.5rem;
             font-weight: 800;
-            color: #2563eb;
+            color: var(--primary);
             text-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
             min-width: 60px;
         }
 
         .progress-status {
             font-size: 0.95rem;
-            color: #6b7280;
+            color: var(--gray-600);
             font-weight: 500;
             text-align: right;
             flex: 1;
@@ -792,7 +959,7 @@
         /* Estados de completado */
         .progress-complete .progress-fill-premium {
             background: linear-gradient(90deg,
-                    #059669 0%,
+                    var(--success) 0%,
                     #10b981 25%,
                     #34d399 50%,
                     #6ee7b7 75%,
@@ -801,13 +968,13 @@
         }
 
         .progress-complete .progress-text {
-            color: #059669;
+            color: var(--success);
         }
 
         /* Estados de error */
         .progress-error .progress-fill-premium {
             background: linear-gradient(90deg,
-                    #dc2626 0%,
+                    var(--danger) 0%,
                     #ef4444 25%,
                     #f87171 50%,
                     #fca5a5 75%,
@@ -816,47 +983,24 @@
         }
 
         .progress-error .progress-text {
-            color: #dc2626;
-        }
-
-        /* ========== ESTILOS PARA INFORMACIÓN DE ARCHIVO ========== */
-        .file-info {
-            background-color: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 10px;
-            padding: 12px 16px;
-            font-size: 13px;
-            margin-top: 12px;
-        }
-
-        .file-info-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-
-        .file-info-name {
-            font-weight: 600;
-            color: #333;
-            word-break: break-all;
-        }
-
-        .file-info-details {
-            display: flex;
-            justify-content: space-between;
-            color: #6b7280;
-            font-size: 12px;
-        }
-
-        .file-info-success {
-            color: #059669;
-            font-weight: 500;
+            color: var(--danger);
         }
 
         /* Animación fade-in */
         .fade-in {
             animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         /* Estilos para botones deshabilitados */
@@ -869,9 +1013,290 @@
         /* Estilos para mensajes de error */
         .image-error {
             font-size: 12px;
-            color: #dc2626;
+            color: var(--danger);
             margin-top: 8px;
             display: block;
+        }
+
+        /* Estilos para Select2 personalizados */
+        .select2-container--default .select2-selection--single,
+        .select2-container--default .select2-selection--multiple {
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-md);
+            background: var(--gray-50);
+            padding: 8px;
+            min-height: 48px;
+        }
+
+        .select2-container--default .select2-selection--single:focus,
+        .select2-container--default .select2-selection--multiple:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        /* ============================================
+                                                                                       ESTILOS PARA SWEETALERT PREMIUM TIPO APPLE
+                                                                                       ============================================ */
+        .apple-sweet-alert {
+            border-radius: 20px !important;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            background: #fff !important;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+        }
+
+        .apple-sweet-alert-title {
+            font-size: 22px !important;
+            font-weight: 700 !important;
+            color: #1d1d1f !important;
+            margin-bottom: 10px !important;
+            letter-spacing: -0.3px !important;
+        }
+
+        .apple-sweet-alert-html {
+            font-size: 15px !important;
+            color: #86868b !important;
+            line-height: 1.5 !important;
+        }
+
+        .apple-sweet-alert-actions {
+            margin-top: 30px !important;
+            gap: 12px !important;
+            justify-content: center !important;
+        }
+
+        .apple-sweet-alert-confirm-btn {
+            background: linear-gradient(135deg, #dc2626, #ef4444) !important;
+            border: none !important;
+            border-radius: 12px !important;
+            padding: 14px 28px !important;
+            font-size: 15px !important;
+            font-weight: 600 !important;
+            color: white !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+            box-shadow: 0 4px 15px rgba(220, 38, 38, 0.2) !important;
+            min-width: 180px !important;
+        }
+
+        .apple-sweet-alert-confirm-btn:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 20px rgba(220, 38, 38, 0.3) !important;
+            background: linear-gradient(135deg, #ef4444, #f87171) !important;
+        }
+
+        .apple-sweet-alert-confirm-btn:active {
+            transform: translateY(0) !important;
+            box-shadow: 0 2px 10px rgba(220, 38, 38, 0.2) !important;
+        }
+
+        .apple-sweet-alert-cancel-btn {
+            background: #f1f1f2 !important;
+            border: 1px solid #e5e7eb !important;
+            border-radius: 12px !important;
+            padding: 14px 28px !important;
+            font-size: 15px !important;
+            font-weight: 600 !important;
+            color: #374151 !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+            min-width: 120px !important;
+        }
+
+        .apple-sweet-alert-cancel-btn:hover {
+            background: #e5e7eb !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05) !important;
+        }
+
+        .apple-sweet-alert-cancel-btn:active {
+            transform: translateY(0) !important;
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.05) !important;
+        }
+
+        /* Animaciones para SweetAlert */
+        .animate__animated {
+            animation-duration: 0.3s !important;
+        }
+
+        .animate__faster {
+            animation-duration: 0.2s !important;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translate3d(0, -20px, 0);
+            }
+
+            to {
+                opacity: 1;
+                transform: translate3d(0, 0, 0);
+            }
+        }
+
+        @keyframes fadeOutUp {
+            from {
+                opacity: 1;
+            }
+
+            to {
+                opacity: 0;
+                transform: translate3d(0, -20px, 0);
+            }
+        }
+
+        .animate__fadeInDown {
+            animation-name: fadeInDown;
+        }
+
+        .animate__fadeOutUp {
+            animation-name: fadeOutUp;
+        }
+
+        /* ============================================
+                       ESTILOS DEL BOTÓN X AZUL PREMIUM (MODAL-CLOSE-PREMIUM)
+                       ============================================ */
+        .modal-close-premium {
+            position: absolute;
+            top: -15px;
+            right: -15px;
+            width: 45px;
+            height: 45px;
+            background: #2563eb;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1070;
+        }
+
+        .modal-close-premium:hover {
+            background: #1d4ed8;
+            transform: scale(1.15) rotate(90deg);
+            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.5);
+        }
+
+        /* ============================================
+                       ESTILOS DEL MODAL DE CONFIRMACIÓN ELIMINAR IMAGEN
+                       ============================================ */
+        .modal-delete-apple {
+            border-radius: 24px;
+            border: none;
+            padding: 32px 28px 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25),
+                0 0 1px rgba(0, 0, 0, 0.1);
+            background: #ffffff;
+        }
+
+        .modal-delete-icon {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-delete-icon .icon-wrapper {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(252, 211, 77, 0.3);
+        }
+
+        .modal-delete-icon i {
+            font-size: 28px;
+            color: #d97706;
+        }
+
+        .modal-delete-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1f2937;
+            text-align: center;
+            margin-bottom: 16px;
+            letter-spacing: -0.5px;
+            line-height: 1.3;
+        }
+
+        .modal-delete-description {
+            font-size: 0.95rem;
+            color: #6b7280;
+            text-align: center;
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+
+        .modal-delete-actions {
+            display: flex;
+            gap: 12px;
+            flex-direction: column;
+        }
+
+        .btn-cancel-apple {
+            background: #f3f4f6;
+            border: 1.5px solid #e5e7eb;
+            color: #374151;
+            font-weight: 600;
+            font-size: 1rem;
+            padding: 14px 24px;
+            border-radius: 12px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            letter-spacing: 0.2px;
+        }
+
+        .btn-cancel-apple:hover {
+            background: #e5e7eb;
+            border-color: #d1d5db;
+            transform: translateY(-1px);
+        }
+
+        .btn-delete-apple {
+            background: linear-gradient(180deg, #dc2626 0%, #b91c1c 100%);
+            border: none;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 1rem;
+            padding: 14px 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .btn-delete-apple:hover {
+            background: linear-gradient(180deg, #b91c1c 0%, #991b1b 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(220, 38, 38, 0.3);
+        }
+
+        .btn-delete-apple.loading {
+            position: relative;
+            color: transparent;
+        }
+
+        .btn-delete-apple.loading::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
         }
 
         /* Responsive */
@@ -890,7 +1315,7 @@
                 grid-template-columns: 1fr;
             }
 
-            .existing-images-grid {
+            .primary-image-grid {
                 grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
             }
         }
@@ -898,14 +1323,43 @@
 @stop
 
 @section('js')
+    {{-- Primero asegurar que jQuery esté cargado --}}
+    <script>
+        if (typeof jQuery === 'undefined') {
+            document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
+        }
+    </script>
+
+    {{-- Luego cargar Select2 --}}
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
     <script>
         // ============================================
-        // SISTEMA PREMIUM COMPLETO PARA EDITAR VARIANTE
+        // DECLARACIONES INICIALES
         // ============================================
+        const dropzone = document.getElementById('dropzone');
+        const input = document.getElementById('imageInput');
+        const imagesGrid = document.getElementById('imagesGrid');
+        const imagesScrollContainer = document.getElementById('imagesScrollContainer');
+        const filesSummary = document.getElementById('filesSummary');
+        const submitBtn = document.getElementById('submitBtn');
+        const form = document.getElementById('variant-form');
+        const backBtn = document.getElementById('back-btn');
+        const appleToast = document.getElementById('appleToast');
+        const toastMessage = document.getElementById('toastMessage');
+        const designBaseName = "{{ $design->name }}";
+        const nameInput = document.getElementById('variant_name');
+        const skuInput = document.getElementById('variant_sku');
+
+        let isSubmitting = false;
+        let currentObjectURLs = [];
+        let selectedFiles = []; // Solo para nuevas imágenes
+        let validationResults = [];
+        let formChanged = false;
+        let isFormSubmitting = false;
 
         // ============================================
-        // VALIDADOR MEJORADO DE ARCHIVOS DE DISEÑO (MANTENIDO)
+        // VALIDADOR MEJORADO DE ARCHIVOS DE DISEÑO
         // ============================================
         class DesignFileValidator {
             constructor() {
@@ -1141,36 +1595,60 @@
             }
         }
 
-        // ============================================
-        // CÓDIGO PRINCIPAL DE LA VISTA - SISTEMA PREMIUM ADAPTADO
-        // ============================================
-        const dropzone = document.getElementById('dropzone');
-        const input = document.getElementById('imageInput');
-        const imagesGrid = document.getElementById('imagesGrid');
-        const imagesScrollContainer = document.getElementById('imagesScrollContainer');
-        const filesSummary = document.getElementById('filesSummary');
-        const submitBtn = document.getElementById('submitBtn');
-        const form = document.getElementById('variant-form');
-        const backBtn = document.getElementById('back-btn');
-        const appleToast = document.getElementById('appleToast');
-        const toastMessage = document.getElementById('toastMessage');
-
-        let isSubmitting = false;
-        let currentObjectURLs = [];
+        // Instanciar el validador
         const fileValidator = new DesignFileValidator();
-        let selectedFiles = []; // Solo para nuevas imágenes
-        let validationResults = [];
-        let formChanged = false;
-        let isFormSubmitting = false;
 
         // ============================================
-        // INICIALIZACIÓN SELECT2 (MANTENIDO)
+        // AGREGADO: GENERACIÓN DE SKU IDÉNTICA AL CREATE
         // ============================================
-        $(document).ready(function() {
-            $('.select2').select2({
-                width: '100%'
+        function updateSku() {
+            let skuBase = designBaseName;
+            let userValue = nameInput.value.trim();
+
+            if (userValue) {
+                skuBase += " " + userValue;
+            }
+
+            skuInput.value = skuBase
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                .replace(/\s+/g, '_')
+                .replace(/[^a-zA-Z0-9_]/g, '')
+                .toUpperCase();
+        }
+
+        // ============================================
+        // INICIALIZACIÓN SELECT2 (con jQuery seguro)
+        // ============================================
+        function initializeSelect2() {
+            // Esperar a que jQuery esté disponible
+            if (typeof jQuery === 'undefined') {
+                setTimeout(initializeSelect2, 50);
+                return;
+            }
+
+            $(document).ready(function() {
+                $('.select2').select2({
+                    width: '100%',
+                    placeholder: 'Selecciona una opción',
+                    allowClear: true
+                });
+
+                // AGREGADO: Inicializar SKU al cargar la página
+                updateSku();
             });
-        });
+        }
+
+        // Inicializar Select2 cuando el DOM esté listo
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeSelect2);
+        } else {
+            initializeSelect2();
+        }
+
+        // ============================================
+        // AGREGADO: EVENTO PARA ACTUALIZAR SKU AL ESCRIBIR
+        // ============================================
+        nameInput.addEventListener('input', updateSku);
 
         // ============================================
         // FUNCIONALIDAD DEL DROPZONE PREMIUM
@@ -1216,11 +1694,11 @@
 
             if (validationResult.type === 'embroidery') {
                 previewDiv.innerHTML = `
-                    <div class="embroidery-preview">
-                        <i class="fas fa-vest"></i>
-                        <span class="format-name">${validationResult.subtype.toUpperCase()}</span>
-                    </div>
-                `;
+                <div class="embroidery-preview">
+                    <i class="fas fa-vest"></i>
+                    <span class="format-name">${validationResult.subtype.toUpperCase()}</span>
+                </div>
+            `;
             } else if (validationResult.type === 'vector') {
                 const objectURL = URL.createObjectURL(file);
                 currentObjectURLs.push(objectURL);
@@ -1234,11 +1712,11 @@
                 img.alt = "Vista previa";
                 img.onerror = () => {
                     previewDiv.innerHTML = `
-                        <div style="text-align: center; color: #666; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%;">
-                            <i class="fas fa-file-image" style="font-size: 24px; margin-bottom: 5px;"></i>
-                            <div style="font-size: 9px;">No disponible</div>
-                        </div>
-                    `;
+                    <div style="text-align: center; color: #666; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%;">
+                        <i class="fas fa-file-image" style="font-size: 24px; margin-bottom: 5px;"></i>
+                        <div style="font-size: 9px;">No disponible</div>
+                    </div>
+                `;
                 };
                 previewDiv.appendChild(img);
             }
@@ -1285,28 +1763,28 @@
                 validationResult.subtype &&
                 originalExtension !== validationResult.subtype.toLowerCase()) {
                 warningHTML = `
-                    <div class="image-card-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        Extensión .${originalExtension} → formato ${validationResult.subtype.toUpperCase()}
-                    </div>
-                `;
+                <div class="image-card-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Extensión .${originalExtension} → formato ${validationResult.subtype.toUpperCase()}
+                </div>
+            `;
             }
 
             infoDiv.innerHTML = `
-                <div class="image-card-name" title="${file.name}">
-                    <i class="fas fa-${fileValidator.getFileIcon(detectedFormat)} mr-1"></i>
-                    ${file.name}
-                </div>
-                <div class="image-card-details">
-                    <span>${fileTypeName} (${detectedFormat.toUpperCase()})</span>
-                    <span>${fileSize} KB</span>
-                </div>
-                <div class="image-card-format">
-                    <i class="fas fa-check-circle"></i>
-                    Formato detectado: ${detectedFormat.toUpperCase()}
-                </div>
-                ${warningHTML}
-            `;
+            <div class="image-card-name" title="${file.name}">
+                <i class="fas fa-${fileValidator.getFileIcon(detectedFormat)} mr-1"></i>
+                ${file.name}
+            </div>
+            <div class="image-card-details">
+                <span>${fileTypeName} (${detectedFormat.toUpperCase()})</span>
+                <span>${fileSize} KB</span>
+            </div>
+            <div class="image-card-format">
+                <i class="fas fa-check-circle"></i>
+                Formato detectado: ${detectedFormat.toUpperCase()}
+            </div>
+            ${warningHTML}
+        `;
 
             card.appendChild(previewDiv);
             card.appendChild(infoDiv);
@@ -1392,10 +1870,6 @@
             });
         }
 
-        // ============================================
-        // EVENT LISTENERS PARA DROPZONE PREMIUM
-        // ============================================
-
         // Función para manejar clic en dropzone
         function handleDropzoneClick(e) {
             // Verificar límite de archivos (10 imágenes nuevas)
@@ -1407,6 +1881,10 @@
             // Abrir selector de archivos
             input.click();
         }
+
+        // ============================================
+        // EVENT LISTENERS PARA DROPZONE PREMIUM
+        // ============================================
 
         // Event Listeners para dropzone
         dropzone.addEventListener('click', handleDropzoneClick);
@@ -1518,6 +1996,87 @@
         });
 
         // ============================================
+        // FUNCIONES DE VALIDACIÓN SIMILARES AL CREATE
+        // ============================================
+
+        // Función para mostrar error en un campo específico
+        function showFieldError(field, message) {
+            field.classList.add('is-invalid');
+
+            // Buscar el div de error por ID del campo
+            const fieldName = field.getAttribute('name');
+            let errorElement = document.getElementById(fieldName + '-error');
+
+            if (errorElement) {
+                errorElement.innerHTML = `<i class="fas fa-exclamation-triangle mr-1"></i>${message}`;
+                errorElement.style.display = 'block';
+            }
+        }
+
+        // Función para limpiar todos los errores de validación
+        function clearValidationErrors() {
+            // Limpiar errores de campos (clases is-invalid)
+            form.querySelectorAll('.is-invalid').forEach(field => {
+                field.classList.remove('is-invalid');
+            });
+
+            // Limpiar errores de los divs con ID (name-error, sku-error, etc.)
+            document.querySelectorAll('[id$="-error"]').forEach(el => {
+                el.style.display = 'none';
+                el.innerHTML = '';
+            });
+
+            // Limpiar errores del dropzone
+            dropzone.classList.remove('border-danger');
+            const imageErrors = document.querySelectorAll('.image-error');
+            imageErrors.forEach(error => error.remove());
+        }
+
+        // ============================================
+        // AGREGADO: EVENTOS PARA LIMPIAR ERRORES AL INTERACTUAR
+        // ============================================
+
+        // Limpiar error del nombre cuando se escribe
+        nameInput.addEventListener('input', function() {
+            this.classList.remove('is-invalid');
+            const nameError = document.getElementById('name-error');
+            if (nameError) {
+                nameError.style.display = 'none';
+                nameError.innerHTML = '';
+            }
+        });
+
+        // Limpiar error del SKU cuando se escribe
+        skuInput.addEventListener('input', function() {
+            this.classList.remove('is-invalid');
+            const skuError = document.getElementById('sku-error');
+            if (skuError) {
+                skuError.style.display = 'none';
+                skuError.innerHTML = '';
+            }
+        });
+
+        // Limpiar error del precio cuando se escribe
+        form.querySelector('input[name="price"]')?.addEventListener('input', function() {
+            this.classList.remove('is-invalid');
+            const priceError = document.getElementById('price-error');
+            if (priceError) {
+                priceError.style.display = 'none';
+                priceError.innerHTML = '';
+            }
+        });
+
+        // Limpiar error del stock cuando se escribe
+        form.querySelector('input[name="stock"]')?.addEventListener('input', function() {
+            this.classList.remove('is-invalid');
+            const stockError = document.getElementById('stock-error');
+            if (stockError) {
+                stockError.style.display = 'none';
+                stockError.innerHTML = '';
+            }
+        });
+
+        // ============================================
         // DETECCIÓN DE CAMBIOS EN EL FORMULARIO
         // ============================================
         form.querySelectorAll('input, textarea, select').forEach(el => {
@@ -1528,7 +2087,7 @@
         });
 
         // ============================================
-        // FUNCIONES PARA EL SPINNER CON BARRA DE PROGRESO (MANTENIDAS)
+        // FUNCIONES PARA EL SPINNER CON BARRA DE PROGRESO
         // ============================================
 
         // Función para deshabilitar todos los botones y preparar spinner
@@ -1615,8 +2174,6 @@
 
         /**
          * Actualiza la barra de progreso
-         * @param {number} percentage - Porcentaje de 0 a 100
-         * @param {string} status - Texto de estado (opcional)
          */
         function updateProgress(percentage, status = null) {
             const progressFill = document.getElementById('progressFill');
@@ -1652,7 +2209,6 @@
 
         /**
          * Muestra estado de error en la barra de progreso
-         * @param {string} errorMessage - Mensaje de error
          */
         function showProgressError(errorMessage) {
             const progressBar = document.getElementById('progressBar');
@@ -1739,12 +2295,37 @@
         }
 
         // ============================================
-        // MANEJO DEL FORMULARIO CON SPINNER PREMIUM
+        // MANEJO DEL FORMULARIO CON VALIDACIÓN
         // ============================================
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
 
             if (isSubmitting) {
+                return;
+            }
+
+            // Validaciones básicas antes de enviar
+            clearValidationErrors();
+
+            const name = nameInput.value.trim();
+            let hasErrors = false;
+
+            // Validar nombre (igual que en el create)
+            if (!name) {
+                showFieldError(nameInput, 'El nombre de la variante es obligatorio.');
+                hasErrors = true;
+            }
+
+            // Si hay errores, hacer focus en el primer campo con error
+            if (hasErrors) {
+                const firstError = form.querySelector('.is-invalid, .border-danger');
+                if (firstError) {
+                    firstError.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+                    if (firstError.focus) firstError.focus();
+                }
                 return;
             }
 
@@ -1765,14 +2346,50 @@
         // FUNCIONES ORIGINALES (MANTENIDAS)
         // ============================================
 
-        // Función original para eliminar imágenes existentes (NO MODIFICADA)
+        // Función para seleccionar imagen principal existente
+        function selectExistingPrimaryImage(imageId) {
+            // Actualizar input hidden
+            document.getElementById('primary_image_id').value = imageId;
+
+            // Quitar selección de todas
+            document.querySelectorAll('.primary-image-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+
+            // Agregar selección a la seleccionada
+            const selectedOption = document.querySelector(`.primary-image-option[data-image-id="${imageId}"]`);
+            if (selectedOption) {
+                selectedOption.classList.add('selected');
+            }
+
+            // Marcar cambio en formulario
+            formChanged = true;
+        }
+
+        // ============================================
+        // NUEVA FUNCIÓN CON MODAL DE BOOTSTRAP (REEMPLAZA SWEETALERT)
+        // ============================================
         function confirmDeleteImage(url) {
-            if (confirm('¿Estás seguro de eliminar esta imagen?')) {
+            // Mostrar el modal de confirmación con botón X azul
+            $('#deleteImageConfirmModal').modal('show');
+
+            // Configurar el evento del botón de confirmación
+            document.getElementById('confirmDeleteImageBtn').onclick = function() {
                 const form = document.getElementById('deleteImageForm');
                 form.action = url;
                 form.submit();
-            }
+            };
         }
+
+        // ============================================
+        // LIMPIAR EVENTO AL CERRAR EL MODAL
+        // ============================================
+        $(document).ready(function() {
+            // Limpiar el evento cuando el modal de confirmación de imagen se cierre
+            $('#deleteImageConfirmModal').on('hidden.bs.modal', function() {
+                document.getElementById('confirmDeleteImageBtn').onclick = null;
+            });
+        });
 
         // Manejar el evento beforeunload
         window.addEventListener('beforeunload', e => {
@@ -1796,7 +2413,10 @@
                     confirmButtonColor: '#2563eb',
                     cancelButtonColor: '#6b7280',
                     confirmButtonText: 'Sí, cancelar',
-                    cancelButtonText: 'Continuar actualizando'
+                    cancelButtonText: 'Continuar actualizando',
+                    customClass: {
+                        popup: 'apple-sweet-alert'
+                    }
                 }).then((result) => {
                     if (result.isConfirmed) {
                         // Cancelar operación
@@ -1842,7 +2462,7 @@
                 timer: 4000,
                 showConfirmButton: false,
                 customClass: {
-                    popup: 'fade-in'
+                    popup: 'fade-in apple-sweet-alert'
                 }
             });
         </script>
@@ -1857,7 +2477,7 @@
                 showConfirmButton: true,
                 confirmButtonColor: '#2563eb',
                 customClass: {
-                    popup: 'shake'
+                    popup: 'shake apple-sweet-alert'
                 }
             });
         </script>

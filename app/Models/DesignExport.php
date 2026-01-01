@@ -17,6 +17,7 @@ class DesignExport extends Model
     protected $fillable = [
         'design_id',
         'design_variant_id',
+        'image_id',
         'application_type',
         'application_label',
         'placement_description',
@@ -51,6 +52,7 @@ class DesignExport extends Model
         'colors_count' => 'integer',
         'file_size' => 'integer',
         'auto_read_success' => 'boolean',
+        'colors_detected' => 'array',
     ];
 
     /**
@@ -78,6 +80,15 @@ class DesignExport extends Model
     public function variant()
     {
         return $this->belongsTo(DesignVariant::class, 'design_variant_id');
+    }
+
+    /**
+     * Relación con la imagen específica (opcional).
+     * Permite vincular una producción a una imagen específica de la galería.
+     */
+    public function image()
+    {
+        return $this->belongsTo(Image::class);
     }
 
     /**
@@ -170,8 +181,8 @@ class DesignExport extends Model
         }
         return 'N/A';
     }
-    public function application_type()
+    public function productVariants()
     {
-        return $this->belongsTo(Application_types::class);
+        return $this->belongsToMany(ProductVariant::class, 'product_variant_design');
     }
 }

@@ -6,7 +6,17 @@
       "Bash(php artisan:*)",
       "Bash(dir /b /s \"c:\\\\xampp\\\\htdocs\\\\laravel\\\\sistema_bordados\\\\resources\\\\views\\\\admin\")",
       "Bash(findstr:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(c:)",
+      "Bash(composer show:*)",
+      "Bash(composer require:*)",
+      "Bash(php -r:*)",
+      "Bash(echo:*)",
+      "Bash(dir /b \"c:\\\\xampp\\\\htdocs\\\\laravel\\\\sistema_bordados\\\\storage\\\\app\\\\public\\\\designs\\\\images\\\\2025\\\\12\\\\*.webp\")",
+      "Bash(curl:*)",
+      "Bash(ls:*)"
     ]
   }
 }

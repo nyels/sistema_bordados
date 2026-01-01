@@ -72,14 +72,121 @@
 
         <div class="row">
 
-            {{-- COLUMNA IZQUIERDA --}}
-            <div class="col-lg-7">
-
+            {{-- COLUMNA IZQUIERDA: IMAGEN --}}
+            <div class="col-lg-5">
                 <div class="surface">
+
+                    <h5 class="section-title mb-3">
+                        <i class="fas fa-image text-primary"></i> Imagen del diseño
+                    </h5>
+
+                    {{-- Imagen actual con diseño descriptivo --}}
+                    @if ($design->primaryImage)
+                        @php
+                            $img = $design->primaryImage;
+                            $fileExt = strtolower(pathinfo($img->file_name, PATHINFO_EXTENSION));
+                            $mimeMap = [
+                                'image/jpeg' => 'JPEG',
+                                'image/png' => 'PNG',
+                                'image/webp' => 'WebP',
+                                'image/avif' => 'AVIF',
+                                'image/gif' => 'GIF',
+                                'image/svg+xml' => 'SVG',
+                            ];
+                            $formatName = $mimeMap[$img->mime_type] ?? strtoupper($fileExt);
+                            $fileType = str_starts_with($img->mime_type ?? '', 'image/svg') ? 'Vector' : 'Imagen';
+
+                            // Formatear tamaño
+                            $fileSize = $img->file_size ?? $img->original_size ?? 0;
+                            if ($fileSize < 1024) {
+                                $formattedSize = $fileSize . ' B';
+                            } elseif ($fileSize < 1024 * 1024) {
+                                $formattedSize = number_format($fileSize / 1024, 1) . ' KB';
+                            } else {
+                                $formattedSize = number_format($fileSize / (1024 * 1024), 2) . ' MB';
+                            }
+                        @endphp
+                        <div class="image-analysis-card current-image-card mb-3">
+                            <div class="image-card-preview">
+                                <img src="{{ asset('storage/' . $img->file_path) }}"
+                                    alt="{{ $design->name }}">
+                            </div>
+                            <div class="image-card-info">
+                                <div class="image-card-name">
+                                    <i class="fas fa-file-image"></i>
+                                    <span title="{{ $img->file_name }}">{{ $img->file_name }}</span>
+                                </div>
+                                <div class="image-card-details">
+                                    <span>{{ $fileType }} ({{ $formatName }})</span>
+                                    <span>Tamaño: {{ $formattedSize }}</span>
+                                </div>
+                                @if($img->width && $img->height)
+                                <div class="image-card-dimensions">
+                                    <span class="dim-label">Dimensiones:</span>
+                                    {{ $img->width }} × {{ $img->height }} px
+                                </div>
+                                @endif
+                                <div class="image-card-format">
+                                    <i class="fas fa-check-circle"></i>
+                                    Formato: {{ $formatName }} (extensión .{{ $fileExt }})
+                                </div>
+                                <div class="image-card-date">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    Subida el {{ $img->created_at->format('d/m/Y') }} a las {{ $img->created_at->format('H:i') }}
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
+                    {{-- Alerta warning --}}
+                    <div class="alert alert-warning alert-modern mb-3">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Nota:</strong> Si subes una nueva imagen, reemplazará la actual como imagen principal.
+                    </div>
+
+                    {{-- Dropzone para nueva imagen --}}
+                    <div id="dropzone" class="dropzone @error('image') border-danger @enderror">
+                        <input type="file" id="imageInput" name="image" accept="image/*" hidden>
+
+                        <div class="dropzone-content" id="dropzoneContent">
+                            <div class="dropzone-icon">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                            </div>
+                            <div class="dropzone-title">
+                                {{ $design->primaryImage ? 'Cambiar imagen' : 'Subir imagen' }}
+                            </div>
+                            <div class="dropzone-sub">
+                                Arrastra una imagen aquí o haz clic
+                            </div>
+                            <div class="dropzone-formats">
+                                Formatos: JPEG, PNG, SVG, AVIF, WebP
+                            </div>
+                        </div>
+
+                        {{-- Contenedor para la vista previa de la imagen --}}
+                        <div id="previewContainer" class="preview-container"></div>
+                    </div>
+
+                    {{-- Contenedor para la información del archivo (card descriptiva) --}}
+                    <div id="fileInfoContainer"></div>
+                    <div id="image-error" class="text-danger small mt-1" style="display: none;"></div>
+
+                </div>
+            </div>
+
+            {{-- COLUMNA DERECHA: FORMULARIO --}}
+            <div class="col-lg-7">
+                <div class="surface">
+
+                    <h5 class="section-title mb-4">
+                        <i class="fas fa-info-circle text-primary"></i> Información básica
+                    </h5>
 
                     {{-- Nombre del diseño --}}
                     <div class="mb-4">
-                        <label class="label">Nombre del diseño</label>
+                        <label class="label">
+                            Nombre del diseño <span class="text-danger">*</span>
+                        </label>
                         <input type="text" name="name" class="input @error('name') is-invalid @enderror"
                             placeholder="Ej. Mariposa floral minimalista" value="{{ old('name', $design->name) }}" required>
                         <div id="name-error" class="text-danger small mt-1" style="display: none;"></div>
@@ -90,7 +197,9 @@
 
                     {{-- Categorías --}}
                     <div class="mb-4">
-                        <label class="label">Categorías</label>
+                        <label class="label">
+                            Categorías <span class="text-danger">*</span>
+                        </label>
                         <select name="categories[]" class="input @error('categories') is-invalid @enderror" multiple
                             size="6">
                             @foreach ($categories as $category)
@@ -120,7 +229,7 @@
                         @enderror
                     </div>
 
-                    {{-- Estado activo --}}
+                    {{-- Estado activo (oculto) --}}
                     <div style="display: none">
                         <div class="custom-control custom-switch">
                             <input type="hidden" name="is_active" value="0">
@@ -136,72 +245,6 @@
                     </div>
 
                 </div>
-
-            </div>
-
-            {{-- COLUMNA DERECHA --}}
-            <div class="col-lg-5">
-
-                <div class="surface">
-
-                    <label class="label mb-3">Imagen del diseño</label>
-
-                    {{-- Imagen actual --}}
-                    @if ($design->primaryImage)
-                        <div class="current-image-container mb-3">
-                            <label class="label small text-muted mb-2">Imagen actual:</label>
-                            <div class="current-image-wrapper">
-                                <img src="{{ asset('storage/' . $design->primaryImage->file_path) }}"
-                                    alt="{{ $design->name }}" class="current-image">
-                            </div>
-                            <div class="image-info mt-2">
-                                <small class="text-muted d-block">
-                                    <i class="fas fa-file"></i> {{ $design->primaryImage->file_name }}
-                                </small>
-                                <small class="text-muted d-block">
-                                    <i class="fas fa-calendar"></i>
-                                    Subida el {{ $design->primaryImage->created_at->format('d/m/Y') }}
-                                </small>
-                            </div>
-                        </div>
-                    @endif
-
-                    {{-- Alerta warning --}}
-                    <div class="alert alert-warning mb-3" style="font-size: 13px; padding: 10px; border-radius: 8px;">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <strong>Nota:</strong> Si subes una nueva imagen, reemplazará la actual como imagen principal.
-                    </div>
-
-                    {{-- Dropzone para nueva imagen --}}
-                    <div id="dropzone" class="dropzone">
-                        <input type="file" id="imageInput" name="image" accept="image/*" hidden>
-
-                        {{-- Contenido de la dropzone (texto) --}}
-                        <div class="dropzone-content" id="dropzoneContent">
-                            <div class="dropzone-icon">
-                                <i class="fas fa-cloud-upload-alt"></i>
-                            </div>
-                            <div class="dropzone-title">
-                                {{ $design->primaryImage ? 'Cambiar imagen' : 'Subir imagen' }}
-                            </div>
-                            <div class="dropzone-sub">
-                                Arrastra una imagen aquí o haz clic
-                            </div>
-                            <div class="dropzone-formats">
-                                Formatos: JPEG, PNG, SVG, AVIF, WebP, PES, DST, etc.
-                            </div>
-                        </div>
-
-                        {{-- Contenedor para la vista previa de la imagen --}}
-                        <div id="previewContainer" class="preview-container"></div>
-                    </div>
-
-                    {{-- Contenedor para la información del archivo --}}
-                    <div id="fileInfoContainer" class="mt-3"></div>
-                    <div id="image-error" class="text-danger small mt-1" style="display: none;"></div>
-
-                </div>
-
             </div>
 
         </div>
@@ -316,12 +359,240 @@
 
 @section('css')
     <style>
+        /* ============================================
+           MATERIAL DESIGN / APPLE HIG - BASE STYLES
+           ============================================ */
+        :root {
+            --primary: #2563eb;
+            --primary-light: #3b82f6;
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+            --font-size-xs: 11px;
+            --font-size-sm: 13px;
+            --font-size-base: 15px;
+            --font-size-lg: 17px;
+            --font-size-xl: 20px;
+        }
+
         .surface {
             background: #ffffff;
-            border-radius: 16px;
+            border-radius: var(--radius-lg);
             padding: 28px;
-            box-shadow: 0 4px 30px rgba(0, 0, 0, .04);
+            box-shadow: var(--shadow-md);
             height: 100%;
+        }
+
+        .section-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--gray-700);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title i {
+            font-size: var(--font-size-base);
+        }
+
+        /* ============================================
+           ALERTA MODERNA
+           ============================================ */
+        .alert-modern {
+            font-size: var(--font-size-sm);
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            border: none;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .alert-modern i {
+            margin-top: 2px;
+        }
+
+        /* ============================================
+           IMAGE ANALYSIS CARD - DISEÑO DESCRIPTIVO
+           ============================================ */
+        .image-analysis-card {
+            background: #fff;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            margin-top: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .image-analysis-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+        }
+
+        .image-card-preview {
+            position: relative;
+            width: 100%;
+            height: 140px;
+            background: var(--gray-50);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        .image-card-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .image-card-remove {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--danger);
+            color: white;
+            border: 2px solid white;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow-md);
+        }
+
+        .image-card-remove:hover {
+            background: #b91c1c;
+            transform: scale(1.1);
+        }
+
+        .image-card-info {
+            padding: 16px;
+            background: var(--gray-50);
+        }
+
+        .image-card-name {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            color: var(--gray-800);
+            margin-bottom: 12px;
+        }
+
+        .image-card-name i {
+            color: var(--primary);
+        }
+
+        .image-card-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: var(--font-size-sm);
+            color: var(--gray-600);
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .image-card-dimensions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: var(--font-size-sm);
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .image-card-dimensions .dim-label {
+            color: var(--gray-500);
+            font-weight: 500;
+        }
+
+        .image-card-format {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: var(--font-size-sm);
+            color: var(--success);
+            font-weight: 500;
+        }
+
+        .image-card-format i {
+            font-size: var(--font-size-xs);
+        }
+
+        /* Alerta de extensión diferente */
+        .image-card-warning {
+            background: #fef3c7;
+            border: 1px solid #fde68a;
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            margin-top: 12px;
+            font-size: var(--font-size-xs);
+            color: #92400e;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .image-card-warning i {
+            color: var(--warning);
+            margin-top: 1px;
+        }
+
+        /* Fecha de subida */
+        .image-card-date {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: var(--font-size-sm);
+            color: var(--gray-500);
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .image-card-date i {
+            color: var(--gray-400);
+            font-size: var(--font-size-xs);
+        }
+
+        /* Ajuste para imagen actual (card más grande) */
+        .current-image-card .image-card-preview {
+            height: 200px;
+        }
+
+        .current-image-card .image-card-name span {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         /* ========== INDICADOR STICKY DE VARIANTES ========== */
@@ -434,15 +705,15 @@
 
         /* ========== DROPZONE ========== */
         .dropzone {
-            border: 2px dashed #d1d5db;
-            border-radius: 18px;
-            padding: 40px 20px;
+            border: 2px dashed var(--gray-300);
+            border-radius: var(--radius-lg);
+            padding: 32px 20px;
             text-align: center;
             cursor: pointer;
-            transition: all .2s;
-            background: #fafafa;
+            transition: all 0.2s ease;
+            background: var(--gray-50);
             position: relative;
-            min-height: 280px;
+            min-height: 160px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -451,43 +722,58 @@
         }
 
         .dropzone:hover {
-            background: #f3f4f6;
-            border-color: #2563eb;
+            background: var(--gray-100);
+            border-color: var(--primary);
         }
 
         .dropzone.has-preview {
-            padding: 0;
-            border: 2px solid #2563eb;
-            background: #f8fafc;
+            min-height: 80px;
+            padding: 20px;
+            border: 2px solid var(--primary);
+            background: #eff6ff;
         }
 
         .dropzone.has-preview .dropzone-content {
             display: none;
         }
 
+        .dropzone.has-preview::after {
+            content: 'Archivo seleccionado ✓';
+            font-size: var(--font-size-sm);
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        .dropzone-content {
+            text-align: center;
+        }
+
         .dropzone-icon {
-            font-size: 48px;
-            color: #9ca3af;
-            margin-bottom: 15px;
+            font-size: 42px;
+            color: var(--gray-400);
+            margin-bottom: 12px;
         }
 
         .dropzone-title {
             font-weight: 600;
-            font-size: 18px;
-            color: #111827;
-            margin-bottom: 5px;
+            font-size: var(--font-size-lg);
+            color: var(--gray-700);
+            margin-bottom: 6px;
         }
 
         .dropzone-sub {
-            font-size: 14px;
-            color: #6b7280;
-            margin-bottom: 5px;
+            font-size: var(--font-size-sm);
+            color: var(--gray-500);
+            margin-bottom: 8px;
         }
 
         .dropzone-formats {
-            font-size: 12px;
-            color: #9ca3af;
-            margin-top: 10px;
+            font-size: var(--font-size-xs);
+            color: var(--gray-400);
+            background: var(--gray-100);
+            padding: 4px 12px;
+            border-radius: 20px;
+            display: inline-block;
         }
 
         /* ========== PREVIEW CONTAINER ========== */
@@ -1316,132 +1602,126 @@
             existingErrors.forEach(error => error.remove());
         }
 
-        // Función para mostrar información del archivo
-        function showFileInfo(file, validationResult) {
-            const fileSize = (file.size / 1024).toFixed(2);
-            let fileTypeName = '';
-            let extensionNote = '';
+        /**
+         * Obtiene las dimensiones de una imagen
+         */
+        function getImageDimensions(file) {
+            return new Promise((resolve) => {
+                if (!file.type.startsWith('image/')) {
+                    resolve({ width: null, height: null });
+                    return;
+                }
 
-            switch (validationResult.type) {
-                case 'image':
-                    fileTypeName = 'Imagen';
-                    break;
-                case 'vector':
-                    fileTypeName = 'Vector (SVG)';
-                    break;
-                case 'embroidery':
-                    fileTypeName = 'Archivo de bordado';
-                    break;
-                default:
-                    fileTypeName = 'Archivo';
+                const img = new Image();
+                const url = URL.createObjectURL(file);
+
+                img.onload = () => {
+                    URL.revokeObjectURL(url);
+                    resolve({ width: img.naturalWidth, height: img.naturalHeight });
+                };
+
+                img.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    resolve({ width: null, height: null });
+                };
+
+                img.src = url;
+            });
+        }
+
+        /**
+         * Formatea el tamaño de archivo de forma legible
+         */
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+
+        // Función para mostrar información del archivo (diseño descriptivo como foto 2)
+        async function showFileInfo(file, validationResult) {
+            // Obtener dimensiones de la imagen
+            const dimensions = await getImageDimensions(file);
+
+            const fileSize = formatFileSize(file.size);
+            const fileExt = file.name.split('.').pop().toLowerCase();
+            const detectedFormat = validationResult.subtype || fileExt;
+
+            // Determinar tipo de archivo
+            let fileTypeName = 'Imagen';
+            if (validationResult.type === 'vector') fileTypeName = 'Vector';
+            else if (validationResult.type === 'embroidery') fileTypeName = 'Bordado';
+
+            // Construir HTML de dimensiones
+            let dimensionsHTML = '';
+            if (dimensions.width && dimensions.height) {
+                dimensionsHTML = `
+                    <div class="image-card-dimensions">
+                        <span class="dim-label">Dimensiones:</span>
+                        ${dimensions.width} × ${dimensions.height} px
+                    </div>
+                `;
             }
 
-            const originalExtension = file.name.toLowerCase().split('.').pop();
+            // Alerta de extensión diferente al tipo real detectado
+            let warningHTML = '';
             if (validationResult.detectedBy === 'signature' &&
                 validationResult.subtype &&
-                originalExtension !== validationResult.subtype.toLowerCase()) {
-
-                extensionNote = `
-                <div class="alert alert-warning mt-2 p-2" style="font-size: 12px; border-radius: 8px;">
-                    <i class="fas fa-exclamation-triangle mr-1"></i>
-                    <strong>Nota:</strong> El archivo tiene extensión .${originalExtension}
-                    pero es un formato ${validationResult.subtype.toUpperCase()}.
-                    Se guardará con la extensión correcta (.${validationResult.subtype}).
-                </div>
-            `;
+                validationResult.actualExtension &&
+                validationResult.subtype.toLowerCase() !== validationResult.actualExtension.toLowerCase()) {
+                warningHTML = `
+                    <div class="image-card-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div>
+                            <strong>Nota:</strong> El archivo tiene extensión .${validationResult.actualExtension} pero es un formato ${validationResult.subtype.toUpperCase()}. Se guardará con la extensión correcta (.${validationResult.subtype}).
+                        </div>
+                    </div>
+                `;
             }
 
+            // Crear la URL de la imagen para preview
+            const previewURL = URL.createObjectURL(file);
+
             const fileInfoHTML = `
-            <div class="file-info fade-in">
-                <div class="file-info-header">
-                    <div class="file-info-name">
-                        <i class="fas fa-${fileValidator.getFileIcon(validationResult.subtype || validationResult.type)} mr-2"></i>
-                        ${file.name}
+                <div class="image-analysis-card fade-in">
+                    <div class="image-card-preview">
+                        <img src="${previewURL}" alt="${file.name}">
+                        <button type="button" class="image-card-remove" onclick="handleRemoveImage()" title="Eliminar imagen">×</button>
+                    </div>
+                    <div class="image-card-info">
+                        <div class="image-card-name">
+                            <i class="fas fa-file-image"></i>
+                            <span title="${file.name}">${file.name}</span>
+                        </div>
+                        <div class="image-card-details">
+                            <span>${fileTypeName} (${detectedFormat.toUpperCase()})</span>
+                            <span>Tamaño: ${fileSize}</span>
+                        </div>
+                        ${dimensionsHTML}
+                        <div class="image-card-format">
+                            <i class="fas fa-check-circle"></i>
+                            Formato detectado: ${detectedFormat.toUpperCase()} (archivo con extensión .${fileExt})
+                        </div>
+                        ${warningHTML}
                     </div>
                 </div>
-                <div class="file-info-details">
-                    <div>
-                        ${fileTypeName} (${validationResult.subtype ? validationResult.subtype.toUpperCase() : 'Desconocido'})
-                    </div>
-                    <div>
-                        Tamaño: ${fileSize} KB
-                    </div>
-                </div>
-                <div class="file-info-success mt-2">
-                    <i class="fas fa-check-circle mr-1"></i>
-                    Formato detectado: ${validationResult.subtype ? validationResult.subtype.toUpperCase() : 'Desconocido'} (archivo con extensión .${originalExtension})
-                </div>
-                ${extensionNote}
-            </div>
-        `;
+            `;
 
             fileInfoContainer.innerHTML = fileInfoHTML;
         }
 
         // Función para crear vista previa dentro de la dropzone
+        // NOTA: La vista previa principal ahora está en la card descriptiva (fileInfoContainer)
+        // Esta función solo oculta el contenido del dropzone y marca que hay archivo seleccionado
         function createPreview(file, validationResult) {
-            // Mostrar el contenedor de vista previa
-            previewContainer.classList.add('active');
-
-            // Agregar clase para indicar que hay preview
+            // Agregar clase para indicar que hay preview (oculta dropzone content)
             dropzone.classList.add('has-preview');
 
-            const div = document.createElement('div');
-            div.className = 'preview-item';
-
-            if (validationResult.type === 'embroidery') {
-                // Icono para archivos de bordado
-                div.innerHTML = `
-                    <div class="embroidery-preview">
-                        <i class="fas fa-vest"></i>
-                        <div style="font-size: 16px; margin-top: 10px;">${validationResult.subtype.toUpperCase()}</div>
-                        <div style="font-size: 14px; opacity: 0.9; margin-top: 5px;">${file.name}</div>
-                    </div>
-                `;
-            } else if (validationResult.type === 'vector') {
-                // Vista previa para SVG
+            // La preview visual se muestra en la card descriptiva (showFileInfo)
+            // Solo guardamos la URL para posible uso posterior
+            if (validationResult.type !== 'embroidery') {
                 currentObjectURL = URL.createObjectURL(file);
-                div.innerHTML = `<img src="${currentObjectURL}" alt="Vista previa SVG">`;
-                div.classList.add('svg-preview');
-            } else {
-                // Intentar crear vista previa para imágenes
-                currentObjectURL = URL.createObjectURL(file);
-                const img = document.createElement('img');
-                img.src = currentObjectURL;
-                img.alt = "Vista previa";
-                img.onload = () => {
-                    // Imagen cargada correctamente
-                };
-                img.onerror = () => {
-                    // Si falla la carga (ej: AVIF en navegadores antiguos)
-                    div.innerHTML = `
-                        <div style="text-align: center; color: #666; padding: 20px; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                            <i class="fas fa-file-image" style="font-size: 48px; margin-bottom: 10px;"></i>
-                            <div style="font-size: 16px;">${validationResult.subtype.toUpperCase()}</div>
-                            <div style="font-size: 14px; opacity: 0.8; margin-top: 5px;">Vista previa no disponible</div>
-                        </div>
-                    `;
-                };
-                div.appendChild(img);
             }
-
-            // Crear botón de eliminar (tachita) - SEPARADO DEL CONTENIDO DE LA VISTA PREVIA
-            const removeBtn = document.createElement('button');
-            removeBtn.type = 'button';
-            removeBtn.className = 'remove-btn';
-            removeBtn.innerHTML = '×';
-            removeBtn.title = 'Eliminar imagen';
-
-            // IMPORTANTE: Detener la propagación del evento para que no active el input file
-            removeBtn.addEventListener('click', function(e) {
-                e.stopPropagation(); // Detener la propagación
-                e.preventDefault(); // Prevenir comportamiento por defecto
-                handleRemoveImage();
-                return false;
-            });
-
-            previewContainer.appendChild(div);
-            previewContainer.appendChild(removeBtn);
         }
 
         // Función para manejar la eliminación de imagen

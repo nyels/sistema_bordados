@@ -138,12 +138,12 @@ class SearchController extends Controller
         $page = max($request->get('page', 1), 1);
         $offset = ($page - 1) * $limit;
 
-        if (mb_strlen(trim($term)) < 2) {
+        if (mb_strlen(trim($term)) < 1) {
             return response()->json([
                 'success' => true,
                 'data' => [],
                 'total' => 0,
-                'message' => 'Ingresa al menos 2 caracteres',
+                'message' => 'Ingresa al menos 1 caracter',
             ]);
         }
 
@@ -166,7 +166,7 @@ class SearchController extends Controller
             // Obtener modelos completos con relaciones
             $designIds = $results->pluck('id')->toArray();
             
-            $designs = Design::with(['primaryImage', 'categories', 'variants'])
+            $designs = Design::with(['primaryImage', 'categories', 'variants', 'exports'])
                 ->whereIn('id', $designIds)
                 ->get()
                 ->keyBy('id');
@@ -179,17 +179,24 @@ class SearchController extends Controller
                     return null;
                 }
 
+                // Usar thumbnail_small para listados (carga rápida)
+                $imageSrc = null;
+                if ($design->primaryImage) {
+                    $imageSrc = $design->primaryImage->thumbnail_small
+                        ? asset('storage/' . $design->primaryImage->thumbnail_small)
+                        : asset('storage/' . $design->primaryImage->file_path);
+                }
+
                 return [
                     'id' => $design->id,
                     'name' => $design->name,
                     'slug' => $design->slug,
                     'description' => $design->description,
                     'excerpt' => $result['excerpt'] ?? $this->truncate($design->description, 100),
-                    'image' => $design->primaryImage 
-                        ? asset('storage/' . $design->primaryImage->file_path)
-                        : null,
+                    'image' => $imageSrc,
                     'categories' => $design->categories->pluck('name')->toArray(),
                     'variants_count' => $design->variants->count(),
+                    'exports_count' => $design->exports->count(),
                     'score' => $result['score'] ?? 1,
                     'url' => route('admin.designs.show', $design),
                 ];
@@ -242,16 +249,22 @@ class SearchController extends Controller
 
             $formatted = $suggestions->map(function ($item) use ($designs) {
                 $design = $designs->get($item['id']);
-                
+
+                // Usar thumbnail_small para autocompletado (carga rápida)
+                $imageSrc = null;
+                if ($design && $design->primaryImage) {
+                    $imageSrc = $design->primaryImage->thumbnail_small
+                        ? asset('storage/' . $design->primaryImage->thumbnail_small)
+                        : asset('storage/' . $design->primaryImage->file_path);
+                }
+
                 return [
                     'id' => $item['id'],
                     'value' => $item['title'], // Para jQuery UI Autocomplete
                     'label' => $item['title'], // Para jQuery UI Autocomplete
                     'name' => $item['title'],
                     'slug' => $item['metadata']['slug'] ?? null,
-                    'image' => $design && $design->primaryImage
-                        ? asset('storage/' . $design->primaryImage->file_path)
-                        : null,
+                    'image' => $imageSrc,
                 ];
             });
 
@@ -280,15 +293,21 @@ class SearchController extends Controller
             ->get();
 
         $formatted = $designs->map(function ($design) {
+            // Usar thumbnail_small para fallback (carga rápida)
+            $imageSrc = null;
+            if ($design->primaryImage) {
+                $imageSrc = $design->primaryImage->thumbnail_small
+                    ? asset('storage/' . $design->primaryImage->thumbnail_small)
+                    : asset('storage/' . $design->primaryImage->file_path);
+            }
+
             return [
                 'id' => $design->id,
                 'value' => $design->name,
                 'label' => $design->name,
                 'name' => $design->name,
                 'slug' => $design->slug,
-                'image' => $design->primaryImage
-                    ? asset('storage/' . $design->primaryImage->file_path)
-                    : null,
+                'image' => $imageSrc,
             ];
         });
 

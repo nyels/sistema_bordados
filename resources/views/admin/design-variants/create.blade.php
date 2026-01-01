@@ -51,13 +51,13 @@
             {{-- COLUMNA IZQUIERDA --}}
             <div class="col-lg-5">
                 <div class="surface">
-                    <h5 class="mb-3">
-                        <i class="fas fa-image text-primary"></i> Imagen de la variante
+                    <h5 class="section-title mb-3">
+                        <i class="fas fa-image text-primary"></i> Imágenes de la variante
                     </h5>
 
-                    <div class="alert alert-info mb-3" style="font-size: 13px; padding: 10px;">
+                    <div class="alert alert-info alert-modern mb-3">
                         <i class="fas fa-info-circle"></i>
-                        Sube hasta 10 imágenes (máx. 10MB c/u) específicas para esta variante.
+                        <span>Sube hasta 10 imágenes (máx. 10MB c/u) específicas para esta variante.</span>
                     </div>
 
                     {{-- DROPZONE COMPACTO --}}
@@ -72,19 +72,12 @@
                             <div class="dropzone-title">Subir imágenes</div>
                             <div class="dropzone-sub">Arrastra imágenes aquí o haz clic</div>
                             <div class="dropzone-formats">
-                                Formatos: JPEG, PNG, SVG, AVIF, WebP, etc.
+                                Formatos: JPEG, PNG, SVG, AVIF, WebP
                             </div>
                         </div>
                     </div>
 
-                    {{-- Contenedor scrolleable para las imágenes con analizador --}}
-                    <div id="imagesScrollContainer" class="images-scroll-container">
-                        <div id="imagesGrid" class="images-analysis-grid">
-                            {{-- Aquí se agregan las imágenes con su info --}}
-                        </div>
-                    </div>
-
-                    {{-- Resumen de archivos --}}
+                    {{-- Resumen de archivos (MOVIDO: ahora está debajo del dropzone) --}}
                     <div id="filesSummary" class="files-summary" style="display: none;">
                         <div class="summary-header">
                             <i class="fas fa-images text-primary"></i>
@@ -100,6 +93,13 @@
                         </div>
                     </div>
 
+                    {{-- Contenedor scrolleable para las imágenes con analizador --}}
+                    <div id="imagesScrollContainer" class="images-scroll-container">
+                        <div id="imagesGrid" class="images-analysis-grid">
+                            {{-- Aquí se agregan las imágenes con su info --}}
+                        </div>
+                    </div>
+
                     {{-- Toast para mensajes --}}
                     <div id="appleToast" class="apple-toast">
                         <i class="fas fa-exclamation-circle"></i>
@@ -111,7 +111,7 @@
             {{-- COLUMNA DERECHA --}}
             <div class="col-lg-7">
                 <div class="surface">
-                    <h5 class="mb-4">
+                    <h5 class="section-title mb-4">
                         <i class="fas fa-info-circle text-primary"></i> Información básica
                     </h5>
 
@@ -133,82 +133,29 @@
                         <small class="hint">Código automático jerárquico profesional</small>
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-6 mb-4">
-                            <label class="label">Precio <span class="text-danger">*</span></label>
-                            <div class="input-group custom-unified-group">
-                                <div class="input-group-prepend">
-                                    <span class="input-group-text unificado-text">$</span>
-                                </div>
-                                <input type="number" name="price" required
-                                    class="input unificado-input @error('price') is-invalid @enderror"
-                                    placeholder="Ej: 150.00" step="0.01" min="0" value="{{ old('price') }}">
-                            </div>
-                            @error('price')
-                                <span class="text-danger small">{{ $message }}</span>
-                            @enderror
+                    {{-- Selector visual de imagen principal --}}
+                    <div class="mb-4 mt-4" id="primaryImageContainer" style="display: none;">
+                        <label class="label">
+                            <i class="fas fa-star text-warning"></i> Selecciona la imagen principal de la variante <span class="text-danger">*</span>
+                        </label>
+                        <input type="hidden" id="primary_image_index" name="primary_image_index" value="">
+
+                        <div id="primaryImageGrid" class="primary-image-grid">
+                            {{-- Aquí se generan las opciones de imagen --}}
                         </div>
+
+                        <div id="primaryImageError" class="invalid-feedback" style="display: none;">
+                            <i class="fas fa-exclamation-circle"></i> Debes seleccionar una imagen principal
+                        </div>
+
+                        <small class="hint mt-2">
+                            <i class="fas fa-info-circle text-info"></i> Esta imagen será la representativa de la variante en listados y búsquedas. Haz clic para seleccionar.
+                        </small>
                     </div>
 
-                    <h5 class="mb-3 mt-4">
-                        <i class="fas fa-tags text-primary"></i> Atributos de la variante *
-                    </h5>
-
-                    @foreach ($attributes as $attribute)
-                        <div class="mb-4">
-                            <label class="label">{{ $attribute->name }}</label>
-                            @if ($attribute->type === 'color')
-                                <div class="color-picker-grid">
-                                    @foreach ($attribute->values as $value)
-                                        <div class="color-option">
-                                            <input type="checkbox" name="attribute_values[]" value="{{ $value->id }}"
-                                                id="attr_{{ $value->id }}" data-name="{{ $value->value }}"
-                                                class="color-checkbox attribute-checkbox"
-                                                {{ in_array($value->id, old('attribute_values', [])) ? 'checked' : '' }}>
-                                            <label for="attr_{{ $value->id }}" class="color-label"
-                                                style="background-color: {{ $value->hex_color }};"
-                                                title="{{ $value->value }}">
-                                                <span class="color-name">{{ $value->value }}</span>
-                                            </label>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            @else
-                                <div class="attribute-options">
-                                    @foreach ($attribute->values as $value)
-                                        <div class="custom-control custom-checkbox">
-                                            <input type="checkbox" class="custom-control-input attribute-checkbox"
-                                                name="attribute_values[]" data-name="{{ $value->value }}"
-                                                value="{{ $value->id }}" id="attr_{{ $value->id }}"
-                                                {{ in_array($value->id, old('attribute_values', [])) ? 'checked' : '' }}>
-                                            <label class="custom-control-label" for="attr_{{ $value->id }}">
-                                                {{ $value->value }}
-                                            </label>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            @endif
-                        </div>
-                    @endforeach
-
-                    <div class="mt-4">
-                        <div class="custom-control custom-switch mb-2">
-                            <input type="hidden" name="is_default" value="0">
-                            <input type="checkbox" class="custom-control-input" id="is_default" name="is_default"
-                                value="1" {{ old('is_default') ? 'checked' : '' }}>
-                            <label class="custom-control-label" for="is_default">
-                                <strong>Variante por defecto</strong>
-                            </label>
-                        </div>
-                        <div class="custom-control custom-switch mt-3">
-                            <input type="hidden" name="is_active" value="0">
-                            <input type="checkbox" class="custom-control-input" id="is_active" name="is_active"
-                                value="1" checked>
-                            <label class="custom-control-label" for="is_active">
-                                <strong>Variante activa</strong>
-                            </label>
-                        </div>
-                    </div>
+                    {{-- Campos ocultos necesarios para el backend --}}
+                    <input type="hidden" name="is_active" value="1">
+                    <input type="hidden" name="is_default" value="0">
                 </div>
             </div>
         </div>
@@ -217,37 +164,100 @@
 
 @section('css')
     <style>
-        /* ESTILOS ORIGINALES (MANTENIDOS) */
+        /* ============================================
+           MATERIAL DESIGN / APPLE HIG - BASE STYLES
+           ============================================ */
+        :root {
+            --primary: #2563eb;
+            --primary-light: #3b82f6;
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+            --font-size-xs: 11px;
+            --font-size-sm: 13px;
+            --font-size-base: 15px;
+            --font-size-lg: 17px;
+            --font-size-xl: 20px;
+        }
+
         .surface {
             background: #fff;
-            border-radius: 20px;
+            border-radius: var(--radius-lg);
             padding: 28px;
-            box-shadow: 0 4px 30px rgba(0, 0, 0, .04);
+            box-shadow: var(--shadow-md);
             height: 100%;
+        }
+
+        .section-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--gray-700);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title i {
+            font-size: var(--font-size-base);
         }
 
         .label {
             font-weight: 600;
-            color: #1d1d1f;
+            color: var(--gray-700);
             margin-bottom: 6px;
             display: block;
+            font-size: var(--font-size-base);
         }
 
         .input {
             width: 100%;
-            border: 1px solid #d2d2d7;
-            border-radius: 12px;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-md);
             padding: 14px 16px;
-            font-size: 15px;
-            background: #f5f5f7;
-            transition: all 0.3s ease;
+            font-size: var(--font-size-base);
+            background: var(--gray-50);
+            transition: all 0.2s ease;
         }
 
         .input:focus {
             outline: none;
-            border-color: #0071e3;
+            border-color: var(--primary);
             background: #fff;
-            box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        /* ============================================
+           ALERTA MODERNA
+           ============================================ */
+        .alert-modern {
+            font-size: var(--font-size-sm);
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            border: none;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .alert-modern i {
+            margin-top: 2px;
         }
 
         .custom-unified-group {
@@ -276,20 +286,58 @@
             outline: none !important;
         }
 
-        /* Dropzone Original (Mantenido para compatibilidad) */
+        /* ============================================
+           DROPZONE - DISEÑO MODERNO
+           ============================================ */
         .dropzone {
-            border: 2px dashed #d1d5db;
-            border-radius: 18px;
-            padding: 40px 20px;
+            border: 2px dashed var(--gray-300);
+            border-radius: var(--radius-lg);
+            padding: 32px 20px;
             text-align: center;
             cursor: pointer;
-            background: #fafafa;
-            transition: all 0.3s;
+            transition: all 0.2s ease;
+            min-height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--gray-50);
         }
 
         .dropzone:hover {
-            border-color: #0071e3;
-            background: #f5f5f7;
+            border-color: var(--primary);
+            background: var(--gray-100);
+        }
+
+        .dropzone-content {
+            text-align: center;
+        }
+
+        .dropzone-icon {
+            font-size: 42px;
+            color: var(--gray-400);
+            margin-bottom: 12px;
+        }
+
+        .dropzone-title {
+            font-weight: 600;
+            font-size: var(--font-size-lg);
+            color: var(--gray-700);
+            margin-bottom: 6px;
+        }
+
+        .dropzone-sub {
+            font-size: var(--font-size-sm);
+            color: var(--gray-500);
+            margin-bottom: 8px;
+        }
+
+        .dropzone-formats {
+            font-size: var(--font-size-xs);
+            color: var(--gray-400);
+            background: var(--gray-100);
+            padding: 4px 12px;
+            border-radius: 20px;
+            display: inline-block;
         }
 
         .preview-grid {
@@ -480,22 +528,24 @@
             gap: 12px;
         }
 
-        /* CARD DE IMAGEN CON ANÁLISIS */
+        /* ============================================
+           IMAGE ANALYSIS CARD - DISEÑO DESCRIPTIVO
+           ============================================ */
         .image-analysis-card {
             background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-md);
             overflow: hidden;
             transition: all 0.2s ease;
         }
 
         .image-analysis-card:hover {
-            border-color: #2563eb;
+            border-color: var(--primary);
             box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
         }
 
         .image-analysis-card.selected {
-            border-color: #2563eb;
+            border-color: var(--primary);
             border-width: 2px;
         }
 
@@ -503,12 +553,13 @@
         .image-card-preview {
             position: relative;
             width: 100%;
-            height: 100px;
-            background: #f8fafc;
+            height: 120px;
+            background: var(--gray-50);
             display: flex;
             align-items: center;
             justify-content: center;
             overflow: hidden;
+            border-bottom: 1px solid var(--gray-100);
         }
 
         .image-card-preview img {
@@ -520,12 +571,12 @@
         /* Botón de eliminar */
         .image-card-remove {
             position: absolute;
-            top: 6px;
-            right: 6px;
-            width: 24px;
-            height: 24px;
+            top: 8px;
+            right: 8px;
+            width: 26px;
+            height: 26px;
             border-radius: 50%;
-            background: #ef4444;
+            background: var(--danger);
             color: white;
             border: 2px solid white;
             cursor: pointer;
@@ -533,53 +584,205 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
+            font-size: 15px;
             font-weight: bold;
             transition: all 0.2s ease;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+            box-shadow: var(--shadow-md);
         }
 
         .image-card-remove:hover {
-            background: #dc2626;
+            background: #b91c1c;
             transform: scale(1.1);
         }
 
         /* Info del análisis */
         .image-card-info {
-            padding: 10px;
-            border-top: 1px solid #f1f5f9;
-            background: #fafafa;
+            padding: 14px;
+            border-top: 1px solid var(--gray-100);
+            background: var(--gray-50);
         }
 
         .image-card-name {
-            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: var(--font-size-sm);
             font-weight: 600;
-            color: #333;
+            color: var(--gray-800);
+            margin-bottom: 10px;
+        }
+
+        .image-card-name i {
+            color: var(--primary);
+        }
+
+        .image-card-name span {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            margin-bottom: 4px;
         }
 
         .image-card-details {
             display: flex;
             justify-content: space-between;
-            font-size: 10px;
-            color: #6b7280;
-            margin-bottom: 4px;
+            font-size: var(--font-size-sm);
+            color: var(--gray-600);
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .image-card-dimensions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: var(--font-size-sm);
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .image-card-dimensions .dim-label {
+            color: var(--gray-500);
+            font-weight: 500;
         }
 
         .image-card-format {
             display: flex;
             align-items: center;
-            gap: 4px;
-            font-size: 10px;
-            color: #059669;
+            gap: 6px;
+            font-size: var(--font-size-sm);
+            color: var(--success);
             font-weight: 500;
         }
 
         .image-card-format i {
-            font-size: 10px;
+            font-size: var(--font-size-xs);
+        }
+
+        /* Alerta de extensión diferente */
+        .image-card-warning {
+            background: #fef3c7;
+            border: 1px solid #fde68a;
+            border-radius: var(--radius-sm);
+            padding: 8px 10px;
+            margin-top: 10px;
+            font-size: var(--font-size-xs);
+            color: #92400e;
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+        }
+
+        .image-card-warning i {
+            color: var(--warning);
+            margin-top: 1px;
+            flex-shrink: 0;
+        }
+
+        .image-card-warning div {
+            line-height: 1.4;
+        }
+
+        /* ============================================
+           SELECTOR VISUAL DE IMAGEN PRINCIPAL
+           ============================================ */
+        .primary-image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+            margin-bottom: 8px;
+        }
+
+        .primary-image-option {
+            position: relative;
+            border: 3px solid #e5e7eb;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            aspect-ratio: 1;
+            background: #f9fafb;
+        }
+
+        .primary-image-option:hover {
+            border-color: #93c5fd;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+
+        .primary-image-option.selected {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2), 0 4px 12px rgba(37, 99, 235, 0.25);
+        }
+
+        .primary-image-option img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .primary-image-option .image-number {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        .primary-image-option .selected-badge {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: #2563eb;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: transform 0.2s ease;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+        }
+
+        .primary-image-option.selected .selected-badge {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .primary-image-option .image-name {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+            color: white;
+            font-size: 11px;
+            padding: 20px 8px 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Error de validación */
+        .primary-image-grid.has-error {
+            border: 2px dashed #dc2626;
+            border-radius: 12px;
+            padding: 10px;
+            background: #fef2f2;
+        }
+
+        .invalid-feedback {
+            color: #dc2626;
+            font-size: 13px;
+            margin-top: 8px;
         }
 
         /* Alerta de extensión diferente */
@@ -1176,10 +1379,13 @@
         const backBtn = document.getElementById('back-btn');
         const nameInput = document.getElementById('variant_name');
         const skuInput = document.getElementById('variant_sku');
-        const attributeCheckboxes = document.querySelectorAll('.attribute-checkbox');
         const designBaseName = "{{ $design->name }}";
         const appleToast = document.getElementById('appleToast');
         const toastMessage = document.getElementById('toastMessage');
+        const primaryImageContainer = document.getElementById('primaryImageContainer');
+        const primaryImageGrid = document.getElementById('primaryImageGrid');
+        const primaryImageInput = document.getElementById('primary_image_index');
+        const primaryImageError = document.getElementById('primaryImageError');
 
         let isSubmitting = false;
         let currentObjectURLs = [];
@@ -1192,15 +1398,10 @@
         let isFormSubmitting = false;
 
         // ============================================
-        // FUNCIONALIDAD ORIGINAL (SKU Y ATRIBUTOS) - MANTENIDA
+        // FUNCIONALIDAD DE SKU AUTOMÁTICO
         // ============================================
 
         function updateSku() {
-            let selectedValues = [];
-            attributeCheckboxes.forEach(cb => {
-                if (cb.checked) selectedValues.push(cb.dataset.name);
-            });
-
             let skuBase = designBaseName;
             let userValue = nameInput.value.trim();
             if (userValue) {
@@ -1215,8 +1416,110 @@
         }
 
         nameInput.addEventListener('input', updateSku);
-        attributeCheckboxes.forEach(cb => cb.addEventListener('change', updateSku));
         updateSku(); // Inicializar SKU
+
+        // ============================================
+        // FUNCIONALIDAD DEL SELECTOR VISUAL DE IMAGEN PRINCIPAL
+        // ============================================
+
+        function updatePrimaryImageSelect() {
+            // Mostrar selector solo si hay imágenes
+            if (selectedFiles.length > 0) {
+                primaryImageContainer.style.display = 'block';
+
+                // Limpiar grid actual
+                primaryImageGrid.innerHTML = '';
+
+                // Crear opción visual por cada imagen
+                selectedFiles.forEach((file, index) => {
+                    const option = document.createElement('div');
+                    option.className = 'primary-image-option';
+                    option.dataset.index = index;
+
+                    // Crear thumbnail
+                    const img = document.createElement('img');
+                    const objectURL = URL.createObjectURL(file);
+                    img.src = objectURL;
+                    img.alt = file.name;
+
+                    // Número de imagen
+                    const numberBadge = document.createElement('span');
+                    numberBadge.className = 'image-number';
+                    numberBadge.textContent = index + 1;
+
+                    // Badge de selección
+                    const selectedBadge = document.createElement('span');
+                    selectedBadge.className = 'selected-badge';
+                    selectedBadge.innerHTML = '<i class="fas fa-check"></i>';
+
+                    // Nombre de la imagen
+                    const imageName = document.createElement('span');
+                    imageName.className = 'image-name';
+                    imageName.textContent = file.name;
+                    imageName.title = file.name;
+
+                    option.appendChild(img);
+                    option.appendChild(numberBadge);
+                    option.appendChild(selectedBadge);
+                    option.appendChild(imageName);
+
+                    // Event listener para seleccionar
+                    option.addEventListener('click', () => selectPrimaryImage(index));
+
+                    primaryImageGrid.appendChild(option);
+                });
+
+                // Si solo hay una imagen, seleccionarla automáticamente
+                if (selectedFiles.length === 1) {
+                    selectPrimaryImage(0);
+                } else if (primaryImageInput.value === '') {
+                    // Si hay más de una y ninguna está seleccionada, limpiar selección
+                    clearPrimaryImageSelection();
+                }
+            } else {
+                primaryImageContainer.style.display = 'none';
+                primaryImageInput.value = '';
+            }
+        }
+
+        function selectPrimaryImage(index) {
+            // Actualizar input hidden
+            primaryImageInput.value = index;
+
+            // Quitar selección de todas
+            document.querySelectorAll('.primary-image-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+
+            // Agregar selección a la seleccionada
+            const selectedOption = document.querySelector(`.primary-image-option[data-index="${index}"]`);
+            if (selectedOption) {
+                selectedOption.classList.add('selected');
+            }
+
+            // Quitar error si existía
+            primaryImageGrid.classList.remove('has-error');
+            primaryImageError.style.display = 'none';
+
+            // Marcar cambio en formulario
+            formChanged = true;
+        }
+
+        function clearPrimaryImageSelection() {
+            primaryImageInput.value = '';
+            document.querySelectorAll('.primary-image-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+        }
+
+        function validatePrimaryImage() {
+            if (selectedFiles.length > 0 && primaryImageInput.value === '') {
+                primaryImageGrid.classList.add('has-error');
+                primaryImageError.style.display = 'block';
+                return false;
+            }
+            return true;
+        }
 
         // ============================================
         // FUNCIONALIDAD DEL DROPZONE MULTIPLE MEJORADO
@@ -1251,7 +1554,7 @@
         }
 
         // Función para crear card de imagen con análisis
-        function createImageCard(file, validationResult, index) {
+        function createImageCard(file, validationResult, index, dimensions = null) {
             const card = document.createElement('div');
             card.className = 'image-analysis-card fade-in';
             card.dataset.index = index;
@@ -1331,6 +1634,25 @@
                 `;
             }
 
+            // Dimensiones de la imagen
+            let dimensionsHTML = '';
+            if (dimensions && dimensions.width && dimensions.height) {
+                dimensionsHTML = `
+                    <div class="image-card-dimensions">
+                        <span class="dim-label">Dimensiones:</span>
+                        ${dimensions.width} × ${dimensions.height} px
+                    </div>
+                `;
+            } else {
+                // Placeholder mientras se carga
+                dimensionsHTML = `
+                    <div class="image-card-dimensions" id="dimensions-${index}">
+                        <span class="dim-label">Dimensiones:</span>
+                        <span class="text-muted">Calculando...</span>
+                    </div>
+                `;
+            }
+
             infoDiv.innerHTML = `
                 <div class="image-card-name" title="${file.name}">
                     <i class="fas fa-${fileValidator.getFileIcon(detectedFormat)} mr-1"></i>
@@ -1340,6 +1662,7 @@
                     <span>${fileTypeName} (${detectedFormat.toUpperCase()})</span>
                     <span>${fileSize} KB</span>
                 </div>
+                ${dimensionsHTML}
                 <div class="image-card-format">
                     <i class="fas fa-check-circle"></i>
                     Formato detectado: ${detectedFormat.toUpperCase()}
@@ -1353,17 +1676,52 @@
             return card;
         }
 
+        // Función para obtener dimensiones de una imagen
+        function getImageDimensions(file) {
+            return new Promise((resolve) => {
+                if (!file.type.startsWith('image/')) {
+                    resolve({ width: null, height: null });
+                    return;
+                }
+
+                const img = new Image();
+                const objectURL = URL.createObjectURL(file);
+
+                img.onload = () => {
+                    URL.revokeObjectURL(objectURL);
+                    resolve({ width: img.naturalWidth, height: img.naturalHeight });
+                };
+
+                img.onerror = () => {
+                    URL.revokeObjectURL(objectURL);
+                    resolve({ width: null, height: null });
+                };
+
+                img.src = objectURL;
+            });
+        }
+
+        // Almacena las dimensiones de las imágenes
+        let imageDimensions = [];
+
         // Función para renderizar todas las cards
-        function renderImageCards() {
+        async function renderImageCards() {
             imagesGrid.innerHTML = '';
 
+            // Obtener dimensiones de todas las imágenes en paralelo
+            const dimensionPromises = selectedFiles.map(file => getImageDimensions(file));
+            imageDimensions = await Promise.all(dimensionPromises);
+
             selectedFiles.forEach((file, index) => {
-                const card = createImageCard(file, validationResults[index], index);
+                const card = createImageCard(file, validationResults[index], index, imageDimensions[index]);
                 imagesGrid.appendChild(card);
             });
 
             // Actualizar resumen
             updateFilesSummary();
+
+            // Actualizar select de imagen principal
+            updatePrimaryImageSelect();
         }
 
         // Función para actualizar resumen de archivos
@@ -1401,12 +1759,17 @@
             selectedFiles.splice(index, 1);
             validationResults.splice(index, 1);
             currentObjectURLs.splice(index, 1);
+            if (imageDimensions[index]) {
+                imageDimensions.splice(index, 1);
+            }
 
             // Re-renderizar
             if (selectedFiles.length > 0) {
                 renderImageCards();
             } else {
                 clearPreviousContent();
+                // Ocultar select de imagen principal
+                primaryImageContainer.style.display = 'none';
             }
 
             // Actualizar estado de cambios
@@ -1610,13 +1973,12 @@
             // Actualizar textos iniciales
             document.getElementById('loadingTitle').textContent = 'Guardando variante';
             document.getElementById('loadingSubtitle').textContent = 'Procesando tu solicitud, por favor espera...';
-            document.getElementById('progressStatus').textContent = 'Validando datos...';
+            document.getElementById('progressStatus').textContent = 'Preparando subida...';
 
             // Bloquear scroll del body
             document.body.style.overflow = 'hidden';
 
-            // Iniciar progreso automático
-            startProgressSimulation();
+            // El progreso real viene del evento xhr.upload.onprogress en submitFormWithProgress()
         }
 
         /**
@@ -1716,70 +2078,166 @@
         }
 
         /**
-         * Simula el progreso de carga (para cuando no hay progreso real del servidor)
+         * Envía el formulario via AJAX con progreso real de subida
          */
-        function startProgressSimulation() {
-            let progress = 0;
-            const statusMessages = [
-                'Validando datos...',
-                'Procesando imágenes...',
-                'Guardando en servidor...',
-                'Optimizando recursos...',
-                'Finalizando proceso...',
-                '¡Completado!'
-            ];
+        function submitFormWithProgress() {
+            return new Promise((resolve, reject) => {
+                const formData = new FormData(form);
 
-            // Iniciar simulación
-            const interval = setInterval(() => {
-                progress += 1;
+                // Agregar archivos seleccionados al FormData
+                // Primero eliminar los archivos existentes (si hay)
+                formData.delete('variant_images[]');
 
-                // Cambiar mensaje según progreso
-                let statusIndex = 0;
-                if (progress >= 20) statusIndex = 1;
-                if (progress >= 40) statusIndex = 2;
-                if (progress >= 60) statusIndex = 3;
-                if (progress >= 80) statusIndex = 4;
-                if (progress >= 95) statusIndex = 5;
+                // Agregar todos los archivos seleccionados
+                selectedFiles.forEach((file, index) => {
+                    formData.append('variant_images[]', file);
+                });
 
-                updateProgress(progress, statusMessages[statusIndex]);
+                const xhr = new XMLHttpRequest();
 
-                // Cuando llegue al 100%, mantener por 1 segundo y luego dejar que el formulario continúe
-                if (progress >= 100) {
-                    clearInterval(interval);
+                // Evento de progreso de subida (PROGRESO REAL)
+                xhr.upload.addEventListener('progress', function(e) {
+                    if (e.lengthComputable) {
+                        const percentComplete = Math.round((e.loaded / e.total) * 100);
 
-                    // Cambiar a estado completado
-                    document.getElementById('loadingTitle').textContent = '¡Variante Guardada!';
-                    document.getElementById('loadingSubtitle').textContent =
-                        'Redirigiendo a la lista de diseños...';
+                        // Mensajes según el progreso
+                        let statusMessage = 'Subiendo imágenes...';
+                        if (percentComplete < 30) {
+                            statusMessage = 'Subiendo imágenes...';
+                        } else if (percentComplete < 60) {
+                            statusMessage = 'Procesando archivos...';
+                        } else if (percentComplete < 90) {
+                            statusMessage = 'Optimizando imágenes...';
+                        } else {
+                            statusMessage = 'Finalizando subida...';
+                        }
 
-                    // Marcar que el formulario se está enviando (para evitar mensaje de beforeunload)
-                    isFormSubmitting = true;
-                    formChanged = false;
+                        updateProgress(percentComplete, statusMessage);
+                    }
+                });
 
-                    // Esperar 1.5 segundos para mostrar el estado "completado"
-                    setTimeout(() => {
-                        // Permitir que el formulario se envíe
-                        hideLoadingState();
+                // Evento cuando la subida se completa (ahora espera respuesta del servidor)
+                xhr.upload.addEventListener('load', function() {
+                    updateProgress(100, 'Guardando en servidor...');
+                });
 
-                        // Actualizar input files antes de enviar
-                        const dt = new DataTransfer();
-                        selectedFiles.forEach(file => dt.items.add(file));
-                        input.files = dt.files;
+                // Evento cuando llega la respuesta del servidor
+                xhr.addEventListener('load', function() {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        // Intentar parsear como JSON primero
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            if (response.success) {
+                                resolve(response);
+                            } else {
+                                reject({
+                                    type: 'validation',
+                                    errors: response.errors || {},
+                                    message: response.message || 'Error de validación'
+                                });
+                            }
+                        } catch (e) {
+                            // Si no es JSON, es una redirección o HTML
+                            // Verificar si hay mensaje de éxito en sesión (Laravel redirige)
+                            resolve({ success: true, redirect: true });
+                        }
+                    } else if (xhr.status === 422) {
+                        // Error de validación de Laravel
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            reject({
+                                type: 'validation',
+                                errors: response.errors || {},
+                                message: 'Error de validación'
+                            });
+                        } catch (e) {
+                            reject({
+                                type: 'server',
+                                message: 'Error de validación del servidor'
+                            });
+                        }
+                    } else {
+                        reject({
+                            type: 'server',
+                            message: `Error del servidor: ${xhr.status}`
+                        });
+                    }
+                });
 
-                        // Enviar el formulario
-                        form.submit();
-                    }, 1500);
+                // Evento de error de red
+                xhr.addEventListener('error', function() {
+                    reject({
+                        type: 'network',
+                        message: 'Error de conexión. Verifica tu internet.'
+                    });
+                });
+
+                // Evento de timeout
+                xhr.addEventListener('timeout', function() {
+                    reject({
+                        type: 'timeout',
+                        message: 'La solicitud tardó demasiado. Intenta de nuevo.'
+                    });
+                });
+
+                // Configurar y enviar
+                xhr.open('POST', form.action);
+                xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                xhr.setRequestHeader('Accept', 'application/json');
+                xhr.timeout = 120000; // 2 minutos de timeout
+
+                xhr.send(formData);
+            });
+        }
+
+        /**
+         * Muestra errores de validación del servidor
+         */
+        function showValidationErrors(errors) {
+            // Limpiar errores previos
+            document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+            document.querySelectorAll('.server-error').forEach(el => el.remove());
+
+            // Mostrar nuevos errores
+            for (const [field, messages] of Object.entries(errors)) {
+                const fieldName = field.replace('variant_images.', 'variant_images_');
+                const input = document.querySelector(`[name="${field}"]`) ||
+                              document.querySelector(`[name="${fieldName}"]`) ||
+                              document.getElementById(field);
+
+                if (input) {
+                    input.classList.add('is-invalid');
+
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'text-danger small mt-1 server-error';
+                    errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${Array.isArray(messages) ? messages[0] : messages}`;
+
+                    input.parentElement.appendChild(errorDiv);
                 }
-            }, 30);
+            }
+
+            // Scroll al primer error
+            const firstError = document.querySelector('.is-invalid');
+            if (firstError) {
+                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                firstError.focus();
+            }
         }
 
         // ============================================
-        // MANEJO DEL FORMULARIO CON SPINNER PREMIUM
+        // MANEJO DEL FORMULARIO CON AJAX Y PROGRESO REAL
         // ============================================
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
 
             if (isSubmitting) {
+                return;
+            }
+
+            // Validar imagen principal si hay imágenes
+            if (!validatePrimaryImage()) {
+                primaryImageContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                showToast('Debes seleccionar una imagen principal', 'error');
                 return;
             }
 
@@ -1789,11 +2247,52 @@
             // 1. Deshabilitar botones y mostrar spinner
             disableAllButtons();
 
-            // 2. Pequeña pausa para que se muestre el spinner
-            await new Promise(resolve => setTimeout(resolve, 100));
+            try {
+                // 2. Enviar formulario con AJAX y progreso real
+                const response = await submitFormWithProgress();
 
-            // 3. Permitir que el formulario se envíe normalmente
-            // El spinner continuará mostrándose hasta que la página se recargue
+                // 3. Mostrar estado de éxito brevemente
+                updateProgress(100, '¡Completado!');
+                document.getElementById('loadingTitle').textContent = '¡Variante Guardada!';
+                document.getElementById('loadingSubtitle').textContent = 'Redirigiendo...';
+
+                // Marcar formulario como no modificado para evitar beforeunload
+                formChanged = false;
+
+                // 4. Redirigir rápido (500ms para que el usuario vea el éxito)
+                setTimeout(() => {
+                    window.location.href = "{{ route('admin.designs.index') }}";
+                }, 500);
+
+            } catch (error) {
+                console.error('Error en submit:', error);
+
+                // Ocultar spinner
+                hideLoadingState();
+                enableAllButtons();
+                isSubmitting = false;
+                isFormSubmitting = false;
+
+                if (error.type === 'validation') {
+                    // Mostrar errores de validación
+                    showValidationErrors(error.errors);
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de validación',
+                        text: 'Por favor corrige los errores marcados en el formulario.',
+                        confirmButtonColor: '#2563eb'
+                    });
+                } else {
+                    // Error de red o servidor
+                    Swal.fire({
+                        icon: 'error',
+                        title: '¡Error!',
+                        text: error.message || 'Ocurrió un error al guardar la variante.',
+                        confirmButtonColor: '#2563eb'
+                    });
+                }
+            }
         });
 
         // Manejar el evento beforeunload - SOLO si no estamos usando el botón de regresar

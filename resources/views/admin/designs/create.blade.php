@@ -53,9 +53,68 @@
 
         <div class="row">
 
-            {{-- COLUMNA IZQUIERDA --}}
+            {{-- COLUMNA IZQUIERDA: IMAGEN --}}
+            <div class="col-lg-5">
+                <div class="surface">
+
+                    <h5 class="section-title mb-3">
+                        <i class="fas fa-image text-primary"></i> Imagen del diseño
+                    </h5>
+
+                    <div class="alert alert-info alert-modern mb-3">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Sube la imagen principal del diseño. Para variaciones de color o estilo, podrás crear
+                            <strong>variantes</strong> después de guardar.</span>
+                    </div>
+
+                    <div id="dropzone" class="dropzone @error('image') border-danger @enderror">
+                        <input type="file" id="imageInput" name="image" accept="image/*" hidden>
+
+                        <div id="dropzoneContent" class="dropzone-content">
+                            <div class="dropzone-icon">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                            </div>
+                            <div class="dropzone-title">
+                                Subir imagen
+                            </div>
+                            <div class="dropzone-sub">
+                                Arrastra imagen aquí o haz clic
+                            </div>
+                            <div class="dropzone-formats">
+                                Formatos: JPEG, PNG, SVG, AVIF, WebP
+                            </div>
+                        </div>
+
+                        {{-- Contenedor para la vista previa DENTRO del dropzone --}}
+                        <div id="previewContainer" class="preview-grid"></div>
+                    </div>
+
+                    {{-- Contenedor para la información del archivo (debajo del dropzone) --}}
+                    <div id="fileInfoContainer"></div>
+                    <div id="image-error" class="text-danger small mt-1" style="display: none;"></div>
+                    @error('image')
+                        <small class="text-danger d-block mt-2">{{ $message }}</small>
+                    @enderror
+
+                    {{-- Contenedor para la paleta de colores detectada (al final) --}}
+                    <div id="palette-container" class="mt-3" style="display: none;">
+                        <label class="label mb-2" style="font-size: 13px; color: #64748b;">Colores detectados en el
+                            diseño</label>
+                        <div id="palette-grid" class="d-flex flex-wrap gap-2 p-2"
+                            style="background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            {{-- COLUMNA DERECHA: FORMULARIO --}}
             <div class="col-lg-7">
                 <div class="surface">
+
+                    <h5 class="section-title mb-4">
+                        <i class="fas fa-info-circle text-primary"></i> Información básica
+                    </h5>
 
                     {{-- Nombre --}}
                     <div class="mb-4">
@@ -107,145 +166,195 @@
                 </div>
             </div>
 
-            {{-- COLUMNA DERECHA --}}
-            <div class="col-lg-5">
-                <div class="surface">
-
-                    <label class="label mb-3">
-                        Imagen del diseño <span class="text-danger">*</span>
-                    </label>
-
-                    <div class="alert alert-info mb-3" style="font-size:14px; padding:12px; border-radius:10px;">
-                        <i class="fas fa-info-circle"></i>
-                        <strong>Importante:</strong>
-                        Sube solo imágenes representativas del diseño base.
-                        Para colores o estilos distintos, crea <strong>variantes</strong> después.
-                    </div>
-
-                    <div id="dropzone" class="dropzone @error('image') border-danger @enderror">
-                        <input type="file" id="imageInput" name="image" accept="image/*" hidden>
-
-                        <div id="dropzoneContent" class="dropzone-content">
-                            <div class="dropzone-title">
-                                Arrastra archivos aquí
-                            </div>
-                            <div class="dropzone-sub">
-                                Formatos: JPEG, PNG, SVG, AVIF, WebP, PES, DST, etc.
-                            </div>
-                        </div>
-
-                        {{-- Contenedor para la vista previa DENTRO del dropzone --}}
-                        <div id="previewContainer" class="preview-grid"></div>
-                    </div>
-
-                    {{-- AGREGADO: Contenedor para la paleta de colores detectada --}}
-                    <div id="palette-container" class="mt-4" style="display: none;">
-                        <label class="label mb-2" style="font-size: 13px; color: #64748b;">Colores detectados en el
-                            diseño</label>
-                        <div id="palette-grid" class="d-flex flex-wrap gap-2 p-2"
-                            style="background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
-                        </div>
-                    </div>
-
-                    {{-- Contenedor para la información del archivo --}}
-                    <div id="fileInfoContainer" class="mt-3"></div>
-                    <div id="image-error" class="text-danger small mt-1" style="display: none;"></div>
-                    @error('image')
-                        <small class="text-danger d-block mt-2">{{ $message }}</small>
-                    @enderror
-
-                </div>
-            </div>
-
         </div>
     </form>
 @stop
 
 @section('css')
     <style>
+        /* ============================================
+               MATERIAL DESIGN / APPLE HIG - BASE STYLES
+               ============================================ */
+        :root {
+            --primary: #2563eb;
+            --primary-light: #3b82f6;
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --font-size-xs: 11px;
+            --font-size-sm: 13px;
+            --font-size-base: 15px;
+            --font-size-lg: 17px;
+            --font-size-xl: 20px;
+        }
+
         .surface {
             background: #fff;
-            border-radius: 16px;
+            border-radius: var(--radius-lg);
             padding: 28px;
-            box-shadow: 0 4px 30px rgba(0, 0, 0, .04);
+            box-shadow: var(--shadow-md);
+        }
+
+        .section-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--gray-700);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title i {
+            font-size: var(--font-size-base);
         }
 
         .label {
             font-weight: 600;
-            color: #333;
+            color: var(--gray-700);
             margin-bottom: 6px;
             display: block;
+            font-size: var(--font-size-base);
         }
 
         .input {
             width: 100%;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-md);
             padding: 14px 16px;
-            font-size: 15px;
-            background: #fafafa;
+            font-size: var(--font-size-base);
+            background: var(--gray-50);
+            transition: all 0.2s ease;
         }
 
         .input:focus {
             outline: none;
-            border-color: #2563eb;
+            border-color: var(--primary);
             background: #fff;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
 
         .is-invalid {
-            border-color: #dc2626 !important;
+            border-color: var(--danger) !important;
             background: #fef2f2;
         }
 
         .hint {
-            font-size: 13px;
-            color: #6b7280;
+            font-size: var(--font-size-sm);
+            color: var(--gray-500);
         }
 
+        /* ============================================
+               ALERTA MODERNA
+               ============================================ */
+        .alert-modern {
+            font-size: var(--font-size-sm);
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            border: none;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .alert-modern i {
+            margin-top: 2px;
+        }
+
+        /* ============================================
+               DROPZONE - DISEÑO MODERNO
+               ============================================ */
         .dropzone {
-            border: 2px dashed #d1d5db;
-            border-radius: 18px;
-            padding: 40px 20px;
+            border: 2px dashed var(--gray-300);
+            border-radius: var(--radius-lg);
+            padding: 32px 20px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s ease;
-            min-height: 180px;
+            transition: all 0.2s ease;
+            min-height: 160px;
             display: flex;
             align-items: center;
             justify-content: center;
             position: relative;
+            background: var(--gray-50);
         }
 
         .dropzone:hover {
-            border-color: #2563eb;
-            background-color: #f0f9ff;
+            border-color: var(--primary);
+            background-color: var(--gray-100);
         }
 
         .dropzone.border-danger {
-            border-color: #dc2626;
+            border-color: var(--danger);
             background: #fef2f2;
         }
 
         /* Cuando hay imagen, cambiar estilo del dropzone */
         .dropzone.has-preview {
-            padding: 15px;
-            border-style: solid;
-            border-color: #2563eb;
-            background: #f8fafc;
+            min-height: 80px;
+            padding: 20px;
+            border: 2px solid var(--primary);
+            background: #eff6ff;
+        }
+
+        .dropzone.has-preview .dropzone-content {
+            display: none;
+        }
+
+        .dropzone.has-preview::after {
+            content: 'Archivo seleccionado ✓';
+            font-size: var(--font-size-sm);
+            color: var(--primary);
+            font-weight: 500;
         }
 
         .dropzone-content {
-            color: #6b7280;
+            color: var(--gray-500);
+            text-align: center;
+        }
+
+        .dropzone-icon {
+            font-size: 42px;
+            color: var(--gray-400);
+            margin-bottom: 12px;
         }
 
         .dropzone-title {
             font-weight: 600;
-            font-size: 18px;
-            margin-bottom: 8px;
+            font-size: var(--font-size-lg);
+            color: var(--gray-700);
+            margin-bottom: 6px;
         }
 
         .dropzone-sub {
-            font-size: 14px;
+            font-size: var(--font-size-sm);
+            color: var(--gray-500);
+            margin-bottom: 8px;
+        }
+
+        .dropzone-formats {
+            font-size: var(--font-size-xs);
+            color: var(--gray-400);
+            background: var(--gray-100);
+            padding: 4px 12px;
+            border-radius: 20px;
+            display: inline-block;
         }
 
         .preview-grid {
@@ -261,8 +370,8 @@
         .preview-item {
             width: 150px;
             height: 150px;
-            background: #1f2937;
-            border-radius: 12px;
+            background: var(--gray-800);
+            border-radius: var(--radius-md);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -300,53 +409,157 @@
             transform: scale(1.1);
         }
 
-        /* Estilos para información de archivo */
-        .file-info {
-            background-color: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 10px;
-            padding: 12px 16px;
-            font-size: 13px;
-            margin-top: 12px;
+        /* ============================================
+               IMAGE ANALYSIS CARD - DISEÑO DESCRIPTIVO (foto 2)
+               ============================================ */
+        .image-analysis-card {
+            background: #fff;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            margin-top: 16px;
+            transition: all 0.2s ease;
         }
 
-        .file-info-header {
+        .image-analysis-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+        }
+
+        /* Preview de imagen dentro de la card */
+        .image-card-preview {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            background: var(--gray-50);
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
+            justify-content: center;
+            overflow: hidden;
+            border: 2px solid var(--primary);
+            border-radius: var(--radius-md) var(--radius-md) 0 0;
         }
 
-        .file-info-name {
+        .image-card-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        /* Botón de eliminar en preview */
+        .image-card-remove {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--danger);
+            color: white;
+            border: 2px solid white;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow-md);
+        }
+
+        .image-card-remove:hover {
+            background: #b91c1c;
+            transform: scale(1.1);
+        }
+
+        /* Info del análisis */
+        .image-card-info {
+            padding: 16px;
+            border-top: 1px solid var(--gray-100);
+            background: var(--gray-50);
+        }
+
+        .image-card-name {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: var(--font-size-base);
             font-weight: 600;
-            color: #333;
-            word-break: break-all;
+            color: var(--gray-800);
+            margin-bottom: 12px;
         }
 
-        .file-info-details {
+        .image-card-name i {
+            color: var(--primary);
+        }
+
+        .image-card-name span {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .image-card-details {
             display: flex;
             justify-content: space-between;
-            color: #6b7280;
-            font-size: 12px;
+            font-size: var(--font-size-sm);
+            color: var(--gray-600);
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--gray-200);
         }
 
-        .file-info-success {
-            color: #059669;
+        .image-card-dimensions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: var(--font-size-sm);
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .image-card-dimensions .dim-label {
+            color: var(--gray-500);
             font-weight: 500;
         }
 
-        /* Estilos para archivo temporal */
-        .temp-file-alert {
-            background-color: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 10px;
-            padding: 12px 16px;
-            margin-top: 12px;
-            font-size: 13px;
+        .image-card-format {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: var(--font-size-sm);
+            color: var(--success);
+            font-weight: 500;
         }
 
-        .temp-file-alert i {
-            color: #856404;
+        .image-card-format i {
+            font-size: var(--font-size-xs);
+        }
+
+        /* Alerta de extensión diferente */
+        .image-card-warning {
+            background: #fef3c7;
+            border: 1px solid #fde68a;
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            margin-top: 12px;
+            font-size: var(--font-size-xs);
+            color: #92400e;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .image-card-warning i {
+            color: var(--warning);
+            margin-top: 1px;
+            flex-shrink: 0;
+        }
+
+        .image-card-warning div {
+            line-height: 1.4;
         }
 
         /* Iconos para tipos de archivo */
@@ -394,8 +607,8 @@
         }
 
         /* ============================================
-                                                                                                       ESTILOS DEL SPINNER PREMIUM (AGREGADOS)
-                                                                                                       ============================================ */
+                                                                                                           ESTILOS DEL SPINNER PREMIUM (AGREGADOS)
+                                                                                                           ============================================ */
         .modal-loading-overlay {
             position: fixed;
             top: 0;
@@ -453,8 +666,8 @@
         }
 
         /* ============================================
-                                                                                                       BARRA DE PROGRESO PREMIUM
-                                                                                                       ============================================ */
+                                                                                                           BARRA DE PROGRESO PREMIUM
+                                                                                                           ============================================ */
         .progress-container-premium {
             width: 100%;
             max-width: 320px;
@@ -1026,72 +1239,117 @@
             dropzone.classList.add('has-preview');
         }
 
-        // Función para mostrar información del archivo (actualizada)
-        function showFileInfo(file, validationResult, isTempFile = false) {
-            const fileSize = (file.size / 1024).toFixed(2);
-            let fileTypeName = '';
-            let extensionNote = '';
+        /**
+         * Obtiene las dimensiones de una imagen
+         */
+        function getImageDimensions(file) {
+            return new Promise((resolve) => {
+                if (!file.type.startsWith('image/')) {
+                    resolve({
+                        width: null,
+                        height: null
+                    });
+                    return;
+                }
 
-            switch (validationResult.type) {
-                case 'image':
-                    fileTypeName = 'Imagen';
-                    break;
-                case 'vector':
-                    fileTypeName = 'Vector (SVG)';
-                    break;
-                case 'embroidery':
-                    fileTypeName = 'Archivo de bordado';
-                    break;
-                default:
-                    fileTypeName = 'Archivo';
-            }
+                const img = new Image();
+                const url = URL.createObjectURL(file);
 
-            // Verificar si la extensión no coincide con el formato detectado
-            const originalExtension = file.name.toLowerCase().split('.').pop();
+                img.onload = () => {
+                    URL.revokeObjectURL(url);
+                    resolve({
+                        width: img.naturalWidth,
+                        height: img.naturalHeight
+                    });
+                };
 
-            if (validationResult.detectedBy === 'signature' && validationResult.subtype && originalExtension !==
-                validationResult.subtype.toLowerCase()) {
-                extensionNote = `
-                    <div class="alert alert-warning mt-2 p-2" style="font-size: 12px; border-radius: 8px;">
-                        <i class="fas fa-exclamation-triangle mr-1"></i>
-                        <strong>Nota:</strong> El archivo tiene extensión .${originalExtension} pero es un formato ${validationResult.subtype.toUpperCase()}.
-                        Se guardará con la extensión correcta (.${validationResult.subtype}).
+                img.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    resolve({
+                        width: null,
+                        height: null
+                    });
+                };
+
+                img.src = url;
+            });
+        }
+
+        /**
+         * Formatea el tamaño de archivo de forma legible
+         */
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+
+        // Función para mostrar información del archivo (diseño descriptivo como foto 2)
+        async function showFileInfo(file, validationResult, isTempFile = false) {
+            // Obtener dimensiones de la imagen
+            const dimensions = await getImageDimensions(file);
+
+            const fileSize = formatFileSize(file.size);
+            const fileExt = file.name.split('.').pop().toLowerCase();
+            const detectedFormat = validationResult.subtype || fileExt;
+
+            // Determinar tipo de archivo
+            let fileTypeName = 'Imagen';
+            if (validationResult.type === 'vector') fileTypeName = 'Vector';
+            else if (validationResult.type === 'embroidery') fileTypeName = 'Bordado';
+
+            // Construir HTML de dimensiones
+            let dimensionsHTML = '';
+            if (dimensions.width && dimensions.height) {
+                dimensionsHTML = `
+                    <div class="image-card-dimensions">
+                        <span class="dim-label">Dimensiones:</span>
+                        ${dimensions.width} × ${dimensions.height} px
                     </div>
                 `;
             }
 
-            // Mostrar alerta para archivos temporales
-            const tempFileAlert = isTempFile ?
-                `
-                <div class="temp-file-alert mt-2">
-                    <i class="fas fa-info-circle mr-1"></i>
-                    <strong>Archivo temporal:</strong> Esta imagen se mantendrá disponible hasta que envíes el formulario correctamente.
-                </div>
-                ` :
-                '';
+            // Alerta de extensión diferente al tipo real detectado (diseño como foto 2)
+            let warningHTML = '';
+            if (validationResult.detectedBy === 'signature' &&
+                validationResult.subtype &&
+                validationResult.actualExtension &&
+                validationResult.subtype.toLowerCase() !== validationResult.actualExtension.toLowerCase()) {
+                warningHTML = `
+                    <div class="image-card-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div>
+                            <strong>Nota:</strong> El archivo tiene extensión .${validationResult.actualExtension} pero es un formato ${validationResult.subtype.toUpperCase()}. Se guardará con la extensión correcta (.${validationResult.subtype}).
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Crear la URL de la imagen para preview
+            const previewURL = URL.createObjectURL(file);
 
             const fileInfoHTML = `
-                <div class="file-info fade-in">
-                    <div class="file-info-header">
-                        <div class="file-info-name">
-                            <i class="fas fa-${fileValidator.getFileIcon(validationResult.subtype || validationResult.type)} mr-2"></i>
-                            ${file.name}
-                        </div>
+                <div class="image-analysis-card fade-in">
+                    <div class="image-card-preview">
+                        <img src="${previewURL}" alt="${file.name}">
+                        <button type="button" class="image-card-remove" onclick="removeFile(${isTempFile})" title="Eliminar imagen">×</button>
                     </div>
-                    <div class="file-info-details">
-                        <div>
-                            ${fileTypeName} (${validationResult.subtype ? validationResult.subtype.toUpperCase() : 'Desconocido'})
+                    <div class="image-card-info">
+                        <div class="image-card-name">
+                            <i class="fas fa-file-image"></i>
+                            <span title="${file.name}">${file.name}</span>
                         </div>
-                        <div>
-                            Tamaño: ${fileSize} KB
+                        <div class="image-card-details">
+                            <span>${fileTypeName} (${detectedFormat.toUpperCase()})</span>
+                            <span>Tamaño: ${fileSize}</span>
                         </div>
+                        ${dimensionsHTML}
+                        <div class="image-card-format">
+                            <i class="fas fa-check-circle"></i>
+                            Formato detectado: ${detectedFormat.toUpperCase()} (archivo con extensión .${fileExt})
+                        </div>
+                        ${warningHTML}
                     </div>
-                    <div class="file-info-success mt-2">
-                        <i class="fas fa-check-circle mr-1"></i>
-                        ${validationResult.reason}
-                    </div>
-                    ${extensionNote}
-                    ${tempFileAlert}
                 </div>
             `;
 
@@ -1519,8 +1777,6 @@
         // ============================================
 
         let isFormSubmitting = false;
-        let progressInterval = null;
-        let currentProgress = 0;
 
         function showLoadingState() {
             const overlay = document.getElementById('loadingOverlay');
@@ -1579,94 +1835,110 @@
         }
 
         /**
-         * Simula el progreso de carga hasta un límite (para AJAX)
-         * @param {number} maxProgress - Progreso máximo a simular (default 90)
+         * Envía el formulario via AJAX con progreso REAL de subida
          */
-        function startProgressSimulation(maxProgress = 90) {
-            currentProgress = 0;
-            const statusMessages = [
-                'Validando datos...',
-                'Procesando imagen...',
-                'Guardando en servidor...',
-                'Optimizando recursos...',
-                'Esperando respuesta...'
-            ];
+        function submitFormWithRealProgress(formData) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
 
-            // Limpiar intervalo anterior si existe
-            if (progressInterval) {
-                clearInterval(progressInterval);
-            }
+                // Evento de progreso de subida (PROGRESO REAL)
+                xhr.upload.addEventListener('progress', function(e) {
+                    if (e.lengthComputable) {
+                        const percentComplete = Math.round((e.loaded / e.total) * 100);
 
-            // Iniciar simulación
-            progressInterval = setInterval(() => {
-                // Incremento más lento al acercarse al límite
-                const increment = currentProgress < 50 ? 2 : (currentProgress < 70 ? 1 : 0.5);
-                currentProgress += increment;
+                        // Mensajes según el progreso
+                        let statusMessage = 'Subiendo imagen...';
+                        if (percentComplete < 30) {
+                            statusMessage = 'Subiendo imagen...';
+                        } else if (percentComplete < 60) {
+                            statusMessage = 'Procesando archivo...';
+                        } else if (percentComplete < 90) {
+                            statusMessage = 'Optimizando imagen...';
+                        } else {
+                            statusMessage = 'Finalizando subida...';
+                        }
 
-                // Limitar al máximo especificado
-                if (currentProgress >= maxProgress) {
-                    currentProgress = maxProgress;
-                    clearInterval(progressInterval);
-                    progressInterval = null;
-                }
-
-                // Cambiar mensaje según progreso
-                let statusIndex = 0;
-                if (currentProgress >= 20) statusIndex = 1;
-                if (currentProgress >= 40) statusIndex = 2;
-                if (currentProgress >= 60) statusIndex = 3;
-                if (currentProgress >= 80) statusIndex = 4;
-
-                updateProgress(currentProgress, statusMessages[statusIndex]);
-            }, 50);
-        }
-
-        /**
-         * Completa el progreso al 100% después de recibir respuesta exitosa
-         */
-        function completeProgress(redirectUrl) {
-            // Detener simulación si está corriendo
-            if (progressInterval) {
-                clearInterval(progressInterval);
-                progressInterval = null;
-            }
-
-            // IMPORTANTE: Desactivar protección de navegación ANTES de redirigir
-            // Esto evita que aparezca el diálogo de "¿Deseas abandonar el sitio?"
-            isFormSubmitting = false;
-            isSubmitting = false;
-
-            // Completar rápidamente hasta 100%
-            const completeInterval = setInterval(() => {
-                currentProgress += 3;
-
-                if (currentProgress >= 100) {
-                    currentProgress = 100;
-                    clearInterval(completeInterval);
-
-                    updateProgress(100, '¡Completado!');
-
-                    // Cambiar a estado completado
-                    document.getElementById('loadingTitle').textContent = '¡Diseño Creado!';
-                    document.getElementById('loadingSubtitle').textContent = 'Redirigiendo...';
-
-                    // Agregar clase de completado
-                    const progressBar = document.getElementById('progressBar');
-                    if (progressBar) {
-                        progressBar.classList.add('progress-complete');
+                        updateProgress(percentComplete, statusMessage);
                     }
+                });
 
-                    // Redirigir después de mostrar el estado completado
-                    setTimeout(() => {
-                        window.location.href = redirectUrl;
-                    }, 800);
-                } else {
-                    updateProgress(currentProgress, 'Finalizando...');
-                }
-            }, 20);
+                // Evento cuando la subida se completa (espera respuesta del servidor)
+                xhr.upload.addEventListener('load', function() {
+                    updateProgress(100, 'Guardando en servidor...');
+                });
+
+                // Evento cuando llega la respuesta del servidor
+                xhr.addEventListener('load', function() {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            if (response.success) {
+                                resolve(response);
+                            } else {
+                                reject({
+                                    type: 'validation',
+                                    errors: response.errors || {},
+                                    message: response.message || 'Error de validación'
+                                });
+                            }
+                        } catch (e) {
+                            // Si no es JSON, asumir éxito
+                            resolve({
+                                success: true,
+                                redirect: true
+                            });
+                        }
+                    } else if (xhr.status === 422) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            reject({
+                                type: 'validation',
+                                errors: response.errors || {},
+                                message: 'Error de validación'
+                            });
+                        } catch (e) {
+                            reject({
+                                type: 'server',
+                                message: 'Error de validación del servidor'
+                            });
+                        }
+                    } else {
+                        reject({
+                            type: 'server',
+                            message: `Error del servidor: ${xhr.status}`
+                        });
+                    }
+                });
+
+                // Evento de error de red
+                xhr.addEventListener('error', function() {
+                    reject({
+                        type: 'network',
+                        message: 'Error de conexión. Verifica tu internet.'
+                    });
+                });
+
+                // Evento de timeout
+                xhr.addEventListener('timeout', function() {
+                    reject({
+                        type: 'timeout',
+                        message: 'La solicitud tardó demasiado. Intenta de nuevo.'
+                    });
+                });
+
+                // Configurar y enviar
+                xhr.open('POST', form.action);
+                xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                xhr.setRequestHeader('Accept', 'application/json');
+                xhr.timeout = 120000; // 2 minutos de timeout
+
+                xhr.send(formData);
+            });
         }
 
-        // Validación del formulario con AJAX y spinner premium
+        // ============================================
+        // MANEJO DEL FORMULARIO CON AJAX Y PROGRESO REAL
+        // ============================================
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
 
@@ -1723,67 +1995,62 @@
             // 1. Deshabilitar botones y mostrar spinner
             disableAllButtons();
             showLoadingState();
+            updateProgress(0, 'Preparando subida...');
 
-            // 2. Iniciar simulación de progreso (hasta 90%)
-            startProgressSimulation(90);
-
-            // 3. Preparar datos del formulario
+            // 2. Preparar datos del formulario
             const formData = new FormData(form);
 
-            // 4. Enviar por AJAX
             try {
-                const response = await fetch(form.action, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'application/json'
-                    }
-                });
+                // 3. Enviar con progreso REAL
+                const response = await submitFormWithRealProgress(formData);
 
-                const data = await response.json();
+                // 4. Éxito - mostrar completado y redirigir rápido
+                updateProgress(100, '¡Completado!');
+                document.getElementById('loadingTitle').textContent = '¡Diseño Creado!';
+                document.getElementById('loadingSubtitle').textContent = 'Redirigiendo...';
 
-                if (response.ok && data.success) {
-                    // Éxito - completar progreso y redirigir
-                    completeProgress(data.redirect || '{{ route('admin.designs.index') }}');
-                } else {
-                    // Error de validación o del servidor
-                    if (progressInterval) {
-                        clearInterval(progressInterval);
-                        progressInterval = null;
-                    }
-
-                    showProgressError(data.message || 'Error al crear el diseño');
-
-                    // Mostrar errores de validación si existen
-                    if (data.errors && Object.keys(data.errors).length > 0) {
-                        setTimeout(() => {
-                            hideLoadingState();
-                            enableAllButtons();
-                            isSubmitting = false;
-                            isFormSubmitting = false;
-
-                            // Mostrar errores en los campos correspondientes
-                            showServerValidationErrors(data.errors);
-                        }, 2000);
-                    }
-                }
-            } catch (error) {
-                console.error('Error en la solicitud:', error);
-
-                if (progressInterval) {
-                    clearInterval(progressInterval);
-                    progressInterval = null;
+                const progressBar = document.getElementById('progressBar');
+                if (progressBar) {
+                    progressBar.classList.add('progress-complete');
                 }
 
-                showProgressError('Error de conexión. Intenta de nuevo.');
+                // Desactivar protección de navegación
+                isFormSubmitting = false;
+                isSubmitting = false;
 
+                // Redirigir rápido (500ms)
                 setTimeout(() => {
-                    hideLoadingState();
-                    enableAllButtons();
-                    isSubmitting = false;
-                    isFormSubmitting = false;
-                }, 3000);
+                    window.location.href = response.redirect || '{{ route('admin.designs.index') }}';
+                }, 500);
+
+            } catch (error) {
+                console.error('Error en submit:', error);
+
+                // Ocultar spinner
+                hideLoadingState();
+                enableAllButtons();
+                isSubmitting = false;
+                isFormSubmitting = false;
+
+                if (error.type === 'validation') {
+                    // Mostrar errores de validación
+                    showServerValidationErrors(error.errors);
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de validación',
+                        text: 'Por favor corrige los errores marcados en el formulario.',
+                        confirmButtonColor: '#2563eb'
+                    });
+                } else {
+                    // Error de red o servidor
+                    Swal.fire({
+                        icon: 'error',
+                        title: '¡Error!',
+                        text: error.message || 'Ocurrió un error al guardar el diseño.',
+                        confirmButtonColor: '#2563eb'
+                    });
+                }
             }
         });
 

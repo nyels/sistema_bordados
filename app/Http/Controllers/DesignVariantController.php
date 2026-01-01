@@ -61,7 +61,7 @@ class DesignVariantController extends Controller
         }
 
         /**
-         * 1. LIMPIEZA DE ATRIBUTOS
+         * 1. LIMPIEZA DE ATRIBUTOS (si se proporcionan)
          */
         if ($request->has('attribute_values')) {
             $request->merge([
@@ -73,25 +73,46 @@ class DesignVariantController extends Controller
         }
 
         /**
-         * 2. VALIDACIÓN (Soporte AVIF añadido)
+         * 2. VALIDACIÓN (Simplificada - sin precio ni atributos obligatorios)
          */
-        $validator = Validator::make($request->all(), [
+        $rules = [
             'sku' => 'required|string|max:255|unique:design_variants,sku',
             'name' => 'required|string|max:255|unique:design_variants,name',
-            'price' => 'required|numeric|min:0',
+            'price' => 'nullable|numeric|min:0',
             'stock' => 'nullable|integer|min:0',
             'is_default' => 'nullable',
-            'attribute_values' => 'required|array|min:1',
+            'attribute_values' => 'nullable|array',
             'attribute_values.*' => 'exists:attribute_values,id',
             'variant_images' => 'nullable|array',
-            // Agregado avif y extensiones adicionales para match con el Middleware
             'variant_images.*' => 'file|mimes:jpg,jpeg,png,webp,avif|max:10240',
-        ]);
+            'primary_image_index' => 'nullable|integer|min:0',
+        ];
+
+        // Si hay imágenes, el índice de imagen principal es requerido
+        if ($request->hasFile('variant_images')) {
+            $rules['primary_image_index'] = 'required|integer|min:0';
+        }
+
+        $messages = [
+            'primary_image_index.required' => 'Debes seleccionar una imagen principal para la variante.',
+        ];
+
+        $validator = Validator::make($request->all(), $rules, $messages);
 
         if ($validator->fails()) {
             Log::error('=== [ERROR] FALLO DE VALIDACIÓN ===', [
                 'errors' => $validator->errors()->toArray()
             ]);
+
+            // Si es petición AJAX, devolver JSON
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error de validación',
+                    'errors' => $validator->errors()->toArray()
+                ], 422);
+            }
+
             return back()->with('error', 'Error al cargar formulario de creación de variante')
                 ->with('icon', 'error')
                 ->withInput();
@@ -117,7 +138,7 @@ class DesignVariantController extends Controller
             $variant = $design->variants()->create([
                 'sku' => $validated['sku'],
                 'name' => $validated['name'],
-                'price' => $validated['price'],
+                'price' => $validated['price'] ?? 0,
                 'stock' => $validated['stock'] ?? 0,
                 'is_active' => $request->input('is_active', "1") == "1",
                 'is_default' => $isDefault,
@@ -127,16 +148,24 @@ class DesignVariantController extends Controller
             Log::info('=== [PASO 4] VARIANTE CREADA EN BD ===', ['variant_id' => $variant->id]);
 
             /**
-             * 5. SINCRONIZAR ATRIBUTOS
+             * 5. SINCRONIZAR ATRIBUTOS (si se proporcionan)
              */
-            $variant->attributeValues()->sync($validated['attribute_values']);
-            Log::info('=== [PASO 5] ATRIBUTOS SINCRONIZADOS ===');
+            if (!empty($validated['attribute_values'])) {
+                $variant->attributeValues()->sync($validated['attribute_values']);
+                Log::info('=== [PASO 5] ATRIBUTOS SINCRONIZADOS ===');
+            } else {
+                Log::info('=== [PASO 5] SIN ATRIBUTOS PARA SINCRONIZAR ===');
+            }
 
             /**
              * 6. SUBIDA DE IMÁGENES
              */
             if ($request->hasFile('variant_images')) {
                 Log::info('=== [PASO 6] INICIANDO SUBIDA DE IMÁGENES ===');
+
+                // Obtener índice de imagen principal (0 por defecto)
+                $primaryIndex = (int) $request->input('primary_image_index', 0);
+
                 foreach ($request->file('variant_images') as $index => $image) {
                     $this->imageService->uploadImage(
                         $image,
@@ -147,17 +176,29 @@ class DesignVariantController extends Controller
                             'variant_name'  => $variant->name,
                             'variant_sku'   => $variant->sku,
                             'alt_text'      => $variant->name,
-                            'is_primary'    => $index === 0,
+                            'is_primary'    => $index === $primaryIndex,
                             'image_context' => 'variant',
                             'order'         => $index,
                         ]
                     );
                 }
-                Log::info('=== [PASO 6] TODAS LAS IMÁGENES PROCESADAS EXITOSAMENTE ===');
+                Log::info('=== [PASO 6] TODAS LAS IMÁGENES PROCESADAS EXITOSAMENTE ===', [
+                    'primary_index' => $primaryIndex
+                ]);
             }
 
             DB::commit();
             Log::info('=== [ÉXITO FINAL] TRANSACCIÓN COMPLETADA ===');
+
+            // Si es petición AJAX, devolver JSON
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Variante guardada correctamente',
+                    'variant_id' => $variant->id,
+                    'redirect' => route('admin.designs.index')
+                ]);
+            }
 
             return redirect()
                 ->route('admin.designs.index')
@@ -169,6 +210,16 @@ class DesignVariantController extends Controller
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
+
+            // Si es petición AJAX, devolver JSON de error
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al guardar la variante: ' . $e->getMessage(),
+                    'errors' => []
+                ], 500);
+            }
+
             return back()
                 ->with('error', 'Error al guardar la variante: ' . $e->getMessage())
                 ->withInput()
@@ -206,13 +257,14 @@ class DesignVariantController extends Controller
         $validator = Validator::make($request->all(), [
             'sku' => 'required|string|max:255|unique:design_variants,sku,' . $variant->id,
             'name' => 'required|string|max:255|unique:design_variants,name,' . $variant->id,
-            'price' => 'required|numeric|min:0',
+            'price' => 'nullable|numeric|min:0',
             'stock' => 'nullable|integer|min:0',
             'is_default' => 'nullable',
-            'attribute_values' => 'required|array|min:1',
+            'attribute_values' => 'nullable|array',
             'attribute_values.*' => 'exists:attribute_values,id',
             'variant_images' => 'nullable|array',
             'variant_images.*' => 'file|mimes:jpg,jpeg,png,webp,avif|max:10240',
+            'primary_image_id' => 'nullable|integer|exists:images,id',
         ]);
 
         if ($validator->fails()) {
@@ -234,14 +286,33 @@ class DesignVariantController extends Controller
             $variant->update([
                 'sku' => $validated['sku'],
                 'name' => $validated['name'],
-                'price' => $validated['price'],
+                'price' => $validated['price'] ?? $variant->price ?? 0,
                 'stock' => $validated['stock'] ?? $variant->stock,
                 'is_default' => $isDefault,
                 'is_active' => $request->input('is_active', "1") == "1",
                 'activated_at' => $variant->activated_at ?? now(),
             ]);
 
-            $variant->attributeValues()->sync($validated['attribute_values']);
+            // Sincronizar atributos solo si se proporcionan
+            if (!empty($validated['attribute_values'])) {
+                $variant->attributeValues()->sync($validated['attribute_values']);
+            }
+
+            // Actualizar imagen principal si se proporcionó
+            if ($request->filled('primary_image_id')) {
+                $primaryImageId = $request->input('primary_image_id');
+
+                // Quitar is_primary de todas las imágenes de la variante
+                $variant->images()->update(['is_primary' => false]);
+
+                // Establecer la nueva imagen principal
+                $variant->images()->where('id', $primaryImageId)->update(['is_primary' => true]);
+
+                Log::info('Imagen principal actualizada', [
+                    'variant_id' => $variant->id,
+                    'primary_image_id' => $primaryImageId
+                ]);
+            }
 
             if ($request->hasFile('variant_images')) {
                 Log::info('Subiendo nuevas imágenes en update...');

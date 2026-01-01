@@ -359,6 +359,16 @@ return [
                 ],
             ],*/
         ],
+        [
+            'text' => 'Producción',
+            'icon' => 'fas fa-fw fa-industry',
+            'url' => 'produccion',
+        ],
+        [
+            'text' => 'Productos y Bordados',
+            'url'  => 'gestion-productos', // La URL que definimos en el paso anterior
+            'icon' => 'fas fa-fw fa-box-open',
+        ],
 
 
         ['header' => 'BÚSQUEDA Y FILTROS'],

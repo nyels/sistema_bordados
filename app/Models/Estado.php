@@ -11,7 +11,7 @@ class Estado extends Model
     protected $table = 'estados';
     //protected
     protected $fillable = [
-        'nombre',
+        'nombre_estado',
         'activo',
         'fecha_baja',
         'motivo_baja',

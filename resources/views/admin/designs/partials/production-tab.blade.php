@@ -30,7 +30,15 @@
     {{-- Lista de Exportaciones con Filtros --}}
     <div id="productionList" class="production-list-container" style="display: none;">
 
-        {{-- Resumen de Estados (Arriba, clicables para filtrar) --}}
+        {{-- Botón Agregar Producción (ancho completo, arriba de todo) --}}
+        <div class="add-production-section">
+            <button type="button" class="btn-add-production-full" id="btnAddNewExport">
+                <i class="fas fa-plus"></i>
+                <span>Agregar archivo de producción</span>
+            </button>
+        </div>
+
+        {{-- Resumen de Estados (clicables para filtrar) --}}
         <div class="summary-section" id="summarySection">
             <div class="summary-badges">
                 <button type="button" class="summary-badge active" data-filter="">
@@ -92,9 +100,13 @@
                 <input type="hidden" name="_method" id="formMethod" value="POST">
                 <input type="hidden" name="design_id" id="exportDesignId">
                 <input type="hidden" name="design_variant_id" id="exportVariantId">
+                <input type="hidden" name="image_id" id="exportImageId">
                 <input type="hidden" name="export_id" id="exportEditId">
                 <input type="hidden" name="colors_detected" id="hiddenColorsDetected" value="[]">
                 <input type="hidden" name="auto_read_success" id="hiddenAutoRead" value="1">
+
+                {{-- Indicador de imagen vinculada --}}
+                <div id="linkedImageIndicator" style="display: none;"></div>
 
                 {{-- Upload Zone --}}
                 <div class="upload-zone" id="uploadZone">
@@ -244,18 +256,10 @@
     </div>
 </div>
 
-{{-- Footer --}}
-<div class="production-footer" id="productionFooter" style="display: none;">
-    <button type="button" id="btnAddExport" class="btn-premium btn-premium-primary btn-block">
-        <i class="fas fa-plus"></i>
-        <span>Agregar archivo de producción</span>
-    </button>
-</div>
-
 {{-- Modal de Detalles (Overlay centrado) --}}
 <div class="detail-overlay" id="exportDetailOverlay" style="display: none;">
     <div class="detail-modal-centered">
-        <button type="button" class="detail-modal-close" id="btnCloseDetailOverlay">
+        <button type="button" class="modal-close-premium" id="btnCloseDetailOverlay" aria-label="Close">
             <i class="fas fa-times"></i>
         </button>
 
@@ -667,6 +671,41 @@
     }
 
     /* ============================================= */
+    /* BOTÓN AGREGAR PRODUCCIÓN (ANCHO COMPLETO) */
+    /* ============================================= */
+    .add-production-section {
+        margin-bottom: 12px;
+    }
+
+    .btn-add-production-full {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        padding: 12px 20px;
+        background: linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%);
+        color: #fff;
+        border: none;
+        border-radius: var(--radius-md);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+    }
+
+    .btn-add-production-full:hover {
+        background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+    }
+
+    .btn-add-production-full i {
+        font-size: 12px;
+    }
+
+    /* ============================================= */
     /* RESUMEN DE ESTADOS (COMPACTO) */
     /* ============================================= */
     .summary-section {
@@ -677,6 +716,8 @@
         display: flex;
         gap: 6px;
         flex-wrap: wrap;
+        justify-content: center;
+        width: 100%;
     }
 
     .summary-badge {
@@ -690,6 +731,8 @@
         cursor: pointer;
         transition: all 0.2s ease;
         min-width: 58px;
+        flex: 1;
+        max-width: 100px;
     }
 
     .summary-badge:hover {
@@ -941,14 +984,91 @@
         display: none !important;
     }
 
-    @media (max-width: 600px) {
+    /* ============================================= */
+    /* RESPONSIVE - WEB APP OPTIMIZADO */
+    /* ============================================= */
+
+    /* Tablet landscape y desktop pequeño */
+    @media (max-width: 992px) {
+        .summary-badge {
+            padding: 6px 8px;
+            min-width: 50px;
+        }
+
+        .summary-count {
+            font-size: 14px;
+        }
+
+        .summary-label {
+            font-size: 9px;
+        }
+    }
+
+    /* Tablet portrait */
+    @media (max-width: 768px) {
         .summary-badges {
-            justify-content: center;
+            gap: 4px;
         }
 
         .summary-badge {
-            min-width: 60px;
-            padding: 8px 10px;
+            padding: 6px 4px;
+            min-width: 45px;
+            max-width: none;
+        }
+
+        .summary-icon {
+            font-size: 12px;
+        }
+
+        .summary-count {
+            font-size: 13px;
+        }
+
+        .summary-label {
+            font-size: 8px;
+            letter-spacing: -0.3px;
+        }
+    }
+
+    /* Móvil grande */
+    @media (max-width: 600px) {
+        .add-production-section {
+            margin-bottom: 8px;
+        }
+
+        .btn-add-production-full {
+            padding: 12px 16px;
+            font-size: 13px;
+        }
+
+        .btn-add-production-full i {
+            font-size: 14px;
+        }
+
+        .summary-badges {
+            justify-content: space-between;
+            gap: 3px;
+        }
+
+        .summary-badge {
+            min-width: 0;
+            flex: 1;
+            padding: 5px 3px;
+            max-width: none;
+        }
+
+        .summary-icon {
+            font-size: 11px;
+            margin-bottom: 1px;
+        }
+
+        .summary-count {
+            font-size: 12px;
+        }
+
+        .summary-label {
+            font-size: 7px;
+            letter-spacing: -0.5px;
         }
 
         .filters-row {
@@ -961,6 +1081,56 @@
 
         .btn-clear-filters {
             align-self: flex-end;
+        }
+    }
+
+    /* Móvil pequeño */
+    @media (max-width: 420px) {
+        .btn-add-production-full {
+            padding: 10px 12px;
+            font-size: 12px;
+        }
+
+        .summary-badges {
+            gap: 2px;
+        }
+
+        .summary-badge {
+            padding: 4px 2px;
+            border-radius: 4px;
+        }
+
+        .summary-icon {
+            font-size: 10px;
+        }
+
+        .summary-count {
+            font-size: 11px;
+        }
+
+        .summary-label {
+            font-size: 6px;
+            text-transform: uppercase;
+            letter-spacing: -0.3px;
+        }
+    }
+
+    /* Pantallas muy pequeñas - ocultar labels, solo iconos y números */
+    @media (max-width: 340px) {
+        .summary-label {
+            display: none;
+        }
+
+        .summary-badge {
+            padding: 6px 4px;
+        }
+
+        .summary-count {
+            font-size: 12px;
+        }
+
+        .btn-add-production-full span {
+            font-size: 11px;
         }
     }
 
@@ -1187,6 +1357,34 @@
     .export-item-icon i {
         font-size: 18px;
         color: var(--primary);
+    }
+
+    /* Miniatura de imagen en el item */
+    .export-item-thumbnail {
+        width: 56px;
+        height: 56px;
+        flex-shrink: 0;
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+        background: #f1f5f9;
+        border: 2px solid #e2e8f0;
+    }
+
+    .export-item-thumbnail img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .export-item-thumbnail.no-image {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .export-item-thumbnail.no-image i {
+        font-size: 20px;
+        color: #94a3b8;
     }
 
     .export-item-info {
@@ -1691,14 +1889,19 @@
     /* ============================================= */
     .detail-overlay {
         position: fixed;
-        inset: 0;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100vw;
+        height: 100vh;
         background: rgba(0, 0, 0, 0.6);
         backdrop-filter: blur(4px);
-        z-index: 10000;
+        z-index: 99999;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 20px;
+        overflow: auto;
     }
 
     .detail-modal-centered {
@@ -1711,7 +1914,7 @@
         flex-direction: column;
         position: relative;
         box-shadow: var(--shadow-lg);
-        overflow: hidden;
+        overflow: visible;
     }
 
     .detail-modal-close {
@@ -2060,8 +2263,10 @@
     }
 
     /* ============================================= */
-    /* RESPONSIVE */
+    /* RESPONSIVE - EXPORT ITEMS & FORM */
     /* ============================================= */
+
+    /* Tablet */
     @media (max-width: 768px) {
         .export-item-meta .meta-dimensions {
             display: none;
@@ -2072,8 +2277,44 @@
             height: 30px;
             font-size: 12px;
         }
+
+        .export-item-thumb {
+            width: 40px;
+            height: 40px;
+        }
+
+        .export-item-content {
+            gap: 8px;
+        }
+
+        .export-item-name {
+            font-size: 13px;
+        }
+
+        .export-item-meta span {
+            font-size: 10px;
+        }
+
+        /* Form adjustments */
+        .upload-zone {
+            padding: 20px 15px;
+        }
+
+        .upload-zone i {
+            font-size: 32px;
+        }
+
+        .tech-cards {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .tech-card {
+            padding: 10px;
+        }
     }
 
+    /* Móvil */
     @media (max-width: 576px) {
         .tech-cards {
             grid-template-columns: 1fr 1fr;
@@ -2099,11 +2340,42 @@
 
         .export-item {
             flex-direction: column;
+            align-items: stretch;
         }
 
         .export-status-indicator {
             width: 100%;
             height: 4px;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .export-item-thumb {
+            width: 36px;
+            height: 36px;
+            flex-shrink: 0;
+        }
+
+        .export-item-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .export-item-name {
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .export-item-meta {
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .export-item-meta span {
+            font-size: 9px;
         }
 
         .export-item-actions {
@@ -2111,11 +2383,133 @@
             justify-content: flex-end;
             padding: 8px 12px;
             border-top: 1px solid var(--gray-100);
+            gap: 6px;
+        }
+
+        .btn-action-icon {
+            width: 28px;
+            height: 28px;
+            font-size: 11px;
+        }
+
+        /* Upload zone mobile */
+        .upload-zone {
+            padding: 16px 12px;
+            min-height: 100px;
+        }
+
+        .upload-zone i {
+            font-size: 28px;
+            margin-bottom: 6px;
+        }
+
+        .upload-zone p {
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
+        .upload-zone small {
+            font-size: 10px;
+        }
+
+        /* Form mobile */
+        .form-group label {
+            font-size: 12px;
+        }
+
+        .form-control {
+            font-size: 14px;
+            padding: 8px 10px;
+        }
+
+        .tech-cards {
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        .tech-card {
+            padding: 8px;
+        }
+
+        .tech-card .value {
+            font-size: 14px;
+        }
+
+        .tech-card .label {
+            font-size: 9px;
         }
 
         .footer-actions-main,
         .footer-actions-status {
             flex-direction: column;
+        }
+
+        /* Empty state mobile */
+        .production-state {
+            padding: 32px 16px;
+        }
+
+        .empty-state-icon {
+            width: 60px;
+            height: 60px;
+        }
+
+        .empty-state-icon i {
+            font-size: 24px;
+        }
+
+        .empty-state-title {
+            font-size: 15px;
+        }
+
+        .empty-state-text {
+            font-size: 12px;
+        }
+    }
+
+    /* Móvil muy pequeño */
+    @media (max-width: 380px) {
+        .export-item-thumb {
+            width: 32px;
+            height: 32px;
+        }
+
+        .export-item-name {
+            font-size: 11px;
+        }
+
+        .btn-action-icon {
+            width: 26px;
+            height: 26px;
+            font-size: 10px;
+        }
+
+        .tech-cards {
+            grid-template-columns: 1fr;
+        }
+
+        .upload-zone {
+            padding: 14px 10px;
+        }
+    }
+
+    /* Touch-friendly: aumentar áreas táctiles */
+    @media (hover: none) and (pointer: coarse) {
+        .summary-badge {
+            min-height: 44px;
+        }
+
+        .btn-action-icon {
+            min-width: 36px;
+            min-height: 36px;
+        }
+
+        .export-item {
+            min-height: 60px;
+        }
+
+        .btn-add-production-full {
+            min-height: 48px;
         }
     }
 </style>
@@ -2265,7 +2659,7 @@
 
                                     if (response.total_count > 0) {
                                         renderGroups(groupsData);
-                                        $('#productionList, #productionFooter').show();
+                                        $('#productionList').show();
                                     } else {
                                         showEmptyState();
                                     }
@@ -2298,7 +2692,7 @@
                                         .context_name || currentVariantId) + '</strong>');
                                     $('#exportsCount').text(displayCount + ' archivo' + (
                                         displayCount !== 1 ? 's' : ''));
-                                    $('#productionList, #productionFooter').show();
+                                    $('#productionList').show();
                                 } else {
                                     showEmptyState();
                                     displayCount = 0;
@@ -2314,8 +2708,55 @@
                     }
                 }
 
-                // Exponer función globalmente para que index.blade.php pueda llamarla
+                // Bandera para indicar que queremos ir directo al formulario (no cargar lista)
+                var skipLoadAndShowForm = false;
+                var pendingImageId = null;
+
+                // Exponer funciones globalmente para que index.blade.php pueda llamarlas
                 window.loadProductionData = loadProductionData;
+                window.openExportForm = function() {
+                    showForm(null);
+                };
+
+                // Función para preparar apertura directa al formulario
+                // Se llama ANTES de cambiar a la pestaña de producción
+                window.prepareDirectFormOpen = function(imageId) {
+                    skipLoadAndShowForm = true;
+                    pendingImageId = imageId || null;
+                };
+
+                // Función para limpiar imagen vinculada
+                window.clearLinkedImage = function() {
+                    $('#exportImageId').val('');
+                    $('#linkedImageIndicator').hide().html('');
+                };
+
+                // Función interna para mostrar formulario directo
+                function showFormDirect() {
+                    // Establecer IDs del contexto actual
+                    currentDesignId = $('#modalDesignId').val();
+                    currentVariantId = $('#modalVariantId').val();
+
+                    // Ocultar todo y mostrar solo el formulario
+                    hideAllStates();
+                    showForm(null);
+
+                    // Establecer el image_id si viene de una imagen específica
+                    if (pendingImageId) {
+                        setTimeout(function() {
+                            $('#exportImageId').val(pendingImageId);
+                            // Mostrar indicador visual
+                            $('#linkedImageIndicator').html(
+                                '<div class="alert alert-info py-2 px-3 mb-2" style="font-size: 12px;">' +
+                                '<i class="fas fa-link mr-1"></i> Producción vinculada a imagen #' +
+                                pendingImageId +
+                                '<button type="button" class="close" onclick="clearLinkedImage()" style="font-size: 14px; margin-left: 10px;">' +
+                                '<span>&times;</span></button></div>'
+                            ).show();
+                            pendingImageId = null;
+                        }, 50);
+                    }
+                }
 
                 function calculateSummary(data) {
                     var summary = {
@@ -2436,7 +2877,17 @@
                         '" data-variant="' + (exp.design_variant_id || '') + '">';
                     html += '<div class="export-status-indicator status-' + status + '"></div>';
                     html += '<div class="export-item-content" role="button">';
-                    html += '<div class="export-item-icon"><i class="fas fa-file-code"></i></div>';
+
+                    // Miniatura de imagen (vinculada, de variante o del diseño)
+                    if (exp.image_url) {
+                        html += '<div class="export-item-thumbnail">';
+                        html += '<img src="' + exp.image_url +
+                            '" alt="Ref" onerror="this.parentElement.innerHTML=\'<i class=\\\'fas fa-image\\\'></i>\';this.parentElement.classList.add(\'no-image\');">';
+                        html += '</div>';
+                    } else {
+                        html +=
+                            '<div class="export-item-thumbnail no-image"><i class="fas fa-image"></i></div>';
+                    }
                     html += '<div class="export-item-info">';
                     html += '<div class="export-item-name">' + escapeHtml(exp.application_label ||
                         'Sin nombre') + '</div>';
@@ -2667,8 +3118,7 @@
                 }
 
                 function hideAllStates() {
-                    $('#productionLoading, #productionEmpty, #productionList, #productionForm, #productionFooter')
-                        .hide();
+                    $('#productionLoading, #productionEmpty, #productionList, #productionForm').hide();
                 }
 
                 function showEmptyState() {
@@ -2804,6 +3254,10 @@
                     $('.tech-card').removeClass('has-error');
                     $('.field-error').text('');
                     $('#inputStitches, #inputColors, #inputWidth, #inputHeight').val('');
+
+                    // Limpiar imagen vinculada
+                    $('#exportImageId').val('');
+                    $('#linkedImageIndicator').hide().html('');
                 }
 
                 // Análisis de archivo
@@ -2956,6 +3410,11 @@
                         formData.append('file', currentFile);
                         formData.append('design_id', currentDesignId);
                         formData.append('design_variant_id', currentVariantId || '');
+                        // Incluir image_id si está vinculado a una imagen específica
+                        var imageId = $('#exportImageId').val();
+                        if (imageId) {
+                            formData.append('image_id', imageId);
+                        }
                     }
 
                     formData.append('application_type', $('#applicationType').val());
@@ -2982,6 +3441,35 @@
                                 hideForm();
                                 loadProductionData();
                                 updateDesignCardCounter(isEditMode ? 'updated' : 'created');
+
+                                // ⭐ ACTUALIZACIÓN INMEDIATA de badges y contadores (optimista)
+                                if (!isEditMode) {
+                                    // Incrementar contador del tab de producción y tarjeta inmediatamente
+                                    if (typeof window.incrementProductionTabCounter ===
+                                        'function') {
+                                        window.incrementProductionTabCounter();
+                                    }
+
+                                    // Incrementar inmediatamente el badge de la imagen vinculada
+                                    var linkedImageId = $('#exportImageId').val();
+                                    if (linkedImageId && typeof window.incrementImageBadge ===
+                                        'function') {
+                                        window.incrementImageBadge(linkedImageId);
+                                    }
+                                    // También incrementar el badge de imagen principal si coincide
+                                    if (typeof window.incrementMainImageBadgeIfMatches ===
+                                        'function') {
+                                        window.incrementMainImageBadgeIfMatches(linkedImageId);
+                                    }
+                                }
+
+                                // Refrescar badges desde servidor (verificación en segundo plano)
+                                setTimeout(function() {
+                                    if (typeof refreshGalleryProductionBadges ===
+                                        'function') {
+                                        refreshGalleryProductionBadges();
+                                    }
+                                }, 500);
                                 showSuccessAlert(isEditMode ? '¡Actualizado!' : '¡Guardado!',
                                     isEditMode ?
                                     'La exportación se actualizó correctamente' :
@@ -3131,7 +3619,14 @@
 
                     $('#btnDetailDownload').attr('href', exportData.download_url || '#');
                     exportsData[exportData.id] = exportData;
-                    $('#exportDetailOverlay').fadeIn(200);
+
+                    // Mover overlay al body para que cubra toda la pantalla (escapar del modal padre)
+                    var $overlay = $('#exportDetailOverlay');
+                    if (!$overlay.data('moved-to-body')) {
+                        $overlay.appendTo('body');
+                        $overlay.data('moved-to-body', true);
+                    }
+                    $overlay.fadeIn(200);
                 }
 
                 function updateWorkflowIndicator(currentStatus) {
@@ -3344,6 +3839,12 @@
                     });
                 }
 
+                // ⭐ Botón de agregar nueva producción (desde la lista)
+                $(document).on('click', '#btnAddNewExport', function(e) {
+                    e.preventDefault();
+                    showForm(null);
+                });
+
                 $(document).on('click', '#btnRemoveFile, #btnRemoveFileError', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
@@ -3479,11 +3980,22 @@
                 });
 
                 $(document).on('click', '#production-tab', function() {
-                    setTimeout(loadProductionData, 100);
+                    // Solo cargar datos si no hay petición de ir directo al formulario
+                    if (!skipLoadAndShowForm) {
+                        setTimeout(loadProductionData, 100);
+                    }
                 });
 
                 $('a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
-                    if (e.target.id === 'production-tab') loadProductionData();
+                    if (e.target.id === 'production-tab') {
+                        // Verificar si debemos ir directo al formulario
+                        if (skipLoadAndShowForm) {
+                            skipLoadAndShowForm = false; // Resetear bandera
+                            showFormDirect();
+                        } else {
+                            loadProductionData();
+                        }
+                    }
                 });
 
                 $(document).on('keydown', function(e) {

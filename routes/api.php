@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ImageController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SearchController;
 
 /*
@@ -33,3 +34,6 @@ Route::post('images/reorder', [ImageController::class, 'reorder'])
 // Autocompletado de búsqueda
 Route::get('search/autocomplete', [SearchController::class, 'autocomplete'])
     ->name('api.search.autocomplete');
+
+// Esta línea crea automáticamente las rutas para index, store, show, update y destroy
+Route::apiResource('products', ProductController::class);

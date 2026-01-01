@@ -42,15 +42,16 @@ def rgb_to_hex(r, g, b):
     return "#{:02x}{:02x}{:02x}".format(r, g, b)
 
 
-def analyze_embroidery_file(file_path):
+def analyze_embroidery_file(file_path, output_svg=False):
     """
-    Analiza un archivo de bordado y extrae información técnica.
+    Analiza un archivo de bordado y extrae información técnica o genera un SVG.
     
     Args:
         file_path: Ruta completa al archivo de bordado
+        output_svg: Boolean, si es True retorna el SVG en lugar del análisis técnico
         
     Returns:
-        dict: Diccionario con los datos del archivo
+        dict: Diccionario con los datos del archivo o el SVG
     """
     result = {
         "success": False,
@@ -87,6 +88,52 @@ def analyze_embroidery_file(file_path):
             result["error"] = "No se pudo leer el archivo. Formato no soportado o archivo corrupto."
             return result
         
+        # Si se solicita SVG, generarlo y retornar
+        if output_svg:
+            import tempfile
+            # Crear un archivo temporal con extensión .svg para que pyembroidery sepa el formato
+            fd, temp_path = tempfile.mkstemp(suffix=".svg")
+            try:
+                # Escribir el patrón al archivo temporal
+                pyembroidery.write(pattern, temp_path)
+                # Leer el contenido del SVG
+                # Contenido del SVG
+                with open(temp_path, "r", encoding="utf-8") as f:
+                    svg_content = f.read()
+                
+                # Ajustar el viewBox para que sea ajustado (tight) al diseño
+                bounds = pattern.bounds()
+                if bounds:
+                    min_x, min_y, max_x, max_y = bounds
+                    width = max_x - min_x
+                    height = max_y - min_y
+                    
+                    # Añadir un pequeño margen del 5%
+                    margin = max(width, height) * 0.05
+                    view_x = min_x - margin
+                    view_y = min_y - margin
+                    view_w = width + (margin * 2)
+                    view_h = height + (margin * 2)
+                    
+                    # Reemplazar el viewBox original por uno más preciso
+                    import re
+                    new_viewbox = f'viewBox="{view_x} {view_y} {view_w} {view_h}"'
+                    svg_content = re.sub(r'viewBox="[^"]+"', new_viewbox, svg_content)
+                    
+                    # Asegurar que tenga width/height="100%" para responsividad
+                    if 'width=' not in svg_content:
+                        svg_content = svg_content.replace('<svg ', f'<svg width="100%" height="100%" ')
+                
+                return {
+                    "success": True,
+                    "svg": svg_content
+                }
+            finally:
+                # Asegurar que el archivo se cierre y elimine
+                os.close(fd)
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+
         # Contar puntadas (solo comandos STITCH)
         stitch_count = 0
         color_changes = 0
@@ -159,17 +206,22 @@ def main():
     if len(sys.argv) < 2:
         print(json.dumps({
             "success": False,
-            "error": "Uso: python embroidery_analyzer.py <ruta_archivo>"
+            "error": "Uso: python embroidery_analyzer.py <ruta_archivo> [--svg]"
         }))
         sys.exit(1)
     
     file_path = sys.argv[1]
+    output_svg = "--svg" in sys.argv
     
     # Analizar el archivo
-    result = analyze_embroidery_file(file_path)
+    result = analyze_embroidery_file(file_path, output_svg)
     
-    # Imprimir resultado como JSON
-    print(json.dumps(result, ensure_ascii=False))
+    # Imprimir resultado como JSON o SVG
+    if output_svg and result["success"]:
+        # Imprimir solo el SVG si fue exitoso
+        print(result["svg"])
+    else:
+        print(json.dumps(result, ensure_ascii=False))
     
     # Código de salida
     sys.exit(0 if result["success"] else 1)

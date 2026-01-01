@@ -3,12 +3,11 @@
 @section('title', 'Diseños')
 
 @section('content_header')
-    <div class="d-flex justify-content-between align-items-center">
-        <h1 class="text-xl font-weight-semibold">Diseños</h1>
-
-        {{-- BOTÓN NUEVO DISEÑO --}}
-        <a href="{{ route('admin.designs.create') }}" class="btn btn-primary">
-            + Nuevo diseño
+    <div class="page-header-wrapper">
+        <h1 class="page-title">Diseños</h1>
+        <a href="{{ route('admin.designs.create') }}" class="btn-new-design">
+            <i class="fas fa-plus"></i>
+            <span>Nuevo diseño</span>
         </a>
     </div>
 @stop
@@ -21,24 +20,23 @@
         <div class="col-lg-3">
 
             <div class="surface mb-4">
-                <form method="GET">
+                <form method="GET" id="searchForm">
                     {{-- Contenedor relativo para agrupar todo --}}
                     <div class="position-relative d-flex align-items-center">
 
-                        {{-- LUPA DENTRO (IZQUIERDA) --}}
-                        <button type="submit" class="btn btn-link p-0 text-primary position-absolute"
-                            style="left: 12px; line-height: 1; z-index: 10;">
-                            <i class="fas fa-search"></i>
-                        </button>
+                        {{-- LUPA / SPINNER (IZQUIERDA) --}}
+                        <span class="position-absolute" style="left: 12px; line-height: 1; z-index: 10;">
+                            <i class="fas fa-search text-primary" id="searchIcon"></i>
+                            <i class="fas fa-spinner fa-spin text-primary" id="searchSpinner" style="display: none;"></i>
+                        </span>
 
-                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Buscar diseño…"
-                            class="search-input w-100" style="padding-left: 40px; padding-right: 40px;">
+                        <input type="text" name="search" id="searchInput" value="{{ request('search') }}"
+                            placeholder="Buscar diseño…" autocomplete="off" class="search-input w-100"
+                            style="padding-left: 40px; padding-right: 40px;">
 
-                        {{-- "X" DENTRO (DERECHA) --}}
-                        @if (request('search'))
-                            <a href="{{ route('admin.designs.index', request()->except('search')) }}"
-                                class="search-clear m-0" style="right: 12px; position: absolute; line-height: 1;">×</a>
-                        @endif
+                        {{-- Botón clear estilo iOS/Apple --}}
+                        <a href="{{ route('admin.designs.index') }}" id="searchClear" class="search-clear"
+                            style="display: {{ request('search') ? 'flex' : 'none' }};"></a>
 
                     </div>
                 </form>
@@ -72,10 +70,10 @@
         </div>
 
         {{-- GRID --}}
-        <div class="col-lg-9">
+        <div class="col-lg-9" id="designsContainer">
 
             @if ($designs->count() > 0)
-                <div class="design-grid">
+                <div class="design-grid" id="designGrid">
 
                     @foreach ($designs as $design)
                         <div class="design-card" data-design-id="{{ $design->id }}"
@@ -88,8 +86,9 @@
 
                             <div class="design-image">
                                 @if ($design->primaryImage)
-                                    <img src="{{ asset('storage/' . $design->primaryImage->file_path) }}"
-                                        alt="{{ $design->name }}"
+                                    <img src="{{ asset('storage/' . ($design->primaryImage->thumbnail_small ?? $design->primaryImage->file_path)) }}"
+                                        data-full-src="{{ asset('storage/' . $design->primaryImage->file_path) }}"
+                                        alt="{{ $design->name }}" loading="lazy"
                                         onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                     <div class="no-image" style="display: none;">
                                         <i class="fas fa-image fa-3x mb-2 text-gray-300"></i>
@@ -140,14 +139,12 @@
     {{-- MODAL PRINCIPAL DEL DISEÑO - CON data-backdrop="static" --}}
     <div class="modal fade" id="designModal" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
         <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
-            <div class="modal-content modal-premium">
+            <div class="modal-content modal-premium" style="overflow: visible;">
 
                 {{-- Botón Cerrar Flotante --}}
-                <div style="position: absolute; top: 15px; right: 15px; z-index: 1060;">
-                    <button type="button" class="modal-close-premium" data-dismiss="modal" aria-label="Close">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
+                <button type="button" class="modal-close-premium" data-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
 
                 <div class="modal-body p-0 position-relative">
                     <div class="modal-content-wrapper shadow-lg" style="border-radius: 30px; overflow: hidden;">
@@ -183,6 +180,19 @@
                                         <img id="mainImageThumbnail" src="" alt="Principal">
                                         <i class="fas fa-home"></i>
                                     </button>
+
+                                    {{-- Badge contador de producciones --}}
+                                    <span id="mainImageProductionBadge" class="production-count-badge"
+                                        data-count="0"></span>
+
+                                    {{-- Overlay para añadir producción --}}
+                                    <div class="image-production-overlay" id="mainImageOverlay">
+                                        <button type="button" class="btn-add-production-overlay"
+                                            onclick="addProductionFromImage('main')">
+                                            <i class="fas fa-plus"></i>
+                                            <span>Producción</span>
+                                        </button>
+                                    </div>
 
                                     {{-- Imagen --}}
                                     <img id="mainDisplayImage" src="" alt="Diseño">
@@ -355,14 +365,12 @@
     {{-- MODAL DE CONFIRMACIÓN ELIMINAR DISEÑO --}}
     <div class="modal fade" id="deleteConfirmModal" tabindex="-1" role="dialog" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
-            <div class="modal-content modal-delete-apple">
+            <div class="modal-content modal-delete-apple" style="overflow: visible;">
 
                 {{-- Botón Cerrar Flotante --}}
-                <div style="position: absolute; top: 15px; right: 15px; z-index: 1060;">
-                    <button type="button" class="modal-close-premium" data-dismiss="modal" aria-label="Close">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
+                <button type="button" class="modal-close-premium" data-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
 
                 {{-- Icono de advertencia --}}
                 <div class="modal-delete-icon">
@@ -408,8 +416,8 @@
 @section('css')
     <style>
         /* ============================================
-                                        PLACEHOLDERS Y UTILIDADES
-                                        ============================================ */
+                                                                        PLACEHOLDERS Y UTILIDADES
+                                                                        ============================================ */
         .no-img-placeholder {
             width: 45px;
             height: 45px;
@@ -424,8 +432,8 @@
         }
 
         /* ============================================
-                                        MODAL PREMIUM - ESTRUCTURA BASE
-                                        ============================================ */
+                                                                        MODAL PREMIUM - ESTRUCTURA BASE
+                                                                        ============================================ */
         .modal-premium {
             border-radius: 30px;
             border: none;
@@ -434,36 +442,49 @@
             background: transparent;
         }
 
+        /* ============================================
+                                                                        BOTÓN CERRAR MODAL - ARREGLADO
+                                                                        Estilos para el botón de cerrar (X) que estaba flotando mal
+                                                                        ============================================ */
         .modal-close-premium {
             position: absolute;
-            top: -15px;
-            right: -15px;
-            width: 45px;
-            height: 45px;
-            background: #2563eb;
-            border: 2px solid #fff;
+            top: 12px;
+            right: 12px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
-            color: #fff;
-            font-size: 20px;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #e5e7eb;
+            color: #374151;
+            font-size: 18px;
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 1070;
+            cursor: pointer;
+            z-index: 9999;
+            /* Alto z-index para estar por encima de todo */
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            text-decoration: none;
+            outline: none;
         }
 
         .modal-close-premium:hover {
-            background: #1d4ed8;
-            transform: scale(1.15) rotate(90deg);
-            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.5);
+            background: #2563eb;
+            color: white;
+            border-color: #2563eb;
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .modal-close-premium:active {
+            transform: scale(0.95);
         }
 
         /* ============================================
-                                        APPLE HIG MODAL - SISTEMA DE DISEÑO PREMIUM
-                                        8pt Grid System | Claridad | Deferencia | Profundidad
-                                        ============================================ */
+                                                                        APPLE HIG MODAL - SISTEMA DE DISEÑO PREMIUM
+                                                                        8pt Grid System | Claridad | Deferencia | Profundidad
+                                                                        ============================================ */
 
         /* COLUMNA IZQUIERDA */
         .modal-left-column {
@@ -676,9 +697,9 @@
         }
 
         /* ============================================
-                                        BOTONES DE ACCIÓN - SISTEMA UNIFICADO PREMIUM
-                                        Ambas columnas usan el mismo sistema
-                                        ============================================ */
+                                                                        BOTONES DE ACCIÓN - SISTEMA UNIFICADO PREMIUM
+                                                                        Ambas columnas usan el mismo sistema
+                                                                        ============================================ */
 
         /* Contenedor de acciones - BASE COMÚN */
         .design-actions,
@@ -808,8 +829,8 @@
         }
 
         /* ============================================
-                                        COLUMNA DERECHA - VARIANTES Y PRODUCCIÓN
-                                        ============================================ */
+                                                                        COLUMNA DERECHA - VARIANTES Y PRODUCCIÓN
+                                                                        ============================================ */
 
         /* Tabs del Modal */
         .modal-tabs-container {
@@ -1105,15 +1126,21 @@
             justify-content: center;
         }
 
-        /* GRID DE GALERÍA - ALTURA FIJA */
+        /* GRID DE GALERÍA - ALTURA AUTOMÁTICA */
         .gallery-grid-container {
             flex: 1;
             width: 100%;
-            min-height: 80px;
-            max-height: 150px;
+            min-height: 60px;
+            max-height: 180px;
             overflow-y: auto;
             overflow-x: hidden;
             padding: 4px;
+        }
+
+        /* Si solo hay 1-3 items (una fila), no necesita scroll */
+        .gallery-grid-container:has(.gallery-grid:not(:has(.gallery-item:nth-child(4)))) {
+            max-height: none;
+            overflow-y: visible;
         }
 
         /* Cuando la galería está vacía, centrar contenido */
@@ -1123,22 +1150,24 @@
             justify-content: center;
         }
 
-        /* Personalización del scrollbar para que sea sutil (estilo Apple) */
+        /* Scrollbar visible y más ancho */
         .gallery-grid-container::-webkit-scrollbar {
-            width: 6px;
+            width: 10px;
         }
 
         .gallery-grid-container::-webkit-scrollbar-track {
-            background: transparent;
+            background: #e5e7eb;
+            border-radius: 5px;
         }
 
         .gallery-grid-container::-webkit-scrollbar-thumb {
-            background: #d1d5db;
-            border-radius: 10px;
+            background: #94a3b8;
+            border-radius: 5px;
+            border: 2px solid #e5e7eb;
         }
 
         .gallery-grid-container::-webkit-scrollbar-thumb:hover {
-            background: #9ca3af;
+            background: #64748b;
         }
 
         .gallery-grid {
@@ -1211,6 +1240,162 @@
             z-index: 2;
         }
 
+        /* ================================================
+                                           HOVER OVERLAY PARA AÑADIR PRODUCCIÓN
+                                           ================================================ */
+
+        /* Overlay en IMAGEN PRINCIPAL - posicionado abajo */
+        .main-image-wrapper .image-production-overlay {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            top: auto;
+            height: 70px;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 16px;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            z-index: 3;
+            /* Por debajo de los botones de descarga/thumbnail */
+            border-radius: 0 0 inherit inherit;
+            pointer-events: none;
+        }
+
+        .main-image-wrapper:hover .image-production-overlay {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Asegurar que descarga y thumbnail estén por encima */
+        .main-image-wrapper .btn-download-floating,
+        .main-image-wrapper .btn-back-thumbnail {
+            z-index: 15 !important;
+        }
+
+        /* Botón de producción en imagen principal */
+        .main-image-wrapper .btn-add-production-overlay {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 18px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .main-image-wrapper .btn-add-production-overlay:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.5);
+        }
+
+        /* Badge contador en imagen principal */
+        .main-image-wrapper .production-count-badge {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            top: auto;
+            min-width: 24px;
+            height: 24px;
+            padding: 0 6px;
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            box-shadow: 0 2px 6px rgba(139, 92, 246, 0.4);
+        }
+
+        /* Overlay en GALERÍA - mismo estilo que imagen principal */
+        .gallery-item .image-production-overlay {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            top: auto;
+            height: 50px;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 10px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            z-index: 3;
+            border-radius: 0 0 6px 6px;
+            pointer-events: none;
+        }
+
+        .gallery-item:hover .image-production-overlay {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Botón para galería - mismo diseño que imagen principal */
+        .gallery-item .btn-add-production-overlay {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 7px 14px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 3px 10px rgba(16, 185, 129, 0.4);
+        }
+
+        .gallery-item .btn-add-production-overlay:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.5);
+        }
+
+        .gallery-item .btn-add-production-overlay i {
+            font-size: 10px;
+        }
+
+        /* Badge contador en galería - posicionado abajo como imagen principal */
+        .gallery-item .production-count-badge {
+            position: absolute;
+            bottom: 6px;
+            left: 6px;
+            top: auto;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 5px;
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            box-shadow: 0 2px 6px rgba(139, 92, 246, 0.4);
+        }
+
+        .production-count-badge:empty,
+        .production-count-badge[data-count="0"] {
+            display: none;
+        }
+
         /* Estado Vacío Galería - Diseño Premium */
         .gallery-empty-state {
             display: flex;
@@ -1240,8 +1425,61 @@
         }
 
         /* ============================================
-                                        ESTILOS DEL GRID DE TARJETAS
-                                        ============================================ */
+                                           PAGE HEADER - Enterprise/SaaS Style
+                                           ============================================ */
+        .page-header-wrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .page-title {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin: 0;
+            line-height: 1.2;
+        }
+
+        .btn-new-design {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            min-height: 44px;
+        }
+
+        .btn-new-design:hover {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+            color: #fff;
+            text-decoration: none;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+        }
+
+        .btn-new-design:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-new-design i {
+            font-size: 12px;
+        }
+
+        /* ============================================
+                                                                        ESTILOS DEL GRID DE TARJETAS
+                                                                        ============================================ */
         .surface {
             background: #fff;
             border-radius: 16px;
@@ -1391,8 +1629,8 @@
         }
 
         /* ============================================
-                                        MODAL DE CONFIRMACIÓN ELIMINAR
-                                        ============================================ */
+                                                                        MODAL DE CONFIRMACIÓN ELIMINAR
+                                                                        ============================================ */
         .modal-delete-apple {
             border-radius: 24px;
             border: none;
@@ -1527,8 +1765,8 @@
         }
 
         /* ============================================
-                                        ESTADOS DE CARGA
-                                        ============================================ */
+                                                                        ESTADOS DE CARGA
+                                                                        ============================================ */
         .modal-loading-overlay {
             position: absolute;
             top: 0;
@@ -1585,9 +1823,32 @@
         }
 
         /* ============================================
-                                        RESPONSIVE
-                                        ============================================ */
+                                                                        RESPONSIVE - BREAKPOINTS ESTÁNDAR
+                                                                        xs: <576px | sm: 576-767px | md: 768-991px | lg: 992-1199px | xl: ≥1200px
+                                                                        ============================================ */
+
+        /* ===== XL: Pantallas grandes (≥1200px) ===== */
+        @media (min-width: 1200px) {
+            .design-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        /* ===== LG: Desktop (992px - 1199px) ===== */
+        @media (min-width: 992px) and (max-width: 1199px) {
+            .design-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .category-list {
+                max-height: 350px;
+            }
+        }
+
+        /* ===== MD: Tablets (768px - 991px) ===== */
         @media (max-width: 991px) {
+
+            /* Modal */
             .modal-left-column {
                 border-right: none;
                 border-bottom: 1px solid #f1f5f9;
@@ -1601,8 +1862,56 @@
             .main-image-wrapper {
                 height: 280px;
             }
+
+            /* Sidebar colapsable */
+            .col-lg-3 {
+                margin-bottom: 20px;
+            }
+
+            /* Categorías en horizontal scroll */
+            .category-list {
+                display: flex;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                max-height: none;
+                gap: 8px;
+                padding-bottom: 8px;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: thin;
+            }
+
+            .category-item {
+                flex-shrink: 0;
+                white-space: nowrap;
+                padding: 8px 16px;
+            }
+
+            .category-count {
+                margin-left: 8px;
+            }
+
+            /* Grid 2 columnas en tablet */
+            .design-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 16px;
+            }
+
+            .design-image {
+                height: 160px;
+            }
+
+            /* Surface más compacta */
+            .surface {
+                padding: 16px;
+                border-radius: 12px;
+            }
+
+            .sidebar-title {
+                display: none;
+            }
         }
 
+        /* ===== SM: Móviles grandes (576px - 767px) ===== */
         @media (max-width: 768px) {
             .modal-dialog.modal-xl {
                 max-width: 95%;
@@ -1627,8 +1936,57 @@
                 font-size: 13px;
                 min-height: 48px;
             }
+
+            /* Grid responsive */
+            .design-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+
+            .design-card {
+                border-radius: 14px;
+            }
+
+            .design-image {
+                height: 140px;
+                padding: 6px;
+            }
+
+            .design-body {
+                padding: 12px;
+            }
+
+            .design-body .design-title {
+                font-size: 0.9rem;
+            }
+
+            .design-variants {
+                font-size: 12px;
+            }
+
+            .design-exports {
+                font-size: 11px;
+                padding: 5px 10px;
+            }
+
+            /* Search input */
+            .search-input {
+                padding: 12px 36px 12px 14px;
+                font-size: 14px;
+            }
+
+            /* Header responsive - Tablet */
+            .page-title {
+                font-size: 1.5rem;
+            }
+
+            .btn-new-design {
+                padding: 10px 16px;
+                font-size: 13px;
+            }
         }
 
+        /* ===== XS: Móviles pequeños (<576px) ===== */
         @media (max-width: 576px) {
             .modal-dialog.modal-xl {
                 max-width: 100%;
@@ -1657,10 +2015,435 @@
                 width: 100%;
                 flex: none;
             }
+
+            /* Grid 1 columna en móvil pequeño - Cards más grandes */
+            .design-grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
+            .design-card {
+                display: flex;
+                flex-direction: row;
+                border-radius: 12px;
+            }
+
+            .design-image {
+                width: 120px;
+                min-width: 120px;
+                height: 120px;
+                border-radius: 12px 0 0 12px;
+            }
+
+            .design-body {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                text-align: left;
+                padding: 12px 16px;
+            }
+
+            .design-body .design-title {
+                font-size: 1rem;
+                margin-bottom: 4px;
+            }
+
+            .design-exports {
+                justify-content: flex-start;
+                margin-top: 6px;
+            }
+
+            /* Categorías scroll horizontal más compacto */
+            .category-list {
+                gap: 6px;
+            }
+
+            .category-item {
+                padding: 6px 12px;
+                font-size: 13px;
+                border-radius: 8px;
+            }
+
+            /* Surface */
+            .surface {
+                padding: 12px;
+                border-radius: 10px;
+                margin-bottom: 12px !important;
+            }
+
+            /* Search */
+            .search-input {
+                padding: 10px 32px 10px 12px;
+                border-radius: 10px;
+            }
+
+            /* Header - Mobile */
+            .page-header-wrapper {
+                gap: 12px;
+            }
+
+            .page-title {
+                font-size: 1.35rem;
+            }
+
+            .btn-new-design {
+                padding: 10px 14px;
+                font-size: 13px;
+                border-radius: 8px;
+            }
+
+            .btn-new-design i {
+                font-size: 11px;
+            }
+
+            /* Alert info responsive */
+            .alert-info {
+                font-size: 13px;
+                padding: 12px;
+            }
+        }
+
+        /* ===== XXS: Móviles muy pequeños (<400px) ===== */
+        @media (max-width: 400px) {
+
+            /* Header - XXS: Stack vertical */
+            .page-header-wrapper {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+
+            .page-title {
+                font-size: 1.25rem;
+                text-align: center;
+            }
+
+            .btn-new-design {
+                justify-content: center;
+                padding: 12px 16px;
+                width: 100%;
+            }
+
+            .design-image {
+                width: 100px;
+                min-width: 100px;
+                height: 100px;
+            }
+
+            .design-body {
+                padding: 10px 12px;
+            }
+
+            .design-body .design-title {
+                font-size: 0.9rem;
+            }
+
+            .design-variants {
+                font-size: 11px;
+            }
+
+            .design-exports {
+                font-size: 10px;
+                padding: 4px 8px;
+            }
+
+            .category-item {
+                padding: 5px 10px;
+                font-size: 12px;
+            }
+        }
+
+        /* ===== Scrollbar personalizado para categorías ===== */
+        .category-list::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .category-list::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 2px;
+        }
+
+        .category-list::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
+
+        .category-list::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* ===== Transiciones suaves en cambios de tamaño ===== */
+        .design-card,
+        .design-image,
+        .design-body,
+        .surface,
+        .category-item {
+            transition: all 0.2s ease;
+        }
+
+        /* ============================================
+                                           WEB APP / PWA - OPTIMIZACIONES TOUCH & MOBILE
+                                           ============================================ */
+
+        /* Touch Target mínimo 44x44px (Apple HIG / Material Design) */
+        .design-card,
+        .category-item,
+        .btn,
+        .modal-close {
+            min-height: 44px;
+            min-width: 44px;
+        }
+
+        /* Mejor feedback táctil */
+        .design-card {
+            -webkit-tap-highlight-color: rgba(37, 99, 235, 0.1);
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .design-card:active {
+            transform: scale(0.98);
+            opacity: 0.9;
+        }
+
+        .category-item {
+            -webkit-tap-highlight-color: rgba(37, 99, 235, 0.15);
+            touch-action: manipulation;
+        }
+
+        .category-item:active {
+            transform: scale(0.97);
+        }
+
+        /* Input optimizado para móvil */
+        .search-input {
+            font-size: 16px !important;
+            /* Previene zoom en iOS */
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        /* Botón clear - Estilo Apple/Premium */
+        .search-clear {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0;
+            /* Ocultar el × de texto */
+            border-radius: 50%;
+            background: #c4c4c6;
+            color: #fff;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            z-index: 10;
+        }
+
+        /* Icono X con pseudo-elementos (estilo iOS) */
+        .search-clear::before,
+        .search-clear::after {
+            content: '';
+            position: absolute;
+            width: 10px;
+            height: 1.5px;
+            background: #fff;
+            border-radius: 1px;
+        }
+
+        .search-clear::before {
+            transform: rotate(45deg);
+        }
+
+        .search-clear::after {
+            transform: rotate(-45deg);
+        }
+
+        .search-clear:hover {
+            background: #8e8e93;
+            text-decoration: none;
+        }
+
+        .search-clear:active {
+            background: #636366;
+            transform: translateY(-50%) scale(0.92);
+        }
+
+        /* Safe Areas para iPhone X+ (notch) */
+        @supports (padding: max(0px)) {
+            .page-header-wrapper {
+                padding-left: max(0px, env(safe-area-inset-left));
+                padding-right: max(0px, env(safe-area-inset-right));
+            }
+
+            .modal-body {
+                padding-bottom: max(20px, env(safe-area-inset-bottom));
+            }
+
+            .surface {
+                margin-left: max(0px, env(safe-area-inset-left));
+                margin-right: max(0px, env(safe-area-inset-right));
+            }
+        }
+
+        /* Smooth scrolling nativo */
+        .category-list,
+        .design-grid,
+        .modal-body {
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+        }
+
+        /* Prevenir scroll bounce en iOS */
+        .designs-container {
+            overscroll-behavior: contain;
+        }
+
+        /* Optimización de renderizado GPU */
+        .design-card,
+        .modal-dialog {
+            will-change: transform;
+            transform: translateZ(0);
+            backface-visibility: hidden;
+        }
+
+        /* Loading state visual */
+        .design-card.loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        /* Skeleton loading placeholder */
+        @keyframes shimmer {
+            0% {
+                background-position: -200% 0;
+            }
+
+            100% {
+                background-position: 200% 0;
+            }
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 8px;
+        }
+
+        /* Pull-to-refresh indicator (futuro) */
+        .ptr-indicator {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100%);
+            transition: transform 0.2s ease;
+            z-index: 9999;
+        }
+
+        /* Orientation changes */
+        @media (orientation: landscape) and (max-height: 500px) {
+            .design-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .design-image {
+                height: 100px;
+            }
+
+            .modal-dialog.modal-xl {
+                max-height: 95vh;
+            }
+        }
+
+        /* Tablet landscape optimization */
+        @media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+            .design-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 14px;
+            }
+
+            .design-image {
+                height: 130px;
+            }
+        }
+
+        /* High DPI / Retina displays */
+        @media (-webkit-min-device-pixel-ratio: 2),
+        (min-resolution: 192dpi) {
+            .design-card {
+                border-width: 0.5px;
+            }
+        }
+
+        /* Reduced motion accessibility */
+        @media (prefers-reduced-motion: reduce) {
+
+            .design-card,
+            .design-image,
+            .design-body,
+            .surface,
+            .category-item,
+            .modal-dialog {
+                transition: none !important;
+                animation: none !important;
+            }
+
+            .design-card:active {
+                transform: none;
+            }
+        }
+
+        /* Dark mode support (futuro) */
+        @media (prefers-color-scheme: dark) {
+
+            /* Variables preparadas para dark mode */
+            :root {
+                --bg-surface: #1f2937;
+                --text-primary: #f9fafb;
+                --text-secondary: #9ca3af;
+                --border-color: #374151;
+            }
+        }
+
+        /* Hover states solo para dispositivos con hover real */
+        @media (hover: hover) and (pointer: fine) {
+            .design-card:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 12px 40px -12px rgba(0, 0, 0, 0.25);
+            }
+
+            .category-item:hover {
+                background: rgba(37, 99, 235, 0.08);
+            }
+        }
+
+        /* Touch devices - no hover effects */
+        @media (hover: none) {
+            .design-card:hover {
+                transform: none;
+                box-shadow: 0 4px 20px -8px rgba(0, 0, 0, 0.12);
+            }
+        }
+
+        /* Foldable devices support */
+        @media (horizontal-viewport-segments: 2) {
+            .design-grid {
+                gap: calc(env(viewport-segment-right 0 0) - env(viewport-segment-left 0 0) + 16px);
+            }
         }
     </style>
 @stop
+
 @section('js')
+    {{-- Tu código JavaScript existente se mantiene intacto --}}
     <script>
         // ============================================
         // VARIABLES GLOBALES
@@ -1670,6 +2453,7 @@
         let currentVariantIndex = -1;
         let currentGalleryImages = [];
         let currentGalleryIndex = 0;
+        let currentDisplayedImageId = null; // ID de la imagen actualmente mostrada
         let pendingDeleteUrl = null;
         let isProcessingDelete = false;
         let isViewingDesignImage = true;
@@ -1812,6 +2596,7 @@
         // ============================================
         function displayMainImage({
             src,
+            originalSrc = null,
             title,
             subtitle,
             downloadName,
@@ -1833,8 +2618,10 @@
             if (title) titleEl.innerText = title.toUpperCase();
             descEl.innerText = subtitle;
 
+            // Usar thumbnail para el botón de volver
             if (showBackButton && currentDesign?.primaryImage?.file_path) {
-                thumbnail.src = `/storage/${currentDesign.primaryImage.file_path}`;
+                const thumbSrc = currentDesign.primaryImage.thumbnail_small || currentDesign.primaryImage.file_path;
+                thumbnail.src = `/storage/${thumbSrc}`;
                 backBtn.style.display = 'block';
             } else {
                 backBtn.style.display = 'none';
@@ -1849,10 +2636,14 @@
             img.style.display = 'block';
             noImg.style.setProperty('display', 'none', 'important');
 
+            // Guardar la URL original para descarga (imagen sin comprimir)
+            const downloadUrl = originalSrc || src;
+
             img.onload = () => {
                 noImg.style.setProperty('display', 'none', 'important');
                 downloadBtn.style.display = 'flex';
-                downloadBtn.href = src;
+                // IMPORTANTE: Siempre usar la imagen original para descarga
+                downloadBtn.href = downloadUrl;
                 downloadBtn.setAttribute('download', downloadName);
             };
 
@@ -1879,16 +2670,25 @@
 
             if (currentDesign.primaryImage?.file_path) {
                 const ext = currentDesign.primaryImage.file_path.split('.').pop();
+                currentDisplayedImageId = currentDesign.primaryImage.id || null; // Guardar ID de imagen principal
+                // Usar thumbnail_medium para visualización, file_path para descarga
+                const displaySrc = currentDesign.primaryImage.thumbnail_medium ?
+                    `/storage/${currentDesign.primaryImage.thumbnail_medium}` :
+                    `/storage/${currentDesign.primaryImage.file_path}`;
+                const originalSrc = `/storage/${currentDesign.primaryImage.file_path}`;
                 displayMainImage({
-                    src: `/storage/${currentDesign.primaryImage.file_path}`,
+                    src: displaySrc,
+                    originalSrc: originalSrc,
                     title: currentDesign.name,
                     subtitle: 'Imagen principal diseño',
                     downloadName: `${currentDesign.name.replace(/\s+/g, '_')}.${ext}`,
                     showBackButton: false
                 });
             } else {
+                currentDisplayedImageId = null;
                 displayMainImage({
                     src: null,
+                    originalSrc: null,
                     title: currentDesign.name,
                     subtitle: 'Imagen principal diseño',
                     downloadName: null,
@@ -1909,6 +2709,7 @@
 
             updateVariantInfoForDesign();
             updateEditVariantsButton();
+            updateMainImageProductionBadge(); // Actualizar badge de imagen principal
 
             // Si la pestaña de producción está activa, recargar los datos del diseño principal
             if ($('#production-tab').hasClass('active') || $('#production-content').hasClass('active show')) {
@@ -1939,27 +2740,262 @@
         }
 
         // ============================================
+        // FUNCIÓN: AÑADIR PRODUCCIÓN DESDE IMAGEN
+        // ============================================
+        function addProductionFromImage(source, imageId = null, variantIndex = null) {
+            // Determinar el image_id según el contexto
+            let targetImageId = imageId;
+
+            if (source === 'main') {
+                // Imagen principal: usar el ID de la imagen actualmente mostrada
+                targetImageId = currentDisplayedImageId;
+            } else if (source === 'gallery' && imageId) {
+                // Desde galería: cambiar la imagen principal a la imagen seleccionada
+                const imgIndex = currentGalleryImages.findIndex(img => img.id === imageId);
+                if (imgIndex !== -1 && currentVariants[currentVariantIndex]) {
+                    showVariantImage(currentVariants[currentVariantIndex], currentGalleryImages, imgIndex);
+                    // Actualizar el estado activo en la galería
+                    updateGalleryActiveState(imgIndex);
+                }
+                targetImageId = imageId;
+            }
+
+            // Preparar para ir directo al formulario (ANTES de cambiar de pestaña)
+            if (typeof window.prepareDirectFormOpen === 'function') {
+                window.prepareDirectFormOpen(targetImageId);
+            }
+
+            // Cambiar a la pestaña de producción
+            // El evento shown.bs.tab detectará la bandera y mostrará el formulario directo
+            $('#production-tab').tab('show');
+        }
+
+        // ============================================
+        // FUNCIÓN: CARGAR CONTADOR DE PRODUCCIONES POR IMAGEN (individual)
+        // ============================================
+        function loadImageProductionCount(imageId, badgeElementId) {
+            if (!imageId) return;
+
+            fetch(`/admin/images/${imageId}/exports-count`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const badge = document.getElementById(badgeElementId);
+                        if (badge) {
+                            badge.textContent = data.count;
+                            badge.dataset.count = data.count;
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error cargando contador de producciones:', error);
+                });
+        }
+
+        // ============================================
+        // FUNCIÓN: CARGAR CONTADORES BATCH (una sola petición para múltiples imágenes)
+        // ============================================
+        function loadGalleryProductionCounts(imageIds) {
+            if (!imageIds || imageIds.length === 0) return;
+
+            fetch('/admin/images/exports-counts-batch', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                        image_ids: imageIds
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.counts) {
+                        Object.entries(data.counts).forEach(([imageId, count]) => {
+                            const badge = document.getElementById(`gallery-badge-${imageId}`);
+                            if (badge) {
+                                badge.textContent = count > 0 ? count : '';
+                                badge.dataset.count = count;
+                            }
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error cargando contadores batch:', error);
+                });
+        }
+
+        // ============================================
+        // FUNCIÓN: ACTUALIZAR BADGE DE IMAGEN PRINCIPAL
+        // ============================================
+        function updateMainImageProductionBadge() {
+            const badge = document.getElementById('mainImageProductionBadge');
+            if (!badge) return;
+
+            // Si estamos viendo la imagen principal del diseño (sin variante seleccionada),
+            // mostrar producciones del diseño que no tienen image_id ni variant_id
+            if (isViewingDesignImage && currentDesign && currentDesign.id) {
+                loadDesignMainProductionCount(currentDesign.id);
+            }
+            // Si hay una imagen específica de galería seleccionada (variante), cargar su contador
+            else if (currentDisplayedImageId && !isViewingDesignImage) {
+                loadImageProductionCount(currentDisplayedImageId, 'mainImageProductionBadge');
+            } else {
+                badge.textContent = '';
+                badge.dataset.count = '0';
+            }
+        }
+
+        // ============================================
+        // FUNCIÓN: CARGAR CONTADOR DE PRODUCCIONES DEL DISEÑO (SIN IMAGE_ID)
+        // ============================================
+        function loadDesignMainProductionCount(designId) {
+            if (!designId) return;
+
+            fetch(`/admin/designs/${designId}/exports-without-image-count`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const badge = document.getElementById('mainImageProductionBadge');
+                        if (badge) {
+                            badge.textContent = data.count || '';
+                            badge.dataset.count = data.count || '0';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error cargando contador de producciones:', error);
+                });
+        }
+
+        // ============================================
+        // FUNCIÓN: INDICADOR DE IMAGEN VINCULADA EN FORMULARIO
+        // ============================================
+        function updateProductionImageIndicator(imageId) {
+            const indicator = document.getElementById('linkedImageIndicator');
+            if (!indicator) return;
+
+            if (imageId) {
+                indicator.innerHTML = `
+                    <div class="alert alert-info py-2 px-3 mb-2" style="font-size: 12px;">
+                        <i class="fas fa-link mr-1"></i>
+                        Producción vinculada a imagen #${imageId}
+                        <button type="button" class="close" onclick="clearLinkedImage()" style="font-size: 14px;">
+                            <span>&times;</span>
+                        </button>
+                    </div>
+                `;
+                indicator.style.display = 'block';
+            } else {
+                indicator.innerHTML = '';
+                indicator.style.display = 'none';
+            }
+        }
+
+        // ============================================
+        // FUNCIÓN: LIMPIAR IMAGEN VINCULADA
+        // ============================================
+        function clearLinkedImage() {
+            const imageIdField = document.getElementById('exportImageId');
+            if (imageIdField) {
+                imageIdField.value = '';
+            }
+            updateProductionImageIndicator(null);
+        }
+
+        // ============================================
+        // FUNCIÓN: REFRESCAR TODOS LOS BADGES DE GALERÍA
+        // ============================================
+        function refreshGalleryProductionBadges() {
+            const galleryItems = document.querySelectorAll('.gallery-item[data-image-id]');
+            galleryItems.forEach(item => {
+                const imageId = item.dataset.imageId;
+                if (imageId) {
+                    loadImageProductionCount(imageId, `gallery-badge-${imageId}`);
+                }
+            });
+            updateMainImageProductionBadge();
+        }
+
+        // ============================================
+        // ⭐ FUNCIÓN: INCREMENTAR BADGE DE IMAGEN INMEDIATAMENTE (OPTIMISTA)
+        // ============================================
+        window.incrementImageBadge = function(imageId) {
+            if (!imageId) return;
+
+            // Buscar el badge de la imagen en la galería
+            const badge = document.getElementById(`gallery-badge-${imageId}`);
+            if (badge) {
+                const currentCount = parseInt(badge.dataset.count || badge.textContent || '0');
+                const newCount = currentCount + 1;
+                badge.textContent = newCount;
+                badge.dataset.count = newCount;
+
+                // Efecto visual de actualización
+                badge.style.transform = 'scale(1.3)';
+                badge.style.transition = 'transform 0.2s ease';
+                setTimeout(() => {
+                    badge.style.transform = 'scale(1)';
+                }, 200);
+            }
+        };
+
+        // ============================================
+        // ⭐ FUNCIÓN: INCREMENTAR BADGE DE IMAGEN PRINCIPAL SI COINCIDE
+        // ============================================
+        window.incrementMainImageBadgeIfMatches = function(imageId) {
+            if (!imageId || !currentDisplayedImageId) return;
+
+            // Solo incrementar si la imagen actual es la misma
+            if (currentDisplayedImageId == imageId) {
+                const badge = document.getElementById('mainImageProductionBadge');
+                if (badge) {
+                    const currentCount = parseInt(badge.dataset.count || badge.textContent || '0');
+                    const newCount = currentCount + 1;
+                    badge.textContent = newCount;
+                    badge.dataset.count = newCount;
+
+                    // Efecto visual de actualización
+                    badge.style.transform = 'scale(1.3)';
+                    badge.style.transition = 'transform 0.2s ease';
+                    setTimeout(() => {
+                        badge.style.transform = 'scale(1)';
+                    }, 200);
+                }
+            }
+        };
+
+        // ============================================
         // FUNCIÓN: MOSTRAR IMAGEN DE VARIANTE
         // ============================================
         function showVariantImage(variant, images, index) {
             const img = images[index];
             if (!img || !img.file_path) {
+                currentDisplayedImageId = null;
                 displayMainImage({
                     src: null,
+                    originalSrc: null,
                     title: variant.name,
                     subtitle: 'Imagen de variante',
                     downloadName: null,
                     showBackButton: true
                 });
+                updateMainImageProductionBadge();
                 return;
             }
 
             const ext = img.file_path.split('.').pop();
             currentGalleryIndex = index;
             isViewingDesignImage = false;
+            currentDisplayedImageId = img.id || null; // Guardar ID de imagen actual
+
+            // Usar thumbnail_medium para visualización, file_path para descarga
+            const displaySrc = img.thumbnail_medium ? `/storage/${img.thumbnail_medium}` : `/storage/${img.file_path}`;
+            const originalSrc = `/storage/${img.file_path}`;
 
             displayMainImage({
-                src: `/storage/${img.file_path}`,
+                src: displaySrc,
+                originalSrc: originalSrc,
                 title: variant.name,
                 subtitle: `Foto ${index + 1} de variante`,
                 downloadName: `${variant.name.replace(/\s+/g, '_')}_${index + 1}.${ext}`,
@@ -1968,6 +3004,7 @@
 
             updateGalleryActiveState(index);
             scrollGalleryItemIntoView(index);
+            updateMainImageProductionBadge(); // Actualizar badge
         }
 
         // ============================================
@@ -2031,18 +3068,27 @@
             deleteBtn.onclick = () => confirmDeleteDesign(`/admin/designs/${design.id}`);
             document.getElementById('btnAddVariant').href = `/admin/designs/${design.id}/variants/create`;
 
-            // Imagen principal
+            // Imagen principal - Usar thumbnail_medium para visualización, file_path para descarga
             if (design.primaryImage?.file_path) {
                 const ext = design.primaryImage.file_path.split('.').pop();
+                currentDisplayedImageId = design.primaryImage.id || null; // Guardar ID de imagen principal
+                const displaySrc = design.primaryImage.thumbnail_medium ?
+                    `/storage/${design.primaryImage.thumbnail_medium}` :
+                    `/storage/${design.primaryImage.file_path}`;
+                const originalSrc = `/storage/${design.primaryImage.file_path}`;
                 displayMainImage({
-                    src: `/storage/${design.primaryImage.file_path}`,
+                    src: displaySrc,
+                    originalSrc: originalSrc,
                     title: design.name,
                     subtitle: 'Imagen principal diseño',
                     downloadName: `${design.name.replace(/\s+/g, '_')}.${ext}`
                 });
+                updateMainImageProductionBadge(); // Cargar contador de producciones
             } else {
+                currentDisplayedImageId = null;
                 displayMainImage({
                     src: null,
+                    originalSrc: null,
                     title: design.name,
                     subtitle: 'Imagen principal diseño',
                     downloadName: null
@@ -2065,11 +3111,17 @@
                     let thumbSrc = '';
                     let hasImage = false;
 
+                    // Usar thumbnail_small para pestañas de variantes (más rápida carga)
                     if (variant.images && variant.images.length > 0 && variant.images[0].file_path) {
-                        thumbSrc = `/storage/${variant.images[0].file_path}`;
+                        const img = variant.images[0];
+                        thumbSrc = img.thumbnail_small ?
+                            `/storage/${img.thumbnail_small}` :
+                            `/storage/${img.file_path}`;
                         hasImage = true;
                     } else if (design.primaryImage && design.primaryImage.file_path) {
-                        thumbSrc = `/storage/${design.primaryImage.file_path}`;
+                        thumbSrc = design.primaryImage.thumbnail_small ?
+                            `/storage/${design.primaryImage.thumbnail_small}` :
+                            `/storage/${design.primaryImage.file_path}`;
                         hasImage = true;
                     }
 
@@ -2078,7 +3130,7 @@
 
                     if (hasImage) {
                         tab.innerHTML = `
-                            <img src="${thumbSrc}"
+                            <img src="${thumbSrc}" loading="lazy"
                                  onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\\'no-img-placeholder\\'><i class=\\'fas fa-image text-muted\\'></i></div>'">
                             <span>${variant.name.toUpperCase()}</span>
                         `;
@@ -2177,13 +3229,45 @@
                     if (img && img.file_path) {
                         const item = document.createElement('div');
                         item.className = 'gallery-item';
+                        item.dataset.imageId = img.id || '';
 
+                        // Badge contador de producciones
+                        const badge = document.createElement('span');
+                        badge.className = 'production-count-badge';
+                        badge.dataset.count = '0';
+                        badge.id = `gallery-badge-${img.id || imgIndex}`;
+                        item.appendChild(badge);
+
+                        // Overlay para añadir producción
+                        const overlay = document.createElement('div');
+                        overlay.className = 'image-production-overlay';
+                        overlay.innerHTML = `
+                            <button type="button" class="btn-add-production-overlay" onclick="event.stopPropagation(); addProductionFromImage('gallery', ${img.id || 0}, ${currentVariantIndex})">
+                                <i class="fas fa-plus"></i>
+                                <span>Producción</span>
+                            </button>
+                        `;
+                        item.appendChild(overlay);
+
+                        // Usar thumbnail_small para galería (carga más rápida)
                         const imgElement = document.createElement('img');
-                        imgElement.src = `/storage/${img.file_path}`;
+                        const imgSrc = img.thumbnail_small ?
+                            `/storage/${img.thumbnail_small}` :
+                            `/storage/${img.file_path}`;
+                        imgElement.src = imgSrc;
+                        imgElement.alt = `Imagen ${imgIndex + 1}`;
+                        // Forzar carga inmediata
+                        imgElement.decoding = 'async';
                         imgElement.onerror = function() {
+                            console.warn('Error cargando imagen:', imgSrc);
                             this.onerror = null;
-                            this.src =
-                                'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23f1f5f9"/><text x="50%" y="50%" font-family="Arial" font-size="10" fill="%2394a3b8" text-anchor="middle" dy=".3em">Sin Imagen</text></svg>';
+                            // Fallback al archivo original si el thumbnail falla
+                            if (img.file_path && this.src.includes('_thumb_')) {
+                                this.src = `/storage/${img.file_path}`;
+                            } else {
+                                this.src =
+                                    'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23f1f5f9"/><text x="50%" y="50%" font-family="Arial" font-size="10" fill="%2394a3b8" text-anchor="middle" dy=".3em">Sin Imagen</text></svg>';
+                            }
                         };
 
                         item.appendChild(imgElement);
@@ -2194,14 +3278,26 @@
                     }
                 });
 
+                // Cargar contadores de producción en UNA sola petición batch
+                const imageIds = images.filter(img => img && img.id).map(img => img.id);
+                if (imageIds.length > 0) {
+                    loadGalleryProductionCounts(imageIds);
+                }
+
                 showVariantImage(variant, images, 0);
             } else {
                 gallery.innerHTML =
                     '<div class="gallery-empty-state"><i class="fas fa-images"></i><p>No hay imágenes.</p></div>';
                 if (currentDesign.primaryImage?.file_path) {
                     const ext = currentDesign.primaryImage.file_path.split('.').pop();
+                    // Usar thumbnail_medium para visualización, file_path para descarga
+                    const displaySrc = currentDesign.primaryImage.thumbnail_medium ?
+                        `/storage/${currentDesign.primaryImage.thumbnail_medium}` :
+                        `/storage/${currentDesign.primaryImage.file_path}`;
+                    const originalSrc = `/storage/${currentDesign.primaryImage.file_path}`;
                     displayMainImage({
-                        src: `/storage/${currentDesign.primaryImage.file_path}`,
+                        src: displaySrc,
+                        originalSrc: originalSrc,
                         title: variant.name,
                         subtitle: 'Imagen de variante',
                         downloadName: `${currentDesign.name.replace(/\s+/g, '_')}.${ext}`
@@ -2209,6 +3305,7 @@
                 } else {
                     displayMainImage({
                         src: null,
+                        originalSrc: null,
                         title: variant.name,
                         subtitle: 'Imagen de variante',
                         downloadName: null
@@ -2364,6 +3461,49 @@
         }
 
         // ============================================
+        // ⭐ INCREMENTAR CONTADOR TAB PRODUCCIÓN INMEDIATAMENTE
+        // ============================================
+        window.incrementProductionTabCounter = function() {
+            const productionCount = document.getElementById('productionTotalCount');
+            if (productionCount) {
+                const current = parseInt(productionCount.innerText || '0');
+                productionCount.innerText = current + 1;
+
+                // Efecto visual
+                productionCount.style.transform = 'scale(1.3)';
+                productionCount.style.transition = 'transform 0.2s ease';
+                setTimeout(() => {
+                    productionCount.style.transform = 'scale(1)';
+                }, 200);
+            }
+
+            // También incrementar en la tarjeta del grid
+            if (currentDesign && currentDesign.id) {
+                const card = document.querySelector(`.design-card[data-design-id="${currentDesign.id}"]`);
+                if (card) {
+                    const currentExports = parseInt(card.dataset.exports || '0');
+                    const newCount = currentExports + 1;
+                    card.dataset.exports = newCount;
+
+                    const exportsDiv = card.querySelector('.design-exports');
+                    if (exportsDiv) {
+                        const numberSpan = exportsDiv.querySelector('.exports-number');
+                        const textSpan = exportsDiv.querySelector('.exports-text');
+                        if (numberSpan) numberSpan.textContent = newCount;
+                        if (textSpan) textSpan.textContent = newCount !== 1 ? 'exportaciones' : 'exportación';
+
+                        // Animación
+                        exportsDiv.classList.add('updated');
+                        setTimeout(() => exportsDiv.classList.remove('updated'), 400);
+                    }
+                }
+
+                // Actualizar currentDesign
+                currentDesign.exports_count = (currentDesign.exports_count || 0) + 1;
+            }
+        };
+
+        // ============================================
         // ACTUALIZACIÓN EN TIEMPO REAL DE EXPORTACIONES
         // ============================================
         function updateExportsCounter(designId) {
@@ -2509,4 +3649,293 @@
             });
         </script>
     @endif
+
+    {{-- ============================================
+         BÚSQUEDA EN TIEMPO REAL (AJAX)
+         ============================================ --}}
+    <script>
+        (function() {
+            // ============================================
+            // CONFIGURACIÓN - Web App optimizada
+            // ============================================
+            const DEBOUNCE_DELAY = 200; // ms - respuesta rápida
+            const MIN_CHARS = 1; // Buscar desde 1 carácter
+            const SEARCH_URL = '{{ route('admin.search.ajax') }}';
+            const ALL_DESIGNS_URL = '{{ route('admin.designs.ajax-list') }}';
+            const STORAGE_URL = '{{ asset('storage') }}';
+            const DESIGNS_SHOW_URL = '/admin/designs/';
+            const INDEX_URL = '{{ route('admin.designs.index') }}';
+
+            // Elementos DOM
+            const searchInput = document.getElementById('searchInput');
+            const searchIcon = document.getElementById('searchIcon');
+            const searchSpinner = document.getElementById('searchSpinner');
+            const searchClear = document.getElementById('searchClear');
+            const searchForm = document.getElementById('searchForm');
+            const designsContainer = document.getElementById('designsContainer');
+
+            let searchTimeout;
+            let currentRequest = null;
+
+            // Prevenir submit del formulario cuando hay búsqueda activa
+            searchForm.addEventListener('submit', function(e) {
+                const term = searchInput.value.trim();
+                if (term.length >= MIN_CHARS) {
+                    e.preventDefault();
+                    performSearch(term);
+                }
+            });
+
+            // Búsqueda en tiempo real con debounce
+            searchInput.addEventListener('input', function() {
+                const term = this.value.trim();
+
+                // Mostrar/ocultar botón limpiar
+                searchClear.style.display = term.length > 0 ? 'flex' : 'none';
+
+                // Cancelar búsqueda anterior
+                clearTimeout(searchTimeout);
+                if (currentRequest) {
+                    currentRequest.abort();
+                    currentRequest = null;
+                }
+
+                // Si está vacío, cargar todos los diseños vía AJAX (sin reload)
+                if (term.length === 0) {
+                    loadAllDesigns();
+                    return;
+                }
+
+                // Debounce - búsqueda rápida
+                searchTimeout = setTimeout(() => {
+                    performSearch(term);
+                }, DEBOUNCE_DELAY);
+            });
+
+            // Limpiar búsqueda con botón X - AJAX sin reload
+            searchClear.addEventListener('click', function(e) {
+                e.preventDefault();
+                searchInput.value = '';
+                searchClear.style.display = 'none';
+                loadAllDesigns();
+            });
+
+            // Cargar todos los diseños vía AJAX (Web App - sin reload)
+            function loadAllDesigns() {
+                showLoading();
+
+                const controller = new AbortController();
+                currentRequest = controller;
+
+                // Obtener categoría activa si hay una
+                const urlParams = new URLSearchParams(window.location.search);
+                const category = urlParams.get('category') || '';
+                const url = category ? `${ALL_DESIGNS_URL}?category=${encodeURIComponent(category)}` : ALL_DESIGNS_URL;
+
+                fetch(url, {
+                        signal: controller.signal
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            renderResults(data.data, '');
+                            updateURL(''); // Limpiar parámetro search de la URL
+                        }
+                    })
+                    .catch(error => {
+                        if (error.name !== 'AbortError') {
+                            console.error('Error al cargar diseños:', error);
+                        }
+                    })
+                    .finally(() => {
+                        hideLoading();
+                        currentRequest = null;
+                    });
+            }
+
+            // Mostrar spinner
+            function showLoading() {
+                searchIcon.style.display = 'none';
+                searchSpinner.style.display = 'inline-block';
+            }
+
+            // Ocultar spinner
+            function hideLoading() {
+                searchIcon.style.display = 'inline-block';
+                searchSpinner.style.display = 'none';
+            }
+
+            // Realizar búsqueda AJAX
+            function performSearch(term) {
+                showLoading();
+
+                const controller = new AbortController();
+                currentRequest = controller;
+
+                fetch(`${SEARCH_URL}?q=${encodeURIComponent(term)}&limit=50`, {
+                        signal: controller.signal
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            renderResults(data.data, term);
+                            updateURL(term);
+                        }
+                    })
+                    .catch(error => {
+                        if (error.name !== 'AbortError') {
+                            console.error('Error en búsqueda:', error);
+                        }
+                    })
+                    .finally(() => {
+                        hideLoading();
+                        currentRequest = null;
+                    });
+            }
+
+            // Renderizar resultados en el grid
+            function renderResults(designs, searchTerm) {
+                if (designs.length === 0) {
+                    designsContainer.innerHTML = `
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            ${searchTerm
+                                ? `No se encontraron diseños para "<strong>${escapeHtml(searchTerm)}</strong>".`
+                                : 'No se encontraron diseños con los filtros aplicados.'
+                            }
+                            <a href="{{ route('admin.designs.create') }}" class="alert-link">¿Deseas crear uno?</a>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '<div class="design-grid" id="designGrid">';
+
+                designs.forEach(design => {
+                    const imageUrl = design.image || '';
+                    const variantsCount = design.variants_count || 0;
+                    // Obtener exports_count del diseño (si viene en la respuesta)
+                    const exportsCount = design.exports_count || 0;
+
+                    html += `
+                        <div class="design-card" data-design-id="${design.id}"
+                            data-description="${escapeHtml(design.description || 'Sin descripción')}"
+                            data-name="${escapeHtml(design.name)}"
+                            data-variants="${variantsCount}"
+                            data-exports="${exportsCount}"
+                            data-image="${imageUrl}"
+                            data-edit-url="/admin/designs/${design.id}/edit"
+                            data-delete-url="/admin/designs/${design.id}">
+
+                            <div class="design-image">
+                                ${imageUrl
+                                    ? `<img src="${imageUrl}" alt="${escapeHtml(design.name)}" loading="lazy"
+                                                                        onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                                       <div class="no-image" style="display: none;">
+                                                                           <i class="fas fa-image fa-3x mb-2 text-gray-300"></i>
+                                                                           <span>Sin imagen</span>
+                                                                       </div>`
+                                    : `<div class="no-image">
+                                                                           <i class="fas fa-image fa-3x mb-2 text-gray-300"></i>
+                                                                           <span>Sin imagen</span>
+                                                                       </div>`
+                                }
+                            </div>
+
+                            <div class="design-body text-center">
+                                <h6 class="design-title">${escapeHtml(capitalizeFirst(design.name))}</h6>
+                                <div class="design-variants">
+                                    ${variantsCount} variante${variantsCount !== 1 ? 's' : ''}
+                                </div>
+                                <div class="design-exports" data-design-id="${design.id}">
+                                    <i class="fas fa-industry"></i>
+                                    <span class="exports-number">${exportsCount}</span>
+                                    <span class="exports-text">exportación${exportsCount !== 1 ? 'es' : ''}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+                designsContainer.innerHTML = html;
+
+                // Re-bind event listeners para las nuevas cards
+                bindCardEvents();
+            }
+
+            // Re-vincular eventos a las cards después de renderizar
+            function bindCardEvents() {
+                document.querySelectorAll('.design-card').forEach(card => {
+                    card.addEventListener('click', function() {
+                        if (typeof isProcessingDelete !== 'undefined' && isProcessingDelete) return;
+
+                        const designId = this.dataset.designId;
+                        const showUrl = `${DESIGNS_SHOW_URL}${designId}`;
+
+                        // Mostrar modal y loader
+                        $('#designModal').modal('show');
+                        const loader = document.getElementById('modalLoader');
+                        if (loader) {
+                            loader.style.setProperty('display', 'flex', 'important');
+                            loader.style.opacity = '1';
+                        }
+
+                        // Limpiar vista anterior
+                        if (typeof clearModal === 'function') {
+                            clearModal();
+                        }
+
+                        // Fetch diseño completo
+                        fetch(showUrl)
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success && typeof renderModal === 'function') {
+                                    renderModal(data.design);
+                                } else if (typeof showErrorAlert === 'function') {
+                                    showErrorAlert('Error', 'No se pudo cargar el diseño');
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                if (typeof showErrorAlert === 'function') {
+                                    showErrorAlert('Error de conexión',
+                                        'Por favor verifica tu conexión');
+                                }
+                            })
+                            .finally(() => {
+                                const loaderEl = document.getElementById('modalLoader');
+                                if (loaderEl) loaderEl.style.setProperty('display', 'none',
+                                    'important');
+                            });
+                    });
+                });
+            }
+
+            // Actualizar URL sin recargar (para compartir/bookmarks)
+            function updateURL(term) {
+                const url = new URL(window.location);
+                if (term) {
+                    url.searchParams.set('search', term);
+                } else {
+                    url.searchParams.delete('search');
+                }
+                window.history.replaceState({}, '', url);
+            }
+
+            // Helpers
+            function escapeHtml(text) {
+                if (!text) return '';
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            function capitalizeFirst(str) {
+                if (!str) return '';
+                return str.charAt(0).toUpperCase() + str.slice(1);
+            }
+
+        })();
+    </script>
 @stop

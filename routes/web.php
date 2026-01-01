@@ -28,6 +28,11 @@ Route::get('admin/designs', [App\Http\Controllers\DesignController::class, 'inde
     ->name('admin.designs.index')
     ->middleware('auth');
 
+// AJAX: Listado de diseños sin reload (para Web App)
+Route::get('admin/designs/ajax-list', [App\Http\Controllers\DesignController::class, 'ajaxList'])
+    ->name('admin.designs.ajax-list')
+    ->middleware('auth');
+
 Route::get('admin/designs/create', [App\Http\Controllers\DesignController::class, 'create'])
     ->name('admin.designs.create')
     ->middleware('auth');
@@ -221,6 +226,26 @@ Route::get('admin/designs/{design}/exports-grouped', [App\Http\Controllers\Desig
 // ⭐ CONTADOR DE EXPORTACIONES (para actualizar cards en tiempo real)
 Route::get('admin/designs/{design}/exports-count', [App\Http\Controllers\DesignExportController::class, 'getExportsCount'])
     ->name('admin.designs.exports-count')
+    ->middleware('auth');
+
+// ⭐ CONTADOR DE EXPORTACIONES SIN IMAGE_ID (para badge de imagen principal del diseño)
+Route::get('admin/designs/{design}/exports-without-image-count', [App\Http\Controllers\DesignExportController::class, 'getExportsWithoutImageCount'])
+    ->name('admin.designs.exports-without-image-count')
+    ->middleware('auth');
+
+// ⭐ CONTADOR DE EXPORTACIONES POR IMAGEN (para badges en galería)
+Route::get('admin/images/{image}/exports-count', [App\Http\Controllers\DesignExportController::class, 'getImageExportsCount'])
+    ->name('admin.images.exports-count')
+    ->middleware('auth');
+
+// ⭐ CONTADORES BATCH DE EXPORTACIONES (múltiples imágenes en una sola petición)
+Route::post('admin/images/exports-counts-batch', [App\Http\Controllers\DesignExportController::class, 'getImagesExportsCounts'])
+    ->name('admin.images.exports-counts-batch')
+    ->middleware('auth');
+
+// ⭐ OBTENER EXPORTACIONES POR IMAGEN
+Route::get('admin/images/{image}/exports', [App\Http\Controllers\DesignExportController::class, 'getImageExports'])
+    ->name('admin.images.exports')
     ->middleware('auth');
 
 /*
@@ -448,3 +473,29 @@ Route::middleware(['auth'])->prefix('admin')->group(function () {
     Route::get('search/autocomplete', [App\Http\Controllers\SearchController::class, 'autocomplete'])
         ->name('admin.search.autocomplete');
 });
+
+//rutas produccion
+Route::group(['prefix' => 'produccion', 'as' => 'admin.produccion.', 'middleware' => ['auth']], function () {
+    Route::get('/', [App\Http\Controllers\ProduccionController::class, 'index'])->name('index');
+    Route::get('/nuevo', [App\Http\Controllers\ProduccionController::class, 'create'])->name('create');
+    Route::post('/', [App\Http\Controllers\ProduccionController::class, 'store'])->name('store');
+    Route::get('/{id}', [App\Http\Controllers\ProduccionController::class, 'show'])->name('show');
+    Route::get('/{id}/editar', [App\Http\Controllers\ProduccionController::class, 'edit'])->name('edit');
+    Route::put('/{id}', [App\Http\Controllers\ProduccionController::class, 'update'])->name('update');
+    Route::delete('/{id}', [App\Http\Controllers\ProduccionController::class, 'destroy'])->name('destroy');
+
+    // Acciones de estado
+    Route::post('/{id}/solicitar', [App\Http\Controllers\ProduccionController::class, 'requestApproval'])->name('request');
+    Route::post('/{id}/aprobar', [App\Http\Controllers\ProduccionController::class, 'approve'])->name('approve');
+    Route::post('/{id}/archivar', [App\Http\Controllers\ProduccionController::class, 'archive'])->name('archive');
+    Route::post('/{id}/revertir', [App\Http\Controllers\ProduccionController::class, 'revert'])->name('revert');
+    Route::post('/{id}/restaurar', [App\Http\Controllers\ProduccionController::class, 'restore'])->name('restore');
+
+    // Nueva ruta para vista previa SVG (On-demand y Cacheada)
+    Route::get('/{export}/preview', [App\Http\Controllers\DesignPreviewController::class, 'preview'])->name('preview');
+});
+
+//rutas productos
+Route::get('/gestion-productos', [App\Http\Controllers\ProductController::class, 'index'])
+    ->name('admin.productos.index')
+    ->middleware(['auth']);

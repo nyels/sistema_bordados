@@ -374,6 +374,7 @@ class DesignExportController extends Controller
             $validated = $request->validate([
                 'design_id' => 'required|exists:designs,id',
                 'design_variant_id' => 'nullable|exists:design_variants,id',
+                'image_id' => 'nullable|exists:images,id',
                 'application_type' => ['required', 'string', 'max:50', 'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s\-_]+$/'],
                 'application_label' => ['required', 'string', 'max:100', 'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s\-_.,;:()\/#]+$/'],
                 'placement_description' => ['nullable', 'string', 'max:255', 'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s\-_.,;:()\/#]*$/'],
@@ -408,6 +409,7 @@ class DesignExportController extends Controller
             $exportData = [
                 'design_id' => $validated['design_id'],
                 'design_variant_id' => $validated['design_variant_id'] ?? null,
+                'image_id' => $validated['image_id'] ?? null,
                 'application_type' => $this->sanitizeText($validated['application_type']),
                 'application_label' => $this->sanitizeText($validated['application_label']),
                 'placement_description' => $this->sanitizeText($validated['placement_description'] ?? null),
@@ -551,6 +553,105 @@ class DesignExportController extends Controller
         }
     }
 
+    /**
+     * Obtener contador de exportaciones del diseño que NO tienen image_id específico.
+     * Esto es para mostrar en el badge de la imagen principal del diseño.
+     */
+    public function getExportsWithoutImageCount(Design $design)
+    {
+        try {
+            // Contar producciones del diseño que no tienen image_id (diseño general)
+            $count = DesignExport::where('design_id', $design->id)
+                ->whereNull('image_id')
+                ->whereNull('design_variant_id')
+                ->count();
+
+            return response()->json([
+                'success' => true,
+                'count' => $count,
+                'design_id' => $design->id
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'count' => 0], 500);
+        }
+    }
+
+    /**
+     * Obtener contador de exportaciones para una imagen específica.
+     */
+    public function getImageExportsCount($imageId)
+    {
+        try {
+            $count = DesignExport::where('image_id', $imageId)->count();
+            return response()->json([
+                'success' => true,
+                'count' => $count,
+                'image_id' => $imageId
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'count' => 0], 500);
+        }
+    }
+
+    /**
+     * Obtener contadores de exportaciones para múltiples imágenes (batch).
+     * Reduce múltiples peticiones AJAX a una sola.
+     */
+    public function getImagesExportsCounts(Request $request)
+    {
+        try {
+            $imageIds = $request->input('image_ids', []);
+
+            if (empty($imageIds)) {
+                return response()->json(['success' => true, 'counts' => []]);
+            }
+
+            // Una sola consulta para todos los contadores
+            $counts = DesignExport::whereIn('image_id', $imageIds)
+                ->selectRaw('image_id, COUNT(*) as count')
+                ->groupBy('image_id')
+                ->pluck('count', 'image_id')
+                ->toArray();
+
+            // Asegurar que todas las imágenes tengan un contador (0 si no hay)
+            $result = [];
+            foreach ($imageIds as $id) {
+                $result[$id] = $counts[$id] ?? 0;
+            }
+
+            return response()->json([
+                'success' => true,
+                'counts' => $result
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'counts' => []], 500);
+        }
+    }
+
+    /**
+     * Obtener exportaciones vinculadas a una imagen específica.
+     */
+    public function getImageExports($imageId)
+    {
+        try {
+            $exports = DesignExport::where('image_id', $imageId)
+                ->with(['creator:id,name', 'design:id,name', 'variant:id,name'])
+                ->orderByDesc('created_at')
+                ->get()
+                ->map(fn($e) => $this->formatExportForJson($e));
+
+            return response()->json([
+                'success' => true,
+                'data' => $exports,
+                'count' => $exports->count(),
+                'image_id' => $imageId
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error al obtener exportaciones de imagen: ' . $e->getMessage());
+            return response()->json(['success' => false, 'data' => [], 'count' => 0], 500);
+        }
+    }
+
     public function getExport(DesignExport $export)
     {
         try {
@@ -684,7 +785,14 @@ class DesignExportController extends Controller
 
             // Obtener TODAS las exportaciones del diseño
             $allExports = DesignExport::where('design_id', $design->id)
-                ->with(['creator:id,name', 'approver:id,name', 'variant:id,name'])
+                ->with([
+                    'creator:id,name',
+                    'approver:id,name',
+                    'variant:id,name',
+                    'variant.images',
+                    'image',
+                    'design.primaryImage'
+                ])
                 ->latest()
                 ->get();
 
@@ -786,10 +894,25 @@ class DesignExportController extends Controller
             }
         }
 
+        // Determinar la imagen a mostrar (vinculada, de variante o del diseño)
+        $imageUrl = null;
+        if ($export->image_id && $export->image) {
+            // Imagen vinculada directamente
+            $imageUrl = asset('storage/' . $export->image->file_path);
+        } elseif ($export->variant && $export->variant->images->count() > 0) {
+            // Primera imagen de la variante
+            $imageUrl = asset('storage/' . $export->variant->images->first()->file_path);
+        } elseif ($export->design && $export->design->primaryImage) {
+            // Imagen principal del diseño
+            $imageUrl = asset('storage/' . $export->design->primaryImage->file_path);
+        }
+
         return [
             'id' => $export->id,
             'design_id' => $export->design_id,
             'design_variant_id' => $export->design_variant_id,
+            'image_id' => $export->image_id,
+            'image_url' => $imageUrl,
             'variant_name' => $export->variant?->name ?? null,
             'application_label' => $export->application_label ?? 'Sin nombre',
             'application_type' => $export->application_type,

@@ -161,6 +161,39 @@ class EmbroideryAnalyzerService
     }
 
     /**
+     * Genera un SVG del archivo de bordado.
+     * 
+     * @param string $filePath Ruta completa al archivo
+     * @return string|null Contenido del SVG o null si falla
+     */
+    public function generateSvg(string $filePath): ?string
+    {
+        if (!file_exists($filePath)) {
+            return null;
+        }
+
+        $escapedPath = escapeshellarg($filePath);
+        $escapedScript = escapeshellarg($this->scriptPath);
+
+        // Ejecutar con el flag --svg
+        $command = "{$this->pythonCommand} {$escapedScript} {$escapedPath} --svg 2>&1";
+
+        $output = [];
+        $returnCode = 0;
+        exec($command, $output, $returnCode);
+
+        if ($returnCode !== 0) {
+            Log::error("EmbroideryAnalyzer: Error al generar SVG", [
+                'command' => $command,
+                'output' => implode("\n", $output)
+            ]);
+            return null;
+        }
+
+        return implode("\n", $output);
+    }
+
+    /**
      * Ejecuta el script Python de análisis.
      * 
      * @param string $filePath Ruta al archivo a analizar
