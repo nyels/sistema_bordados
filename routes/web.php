@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
+
 // Ruta raíz
 Route::get('/', function () {
     return view('auth.login');
@@ -499,3 +500,339 @@ Route::group(['prefix' => 'produccion', 'as' => 'admin.produccion.', 'middleware
 Route::get('/gestion-productos', [App\Http\Controllers\ProductController::class, 'index'])
     ->name('admin.productos.index')
     ->middleware(['auth']);
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE SISTEMA (CONFIGURACIÓN, LOGS, UNIDADES)
+|--------------------------------------------------------------------------
+*/
+
+// Settings (Configuración del Sistema)
+Route::get('admin/settings', [App\Http\Controllers\SystemSettingController::class, 'index'])
+    ->name('settings.index')
+    ->middleware('auth');
+
+Route::get('admin/settings/create', [App\Http\Controllers\SystemSettingController::class, 'create'])
+    ->name('settings.create')
+    ->middleware('auth');
+
+Route::post('admin/settings', [App\Http\Controllers\SystemSettingController::class, 'store'])
+    ->name('settings.store')
+    ->middleware('auth');
+
+Route::get('admin/settings/{setting}', [App\Http\Controllers\SystemSettingController::class, 'show'])
+    ->name('settings.show')
+    ->middleware('auth');
+
+Route::get('admin/settings/{setting}/edit', [App\Http\Controllers\SystemSettingController::class, 'edit'])
+    ->name('settings.edit')
+    ->middleware('auth');
+
+Route::put('admin/settings/{setting}', [App\Http\Controllers\SystemSettingController::class, 'update'])
+    ->name('settings.update')
+    ->middleware('auth');
+
+Route::delete('admin/settings/{setting}', [App\Http\Controllers\SystemSettingController::class, 'destroy'])
+    ->name('settings.destroy')
+    ->middleware('auth');
+
+// Activity Logs (Registro de Actividad)
+Route::get('admin/activity-logs', [App\Http\Controllers\ActivityLogController::class, 'index'])
+    ->name('activity-logs.index')
+    ->middleware('auth');
+
+Route::get('admin/activity-logs/{activityLog}', [App\Http\Controllers\ActivityLogController::class, 'show'])
+    ->name('activity-logs.show')
+    ->middleware('auth');
+
+/*
+|--------------------------------------------------------------------------
+| Unidades de Medida
+|--------------------------------------------------------------------------
+| Rutas para la gestión completa de unidades de medida del sistema.
+| Incluye CRUD completo, cambio de estado, restauración y eliminación permanente.
+|--------------------------------------------------------------------------
+*/
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE UNIDADES DE MEDIDA
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/units', [App\Http\Controllers\UnitController::class, 'index'])
+    ->name('units.index')
+    ->middleware('auth');
+
+Route::get('/units/create', [App\Http\Controllers\UnitController::class, 'create'])
+    ->name('units.create')
+    ->middleware('auth');
+
+Route::post('/units', [App\Http\Controllers\UnitController::class, 'store'])
+    ->name('units.store')
+    ->middleware('auth');
+
+Route::get('/units/{id}/edit', [App\Http\Controllers\UnitController::class, 'edit'])
+    ->name('units.edit')
+    ->middleware('auth');
+
+Route::put('/units/{id}', [App\Http\Controllers\UnitController::class, 'update'])
+    ->name('units.update')
+    ->middleware('auth');
+
+Route::get('/units/{id}/confirm-delete', [App\Http\Controllers\UnitController::class, 'confirmDelete'])
+    ->name('units.confirm_delete')
+    ->middleware('auth');
+
+Route::delete('/units/{id}', [App\Http\Controllers\UnitController::class, 'destroy'])
+    ->name('units.destroy')
+    ->middleware('auth');
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE CONFIGURACIÓN DEL SISTEMA
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/settings', [App\Http\Controllers\SystemSettingController::class, 'index'])
+    ->name('admin.settings.index')
+    ->middleware('auth');
+
+Route::put('/settings', [App\Http\Controllers\SystemSettingController::class, 'update'])
+    ->name('admin.settings.update')
+    ->middleware('auth');
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE REGISTRO DE ACTIVIDAD
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/activity-logs', [App\Http\Controllers\ActivityLogController::class, 'index'])
+    ->name('activity-logs.index')
+    ->middleware('auth');
+
+// Cambiamos {id} por {uuid} para ser semánticamente correctos
+Route::get('/activity-logs/{uuid}', [App\Http\Controllers\ActivityLogController::class, 'show'])
+    ->name('activity-logs.show')
+    ->middleware('auth');
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE CATEGORÍAS DE MATERIALES
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/material-categories', [App\Http\Controllers\MaterialCategoryController::class, 'index'])
+    ->name('material-categories.index')
+    ->middleware('auth');
+
+Route::get('/material-categories/create', [App\Http\Controllers\MaterialCategoryController::class, 'create'])
+    ->name('material-categories.create')
+    ->middleware('auth');
+
+Route::post('/material-categories', [App\Http\Controllers\MaterialCategoryController::class, 'store'])
+    ->name('material-categories.store')
+    ->middleware('auth');
+
+Route::get('/material-categories/{id}/edit', [App\Http\Controllers\MaterialCategoryController::class, 'edit'])
+    ->name('material-categories.edit')
+    ->middleware('auth');
+
+Route::put('/material-categories/{id}', [App\Http\Controllers\MaterialCategoryController::class, 'update'])
+    ->name('material-categories.update')
+    ->middleware('auth');
+
+Route::get('/material-categories/{id}/confirm-delete', [App\Http\Controllers\MaterialCategoryController::class, 'confirmDelete'])
+    ->name('material-categories.confirm_delete')
+    ->middleware('auth');
+
+Route::delete('/material-categories/{id}', [App\Http\Controllers\MaterialCategoryController::class, 'destroy'])
+    ->name('material-categories.destroy')
+    ->middleware('auth');
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE MATERIALES
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/materials', [App\Http\Controllers\MaterialController::class, 'index'])
+    ->name('materials.index')
+    ->middleware('auth');
+
+Route::get('/materials/create', [App\Http\Controllers\MaterialController::class, 'create'])
+    ->name('materials.create')
+    ->middleware('auth');
+
+Route::post('/materials', [App\Http\Controllers\MaterialController::class, 'store'])
+    ->name('materials.store')
+    ->middleware('auth');
+
+Route::get('/materials/{id}/edit', [App\Http\Controllers\MaterialController::class, 'edit'])
+    ->name('materials.edit')
+    ->middleware('auth');
+
+Route::put('/materials/{id}', [App\Http\Controllers\MaterialController::class, 'update'])
+    ->name('materials.update')
+    ->middleware('auth');
+
+Route::get('/materials/{id}/confirm-delete', [App\Http\Controllers\MaterialController::class, 'confirmDelete'])
+    ->name('materials.confirm_delete')
+    ->middleware('auth');
+
+Route::delete('/materials/{id}', [App\Http\Controllers\MaterialController::class, 'destroy'])
+    ->name('materials.destroy')
+    ->middleware('auth');
+
+Route::get('/materials/category/{categoryId}', [App\Http\Controllers\MaterialController::class, 'getByCategory'])
+    ->name('materials.by-category')
+    ->middleware('auth');
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE VARIANTES DE MATERIALES
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/materials/{materialId}/variants', [App\Http\Controllers\MaterialVariantController::class, 'index'])
+    ->name('material-variants.index')
+    ->middleware('auth');
+
+Route::get('/materials/{materialId}/variants/create', [App\Http\Controllers\MaterialVariantController::class, 'create'])
+    ->name('material-variants.create')
+    ->middleware('auth');
+
+Route::post('/materials/{materialId}/variants', [App\Http\Controllers\MaterialVariantController::class, 'store'])
+    ->name('material-variants.store')
+    ->middleware('auth');
+
+Route::get('/materials/{materialId}/variants/{id}/edit', [App\Http\Controllers\MaterialVariantController::class, 'edit'])
+    ->name('material-variants.edit')
+    ->middleware('auth');
+
+Route::put('/materials/{materialId}/variants/{id}', [App\Http\Controllers\MaterialVariantController::class, 'update'])
+    ->name('material-variants.update')
+    ->middleware('auth');
+
+Route::get('/materials/{materialId}/variants/{id}/confirm-delete', [App\Http\Controllers\MaterialVariantController::class, 'confirmDelete'])
+    ->name('material-variants.confirm_delete')
+    ->middleware('auth');
+
+Route::delete('/materials/{materialId}/variants/{id}', [App\Http\Controllers\MaterialVariantController::class, 'destroy'])
+    ->name('material-variants.destroy')
+    ->middleware('auth');
+
+Route::get('/materials/{materialId}/variants-json', [App\Http\Controllers\MaterialVariantController::class, 'getByMaterial'])
+    ->name('material-variants.by-material')
+    ->middleware('auth');
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE CONVERSIONES DE UNIDADES POR MATERIAL
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/materials/{materialId}/conversions', [App\Http\Controllers\MaterialUnitConversionController::class, 'index'])
+    ->name('material-conversions.index')
+    ->middleware('auth');
+
+Route::get('/materials/{materialId}/conversions/create', [App\Http\Controllers\MaterialUnitConversionController::class, 'create'])
+    ->name('material-conversions.create')
+    ->middleware('auth');
+
+Route::post('/materials/{materialId}/conversions', [App\Http\Controllers\MaterialUnitConversionController::class, 'store'])
+    ->name('material-conversions.store')
+    ->middleware('auth');
+
+Route::get('/materials/{materialId}/conversions/{id}/edit', [App\Http\Controllers\MaterialUnitConversionController::class, 'edit'])
+    ->name('material-conversions.edit')
+    ->middleware('auth');
+
+Route::put('/materials/{materialId}/conversions/{id}', [App\Http\Controllers\MaterialUnitConversionController::class, 'update'])
+    ->name('material-conversions.update')
+    ->middleware('auth');
+
+Route::get('/materials/{materialId}/conversions/{id}/confirm-delete', [App\Http\Controllers\MaterialUnitConversionController::class, 'confirmDelete'])
+    ->name('material-conversions.confirm_delete')
+    ->middleware('auth');
+
+Route::delete('/materials/{materialId}/conversions/{id}', [App\Http\Controllers\MaterialUnitConversionController::class, 'destroy'])
+    ->name('material-conversions.destroy')
+    ->middleware('auth');
+
+Route::get('/materials/{materialId}/conversion-factor/{fromUnitId}', [App\Http\Controllers\MaterialUnitConversionController::class, 'getConversionFactor'])
+    ->name('material-conversions.factor')
+    ->middleware('auth');
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE COMPRAS
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('auth')->group(function () {
+    // Listado y CRUD
+    Route::get('/purchases', [App\Http\Controllers\PurchaseController::class, 'index'])
+        ->name('purchases.index');
+
+    Route::get('/purchases/create', [App\Http\Controllers\PurchaseController::class, 'create'])
+        ->name('purchases.create');
+
+    Route::post('/purchases', [App\Http\Controllers\PurchaseController::class, 'store'])
+        ->name('purchases.store');
+
+    Route::get('/purchases/{id}', [App\Http\Controllers\PurchaseController::class, 'show'])
+        ->name('purchases.show')
+        ->where('id', '[0-9]+');
+
+    Route::get('/purchases/{id}/edit', [App\Http\Controllers\PurchaseController::class, 'edit'])
+        ->name('purchases.edit')
+        ->where('id', '[0-9]+');
+
+    Route::put('/purchases/{id}', [App\Http\Controllers\PurchaseController::class, 'update'])
+        ->name('purchases.update')
+        ->where('id', '[0-9]+');
+
+    // Confirmar (Borrador → Pendiente)
+    Route::post('/purchases/{id}/confirm', [App\Http\Controllers\PurchaseController::class, 'confirm'])
+        ->name('purchases.confirm')
+        ->where('id', '[0-9]+');
+
+    // Recibir
+    Route::get('/purchases/{id}/receive', [App\Http\Controllers\PurchaseController::class, 'showReceive'])
+        ->name('purchases.receive')
+        ->where('id', '[0-9]+');
+
+    Route::post('/purchases/{id}/receive', [App\Http\Controllers\PurchaseController::class, 'receive'])
+        ->name('purchases.receive.store')
+        ->where('id', '[0-9]+');
+
+    // Cancelar
+    Route::get('/purchases/{id}/cancel', [App\Http\Controllers\PurchaseController::class, 'showCancel'])
+        ->name('purchases.cancel')
+        ->where('id', '[0-9]+');
+
+    Route::post('/purchases/{id}/cancel', [App\Http\Controllers\PurchaseController::class, 'cancel'])
+        ->name('purchases.cancel.store')
+        ->where('id', '[0-9]+');
+
+    // Eliminar (solo borradores)
+    Route::get('/purchases/{id}/confirm-delete', [App\Http\Controllers\PurchaseController::class, 'confirmDelete'])
+        ->name('purchases.confirm_delete')
+        ->where('id', '[0-9]+');
+
+    Route::delete('/purchases/{id}', [App\Http\Controllers\PurchaseController::class, 'destroy'])
+        ->name('purchases.destroy')
+        ->where('id', '[0-9]+');
+
+    // AJAX Endpoints
+    Route::get('/purchases/ajax/materials/{categoryId}', [App\Http\Controllers\PurchaseController::class, 'getMaterialsByCategory'])
+        ->name('purchases.ajax.materials')
+        ->where('categoryId', '[0-9]+');
+
+    Route::get('/purchases/ajax/variants/{materialId}', [App\Http\Controllers\PurchaseController::class, 'getVariantsByMaterial'])
+        ->name('purchases.ajax.variants')
+        ->where('materialId', '[0-9]+');
+
+    Route::get('/purchases/ajax/units/{materialId}', [App\Http\Controllers\PurchaseController::class, 'getUnitsForMaterial'])
+        ->name('purchases.ajax.units')
+        ->where('materialId', '[0-9]+');
+});

@@ -16,7 +16,8 @@
       "Bash(echo:*)",
       "Bash(dir /b \"c:\\\\xampp\\\\htdocs\\\\laravel\\\\sistema_bordados\\\\storage\\\\app\\\\public\\\\designs\\\\images\\\\2025\\\\12\\\\*.webp\")",
       "Bash(curl:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(php -l:*)"
     ]
   }
 }

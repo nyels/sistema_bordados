@@ -21,6 +21,7 @@ use App\Models\Estado;
 use App\Models\Cliente;
 use App\Models\Giro;
 use App\Models\ProductExtra;
+use App\Models\MaterialCategory;
 
 class DatabaseSeeder extends Seeder
 {
@@ -48,6 +49,11 @@ class DatabaseSeeder extends Seeder
             CategorySeeder::class,
             //   AttributeSeeder::class,
             ApplicationTypeSeeder::class,
+
+            SystemSettingsSeeder::class,
+            UnitsSeeder::class,
+            MaterialCategoriesSeeder::class,
+            MaterialSeeder::class,
         ]);
 
         // Tablas: attributes y attribute_values

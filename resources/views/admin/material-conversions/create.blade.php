@@ -1,0 +1,244 @@
+@extends('adminlte::page')
+
+@section('title', 'Nueva Conversión - ' . $material->name)
+
+@section('content_header')
+@stop
+
+@section('content')
+    <br>
+
+    {{-- ERRORES DE VALIDACIÓN --}}
+    @if ($errors->any())
+        <div class="alert alert-danger alert-dismissible fade show">
+            <strong>Se encontraron errores:</strong>
+            <ul class="mb-0 mt-2">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+            <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+        </div>
+    @endif
+
+    {{-- BREADCRUMB INFO --}}
+    <div class="card bg-light mb-3">
+        <div class="card-body py-2">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0 bg-transparent p-0">
+                    <li class="breadcrumb-item">
+                        <a href="{{ route('materials.index') }}">
+                            <i class="fas fa-boxes"></i> Materiales
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ route('material-conversions.index', $material->id) }}">
+                            {{ $material->name }}
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active">Nueva Conversión</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="card card-primary">
+        <div class="card-header">
+            <h3 class="card-title" style="font-weight: bold;font-size: 20px;">
+                <i class="fas fa-plus-circle"></i> NUEVA CONVERSIÓN DE UNIDAD
+            </h3>
+        </div>
+
+        <div class="card-body">
+            <form method="POST" action="{{ route('material-conversions.store', $material->id) }}">
+                @csrf
+                <input type="hidden" name="material_id" value="{{ $material->id }}">
+
+                <div class="row">
+                    {{-- COLUMNA izquierda --}}
+                    <div class="col-md-6" style="padding-left: 30px;">
+                        <div style="border-bottom: 3px solid #28a745; padding-bottom: 8px; margin-bottom: 20px;">
+                            <h5 style="color: #28a745; font-weight: 600;">
+                                <i class="fas fa-calculator"></i> Vista Previa
+                            </h5>
+                        </div>
+
+                        {{-- INFO DEL MATERIAL --}}
+                        <div class="card bg-light mb-3">
+                            <div class="card-body py-3">
+                                <h6 class="mb-2"><i class="fas fa-box text-primary"></i> Material</h6>
+                                <table class="table table-sm table-borderless mb-0">
+                                    <tr>
+                                        <td style="width: 120px;"><strong>Nombre:</strong></td>
+                                        <td>{{ $material->name }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Categoría:</strong></td>
+                                        <td>{{ $material->category->name ?? 'N/A' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Unidad Base:</strong></td>
+                                        <td>
+                                            <span class="badge badge-info">
+                                                {{ $material->category->baseUnit->name ?? 'N/A' }}
+                                                ({{ $material->category->baseUnit->symbol ?? '' }})
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+
+
+                        {{-- INFO ADICIONAL --}}
+                        <div class="card bg-light mt-3">
+                            <div class="card-body py-2">
+                                <small>
+                                    <i class="fas fa-info-circle text-info"></i>
+                                    <strong>Información:</strong> Al guardar esta conversión, el sistema
+                                    calculará automáticamente las cantidades en inventario basándose en
+                                    las compras realizadas.
+                                </small>
+                            </div>
+                        </div>
+
+                        {{-- EJEMPLOS --}}
+                        <div class="alert alert-secondary mt-3">
+                            <strong><i class="fas fa-lightbulb"></i> Ejemplos comunes:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>1 Rollo de tela = <strong>50</strong> metros</li>
+                                <li>1 Caja de hilos = <strong>12</strong> conos</li>
+                                <li>1 Paquete de agujas = <strong>100</strong> piezas</li>
+                            </ul>
+                        </div>
+                    </div>
+                    {{-- COLUMNA derecha --}}
+                    <div class="col-md-6" style="border-right: 2px solid #e0e0e0; padding-right: 30px;">
+                        <div style="border-bottom: 3px solid #007bff; padding-bottom: 8px; margin-bottom: 20px;">
+                            <h5 style="color: #007bff; font-weight: 600;">
+                                <i class="fas fa-exchange-alt"></i> Configurar Conversión
+                            </h5>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Unidad de Compra <span class="text-danger">*</span></label>
+                            <select name="from_unit_id" id="from_unit_id"
+                                class="form-control @error('from_unit_id') is-invalid @enderror" required>
+                                <option value="">Seleccionar unidad...</option>
+                                @foreach ($purchaseUnits as $unit)
+                                    @if (!in_array($unit->id, $usedUnitIds))
+                                        <option value="{{ $unit->id }}" data-symbol="{{ $unit->symbol }}"
+                                            {{ old('from_unit_id') == $unit->id ? 'selected' : '' }}>
+                                            {{ $unit->name }} ({{ $unit->symbol }})
+                                        </option>
+                                    @endif
+                                @endforeach
+                            </select>
+                            @error('from_unit_id')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="form-text text-muted">
+                                Unidades compatibles con
+                                <strong>{{ $material->category->baseUnit->name ?? 'N/A' }}</strong>
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Unidad de Inventario (Destino)</label>
+                            <input type="hidden" name="to_unit_id" value="{{ $material->category->base_unit_id }}">
+                            <div class="form-control bg-light" style="cursor: not-allowed;">
+                                <span class="badge badge-info">
+                                    {{ $material->category->baseUnit->name ?? 'N/A' }}
+                                    ({{ $material->category->baseUnit->symbol ?? '' }})
+                                </span>
+                                <i class="fas fa-lock text-muted float-right mt-1"></i>
+                            </div>
+                            <small class="form-text text-muted">
+                                Definida por la categoría del material. No editable.
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Factor de Conversión <span class="text-danger">*</span></label>
+                            <input type="number" name="conversion_factor" id="conversion_factor"
+                                class="form-control @error('conversion_factor') is-invalid @enderror"
+                                value="{{ old('conversion_factor') }}" placeholder="Ej: 50" min="0.0001" max="999999999"
+                                step="0.0001" required>
+                            @error('conversion_factor')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="form-text text-muted">
+                                ¿Cuántas <strong>{{ $material->category->baseUnit->symbol ?? 'unidades' }}</strong> hay en
+                                1 unidad de compra?
+                            </small>
+                        </div>
+
+                        {{-- PREVIEW DE CONVERSIÓN --}}
+                        <div class="card border-primary" id="previewCard" style="display: none;">
+                            <div class="card-header bg-primary text-white py-2">
+                                <strong><i class="fas fa-eye"></i> Resultado de Conversión</strong>
+                            </div>
+                            <div class="card-body text-center py-4">
+                                <h4 class="mb-0">
+                                    <span class="badge badge-secondary" id="previewFrom">1 ?</span>
+                                    <i class="fas fa-arrow-right mx-2 text-primary"></i>
+                                    <span class="badge badge-success" id="previewTo">? unidades</span>
+                                </h4>
+                                <hr>
+                                <p class="mb-0 text-muted">
+                                    <small id="previewText">-</small>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+
+                </div>
+
+                <hr>
+
+                <div class="text-center">
+                    <a href="{{ route('material-conversions.index', $material->id) }}" class="btn btn-secondary">
+                        <i class="fas fa-times-circle"></i> Regresar
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+@stop
+
+@section('js')
+    <script>
+        $(function() {
+            // Datos de la unidad base (destino) desde el servidor
+            var toUnitName = '{{ $material->category->baseUnit->name ?? 'N/A' }}';
+            var toUnitSymbol = '{{ $material->category->baseUnit->symbol ?? '' }}';
+
+            function updatePreview() {
+                var fromUnit = $('#from_unit_id option:selected');
+                var factor = parseFloat($('#conversion_factor').val()) || 0;
+
+                if (fromUnit.val() && factor > 0) {
+                    var fromSymbol = fromUnit.data('symbol') || fromUnit.text();
+                    var fromName = fromUnit.text().split('(')[0].trim();
+
+                    $('#previewFrom').text('1 ' + fromSymbol);
+                    $('#previewTo').text(factor.toFixed(2) + ' ' + toUnitSymbol);
+                    $('#previewText').text('Al comprar 1 ' + fromName +
+                        ', se registrarán ' + factor.toFixed(2) + ' ' + toUnitSymbol + ' en inventario');
+                    $('#previewCard').show();
+                } else {
+                    $('#previewCard').hide();
+                }
+            }
+
+            $('#from_unit_id, #conversion_factor').on('change keyup', updatePreview);
+
+            // Trigger on load
+            updatePreview();
+        });
+    </script>
+@stop

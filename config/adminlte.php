@@ -370,14 +370,14 @@ return [
             'icon' => 'fas fa-fw fa-box-open',
         ],
 
-
+        /*
         ['header' => 'BÚSQUEDA Y FILTROS'],
 
         [
             'text' => 'Búsqueda Avanzada',
             'icon' => 'fas fa-search',
             'url'  => '/admin/search',
-        ],
+        ],*/
 
         /*[
             'text' => 'change_password',
@@ -390,10 +390,15 @@ return [
             'submenu' =>
             [
                 [
-                    'text' => 'Categorias',
+                    'text' => 'Categorias de diseño',
                     'url' => 'categorias',
                     'icon' => 'fas fa-fw fa-list',
                     /*'classes' => 'bg-blue text-white'*/
+                ],
+                [
+                    'text' => 'Categorias de Material',
+                    'url' => 'material-categories',
+                    'icon' => 'fas fa-fw fa-list',
                 ],
                 [
                     'text' => 'Estados',
@@ -407,6 +412,11 @@ return [
                     /*'classes' => 'bg-blue text-white'*/
                 ],
                 [
+                    'text' => 'Materiales',
+                    'url' => 'materials',
+                    'icon' => 'fas fa-fw fa-list',
+                ],
+                [
                     'text' => 'Recomendaciones',
                     'url' => 'recomendaciones',
                     'icon' => 'fas fa-fw fa-list',
@@ -414,6 +424,21 @@ return [
                 [
                     'text' => 'Tipos de aplicacion',
                     'url' => 'tipos_aplicacion',
+                    'icon' => 'fas fa-fw fa-list',
+                ],
+                [
+                    'text' => 'Unidades',
+                    'url' => 'units',
+                    'icon' => 'fas fa-fw fa-list',
+                ],
+                [
+                    'text' => 'Registros de actividad',
+                    'url' => 'activity-logs',
+                    'icon' => 'fas fa-fw fa-list',
+                ],
+                [
+                    'text' => 'System Settings',
+                    'url' => 'settings',
                     'icon' => 'fas fa-fw fa-list',
                 ],
 

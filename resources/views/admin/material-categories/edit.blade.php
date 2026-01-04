@@ -1,0 +1,106 @@
+@extends('adminlte::page')
+
+@section('title', 'Editar Categoría de Material')
+
+@section('content_header')
+@stop
+
+@section('content')
+    <br>
+
+    @if ($errors->any())
+        <div class="alert alert-danger alert-dismissible fade show">
+            <strong>Se encontraron errores:</strong>
+            <ul class="mb-0 mt-2">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+            <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+        </div>
+    @endif
+
+    <div class="card card-warning">
+        <div class="card-header">
+            <h3 class="card-title" style="font-weight: bold;font-size: 20px;">
+                <i class="fas fa-edit"></i> EDITAR CATEGORÍA DE MATERIAL
+            </h3>
+        </div>
+
+        <div class="card-body">
+            <form method="POST" action="{{ route('material-categories.update', $category->id) }}">
+                @csrf
+                @method('PUT')
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Nombre <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control @error('name') is-invalid @enderror"
+                                value="{{ old('name', $category->name) }}" maxlength="50" required>
+                            @error('name')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Unidad Base <span class="text-danger">*</span></label>
+                            <select name="base_unit_id" class="form-control @error('base_unit_id') is-invalid @enderror"
+                                required>
+                                <option value="">Seleccionar unidad...</option>
+                                @foreach ($units as $unit)
+                                    <option value="{{ $unit->id }}"
+                                        {{ old('base_unit_id', $category->base_unit_id) == $unit->id ? 'selected' : '' }}>
+                                        {{ $unit->name }} ({{ $unit->symbol }})
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('base_unit_id')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="form-group">
+                            <label>Descripción</label>
+                            <textarea name="description" class="form-control @error('description') is-invalid @enderror" rows="2"
+                                maxlength="500">{{ old('description', $category->description) }}</textarea>
+                            @error('description')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Opciones</label>
+                            <div class="custom-control custom-checkbox mt-2">
+                                <input type="checkbox" class="custom-control-input" id="has_color" name="has_color"
+                                    value="1" {{ old('has_color', $category->has_color) ? 'checked' : '' }}>
+                                <label class="custom-control-label" for="has_color">
+                                    Materiales tienen variantes de color
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="text-center">
+                    <a href="{{ route('material-categories.index') }}" class="btn btn-secondary">
+                        <i class="fas fa-times-circle"></i> Regresar
+                    </a>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-save"></i> Actualizar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+@stop
