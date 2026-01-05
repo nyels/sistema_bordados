@@ -21,7 +21,7 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('purchases.store') }}" id="purchaseForm">
+    <form method="POST" action="{{ route('admin.purchases.store') }}" id="purchaseForm">
         @csrf
 
         <div class="card card-primary">
@@ -275,7 +275,7 @@
             </div>
 
             <div class="card-footer text-center">
-                <a href="{{ route('purchases.index') }}" class="btn btn-secondary">
+                <a href="{{ route('admin.purchases.index') }}" class="btn btn-secondary">
                     <i class="fas fa-times"></i> Cancelar
                 </a>
                 <button type="submit" class="btn btn-primary" id="btn_submit" disabled>
@@ -301,8 +301,9 @@
 @section('js')
     <script>
         $(function() {
-            let items = [];
-            let itemIndex = 0;
+            // Cargar items desde old() si existen (después de error de validación)
+            let items = @json($oldItemsForJs ?? []);
+            let itemIndex = items.length;
 
             const csrfToken = '{{ csrf_token() }}';
 
@@ -507,7 +508,7 @@
                     const converted = currentItem.quantity * currentItem.conversion_factor;
                     $infoConversion.val(
                         `${currentItem.quantity} ${currentItem.unit_symbol} = ${converted.toFixed(2)} ${currentItem.base_unit_symbol}`
-                        );
+                    );
                 } else if (currentItem.quantity > 0) {
                     $infoConversion.val(
                         `${currentItem.quantity} ${currentItem.unit_symbol || currentItem.base_unit_symbol}`);
@@ -767,6 +768,19 @@
 
                 return true;
             });
+
+            // Si hay items precargados (desde old() después de error), renderizarlos
+            if (items.length > 0) {
+                // Asignar índices a los items precargados
+                items = items.map((item, idx) => ({
+                    ...item,
+                    index: idx,
+                    converted_unit_cost: item.subtotal / item.converted_quantity
+                }));
+                itemIndex = items.length;
+                renderItems();
+                updateTotals();
+            }
         });
     </script>
 @stop

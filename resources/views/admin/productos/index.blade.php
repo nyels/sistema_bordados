@@ -7,7 +7,7 @@
         <h1 class="font-weight-bold text-dark">
             <i class="fas fa-boxes text-primary mr-2"></i> Catálogo de Productos
         </h1>
-        <a href="#" class="btn btn-primary shadow-sm px-4">
+        <a href="{{ route('admin.productos.index') }}" class="btn btn-primary shadow-sm px-4">
             <i class="fas fa-plus-circle mr-1"></i> Nuevo Producto
         </a>
     </div>

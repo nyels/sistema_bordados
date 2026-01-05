@@ -43,6 +43,11 @@ class ReceivePurchaseRequest extends FormRequest
                 'string',
                 'max:1000',
             ],
+            'delivery_note' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
         ];
     }
 

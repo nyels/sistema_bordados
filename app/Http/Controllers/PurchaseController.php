@@ -20,6 +20,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Auth;
+use App\Models\MaterialUnitConversion;
+use App\Services\ReceptionService;
+use App\Exceptions\InventoryException;
+use App\Models\PurchaseReception;
 
 class PurchaseController extends Controller
 {
@@ -91,7 +95,7 @@ class PurchaseController extends Controller
 
             return view('admin.purchases.index', compact('purchases', 'proveedores', 'statuses'));
         } catch (ValidationException $e) {
-            return redirect()->route('purchases.index')
+            return redirect()->route('admin.purchases.index')
                 ->with('error', 'Parámetros de filtro no válidos');
         } catch (\Exception $e) {
             Log::error('Error al listar compras: ' . $e->getMessage(), [
@@ -122,7 +126,7 @@ class PurchaseController extends Controller
                 ->get(['id', 'nombre_proveedor']);
 
             if ($proveedores->isEmpty()) {
-                return redirect()->route('purchases.index')
+                return redirect()->route('admin.purchases.index')
                     ->with('error', 'Debe registrar al menos un proveedor antes de crear compras');
             }
 
@@ -131,13 +135,51 @@ class PurchaseController extends Controller
                 ->ordered()
                 ->get();
 
-            return view('admin.purchases.create', compact('proveedores', 'categories'));
+            // Preparar items desde old() para recuperar después de error de validación
+            $oldItemsForJs = [];
+            if (old('items')) {
+                foreach (old('items') as $idx => $item) {
+                    $variant = MaterialVariant::with(['material.category.baseUnit'])
+                        ->find($item['material_variant_id']);
+
+                    if ($variant) {
+                        $unit = Unit::find($item['unit_id']);
+                        $conversion = MaterialUnitConversion::where('material_id', $variant->material_id)
+                            ->where('from_unit_id', $item['unit_id'])
+                            ->first();
+
+                        $conversionFactor = $conversion ? $conversion->conversion_factor : 1;
+                        $quantity = (float) $item['quantity'];
+                        $unitPrice = (float) $item['unit_price'];
+                        $subtotal = $quantity * $unitPrice;
+                        $convertedQuantity = $quantity * $conversionFactor;
+
+                        $oldItemsForJs[] = [
+                            'variant_id' => $variant->id,
+                            'variant_sku' => $variant->sku,
+                            'variant_color' => $variant->color ?? '',
+                            'material_name' => $variant->material->name ?? '',
+                            'category_name' => $variant->material->category->name ?? '',
+                            'unit_id' => $item['unit_id'],
+                            'unit_symbol' => $unit->symbol ?? '',
+                            'quantity' => $quantity,
+                            'unit_price' => $unitPrice,
+                            'conversion_factor' => $conversionFactor,
+                            'converted_quantity' => $convertedQuantity,
+                            'base_unit_symbol' => $variant->material->category->baseUnit->symbol ?? '',
+                            'subtotal' => $subtotal,
+                        ];
+                    }
+                }
+            }
+
+            return view('admin.purchases.create', compact('proveedores', 'categories', 'oldItemsForJs'));
         } catch (\Exception $e) {
             Log::error('Error al cargar formulario de compra: ' . $e->getMessage(), [
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('purchases.index')
+            return redirect()->route('admin.purchases.index')
                 ->with('error', 'Error al cargar el formulario');
         }
     }
@@ -166,7 +208,7 @@ class PurchaseController extends Controller
                 items: $validated['items']
             );
 
-            return redirect()->route('purchases.show', $purchase->id)
+            return redirect()->route('admin.purchases.show', $purchase->id)
                 ->with('success', "Compra {$purchase->purchase_number} creada exitosamente");
         } catch (PurchaseException $e) {
             Log::warning('Error de negocio al crear compra: ' . $e->getMessage(), [
@@ -174,7 +216,7 @@ class PurchaseController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('purchases.create')
+            return redirect()->route('admin.purchases.create')
                 ->withInput()
                 ->with('error', $e->getMessage());
         } catch (\Exception $e) {
@@ -183,7 +225,7 @@ class PurchaseController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            return redirect()->route('purchases.create')
+            return redirect()->route('admin.purchases.create')
                 ->withInput()
                 ->with('error', 'Error al crear la compra. Intente nuevamente.');
         }
@@ -211,9 +253,13 @@ class PurchaseController extends Controller
                 'receiver',
             ])->where('activo', true)->findOrFail((int) $id);
 
-            return view('admin.purchases.show', compact('purchase'));
+            // Cargar historial de recepciones
+            $receptionService = app(ReceptionService::class);
+            $receptions = $receptionService->getReceptionHistory($purchase);
+
+            return view('admin.purchases.show', compact('purchase', 'receptions'));
         } catch (ModelNotFoundException $e) {
-            return redirect()->route('purchases.index')
+            return redirect()->route('admin.purchases.index')
                 ->with('error', 'Compra no encontrada');
         } catch (\Exception $e) {
             Log::error('Error al mostrar compra: ' . $e->getMessage(), [
@@ -221,7 +267,7 @@ class PurchaseController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('purchases.index')
+            return redirect()->route('admin.purchases.index')
                 ->with('error', 'Error al cargar la compra');
         }
     }
@@ -236,7 +282,7 @@ class PurchaseController extends Controller
     {
         try {
             if (!is_numeric($id) || $id < 1 || $id > 999999999) {
-                return redirect()->route('purchases.index')
+                return redirect()->route('admin.purchases.index')
                     ->with('error', 'Compra no válida');
             }
 
@@ -247,9 +293,29 @@ class PurchaseController extends Controller
             ])->where('activo', true)->findOrFail((int) $id);
 
             if (!$purchase->can_edit) {
-                return redirect()->route('purchases.show', $purchase->id)
+                return redirect()->route('admin.purchases.show', $purchase->id)
                     ->with('error', "No se puede editar la compra en estado: {$purchase->status->label()}");
             }
+
+            // --- NUEVA LÓGICA PARA EVITAR ParseError EN BLADE ---
+            $itemsForJs = $purchase->items->map(function ($item) {
+                return [
+                    'variant_id'         => $item->material_variant_id,
+                    'variant_sku'        => $item->materialVariant->sku ?? '',
+                    'variant_color'      => $item->materialVariant->color ?? '',
+                    'material_name'      => $item->materialVariant->material->name ?? '',
+                    'category_name'      => $item->materialVariant->material->category->name ?? '',
+                    'unit_id'            => $item->unit_id,
+                    'unit_symbol'        => $item->unit->symbol ?? '',
+                    'quantity'           => (float) $item->quantity,
+                    'unit_price'         => (float) $item->unit_price,
+                    'conversion_factor'  => (float) $item->conversion_factor,
+                    'converted_quantity' => (float) $item->converted_quantity,
+                    'base_unit_symbol'   => $item->materialVariant->material->category->baseUnit->symbol ?? '',
+                    'subtotal'           => (float) $item->subtotal,
+                ];
+            })->values();
+            // ----------------------------------------------------
 
             $proveedores = Proveedor::where('activo', true)
                 ->orderBy('nombre_proveedor')
@@ -260,21 +326,22 @@ class PurchaseController extends Controller
                 ->ordered()
                 ->get();
 
-            return view('admin.purchases.edit', compact('purchase', 'proveedores', 'categories'));
+            // Agregamos 'itemsForJs' al compact
+            return view('admin.purchases.edit', compact('purchase', 'proveedores', 'categories', 'itemsForJs'));
         } catch (ModelNotFoundException $e) {
-            return redirect()->route('purchases.index')
+            return redirect()->route('admin.purchases.index')
                 ->with('error', 'Compra no encontrada');
         } catch (\Exception $e) {
             Log::error('Error al cargar compra para editar: ' . $e->getMessage(), [
                 'purchase_id' => $id,
-                'user_id' => Auth::id(),
+                'user_id'     => Auth::id(),
+                'trace'       => $e->getTraceAsString(), // Agregué el trace para mejor depuración
             ]);
 
-            return redirect()->route('purchases.index')
+            return redirect()->route('admin.purchases.index')
                 ->with('error', 'Error al cargar la compra');
         }
     }
-
     /*
     |--------------------------------------------------------------------------
     | UPDATE
@@ -285,7 +352,7 @@ class PurchaseController extends Controller
     {
         try {
             if (!is_numeric($id) || $id < 1 || $id > 999999999) {
-                return redirect()->route('purchases.index')
+                return redirect()->route('admin.purchases.index')
                     ->with('error', 'Compra no válida');
             }
 
@@ -306,7 +373,7 @@ class PurchaseController extends Controller
                 items: $validated['items']
             );
 
-            return redirect()->route('purchases.show', $purchase->id)
+            return redirect()->route('admin.purchases.show', $purchase->id)
                 ->with('success', "Compra {$purchase->purchase_number} actualizada exitosamente");
         } catch (PurchaseException $e) {
             Log::warning('Error de negocio al actualizar compra: ' . $e->getMessage(), [
@@ -314,11 +381,11 @@ class PurchaseController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('purchases.edit', $id)
+            return redirect()->route('admin.purchases.edit', $id)
                 ->withInput()
                 ->with('error', $e->getMessage());
         } catch (ModelNotFoundException $e) {
-            return redirect()->route('purchases.index')
+            return redirect()->route('admin.purchases.index')
                 ->with('error', 'Compra no encontrada');
         } catch (\Exception $e) {
             Log::error('Error al actualizar compra: ' . $e->getMessage(), [
@@ -327,7 +394,7 @@ class PurchaseController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            return redirect()->route('purchases.edit', $id)
+            return redirect()->route('admin.purchases.edit', $id)
                 ->withInput()
                 ->with('error', 'Error al actualizar la compra');
         }
@@ -343,7 +410,7 @@ class PurchaseController extends Controller
     {
         try {
             if (!is_numeric($id) || $id < 1 || $id > 999999999) {
-                return redirect()->route('purchases.index')
+                return redirect()->route('admin.purchases.index')
                     ->with('error', 'Compra no válida');
             }
 
@@ -351,13 +418,13 @@ class PurchaseController extends Controller
 
             $purchase = $this->purchaseService->confirm($purchase);
 
-            return redirect()->route('purchases.show', $purchase->id)
+            return redirect()->route('admin.purchases.show', $purchase->id)
                 ->with('success', "Compra {$purchase->purchase_number} confirmada exitosamente");
         } catch (PurchaseException $e) {
-            return redirect()->route('purchases.show', $id)
+            return redirect()->route('admin.purchases.show', $id)
                 ->with('error', $e->getMessage());
         } catch (ModelNotFoundException $e) {
-            return redirect()->route('purchases.index')
+            return redirect()->route('admin.purchases.index')
                 ->with('error', 'Compra no encontrada');
         } catch (\Exception $e) {
             Log::error('Error al confirmar compra: ' . $e->getMessage(), [
@@ -365,7 +432,7 @@ class PurchaseController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('purchases.show', $id)
+            return redirect()->route('admin.purchases.show', $id)
                 ->with('error', 'Error al confirmar la compra');
         }
     }
@@ -380,7 +447,7 @@ class PurchaseController extends Controller
     {
         try {
             if (!is_numeric($id) || $id < 1 || $id > 999999999) {
-                return redirect()->route('purchases.index')
+                return redirect()->route('admin.purchases.index')
                     ->with('error', 'Compra no válida');
             }
 
@@ -391,13 +458,13 @@ class PurchaseController extends Controller
             ])->where('activo', true)->findOrFail((int) $id);
 
             if (!$purchase->can_receive) {
-                return redirect()->route('purchases.show', $purchase->id)
+                return redirect()->route('admin.purchases.show', $purchase->id)
                     ->with('error', "No se puede recibir la compra en estado: {$purchase->status->label()}");
             }
 
             return view('admin.purchases.receive', compact('purchase'));
         } catch (ModelNotFoundException $e) {
-            return redirect()->route('purchases.index')
+            return redirect()->route('admin.purchases.index')
                 ->with('error', 'Compra no encontrada');
         } catch (\Exception $e) {
             Log::error('Error al cargar recepción de compra: ' . $e->getMessage(), [
@@ -405,7 +472,7 @@ class PurchaseController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('purchases.index')
+            return redirect()->route('admin.purchases.index')
                 ->with('error', 'Error al cargar la recepción');
         }
     }
@@ -414,30 +481,58 @@ class PurchaseController extends Controller
     {
         try {
             if (!is_numeric($id) || $id < 1 || $id > 999999999) {
-                return redirect()->route('purchases.index')
+                return redirect()->route('admin.purchases.index')
                     ->with('error', 'Compra no válida');
             }
 
             $purchase = Purchase::where('activo', true)->findOrFail((int) $id);
             $validated = $request->validated();
 
+            // Usar ReceptionService para crear registro de recepción con historial
+            $receptionService = app(ReceptionService::class);
+
+            // Preparar items para recepción
+            $itemsData = [];
+
             if ($validated['receive_type'] === 'complete') {
-                $purchase = $this->purchaseService->receiveComplete($purchase);
+                // Recepción completa: agregar todas las cantidades pendientes
+                foreach ($purchase->items as $item) {
+                    if ($item->pending_quantity > 0) {
+                        $itemsData[] = [
+                            'item_id' => $item->id,
+                            'quantity' => $item->pending_quantity,
+                        ];
+                    }
+                }
                 $message = "Compra {$purchase->purchase_number} recibida completamente";
             } else {
+                // Recepción parcial: usar las cantidades del formulario
                 foreach ($validated['items'] as $itemData) {
-                    if ($itemData['quantity'] > 0) {
-                        $purchase = $this->purchaseService->receivePartial(
-                            purchase: $purchase,
-                            itemId: $itemData['item_id'],
-                            quantity: $itemData['quantity']
-                        );
+                    if (!empty($itemData['quantity']) && $itemData['quantity'] > 0) {
+                        $itemsData[] = [
+                            'item_id' => $itemData['item_id'],
+                            'quantity' => $itemData['quantity'],
+                        ];
                     }
                 }
                 $message = "Recepción parcial registrada para {$purchase->purchase_number}";
             }
 
-            return redirect()->route('purchases.show', $purchase->id)
+            // Crear la recepción si hay items
+            if (!empty($itemsData)) {
+                $reception = $receptionService->createReception(
+                    purchase: $purchase,
+                    itemsData: $itemsData,
+                    deliveryNote: $validated['delivery_note'] ?? null,
+                    notes: $validated['notes'] ?? null
+                );
+                $message = "Recepción {$reception->reception_number} registrada exitosamente";
+            } else {
+                return redirect()->route('admin.purchases.receive', $id)
+                    ->with('error', 'Debe especificar al menos una cantidad a recibir');
+            }
+
+            return redirect()->route('admin.purchases.show', $purchase->id)
                 ->with('success', $message);
         } catch (PurchaseException $e) {
             Log::warning('Error de negocio al recibir compra: ' . $e->getMessage(), [
@@ -445,10 +540,10 @@ class PurchaseController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('purchases.receive', $id)
+            return redirect()->route('admin.purchases.receive', $id)
                 ->with('error', $e->getMessage());
         } catch (ModelNotFoundException $e) {
-            return redirect()->route('purchases.index')
+            return redirect()->route('admin.purchases.index')
                 ->with('error', 'Compra no encontrada');
         } catch (\Exception $e) {
             Log::error('Error al recibir compra: ' . $e->getMessage(), [
@@ -457,7 +552,7 @@ class PurchaseController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            return redirect()->route('purchases.receive', $id)
+            return redirect()->route('admin.purchases.receive', $id)
                 ->with('error', 'Error al procesar la recepción');
         }
     }
@@ -472,7 +567,7 @@ class PurchaseController extends Controller
     {
         try {
             if (!is_numeric($id) || $id < 1 || $id > 999999999) {
-                return redirect()->route('purchases.index')
+                return redirect()->route('admin.purchases.index')
                     ->with('error', 'Compra no válida');
             }
 
@@ -481,13 +576,13 @@ class PurchaseController extends Controller
                 ->findOrFail((int) $id);
 
             if (!$purchase->can_cancel) {
-                return redirect()->route('purchases.show', $purchase->id)
+                return redirect()->route('admin.purchases.show', $purchase->id)
                     ->with('error', "No se puede cancelar la compra en estado: {$purchase->status->label()}");
             }
 
             return view('admin.purchases.cancel', compact('purchase'));
         } catch (ModelNotFoundException $e) {
-            return redirect()->route('purchases.index')
+            return redirect()->route('admin.purchases.index')
                 ->with('error', 'Compra no encontrada');
         } catch (\Exception $e) {
             Log::error('Error al cargar cancelación de compra: ' . $e->getMessage(), [
@@ -495,7 +590,7 @@ class PurchaseController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('purchases.index')
+            return redirect()->route('admin.purchases.index')
                 ->with('error', 'Error al cargar la cancelación');
         }
     }
@@ -504,7 +599,7 @@ class PurchaseController extends Controller
     {
         try {
             if (!is_numeric($id) || $id < 1 || $id > 999999999) {
-                return redirect()->route('purchases.index')
+                return redirect()->route('admin.purchases.index')
                     ->with('error', 'Compra no válida');
             }
 
@@ -530,17 +625,17 @@ class PurchaseController extends Controller
                 reason: strip_tags(trim($validated['cancellation_reason']))
             );
 
-            return redirect()->route('purchases.show', $purchase->id)
+            return redirect()->route('admin.purchases.show', $purchase->id)
                 ->with('success', "Compra {$purchase->purchase_number} cancelada");
         } catch (PurchaseException $e) {
-            return redirect()->route('purchases.show', $id)
+            return redirect()->route('admin.purchases.show', $id)
                 ->with('error', $e->getMessage());
         } catch (ValidationException $e) {
-            return redirect()->route('purchases.cancel', $id)
+            return redirect()->route('admin.purchases.cancel', $id)
                 ->withInput()
                 ->withErrors($e->errors());
         } catch (ModelNotFoundException $e) {
-            return redirect()->route('purchases.index')
+            return redirect()->route('admin.purchases.index')
                 ->with('error', 'Compra no encontrada');
         } catch (\Exception $e) {
             Log::error('Error al cancelar compra: ' . $e->getMessage(), [
@@ -548,7 +643,7 @@ class PurchaseController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('purchases.show', $id)
+            return redirect()->route('admin.purchases.show', $id)
                 ->with('error', 'Error al cancelar la compra');
         }
     }
@@ -563,7 +658,7 @@ class PurchaseController extends Controller
     {
         try {
             if (!is_numeric($id) || $id < 1 || $id > 999999999) {
-                return redirect()->route('purchases.index')
+                return redirect()->route('admin.purchases.index')
                     ->with('error', 'Compra no válida');
             }
 
@@ -572,13 +667,13 @@ class PurchaseController extends Controller
                 ->findOrFail((int) $id);
 
             if ($purchase->status !== PurchaseStatus::DRAFT) {
-                return redirect()->route('purchases.show', $purchase->id)
+                return redirect()->route('admin.purchases.show', $purchase->id)
                     ->with('error', 'Solo se pueden eliminar compras en borrador');
             }
 
             return view('admin.purchases.delete', compact('purchase'));
         } catch (ModelNotFoundException $e) {
-            return redirect()->route('purchases.index')
+            return redirect()->route('admin.purchases.index')
                 ->with('error', 'Compra no encontrada');
         } catch (\Exception $e) {
             Log::error('Error al cargar eliminación de compra: ' . $e->getMessage(), [
@@ -586,7 +681,7 @@ class PurchaseController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('purchases.index')
+            return redirect()->route('admin.purchases.index')
                 ->with('error', 'Error al cargar la eliminación');
         }
     }
@@ -595,7 +690,7 @@ class PurchaseController extends Controller
     {
         try {
             if (!is_numeric($id) || $id < 1 || $id > 999999999) {
-                return redirect()->route('purchases.index')
+                return redirect()->route('admin.purchases.index')
                     ->with('error', 'Compra no válida');
             }
 
@@ -604,13 +699,13 @@ class PurchaseController extends Controller
 
             $this->purchaseService->delete($purchase);
 
-            return redirect()->route('purchases.index')
+            return redirect()->route('admin.purchases.index')
                 ->with('success', "Compra {$purchaseNumber} eliminada exitosamente");
         } catch (PurchaseException $e) {
-            return redirect()->route('purchases.show', $id)
+            return redirect()->route('admin.purchases.show', $id)
                 ->with('error', $e->getMessage());
         } catch (ModelNotFoundException $e) {
-            return redirect()->route('purchases.index')
+            return redirect()->route('admin.purchases.index')
                 ->with('error', 'Compra no encontrada');
         } catch (\Exception $e) {
             Log::error('Error al eliminar compra: ' . $e->getMessage(), [
@@ -618,7 +713,7 @@ class PurchaseController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('purchases.index')
+            return redirect()->route('admin.purchases.index')
                 ->with('error', 'Error al eliminar la compra');
         }
     }
@@ -700,7 +795,7 @@ class PurchaseController extends Controller
             }
 
             // Unidades de compra con conversión configurada
-            $conversions = \App\Models\MaterialUnitConversion::where('material_id', $material->id)
+            $conversions = MaterialUnitConversion::where('material_id', $material->id)
                 ->with('fromUnit')
                 ->get();
 
@@ -726,6 +821,75 @@ class PurchaseController extends Controller
         } catch (\Exception $e) {
             Log::error('Error AJAX getUnitsForMaterial: ' . $e->getMessage());
             return response()->json(['error' => 'Error al obtener unidades'], 500);
+        }
+    }
+
+    /**
+     * Anular una recepción
+     */
+    public function voidReception(Request $request, $id, $receptionId)
+    {
+        try {
+            $validated = $request->validate([
+                'void_reason' => [
+                    'required',
+                    'string',
+                    'min:10',
+                    'max:500',
+                ],
+            ], [
+                'void_reason.required' => 'El motivo de anulación es obligatorio.',
+                'void_reason.min' => 'El motivo debe tener al menos 10 caracteres.',
+            ]);
+
+            $purchase = Purchase::where('activo', true)->findOrFail((int) $id);
+            $reception = PurchaseReception::where('purchase_id', $purchase->id)
+                ->findOrFail((int) $receptionId);
+
+            $receptionService = app(ReceptionService::class);
+            $receptionService->voidReception($reception, strip_tags(trim($validated['void_reason'])));
+
+            return redirect()->route('admin.purchases.show', $purchase->id)
+                ->with('success', "Recepción {$reception->reception_number} anulada exitosamente");
+        } catch (InventoryException $e) {
+            return redirect()->route('admin.purchases.show', $id)
+                ->with('error', $e->getMessage());
+        } catch (PurchaseException $e) {
+            return redirect()->route('admin.purchases.show', $id)
+                ->with('error', $e->getMessage());
+        } catch (\Exception $e) {
+            Log::error('Error al anular recepción: ' . $e->getMessage(), [
+                'purchase_id' => $id,
+                'reception_id' => $receptionId,
+                'user_id' => Auth::id(),
+            ]);
+
+            return redirect()->route('admin.purchases.show', $id)
+                ->with('error', 'Error al anular la recepción');
+        }
+    }
+
+    /**
+     * Recalcular estado de una compra (útil para corregir inconsistencias)
+     */
+    public function recalculateStatus($id)
+    {
+        try {
+            $purchase = Purchase::where('activo', true)->findOrFail((int) $id);
+
+            $receptionService = app(ReceptionService::class);
+            $receptionService->recalculatePurchaseStatus($purchase);
+
+            return redirect()->route('admin.purchases.show', $id)
+                ->with('success', "Estado de {$purchase->purchase_number} recalculado: {$purchase->fresh()->status->label()}");
+        } catch (\Exception $e) {
+            Log::error('Error al recalcular estado: ' . $e->getMessage(), [
+                'purchase_id' => $id,
+                'user_id' => Auth::id(),
+            ]);
+
+            return redirect()->route('admin.purchases.show', $id)
+                ->with('error', 'Error al recalcular el estado');
         }
     }
 }

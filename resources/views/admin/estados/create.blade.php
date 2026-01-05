@@ -7,6 +7,33 @@
 
 @section('content')
     <br>
+
+    {{-- MENSAJES FLASH --}}
+    @foreach (['success', 'error', 'info'] as $msg)
+        @if (session($msg))
+            <div class="alert alert-{{ $msg == 'error' ? 'danger' : $msg }} alert-dismissible fade show" role="alert">
+                {{ session($msg) }}
+                <button type="button" class="close" data-dismiss="alert">
+                    <span>&times;</span>
+                </button>
+            </div>
+        @endif
+    @endforeach
+
+    {{-- ERRORES GENERALES --}}
+    @if ($errors->any())
+        <div class="alert alert-danger alert-dismissible fade show">
+            <strong>Se encontraron errores en el formulario:</strong>
+            <ul class="mb-0 mt-2">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+            <button type="button" class="close" data-dismiss="alert">
+                <span>&times;</span>
+            </button>
+        </div>
+    @endif
     <div class="col-md-4">
         <div class="card card-primary " bis_skin_checked="1">
 

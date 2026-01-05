@@ -19,7 +19,7 @@ return new class extends Migration
             $table->boolean('is_required')->default(false);
             $table->integer('order')->default(0);
             $table->timestamps();
-
+            $table->softDeletes(); // <--- ESTA LÍNEA ES OBLIGATORIA
             // Índices
             $table->index('slug');
         });

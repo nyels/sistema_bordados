@@ -3,41 +3,140 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreProductRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // En el futuro, aquí validarás si el usuario tiene permiso
+        return true;
     }
 
     public function rules(): array
     {
         return [
-            // Validación del Maestro
-            'product_category_id' => 'required|exists:product_categories,id',
-            'name' => 'required|string|max:255',
-            'sku' => 'required|string|unique:products,sku',
-            'specifications' => 'nullable|array',
-            'extra_ids' => 'nullable|array',
-            'extra_ids.*' => 'exists:product_extras,id',
+            'product_category_id' => [
+                'required',
+                'integer',
+                'min:1',
+                Rule::exists('product_categories', 'id')->where('is_active', true),
+            ],
+            'name' => [
+                'required',
+                'string',
+                'min:3',
+                'max:200',
+                'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-\_\.]+$/u',
+            ],
+            'sku' => [
+                'required',
+                'string',
+                'min:3',
+                'max:50',
+                'regex:/^[A-Z0-9\-\_]+$/u',
+                'unique:products,sku',
+            ],
+            'description' => [
+                'nullable',
+                'string',
+                'max:2000',
+            ],
+            'status' => [
+                'required',
+                'string',
+                'in:draft,active,discontinued',
+            ],
 
-            // Validación de Variantes (Array)
-            'variants' => 'required|array|min:1',
-            'variants.*.sku_variant' => 'required|string|unique:product_variants,sku_variant',
-            'variants.*.price' => 'required|numeric|min:0',
-            'variants.*.stock_alert' => 'nullable|integer|min:0',
+            // Especificaciones (JSON dinámico)
+            'specifications' => [
+                'nullable',
+                'array',
+            ],
+            'specifications.*.key' => [
+                'required_with:specifications',
+                'string',
+                'max:100',
+            ],
+            'specifications.*.value' => [
+                'required_with:specifications',
+                'string',
+                'max:500',
+            ],
 
-            // Validación de Atributos de la Variante
-            'variants.*.attribute_values' => 'nullable|array',
-            'variants.*.attribute_values.*.attribute_id' => 'required|exists:attributes,id',
-            'variants.*.attribute_values.*.value_id' => 'required|exists:attribute_values,id',
+            // Diseños asignados
+            'designs' => [
+                'nullable',
+                'array',
+            ],
+            'designs.*' => [
+                'integer',
+                'exists:designs,id',
+            ],
 
-            // Validación Técnica (Bordados/Exports)
-            'variants.*.design_exports' => 'nullable|array',
-            'variants.*.design_exports.*.design_export_id' => 'required|exists:design_exports,id',
-            'variants.*.design_exports.*.application_type_id' => 'required|exists:application_types,id',
-            'variants.*.design_exports.*.notes' => 'nullable|string|max:500',
+            // Extras
+            'extras' => [
+                'nullable',
+                'array',
+            ],
+            'extras.*' => [
+                'integer',
+                'exists:product_extras,id',
+            ],
+
+            // Variante inicial (opcional)
+            'initial_variant' => [
+                'nullable',
+                'array',
+            ],
+            'initial_variant.price' => [
+                'required_with:initial_variant',
+                'numeric',
+                'min:0',
+                'max:9999999.99',
+            ],
+            'initial_variant.attributes' => [
+                'nullable',
+                'array',
+            ],
         ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'product_category_id.required' => 'La categoría es obligatoria.',
+            'product_category_id.exists' => 'La categoría seleccionada no existe o está inactiva.',
+            'name.required' => 'El nombre del producto es obligatorio.',
+            'name.min' => 'El nombre debe tener al menos 3 caracteres.',
+            'name.max' => 'El nombre no puede exceder 200 caracteres.',
+            'name.regex' => 'El nombre contiene caracteres no permitidos.',
+            'sku.required' => 'El SKU es obligatorio.',
+            'sku.regex' => 'El SKU solo puede contener letras mayúsculas, números, guiones y guiones bajos.',
+            'sku.unique' => 'Este SKU ya está registrado.',
+            'description.max' => 'La descripción no puede exceder 2000 caracteres.',
+            'status.required' => 'El estado es obligatorio.',
+            'status.in' => 'El estado seleccionado no es válido.',
+        ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('name')) {
+            $this->merge([
+                'name' => strip_tags(trim($this->input('name'))),
+            ]);
+        }
+
+        if ($this->has('sku')) {
+            $this->merge([
+                'sku' => strtoupper(strip_tags(trim($this->input('sku')))),
+            ]);
+        }
+
+        if ($this->has('description')) {
+            $this->merge([
+                'description' => strip_tags(trim($this->input('description'))),
+            ]);
+        }
     }
 }

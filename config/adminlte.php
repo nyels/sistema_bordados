@@ -334,6 +334,7 @@ return [
             'icon' => 'fas fa-fw fa-user-tie',
             /*'classes' => 'bg-blue text-white'*/
         ],
+
         [
             'text' => 'Proveedores',
             'url' => 'proveedores',
@@ -369,6 +370,12 @@ return [
             'url'  => 'gestion-productos', // La URL que definimos en el paso anterior
             'icon' => 'fas fa-fw fa-box-open',
         ],
+        [
+            'text' => 'Compras',
+            'url' => 'purchases',
+            'icon' => 'fas fa-fw fa-shopping-cart',
+            'active' => ['purchases*'],
+        ],
 
         /*
         ['header' => 'BÚSQUEDA Y FILTROS'],
@@ -390,56 +397,59 @@ return [
             'submenu' =>
             [
                 [
+                    'text' => 'Atributos',
+                    'url' => 'attributes',
+                    'icon' => 'fas fa-fw fa-list',
+                ],
+                [
                     'text' => 'Categorias de diseño',
                     'url' => 'categorias',
-                    'icon' => 'fas fa-fw fa-list',
-                    /*'classes' => 'bg-blue text-white'*/
+                    'icon' => 'fas fa-fw fa-tags',
                 ],
                 [
                     'text' => 'Categorias de Material',
                     'url' => 'material-categories',
-                    'icon' => 'fas fa-fw fa-list',
+                    'icon' => 'fas fa-fw fa-layer-group',
                 ],
                 [
                     'text' => 'Estados',
                     'url' => 'estados',
-                    'icon' => 'fas fa-fw fa-list',
+                    'icon' => 'fas fa-fw fa-map-marker-alt',
                 ],
                 [
                     'text' => 'Giro',
                     'url' => 'giros',
-                    'icon' => 'fas fa-fw fa-list',
-                    /*'classes' => 'bg-blue text-white'*/
+                    'icon' => 'fas fa-fw fa-briefcase',
                 ],
                 [
                     'text' => 'Materiales',
                     'url' => 'materials',
-                    'icon' => 'fas fa-fw fa-list',
+                    'icon' => 'fas fa-fw fa-cubes',
                 ],
                 [
                     'text' => 'Recomendaciones',
                     'url' => 'recomendaciones',
-                    'icon' => 'fas fa-fw fa-list',
+                    'icon' => 'fas fa-fw fa-lightbulb',
                 ],
                 [
                     'text' => 'Tipos de aplicacion',
                     'url' => 'tipos_aplicacion',
-                    'icon' => 'fas fa-fw fa-list',
+                    'icon' => 'fas fa-fw fa-th-large',
                 ],
                 [
                     'text' => 'Unidades',
                     'url' => 'units',
-                    'icon' => 'fas fa-fw fa-list',
+                    'icon' => 'fas fa-fw fa-ruler',
                 ],
                 [
                     'text' => 'Registros de actividad',
                     'url' => 'activity-logs',
-                    'icon' => 'fas fa-fw fa-list',
+                    'icon' => 'fas fa-fw fa-history',
                 ],
                 [
                     'text' => 'System Settings',
                     'url' => 'settings',
-                    'icon' => 'fas fa-fw fa-list',
+                    'icon' => 'fas fa-fw fa-sliders-h',
                 ],
 
 

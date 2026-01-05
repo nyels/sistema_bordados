@@ -29,7 +29,7 @@
 
         <div class="card-body">
             {{-- FILTROS --}}
-            <form method="GET" action="{{ route('purchases.index') }}" id="filterForm">
+            <form method="GET" action="{{ route('admin.purchases.index') }}" id="filterForm">
                 <div class="row mb-3">
                     <div class="col-md-2">
                         <label class="small text-muted">Estado</label>
@@ -78,7 +78,7 @@
                     </div>
                     <div class="col-md-1 d-flex align-items-end">
                         @if (request()->hasAny(['status', 'proveedor_id', 'date_from', 'date_to', 'search']))
-                            <a href="{{ route('purchases.index') }}" class="btn btn-sm btn-outline-secondary"
+                            <a href="{{ route('admin.purchases.index') }}" class="btn btn-sm btn-outline-secondary"
                                 title="Limpiar filtros">
                                 <i class="fas fa-times"></i>
                             </a>
@@ -90,7 +90,7 @@
             {{-- ACCIONES --}}
             <div class="row mb-3">
                 <div class="col-12">
-                    <a href="{{ route('purchases.create') }}" class="btn btn-info">
+                    <a href="{{ route('admin.purchases.create') }}" class="btn btn-info">
                         <i class="fas fa-plus"></i> Nueva Orden de Compra
                     </a>
                 </div>
@@ -116,7 +116,7 @@
                         @forelse ($purchases as $purchase)
                             <tr>
                                 <td>
-                                    <a href="{{ route('purchases.show', $purchase->id) }}" class="font-weight-bold">
+                                    <a href="{{ route('admin.purchases.show', $purchase->id) }}" class="font-weight-bold">
                                         {{ $purchase->purchase_number }}
                                     </a>
                                     @if ($purchase->reference)
@@ -148,27 +148,27 @@
                                 </td>
                                 <td class="text-center">
                                     <div class="btn-group btn-group-sm" role="group">
-                                        <a href="{{ route('purchases.show', $purchase->id) }}" class="btn btn-info"
+                                        <a href="{{ route('admin.purchases.show', $purchase->id) }}" class="btn btn-info"
                                             title="Ver detalle">
                                             <i class="fas fa-eye"></i>
                                         </a>
 
                                         @if ($purchase->can_edit)
-                                            <a href="{{ route('purchases.edit', $purchase->id) }}" class="btn btn-warning"
-                                                title="Editar">
+                                            <a href="{{ route('admin.purchases.edit', $purchase->id) }}"
+                                                class="btn btn-warning" title="Editar">
                                                 <i class="fas fa-edit"></i>
                                             </a>
                                         @endif
 
                                         @if ($purchase->can_receive)
-                                            <a href="{{ route('purchases.receive', $purchase->id) }}"
+                                            <a href="{{ route('admin.purchases.receive', $purchase->id) }}"
                                                 class="btn btn-success" title="Recibir">
                                                 <i class="fas fa-truck-loading"></i>
                                             </a>
                                         @endif
 
                                         @if ($purchase->can_cancel)
-                                            <a href="{{ route('purchases.cancel', $purchase->id) }}"
+                                            <a href="{{ route('admin.purchases.cancel', $purchase->id) }}"
                                                 class="btn btn-danger" title="Cancelar">
                                                 <i class="fas fa-ban"></i>
                                             </a>
@@ -182,7 +182,7 @@
                                     <i class="fas fa-shopping-cart fa-2x mb-2 d-block"></i>
                                     No hay órdenes de compra registradas
                                     <br>
-                                    <a href="{{ route('purchases.create') }}" class="btn btn-info btn-sm mt-2">
+                                    <a href="{{ route('admin.purchases.create') }}" class="btn btn-info btn-sm mt-2">
                                         <i class="fas fa-plus"></i> Crear primera orden
                                     </a>
                                 </td>

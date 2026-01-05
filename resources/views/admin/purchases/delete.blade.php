@@ -24,12 +24,12 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0 bg-transparent p-0">
                     <li class="breadcrumb-item">
-                        <a href="{{ route('purchases.index') }}">
+                        <a href="{{ route('admin.purchases.index') }}">
                             <i class="fas fa-shopping-cart"></i> Órdenes de Compra
                         </a>
                     </li>
                     <li class="breadcrumb-item">
-                        <a href="{{ route('purchases.show', $purchase->id) }}">
+                        <a href="{{ route('admin.purchases.show', $purchase->id) }}">
                             {{ $purchase->purchase_number }}
                         </a>
                     </li>
@@ -39,7 +39,7 @@
         </div>
     </div>
 
-    <form method="POST" action="{{ route('purchases.destroy', $purchase->id) }}" id="deleteForm">
+    <form method="POST" action="{{ route('admin.purchases.destroy', $purchase->id) }}" id="deleteForm">
         @csrf
         @method('DELETE')
 
@@ -176,7 +176,7 @@
             <div class="card-footer">
                 <div class="row">
                     <div class="col-md-8 offset-md-2 text-center">
-                        <a href="{{ route('purchases.show', $purchase->id) }}" class="btn btn-secondary">
+                        <a href="{{ route('admin.purchases.show', $purchase->id) }}" class="btn btn-secondary">
                             <i class="fas fa-arrow-left"></i> Cancelar
                         </a>
                         <button type="submit" class="btn btn-danger" id="btnDelete">

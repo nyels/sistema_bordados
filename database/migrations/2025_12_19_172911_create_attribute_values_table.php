@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('hex_color', 7)->nullable();
             $table->integer('order')->default(0);
             $table->timestamps();
-
+            $table->softDeletes();
             // Índices
             $table->index('attribute_id');
         });

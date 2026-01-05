@@ -496,10 +496,7 @@ Route::group(['prefix' => 'produccion', 'as' => 'admin.produccion.', 'middleware
     Route::get('/{export}/preview', [App\Http\Controllers\DesignPreviewController::class, 'preview'])->name('preview');
 });
 
-//rutas productos
-Route::get('/gestion-productos', [App\Http\Controllers\ProductController::class, 'index'])
-    ->name('admin.productos.index')
-    ->middleware(['auth']);
+
 
 /*
 |--------------------------------------------------------------------------
@@ -762,77 +759,376 @@ Route::delete('/materials/{materialId}/conversions/{id}', [App\Http\Controllers\
 Route::get('/materials/{materialId}/conversion-factor/{fromUnitId}', [App\Http\Controllers\MaterialUnitConversionController::class, 'getConversionFactor'])
     ->name('material-conversions.factor')
     ->middleware('auth');
+
 /*
 |--------------------------------------------------------------------------
-| RUTAS DE COMPRAS
+| RUTAS DE COMPRAS (PURCHASES) - FORMATO EXPLÍCITO
 |--------------------------------------------------------------------------
 */
 
-Route::middleware('auth')->group(function () {
-    // Listado y CRUD
-    Route::get('/purchases', [App\Http\Controllers\PurchaseController::class, 'index'])
-        ->name('purchases.index');
+// Listado
+Route::get('purchases', [App\Http\Controllers\PurchaseController::class, 'index'])
+    ->middleware('auth')
+    ->name('admin.purchases.index');
 
-    Route::get('/purchases/create', [App\Http\Controllers\PurchaseController::class, 'create'])
-        ->name('purchases.create');
+// Crear
+Route::get('purchases/create', [App\Http\Controllers\PurchaseController::class, 'create'])
+    ->middleware('auth')
+    ->name('admin.purchases.create');
 
-    Route::post('/purchases', [App\Http\Controllers\PurchaseController::class, 'store'])
-        ->name('purchases.store');
+Route::post('purchases', [App\Http\Controllers\PurchaseController::class, 'store'])
+    ->middleware('auth')
+    ->name('admin.purchases.store');
 
-    Route::get('/purchases/{id}', [App\Http\Controllers\PurchaseController::class, 'show'])
-        ->name('purchases.show')
-        ->where('id', '[0-9]+');
+// Ver detalle
+Route::get('purchases/{id}', [App\Http\Controllers\PurchaseController::class, 'show'])
+    ->middleware('auth')
+    ->name('admin.purchases.show')
+    ->where('id', '[0-9]+');
 
-    Route::get('/purchases/{id}/edit', [App\Http\Controllers\PurchaseController::class, 'edit'])
-        ->name('purchases.edit')
-        ->where('id', '[0-9]+');
+// Editar
+Route::get('purchases/{id}/edit', [App\Http\Controllers\PurchaseController::class, 'edit'])
+    ->middleware('auth')
+    ->name('admin.purchases.edit')
+    ->where('id', '[0-9]+');
 
-    Route::put('/purchases/{id}', [App\Http\Controllers\PurchaseController::class, 'update'])
-        ->name('purchases.update')
-        ->where('id', '[0-9]+');
+Route::put('purchases/{id}', [App\Http\Controllers\PurchaseController::class, 'update'])
+    ->middleware('auth')
+    ->name('admin.purchases.update')
+    ->where('id', '[0-9]+');
 
-    // Confirmar (Borrador → Pendiente)
-    Route::post('/purchases/{id}/confirm', [App\Http\Controllers\PurchaseController::class, 'confirm'])
-        ->name('purchases.confirm')
-        ->where('id', '[0-9]+');
+// Confirmar (Borrador → Pendiente)
+Route::post('purchases/{id}/confirm', [App\Http\Controllers\PurchaseController::class, 'confirm'])
+    ->middleware('auth')
+    ->name('admin.purchases.confirm')
+    ->where('id', '[0-9]+');
 
-    // Recibir
-    Route::get('/purchases/{id}/receive', [App\Http\Controllers\PurchaseController::class, 'showReceive'])
-        ->name('purchases.receive')
-        ->where('id', '[0-9]+');
+// Recibir mercancía
+Route::get('purchases/{id}/receive', [App\Http\Controllers\PurchaseController::class, 'showReceive'])
+    ->middleware('auth')
+    ->name('admin.purchases.receive')
+    ->where('id', '[0-9]+');
 
-    Route::post('/purchases/{id}/receive', [App\Http\Controllers\PurchaseController::class, 'receive'])
-        ->name('purchases.receive.store')
-        ->where('id', '[0-9]+');
+Route::post('purchases/{id}/receive', [App\Http\Controllers\PurchaseController::class, 'receive'])
+    ->middleware('auth')
+    ->name('admin.purchases.receive.store')
+    ->where('id', '[0-9]+');
 
-    // Cancelar
-    Route::get('/purchases/{id}/cancel', [App\Http\Controllers\PurchaseController::class, 'showCancel'])
-        ->name('purchases.cancel')
-        ->where('id', '[0-9]+');
+// Cancelar
+Route::get('purchases/{id}/cancel', [App\Http\Controllers\PurchaseController::class, 'showCancel'])
+    ->middleware('auth')
+    ->name('admin.purchases.cancel')
+    ->where('id', '[0-9]+');
 
-    Route::post('/purchases/{id}/cancel', [App\Http\Controllers\PurchaseController::class, 'cancel'])
-        ->name('purchases.cancel.store')
-        ->where('id', '[0-9]+');
+Route::post('purchases/{id}/cancel', [App\Http\Controllers\PurchaseController::class, 'cancel'])
+    ->middleware('auth')
+    ->name('admin.purchases.cancel.store')
+    ->where('id', '[0-9]+');
 
-    // Eliminar (solo borradores)
-    Route::get('/purchases/{id}/confirm-delete', [App\Http\Controllers\PurchaseController::class, 'confirmDelete'])
-        ->name('purchases.confirm_delete')
-        ->where('id', '[0-9]+');
+// Eliminar (solo borradores)
+Route::get('purchases/{id}/confirm-delete', [App\Http\Controllers\PurchaseController::class, 'confirmDelete'])
+    ->middleware('auth')
+    ->name('admin.purchases.confirm_delete')
+    ->where('id', '[0-9]+');
 
-    Route::delete('/purchases/{id}', [App\Http\Controllers\PurchaseController::class, 'destroy'])
-        ->name('purchases.destroy')
-        ->where('id', '[0-9]+');
+Route::delete('purchases/{id}', [App\Http\Controllers\PurchaseController::class, 'destroy'])
+    ->middleware('auth')
+    ->name('admin.purchases.destroy')
+    ->where('id', '[0-9]+');
 
-    // AJAX Endpoints
-    Route::get('/purchases/ajax/materials/{categoryId}', [App\Http\Controllers\PurchaseController::class, 'getMaterialsByCategory'])
-        ->name('purchases.ajax.materials')
-        ->where('categoryId', '[0-9]+');
+// AJAX Endpoints
+Route::get('purchases/ajax/materials/{categoryId}', [App\Http\Controllers\PurchaseController::class, 'getMaterialsByCategory'])
+    ->middleware('auth')
+    ->name('admin.purchases.ajax.materials')
+    ->where('categoryId', '[0-9]+');
 
-    Route::get('/purchases/ajax/variants/{materialId}', [App\Http\Controllers\PurchaseController::class, 'getVariantsByMaterial'])
-        ->name('purchases.ajax.variants')
-        ->where('materialId', '[0-9]+');
+Route::get('purchases/ajax/variants/{materialId}', [App\Http\Controllers\PurchaseController::class, 'getVariantsByMaterial'])
+    ->middleware('auth')
+    ->name('admin.purchases.ajax.variants')
+    ->where('materialId', '[0-9]+');
 
-    Route::get('/purchases/ajax/units/{materialId}', [App\Http\Controllers\PurchaseController::class, 'getUnitsForMaterial'])
-        ->name('purchases.ajax.units')
-        ->where('materialId', '[0-9]+');
-});
+Route::get('purchases/ajax/units/{materialId}', [App\Http\Controllers\PurchaseController::class, 'getUnitsForMaterial'])
+    ->middleware('auth')
+    ->name('admin.purchases.ajax.units')
+    ->where('materialId', '[0-9]+');
+// Anular recepción
+Route::post('purchases/{id}/receptions/{receptionId}/void', [App\Http\Controllers\PurchaseController::class, 'voidReception'])
+    ->middleware('auth')
+    ->name('admin.purchases.receptions.void')
+    ->where(['id' => '[0-9]+', 'receptionId' => '[0-9]+']);
+
+// Recalcular estado de compra
+Route::post('purchases/{id}/recalculate-status', [App\Http\Controllers\PurchaseController::class, 'recalculateStatus'])
+    ->middleware('auth')
+    ->name('admin.purchases.recalculate')
+    ->where('id', '[0-9]+');
+
+
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE PRODUCTOS (Explícitas)
+|--------------------------------------------------------------------------
+*/
+
+//rutas productos
+Route::get('/gestion-productos', [App\Http\Controllers\ProductController::class, 'index'])
+    ->name('admin.productos.index')
+    ->middleware(['auth']);
+
+// Listado principal
+Route::get('productos', [App\Http\Controllers\ProductController::class, 'index'])
+    ->middleware('auth')
+    ->name('admin.products.index');
+
+// Crear producto
+Route::get('productos/create', [App\Http\Controllers\ProductController::class, 'create'])
+    ->middleware('auth')
+    ->name('admin.products.create');
+
+Route::post('productos', [App\Http\Controllers\ProductController::class, 'store'])
+    ->middleware('auth')
+    ->name('admin.products.store');
+
+// Ver detalle
+Route::get('productos/{id}', [App\Http\Controllers\ProductController::class, 'show'])
+    ->middleware('auth')
+    ->name('admin.products.show')
+    ->where('id', '[0-9]+');
+
+// Editar producto
+Route::get('productos/{id}/edit', [App\Http\Controllers\ProductController::class, 'edit'])
+    ->middleware('auth')
+    ->name('admin.products.edit')
+    ->where('id', '[0-9]+');
+
+Route::put('productos/{id}', [App\Http\Controllers\ProductController::class, 'update'])
+    ->middleware('auth')
+    ->name('admin.products.update')
+    ->where('id', '[0-9]+');
+
+// Eliminar producto
+Route::get('productos/{id}/confirm-delete', [App\Http\Controllers\ProductController::class, 'confirmDelete'])
+    ->middleware('auth')
+    ->name('admin.products.confirm_delete')
+    ->where('id', '[0-9]+');
+
+Route::delete('productos/{id}', [App\Http\Controllers\ProductController::class, 'destroy'])
+    ->middleware('auth')
+    ->name('admin.products.destroy')
+    ->where('id', '[0-9]+');
+
+// Operaciones adicionales
+Route::post('productos/{id}/duplicate', [App\Http\Controllers\ProductController::class, 'duplicate'])
+    ->middleware('auth')
+    ->name('admin.products.duplicate')
+    ->where('id', '[0-9]+');
+
+Route::post('productos/{id}/toggle-status', [App\Http\Controllers\ProductController::class, 'toggleStatus'])
+    ->middleware('auth')
+    ->name('admin.products.toggle_status')
+    ->where('id', '[0-9]+');
+
+/*
+|--------------------------------------------------------------------------
+| VARIANTES DE PRODUCTO
+|--------------------------------------------------------------------------
+*/
+
+Route::get('productos/{productId}/variants/create', [App\Http\Controllers\ProductController::class, 'createVariant'])
+    ->middleware('auth')
+    ->name('admin.products.variants.create')
+    ->where('productId', '[0-9]+');
+
+Route::post('productos/{productId}/variants', [App\Http\Controllers\ProductController::class, 'storeVariant'])
+    ->middleware('auth')
+    ->name('admin.products.variants.store')
+    ->where('productId', '[0-9]+');
+
+Route::get('productos/{productId}/variants/{variantId}/edit', [App\Http\Controllers\ProductController::class, 'editVariant'])
+    ->middleware('auth')
+    ->name('admin.products.variants.edit')
+    ->where(['productId' => '[0-9]+', 'variantId' => '[0-9]+']);
+
+Route::put('productos/{productId}/variants/{variantId}', [App\Http\Controllers\ProductController::class, 'updateVariant'])
+    ->middleware('auth')
+    ->name('admin.products.variants.update')
+    ->where(['productId' => '[0-9]+', 'variantId' => '[0-9]+']);
+
+Route::delete('productos/{productId}/variants/{variantId}', [App\Http\Controllers\ProductController::class, 'destroyVariant'])
+    ->middleware('auth')
+    ->name('admin.products.variants.destroy')
+    ->where(['productId' => '[0-9]+', 'variantId' => '[0-9]+']);
+
+/*
+|--------------------------------------------------------------------------
+| AJAX ENDPOINTS PRODUCTOS
+|--------------------------------------------------------------------------
+*/
+
+Route::get('productos/ajax/designs-by-category/{categoryId}', [App\Http\Controllers\ProductController::class, 'getDesignsByCategory'])
+    ->middleware('auth')
+    ->name('admin.products.ajax.designs')
+    ->where('categoryId', '[0-9]+');
+
+Route::get('productos/ajax/design-exports/{designId}', [App\Http\Controllers\ProductController::class, 'getDesignExports'])
+    ->middleware('auth')
+    ->name('admin.products.ajax.exports')
+    ->where('designId', '[0-9]+');
+
+Route::get('productos/ajax/attributes', [App\Http\Controllers\ProductController::class, 'getAttributes'])
+    ->middleware('auth')
+    ->name('admin.products.ajax.attributes');
+
+/*
+|--------------------------------------------------------------------------
+| CATEGORÍAS DE PRODUCTOS
+|--------------------------------------------------------------------------
+*/
+
+Route::get('product-categories', [App\Http\Controllers\ProductCategoryController::class, 'index'])
+    ->middleware('auth')
+    ->name('admin.product_categories.index');
+
+Route::get('product-categories/create', [App\Http\Controllers\ProductCategoryController::class, 'create'])
+    ->middleware('auth')
+    ->name('admin.product_categories.create');
+
+Route::post('product-categories', [App\Http\Controllers\ProductCategoryController::class, 'store'])
+    ->middleware('auth')
+    ->name('admin.product_categories.store');
+
+Route::get('product-categories/{id}/edit', [App\Http\Controllers\ProductCategoryController::class, 'edit'])
+    ->middleware('auth')
+    ->name('admin.product_categories.edit')
+    ->where('id', '[0-9]+');
+
+Route::put('product-categories/{id}', [App\Http\Controllers\ProductCategoryController::class, 'update'])
+    ->middleware('auth')
+    ->name('admin.product_categories.update')
+    ->where('id', '[0-9]+');
+
+Route::get('product-categories/{id}/confirm-delete', [App\Http\Controllers\ProductCategoryController::class, 'confirmDelete'])
+    ->middleware('auth')
+    ->name('admin.product_categories.confirm_delete')
+    ->where('id', '[0-9]+');
+
+Route::delete('product-categories/{id}', [App\Http\Controllers\ProductCategoryController::class, 'destroy'])
+    ->middleware('auth')
+    ->name('admin.product_categories.destroy')
+    ->where('id', '[0-9]+');
+
+/*
+|--------------------------------------------------------------------------
+| EXTRAS DE PRODUCTOS
+|--------------------------------------------------------------------------
+*/
+
+Route::get('product-extras', [App\Http\Controllers\ProductExtraController::class, 'index'])
+    ->middleware('auth')
+    ->name('admin.product_extras.index');
+
+Route::get('product-extras/create', [App\Http\Controllers\ProductExtraController::class, 'create'])
+    ->middleware('auth')
+    ->name('admin.product_extras.create');
+
+Route::post('product-extras', [App\Http\Controllers\ProductExtraController::class, 'store'])
+    ->middleware('auth')
+    ->name('admin.product_extras.store');
+
+Route::get('product-extras/{id}/edit', [App\Http\Controllers\ProductExtraController::class, 'edit'])
+    ->middleware('auth')
+    ->name('admin.product_extras.edit')
+    ->where('id', '[0-9]+');
+
+Route::put('product-extras/{id}', [App\Http\Controllers\ProductExtraController::class, 'update'])
+    ->middleware('auth')
+    ->name('admin.product_extras.update')
+    ->where('id', '[0-9]+');
+
+Route::delete('product-extras/{id}', [App\Http\Controllers\ProductExtraController::class, 'destroy'])
+    ->middleware('auth')
+    ->name('admin.product_extras.destroy')
+    ->where('id', '[0-9]+');
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE ATRIBUTOS
+|--------------------------------------------------------------------------
+*/
+
+Route::get('attributes', [App\Http\Controllers\AttributeController::class, 'index'])
+    ->middleware('auth')
+    ->name('admin.attributes.index');
+
+Route::get('attributes/create', [App\Http\Controllers\AttributeController::class, 'create'])
+    ->middleware('auth')
+    ->name('admin.attributes.create');
+
+Route::post('attributes', [App\Http\Controllers\AttributeController::class, 'store'])
+    ->middleware('auth')
+    ->name('admin.attributes.store');
+
+Route::get('attributes/{id}/edit', [App\Http\Controllers\AttributeController::class, 'edit'])
+    ->middleware('auth')
+    ->name('admin.attributes.edit')
+    ->where('id', '[0-9]+');
+
+Route::put('attributes/{id}', [App\Http\Controllers\AttributeController::class, 'update'])
+    ->middleware('auth')
+    ->name('admin.attributes.update')
+    ->where('id', '[0-9]+');
+
+Route::get('attributes/{id}/confirm-delete', [App\Http\Controllers\AttributeController::class, 'confirm_delete'])
+    ->middleware('auth')
+    ->name('admin.attributes.confirm_delete')
+    ->where('id', '[0-9]+');
+
+Route::delete('attributes/{id}', [App\Http\Controllers\AttributeController::class, 'destroy'])
+    ->middleware('auth')
+    ->name('admin.attributes.destroy')
+    ->where('id', '[0-9]+');
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE VALORES DE ATRIBUTOS
+|--------------------------------------------------------------------------
+*/
+
+Route::get('attribute-values', [App\Http\Controllers\AttributeValueController::class, 'index'])
+    ->middleware('auth')
+    ->name('admin.attribute-values.index');
+
+Route::get('attribute-values/create', [App\Http\Controllers\AttributeValueController::class, 'create'])
+    ->middleware('auth')
+    ->name('admin.attribute-values.create');
+
+Route::post('attribute-values', [App\Http\Controllers\AttributeValueController::class, 'store'])
+    ->middleware('auth')
+    ->name('admin.attribute-values.store');
+
+Route::get('attribute-values/{id}/edit', [App\Http\Controllers\AttributeValueController::class, 'edit'])
+    ->middleware('auth')
+    ->name('admin.attribute-values.edit')
+    ->where('id', '[0-9]+');
+
+Route::put('attribute-values/{id}', [App\Http\Controllers\AttributeValueController::class, 'update'])
+    ->middleware('auth')
+    ->name('admin.attribute-values.update')
+    ->where('id', '[0-9]+');
+
+Route::get('attribute-values/{id}/confirm-delete', [App\Http\Controllers\AttributeValueController::class, 'confirm_delete'])
+    ->middleware('auth')
+    ->name('admin.attribute-values.confirm_delete')
+    ->where('id', '[0-9]+');
+
+Route::delete('attribute-values/{id}', [App\Http\Controllers\AttributeValueController::class, 'destroy'])
+    ->middleware('auth')
+    ->name('admin.attribute-values.destroy')
+    ->where('id', '[0-9]+');
+
+// AJAX endpoint para obtener tipo de atributo (para color picker dinámico)
+Route::get('attribute-values/get-type/{attributeId}', [App\Http\Controllers\AttributeValueController::class, 'getAttributeType'])
+    ->middleware('auth')
+    ->name('admin.attribute-values.get-type')
+    ->where('attributeId', '[0-9]+');

@@ -1,0 +1,259 @@
+@extends('adminlte::page')
+
+@section('title', 'Editar Valor de Atributo')
+
+@section('content_header')
+@stop
+
+@section('content')
+    <br>
+
+    {{-- MENSAJES FLASH --}}
+    @foreach (['success', 'error', 'info'] as $msg)
+        @if (session($msg))
+            <div class="alert alert-{{ $msg == 'error' ? 'danger' : $msg }} alert-dismissible fade show" role="alert">
+                {{ session($msg) }}
+                <button type="button" class="close" data-dismiss="alert">
+                    <span>&times;</span>
+                </button>
+            </div>
+        @endif
+    @endforeach
+
+    {{-- ERRORES GENERALES --}}
+    @if ($errors->any())
+        <div class="alert alert-danger alert-dismissible fade show">
+            <strong>Se encontraron errores en el formulario:</strong>
+            <ul class="mb-0 mt-2">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+            <button type="button" class="close" data-dismiss="alert">
+                <span>&times;</span>
+            </button>
+        </div>
+    @endif
+    <div class="col-md-4">
+        <div class="card card-warning">
+            <div class="card-header">
+                <h3 class="card-title" style="font-weight: bold;font-size: 20px;"> EDITAR VALOR DE ATRIBUTO</h3>
+            </div>
+
+            <div class="card-body">
+                <form method="post" action="{{ route('admin.attribute-values.update', $attributeValue->id) }}"
+                    id="formValorAtributo">
+                    @csrf
+                    @method('PUT')
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div style="border-bottom: 3px solid #ffc107; padding-bottom: 8px; margin-bottom: 20px;">
+                                <h5 style="color: #856404; font-weight: 600;">
+                                    <i class="fas fa-tag"></i> Datos del Valor
+                                </h5>
+                            </div>
+
+                            {{-- Atributo --}}
+                            <div class="form-group">
+                                <label>Atributo <span style="color: red;">*</span></label>
+                                <select name="attribute_id" id="attribute_id"
+                                    class="form-control form-control-sm @error('attribute_id') is-invalid @enderror"
+                                    required>
+                                    <option value="" data-slug="">Selecciona un atributo</option>
+                                    @foreach ($attributes as $attribute)
+                                        <option value="{{ $attribute->id }}" data-slug="{{ $attribute->slug }}"
+                                            {{ old('attribute_id', $attributeValue->attribute_id) == $attribute->id ? 'selected' : '' }}>
+                                            {{ $attribute->name }}
+
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('attribute_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            {{-- Valor --}}
+                            <div class="form-group">
+                                <label>Nombre del Valor <span style="color: red;">*</span></label>
+                                <input type="text" name="value" {{-- CAMBIADO: Antes decía "name" --}}
+                                    class="form-control form-control-sm @error('value') is-invalid @enderror"
+                                    value="{{ old('value', $attributeValue->value) }}" required
+                                    placeholder="Ej: Rojo, Grande, Algodón" maxlength="100">
+
+                                @error('value')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+
+                                <small class="form-text text-muted">
+                                    Letras, números, espacios y guiones (máx. 100 caracteres)
+                                </small>
+                            </div>
+
+                            {{-- Color Picker (Dinámico) --}}
+                            <div class="form-group" id="color_picker_container" style="display: none;">
+                                <label>Color Hexadecimal <span style="color: red;">*</span></label>
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <input type="color" id="color_picker" class="form-control"
+                                            value="{{ old('hex_color', $attributeValue->hex_color ?? '#000000') }}"
+                                            style="height: 45px; padding: 2px; cursor: pointer;">
+                                    </div>
+                                    <div class="col-md-9">
+                                        <div class="input-group">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text">#</span>
+                                            </div>
+                                            <input type="text" name="hex_color" id="hex_color"
+                                                class="form-control form-control-sm @error('hex_color') is-invalid @enderror"
+                                                value="{{ old('hex_color', $attributeValue->hex_color ?? '#000000') }}"
+                                                placeholder="RRGGBB" maxlength="7" pattern="^#[0-9A-Fa-f]{6}$">
+                                            @error('hex_color')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                        <small class="form-text text-muted">Formato: #RRGGBB (ej: #FF0000 para rojo)</small>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <label>Vista previa:</label>
+                                    <div id="color_preview"
+                                        style="
+                                    width: 100%;
+                                    height: 40px;
+                                    background-color: {{ old('hex_color', $attributeValue->hex_color ?? '#000000') }};
+                                    border: 2px solid #333;
+                                    border-radius: 4px;
+                                ">
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            {{-- Botones --}}
+                            <div class="text-center mt-4">
+                                <a href="{{ route('admin.attributes.index') }}" class="btn btn-secondary">
+                                    <i class="fas fa-times-circle"></i> Regresar
+                                </a>
+                                <button type="submit" class="btn btn-warning">
+                                    <i class="fas fa-save"></i> Actualizar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+@stop
+
+@section('css')
+    <style>
+        #color_picker {
+            border: 2px solid #ced4da;
+            border-radius: 4px;
+        }
+
+        #color_picker:hover {
+            border-color: #ffc107;
+        }
+    </style>
+@stop
+@section('js')
+    <script src="https://chir.ag/projects/ntc/ntc.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            const $attributeSelect = $('#attribute_id');
+            const $colorContainer = $('#color_picker_container');
+            const $hexInput = $('#hex_color');
+            const $colorPicker = $('#color_picker');
+            const $colorPreview = $('#color_preview');
+            const $valueInput = $('input[name="value"]');
+
+            // Flag para identificar la carga inicial
+            let isInitialLoad = true;
+
+            /**
+             * Obtiene el nombre del color usando el algoritmo ntc
+             */
+            function fetchColorName(hex) {
+                if (!hex || hex.length < 4) return "";
+                const match = ntc.name(hex);
+                return match[1];
+            }
+
+            function updateUI(hex) {
+                if (/^#[0-9A-Fa-f]{3,6}$/.test(hex)) {
+                    $colorPicker.val(hex);
+                    $colorPreview.css('background-color', hex);
+
+                    // Solo autocompletar el nombre si el usuario está interactuando (no en carga inicial)
+                    if (!isInitialLoad) {
+                        const colorName = fetchColorName(hex);
+                        $valueInput.val(colorName);
+                    }
+                }
+            }
+
+            function toggleDisplay() {
+                const selectedOption = $attributeSelect.find('option:selected');
+                const isColor = selectedOption.data('slug') === 'color';
+
+                if (isColor) {
+                    $colorContainer.slideDown();
+                    $hexInput.prop('required', true);
+
+                    if (!$hexInput.val()) {
+                        $hexInput.val('#000000');
+                    }
+                    updateUI($hexInput.val());
+                } else {
+                    $colorContainer.slideUp();
+                    $hexInput.prop('required', false);
+
+                    // Solo resetear si el usuario está CAMBIANDO el select, 
+                    // no cuando la página carga por primera vez.
+                    if (!isInitialLoad) {
+                        $hexInput.val('');
+                        $valueInput.val('');
+                        $colorPreview.css('background-color', 'transparent');
+                    }
+                }
+            }
+
+            // --- MANEJO DE EVENTOS ---
+
+            $attributeSelect.on('change', function() {
+                isInitialLoad = false; // El usuario cambió manualmente, ya no es carga inicial
+                toggleDisplay();
+            });
+
+            $colorPicker.on('input change', function() {
+                isInitialLoad = false;
+                const hex = $(this).val().toUpperCase();
+                $hexInput.val(hex);
+                updateUI(hex);
+            });
+
+            $hexInput.on('input', function() {
+                isInitialLoad = false;
+                let hex = $(this).val().trim();
+                if (hex && !hex.startsWith('#')) {
+                    hex = '#' + hex;
+                    $(this).val(hex);
+                }
+                if (hex.length === 7) {
+                    updateUI(hex);
+                }
+            });
+
+            // Ejecución inicial
+            toggleDisplay();
+
+            // Finalizamos la carga inicial después de ejecutar toggleDisplay
+            isInitialLoad = false;
+        });
+    </script>
+@stop
