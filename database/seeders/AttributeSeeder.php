@@ -43,9 +43,11 @@ class AttributeSeeder extends Seeder
 
         // Valores de tamaño
         $sizeAttr->values()->createMany([
-            ['value' => 'Pequeño', 'order' => 1],
-            ['value' => 'Mediano', 'order' => 2],
-            ['value' => 'Grande', 'order' => 3],
+            ['value' => 'XS', 'order' => 1],
+            ['value' => 'S', 'order' => 2],
+            ['value' => 'M', 'order' => 3],
+            ['value' => 'L', 'order' => 4],
+            ['value' => 'XL', 'order' => 5],
         ]);
     }
 }

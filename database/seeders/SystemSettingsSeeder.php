@@ -25,6 +25,15 @@ class SystemSettingsSeeder extends Seeder
                 'options' => null,
             ],
             [
+                'key' => 'company_logo',
+                'value' => null,
+                'type' => 'image',
+                'group' => 'general',
+                'label' => 'Logotipo de la Empresa',
+                'description' => 'Logo visible en login, barra lateral y reportes (Formatos: PNG, JPG)',
+                'options' => null,
+            ],
+            [
                 'key' => 'currency',
                 'value' => 'MXN',
                 'type' => 'select',

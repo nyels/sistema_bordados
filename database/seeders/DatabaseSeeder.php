@@ -47,7 +47,7 @@ class DatabaseSeeder extends Seeder
             GiroSeeder::class,
             RecomendacionSeeder::class,
             CategorySeeder::class,
-            //   AttributeSeeder::class,
+            //AttributeSeeder::class,
             ApplicationTypeSeeder::class,
 
             SystemSettingsSeeder::class,
@@ -57,11 +57,16 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // Tablas: attributes y attribute_values
-        $color = Attribute::create(['name' => 'Color', 'slug' => 'color']);
-        $talla = Attribute::create(['name' => 'Talla', 'slug' => 'talla']);
+        $color = Attribute::create(['name' => 'COLOR', 'slug' => 'color']);
+        $talla = Attribute::create(['name' => 'TALLA', 'slug' => 'talla']);
 
-        AttributeValue::create(['attribute_id' => $color->id, 'value' => 'Azul Marino']);
-        AttributeValue::create(['attribute_id' => $talla->id, 'value' => 'L']);
+        AttributeValue::create(['attribute_id' => $color->id, 'value' => 'Azul Marino', 'hex_color' => '#0000FF']);
+
+        AttributeValue::create(['attribute_id' => $talla->id, 'value' => 'XS', 'order' => 1]);
+        AttributeValue::create(['attribute_id' => $talla->id, 'value' => 'S', 'order' => 2]);
+        AttributeValue::create(['attribute_id' => $talla->id, 'value' => 'L', 'order' => 3]);
+        AttributeValue::create(['attribute_id' => $talla->id, 'value' => 'M', 'order' => 4]);
+        AttributeValue::create(['attribute_id' => $talla->id, 'value' => 'XL', 'order' => 5]);
         // Tabla: application_types (Nombres de columna exactos de tu SQL)
         // Tabla: application_types (Nombres de columna exactos de tu SQL)
         Application_types::create([

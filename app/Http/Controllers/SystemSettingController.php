@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class SystemSettingController extends Controller
 {
@@ -58,7 +60,7 @@ class SystemSettingController extends Controller
                 },
             ],
             'settings' => ['required', 'array', 'max:50'],
-            'settings.*' => ['nullable', 'string', 'max:500'],
+            'settings.*' => ['nullable'], // Quitamos la restricción de string para permitir archivos
         ]);
 
         $group = $request->input('group');
@@ -88,8 +90,52 @@ class SystemSettingController extends Controller
                     continue;
                 }
 
-                // 2. Sanitizar y validar según tipo
-                $sanitizedValue = $this->sanitizeValue($value, $setting);
+                // MANEJO DE ARCHIVOS (IMÁGENES)
+                if ($setting->type === 'image') {
+                    if ($request->hasFile("settings.$key")) {
+                        $file = $request->file("settings.$key");
+
+                        // Validación manual del archivo
+                        if (!$file->isValid()) {
+                            continue; // O lanzar error
+                        }
+
+                        $allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+                        if (!in_array($file->getMimeType(), $allowedMimes)) {
+                            DB::rollBack();
+                            return redirect()->back()->with('error', 'Formato de imagen no válido para ' . $setting->label);
+                        }
+
+                        // Eliminar imagen anterior si existe
+                        if ($setting->value && Storage::disk('public')->exists($setting->value)) {
+                            Storage::disk('public')->delete($setting->value);
+                        }
+
+                        // Guardar nueva imagen
+                        $path = $file->store('settings', 'public');
+                        $sanitizedValue = $path;
+                    } else {
+                        // Si no se subió archivo pero viene "null" o vacío, ¿borramos?
+                        // Por UX del Dropzone, si el usuario da "eliminar", podríamos enviar un input hidden vacío.
+                        // Asumiremos que si viene vacío string, es borrar. Si no viene nada, es mantener.
+                        // Pero el request->input incluye todo. 
+
+                        // Si el valor es una cadena vacía y antes había algo, significa borrar?
+                        // Vamos a manejar que si viene texto "DELETE_IMAGE", borramos.
+                        if ($value === '__DELETE__') {
+                            if ($setting->value && Storage::disk('public')->exists($setting->value)) {
+                                Storage::disk('public')->delete($setting->value);
+                            }
+                            $sanitizedValue = null;
+                        } else {
+                            // Si no es archivo ni flag de borrado, mantenemos el valor actual (no actualizar)
+                            continue;
+                        }
+                    }
+                } else {
+                    // 2. Sanitizar y validar según tipo (NO IMAGEN)
+                    $sanitizedValue = $this->sanitizeValue($value, $setting);
+                }
 
                 // CORRECCIÓN: Si el valor es inválido, informamos la causa exacta
                 if ($sanitizedValue === false) {
@@ -178,6 +224,14 @@ class SystemSettingController extends Controller
                 if (!preg_match($pattern, $value)) {
                     return false;
                 }
+                if (!preg_match($pattern, $value)) {
+                    return false;
+                }
+                return $value;
+
+            case 'image':
+                // Para tipos imagen, sanitizeValue no se usa para el upload, 
+                // pero por seguridad retornamos null si llega aquí por error.
                 return $value;
         }
     }

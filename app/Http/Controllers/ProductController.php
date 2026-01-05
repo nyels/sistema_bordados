@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Application_types;
+use App\Models\MaterialVariant;
 
 class ProductController extends Controller
 {
@@ -99,24 +100,42 @@ class ProductController extends Controller
     public function create()
     {
         try {
+            // 1. Validar categorías (Single Responsability)
             $categories = ProductCategory::active()->ordered()->get();
-
             if ($categories->isEmpty()) {
                 return redirect()->route('product_categories.create')
-                    ->with('info', 'Debe crear al menos una categoría de productos antes de crear productos');
+                    ->with('info', 'Debe crear al menos una categoría antes de continuar.');
             }
 
+            // 2. Carga de Insumos y Configuración
             $extras = ProductExtra::ordered()->get();
             $designs = Design::with('categories')->orderBy('name')->get();
             $applicationTypes = Application_types::where('activo', true)->orderBy('nombre_aplicacion')->get();
-            // 🔹 Atributos por slug (CORRECTO según tu BD)
-            $sizeAttribute = Attribute::with('values')
-                ->where('slug', 'talla')
-                ->first();
 
-            $colorAttribute = Attribute::with('values')
-                ->where('slug', 'color')
-                ->first();
+            // 3. Atributos (Las tallas ya vienen ordenadas por el Global Scope del Modelo)
+            $sizeAttribute = Attribute::with('values')->where('slug', 'talla')->first();
+            $colorAttribute = Attribute::with('values')->where('slug', 'color')->first();
+
+            // 4. NUEVO: Materiales para la Fase 3
+            // Cargamos variantes de materiales con su stock para mostrar disponibilidad
+            /* $materials = MaterialVariant::with(['material', 'category', 'unit'])
+                ->whereHas('material', fn($q) => $q->where('activo', true))
+                ->get(); */
+            $materials = MaterialVariant::with(['material.category.baseUnit'])
+                ->where('activo', true)
+                ->get()
+                ->map(function ($variant) {
+                    // Obtenemos la unidad desde la categoría del material
+                    $unit = $variant->material->category->baseUnit ?? null;
+
+                    return [
+                        'id' => $variant->id,
+                        'full_name' => $variant->display_name, // Usa el accessor de tu modelo
+                        'stock' => (float) $variant->current_stock,
+                        'unit_symbol' => $unit ? $unit->symbol : 'unid',
+                        'average_cost' => (float) $variant->average_cost,
+                    ];
+                });
 
             return view('admin.products.create', compact(
                 'categories',
@@ -124,13 +143,12 @@ class ProductController extends Controller
                 'designs',
                 'applicationTypes',
                 'sizeAttribute',
-                'colorAttribute'
+                'colorAttribute',
+                'materials' // <-- Enviamos a la vista
             ));
         } catch (\Exception $e) {
-            Log::error('Error al cargar formulario de producto: ' . $e->getMessage());
-
-            return redirect()->route('products.index')
-                ->with('error', 'Error al cargar el formulario');
+            Log::error("Product Create Error [Line {$e->getLine()}]: " . $e->getMessage());
+            return redirect()->route('admin.products.index')->with('error', 'Error interno al cargar el formulario.');
         }
     }
 
@@ -147,7 +165,7 @@ class ProductController extends Controller
 
             $product = $this->productService->createProduct($validated);
 
-            return redirect()->route('products.show', $product->id)
+            return redirect()->route('admin.products.show', $product->id)
                 ->with('success', "Producto '{$product->name}' creado exitosamente");
         } catch (\Exception $e) {
             Log::error('Error al crear producto: ' . $e->getMessage(), [
@@ -155,7 +173,7 @@ class ProductController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            return redirect()->route('products.create')
+            return redirect()->route('admin.products.create')
                 ->withInput()
                 ->with('error', 'Error al crear el producto. Intente nuevamente.');
         }
@@ -171,7 +189,7 @@ class ProductController extends Controller
     {
         try {
             if (!is_numeric($id) || $id < 1) {
-                return redirect()->route('products.index')
+                return redirect()->route('admin.products.index')
                     ->with('error', 'Producto no válido');
             }
 
@@ -186,14 +204,14 @@ class ProductController extends Controller
 
             return view('admin.products.show', compact('product'));
         } catch (ModelNotFoundException $e) {
-            return redirect()->route('products.index')
+            return redirect()->route('admin.products.index')
                 ->with('error', 'Producto no encontrado');
         } catch (\Exception $e) {
             Log::error('Error al mostrar producto: ' . $e->getMessage(), [
                 'product_id' => $id,
             ]);
 
-            return redirect()->route('products.index')
+            return redirect()->route('admin.products.index')
                 ->with('error', 'Error al cargar el producto');
         }
     }
@@ -208,7 +226,7 @@ class ProductController extends Controller
     {
         try {
             if (!is_numeric($id) || $id < 1) {
-                return redirect()->route('products.index')
+                return redirect()->route('admin.products.index')
                     ->with('error', 'Producto no válido');
             }
 
@@ -234,14 +252,14 @@ class ProductController extends Controller
                 'attributes'
             ));
         } catch (ModelNotFoundException $e) {
-            return redirect()->route('products.index')
+            return redirect()->route('admin.products.index')
                 ->with('error', 'Producto no encontrado');
         } catch (\Exception $e) {
             Log::error('Error al cargar producto para editar: ' . $e->getMessage(), [
                 'product_id' => $id,
             ]);
 
-            return redirect()->route('products.index')
+            return redirect()->route('admin.products.index')
                 ->with('error', 'Error al cargar el producto');
         }
     }
@@ -256,7 +274,7 @@ class ProductController extends Controller
     {
         try {
             if (!is_numeric($id) || $id < 1) {
-                return redirect()->route('products.index')
+                return redirect()->route('admin.products.index')
                     ->with('error', 'Producto no válido');
             }
 
@@ -265,17 +283,17 @@ class ProductController extends Controller
 
             $product = $this->productService->updateProduct($product, $validated);
 
-            return redirect()->route('products.show', $product->id)
+            return redirect()->route('admin.products.show', $product->id)
                 ->with('success', "Producto '{$product->name}' actualizado exitosamente");
         } catch (ModelNotFoundException $e) {
-            return redirect()->route('products.index')
+            return redirect()->route('admin.products.index')
                 ->with('error', 'Producto no encontrado');
         } catch (\Exception $e) {
             Log::error('Error al actualizar producto: ' . $e->getMessage(), [
                 'product_id' => $id,
             ]);
 
-            return redirect()->route('products.edit', $id)
+            return redirect()->route('admin.products.edit', $id)
                 ->withInput()
                 ->with('error', 'Error al actualizar el producto');
         }
@@ -291,7 +309,7 @@ class ProductController extends Controller
     {
         try {
             if (!is_numeric($id) || $id < 1) {
-                return redirect()->route('products.index')
+                return redirect()->route('admin.products.index')
                     ->with('error', 'Producto no válido');
             }
 
@@ -300,12 +318,12 @@ class ProductController extends Controller
 
             return view('admin.products.delete', compact('product'));
         } catch (ModelNotFoundException $e) {
-            return redirect()->route('products.index')
+            return redirect()->route('admin.products.index')
                 ->with('error', 'Producto no encontrado');
         } catch (\Exception $e) {
             Log::error('Error al cargar confirmación de eliminación: ' . $e->getMessage());
 
-            return redirect()->route('products.index')
+            return redirect()->route('admin.products.index')
                 ->with('error', 'Error al procesar la solicitud');
         }
     }
@@ -320,7 +338,7 @@ class ProductController extends Controller
     {
         try {
             if (!is_numeric($id) || $id < 1) {
-                return redirect()->route('products.index')
+                return redirect()->route('admin.products.index')
                     ->with('error', 'Producto no válido');
             }
 
@@ -329,17 +347,17 @@ class ProductController extends Controller
 
             $this->productService->deleteProduct($product);
 
-            return redirect()->route('products.index')
+            return redirect()->route('admin.products.index')
                 ->with('success', "Producto '{$productName}' eliminado exitosamente");
         } catch (ModelNotFoundException $e) {
-            return redirect()->route('products.index')
+            return redirect()->route('admin.products.index')
                 ->with('error', 'Producto no encontrado');
         } catch (\Exception $e) {
             Log::error('Error al eliminar producto: ' . $e->getMessage(), [
                 'product_id' => $id,
             ]);
 
-            return redirect()->route('products.index')
+            return redirect()->route('admin.products.index')
                 ->with('error', 'Error al eliminar el producto');
         }
     }
@@ -354,24 +372,24 @@ class ProductController extends Controller
     {
         try {
             if (!is_numeric($id) || $id < 1) {
-                return redirect()->route('products.index')
+                return redirect()->route('admin.products.index')
                     ->with('error', 'Producto no válido');
             }
 
             $product = Product::findOrFail((int) $id);
             $newProduct = $this->productService->duplicateProduct($product);
 
-            return redirect()->route('products.edit', $newProduct->id)
+            return redirect()->route('admin.products.edit', $newProduct->id)
                 ->with('success', "Producto duplicado exitosamente. Modifique los datos necesarios.");
         } catch (ModelNotFoundException $e) {
-            return redirect()->route('products.index')
+            return redirect()->route('admin.products.index')
                 ->with('error', 'Producto no encontrado');
         } catch (\Exception $e) {
             Log::error('Error al duplicar producto: ' . $e->getMessage(), [
                 'product_id' => $id,
             ]);
 
-            return redirect()->route('products.index')
+            return redirect()->route('admin.products.index')
                 ->with('error', 'Error al duplicar el producto');
         }
     }
@@ -436,11 +454,11 @@ class ProductController extends Controller
                 'designExports'
             ));
         } catch (ModelNotFoundException $e) {
-            return redirect()->route('products.index')
+            return redirect()->route('admin.products.index')
                 ->with('error', 'Producto no encontrado');
         } catch (\Exception $e) {
             Log::error('Error al cargar formulario de variante: ' . $e->getMessage());
-            return redirect()->route('products.show', $productId)
+            return redirect()->route('admin.products.show', $productId)
                 ->with('error', 'Error al cargar el formulario');
         }
     }
@@ -466,12 +484,12 @@ class ProductController extends Controller
 
             $variant = $this->productService->createVariant($product, $validated);
 
-            return redirect()->route('products.show', $product->id)
+            return redirect()->route('admin.products.show', $product->id)
                 ->with('success', "Variante '{$variant->sku_variant}' creada exitosamente");
         } catch (ValidationException $e) {
             return redirect()->back()->withInput()->withErrors($e->errors());
         } catch (ModelNotFoundException $e) {
-            return redirect()->route('products.index')
+            return redirect()->route('admin.products.index')
                 ->with('error', 'Producto no encontrado');
         } catch (\Exception $e) {
             Log::error('Error al crear variante: ' . $e->getMessage());
@@ -506,11 +524,11 @@ class ProductController extends Controller
                 'designExports'
             ));
         } catch (ModelNotFoundException $e) {
-            return redirect()->route('products.index')
+            return redirect()->route('admin.products.index')
                 ->with('error', 'Producto o variante no encontrado');
         } catch (\Exception $e) {
             Log::error('Error al cargar variante para editar: ' . $e->getMessage());
-            return redirect()->route('products.show', $productId)
+            return redirect()->route('admin.products.show', $productId)
                 ->with('error', 'Error al cargar la variante');
         }
     }
@@ -538,12 +556,12 @@ class ProductController extends Controller
 
             $variant = $this->productService->updateVariant($variant, $validated);
 
-            return redirect()->route('products.show', $product->id)
+            return redirect()->route('admin.products.show', $product->id)
                 ->with('success', "Variante '{$variant->sku_variant}' actualizada exitosamente");
         } catch (ValidationException $e) {
             return redirect()->back()->withInput()->withErrors($e->errors());
         } catch (ModelNotFoundException $e) {
-            return redirect()->route('products.index')
+            return redirect()->route('admin.products.index')
                 ->with('error', 'Producto o variante no encontrado');
         } catch (\Exception $e) {
             Log::error('Error al actualizar variante: ' . $e->getMessage());
@@ -562,14 +580,14 @@ class ProductController extends Controller
             $skuVariant = $variant->sku_variant;
             $this->productService->deleteVariant($variant);
 
-            return redirect()->route('products.show', $product->id)
+            return redirect()->route('admin.products.show', $product->id)
                 ->with('success', "Variante '{$skuVariant}' eliminada exitosamente");
         } catch (ModelNotFoundException $e) {
-            return redirect()->route('products.index')
+            return redirect()->route('admin.products.index')
                 ->with('error', 'Producto o variante no encontrado');
         } catch (\Exception $e) {
             Log::error('Error al eliminar variante: ' . $e->getMessage());
-            return redirect()->route('products.show', $productId)
+            return redirect()->route('admin.products.show', $productId)
                 ->with('error', 'Error al eliminar la variante');
         }
     }

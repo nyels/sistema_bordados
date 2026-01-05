@@ -174,7 +174,7 @@
                                 @if ($colorAttribute && $colorAttribute->values->isNotEmpty())
                                     @foreach ($colorAttribute->values as $value)
                                         <span class="attr-chip" data-attribute="color" data-value="{{ $value->id }}"
-                                            style="border-color: {{ $value->hex_code ?? '#000' }}; color: {{ $value->hex_code ?? '#000' }};">
+                                            style="border-color: {{ $value->hex_color ?? '#000' }}; color: {{ $value->hex_color ?? '#000' }};">
                                             ⬤ {{ $value->value }}
                                         </span>
                                     @endforeach
