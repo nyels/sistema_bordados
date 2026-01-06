@@ -43,6 +43,11 @@ class ProductService
                 $product->extras()->sync($data['extras']);
             }
 
+            // Asignar materiales (BOM)
+            if (!empty($data['materials'])) {
+                $this->syncMaterials($product, $data['materials']);
+            }
+
             // Crear variante inicial si se proporcionó
             if (!empty($data['initial_variant'])) {
                 $this->createVariant($product, $data['initial_variant']);
@@ -83,6 +88,11 @@ class ProductService
             // Sincronizar extras
             if (isset($data['extras'])) {
                 $product->extras()->sync($data['extras']);
+            }
+
+            // Sincronizar materiales (BOM)
+            if (isset($data['materials'])) {
+                $this->syncMaterials($product, $data['materials']);
             }
 
             Log::info('Producto actualizado', [
@@ -332,5 +342,30 @@ class ProductService
         }
 
         return implode('-', $parts);
+    }
+
+    /**
+     * Sincronizar materiales del producto (BOM)
+     */
+    protected function syncMaterials(Product $product, array $materials): void
+    {
+        $syncData = [];
+
+        foreach ($materials as $material) {
+            // Validar estructura básica
+            if (!isset($material['material_variant_id']) || !isset($material['quantity'])) {
+                continue;
+            }
+
+            $materialVariantId = $material['material_variant_id'];
+
+            $syncData[$materialVariantId] = [
+                'quantity' => (float) $material['quantity'],
+                'is_primary' => !empty($material['is_primary']),
+                'notes' => $material['notes'] ?? null,
+            ];
+        }
+
+        $product->materials()->sync($syncData);
     }
 }

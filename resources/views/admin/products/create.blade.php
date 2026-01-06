@@ -2,6 +2,8 @@
 
 @section('title', 'Alta de Producto - Sistema de Bordado')
 
+@section('plugins.Sweetalert2', true)
+
 @section('content_header')
     <div class="module-header">
         <div class="d-flex justify-content-between align-items-center">
@@ -21,43 +23,75 @@
 @section('content')
     <div class="content">
         <div class="container-fluid">
-            <!-- Stepper -->
-            <div class="stepper-container" style="margin-top: 20px;">
-                <div class="step-item active" id="step1">
-                    <div class="step-circle">1</div>
-                    <span class="step-label">Producto Base</span>
-                </div>
-                <div class="step-item" id="step2">
-                    <div class="step-circle">2</div>
-                    <span class="step-label">Variantes</span>
-                </div>
-                <div class="step-item" id="step3">
-                    <div class="step-circle">3</div>
-                    <span class="step-label">Bordados</span>
-                </div>
-                <div class="step-item" id="step4">
-                    <div class="step-circle">4</div>
-                    <span class="step-label">Ficha Técnica</span>
-                </div>
-                <div class="step-item" id="step5">
-                    <div class="step-circle">5</div>
-                    <span class="step-label">Revisión Final</span>
-                </div>
-            </div>
 
             <!-- Formulario -->
-            <form method="POST" action="{{ route('admin.products.store') }}" enctype="multipart/form-data"
-                id="productForm">
+            <form method="POST" action="{{ route('admin.products.store') }}" enctype="multipart/form-data" id="productForm">
                 @csrf
 
                 <!-- PASO 1: INFORMACIÓN BASE DEL PRODUCTO -->
+
+                <!-- Navegación Global (Arriba) -->
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div>
+                                <button type="button" class="btn btn-secondary btn-navigation px-4 d-none"
+                                    id="globalPrevBtn" onclick="prevStep()">
+                                    <i class="fas fa-arrow-left"></i> Anterior
+                                </button>
+                            </div>
+
+                            <div>
+                                <button type="button" class="btn btn-primary btn-navigation px-4" id="globalNextBtn"
+                                    onclick="nextStep()">
+                                    Siguiente <i class="fas fa-arrow-right ml-2"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {{-- pasos 1 - 6 --}}
+                        <div class="stepper-wrapper">
+                            <div class="stepper-container">
+                                <div class="step-item active" id="step1">
+                                    <div class="step-circle">1</div>
+                                    <span class="step-label">INFO. BÁSICA</span>
+                                </div>
+                                <div class="step-item" id="step2">
+                                    <div class="step-circle">2</div>
+                                    <span class="step-label">VARIANTES</span>
+                                </div>
+                                <div class="step-item" id="step3">
+                                    <div class="step-circle">3</div>
+                                    <span class="step-label">MATERIALES</span>
+                                </div>
+                                <div class="step-item" id="step4">
+                                    <div class="step-circle">4</div>
+                                    <div class="step-line"></div>
+                                    <span class="step-label">BORDADOS</span>
+                                </div>
+                                <div class="step-item" id="step5">
+                                    <div class="step-circle">5</div>
+                                    <span class="step-label">EXTRAS</span>
+                                </div>
+                                <div class="step-item" id="step6">
+                                    <div class="step-circle">6</div>
+                                    <span class="step-label">REVISIÓN</span>
+                                </div>
+                            </div>
+                        </div>
+                        {{-- fin de pasos 1 - 6 --}}
+
+                    </div>
+                </div>
+                <!-- ========================================= -->
+                {{-- PASO 1: INFORMACIÓN BASE DEL PRODUCTO --}}
+                <!-- ========================================= -->
                 <div class="main-card fade-in" id="content-step1">
                     <div class="two-columns">
                         <div class="left-column">
                             <div class="section-title">
                                 <i class="fas fa-tag"></i>
                                 <span>Información del Producto</span>
-                                <span class="badge-step">Paso 1 de 5</span>
+                                <span class="badge-step">Paso 1 de 6</span>
                             </div>
 
                             <div class="row mb-4">
@@ -120,13 +154,6 @@
                                 onchange="previewImage(event)">
                         </div>
                     </div>
-
-                    <div class="step-navigation">
-                        <div></div>
-                        <button type="button" class="btn-primary-custom" onclick="goToStep(2)">
-                            Siguiente: Variantes <i class="fas fa-arrow-right"></i>
-                        </button>
-                    </div>
                 </div>
 
                 <!-- ========================================= -->
@@ -137,7 +164,7 @@
                         <div class="section-title">
                             <i class="fas fa-layer-group"></i>
                             <span>Generador de Variantes</span>
-                            <span class="badge-step">Paso 2 de 5</span>
+                            <span class="badge-step">Paso 2 de 6</span>
                         </div>
 
                         <p class="text-muted mb-4">
@@ -222,26 +249,125 @@
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <div class="step-navigation">
-                        <button type="button" class="btn-secondary-custom" onclick="goToStep(1)">
-                            <i class="fas fa-arrow-left"></i> Anterior
-                        </button>
-                        <button type="button" class="btn-primary-custom" onclick="goToStep(3)">
-                            Siguiente: Bordados <i class="fas fa-arrow-right"></i>
-                        </button>
+                <!-- ========================================= -->
+                <!-- PASO 3: MATERIALES (BOM) -->
+                <!-- ========================================= -->
+
+                <div class="main-card fade-in d-none" id="content-step3">
+                    <div class="section-block">
+                        <div class="section-title">
+                            <i class="fas fa-scroll"></i>
+                            <span>Materiales Requeridos (BOM)</span>
+                            <span class="badge-step">Paso 3 de 6</span>
+                        </div>
+
+                        {{-- BUSCADOR INTUITIVO UNIFICADO --}}
+                        <div class="card border-primary-subtle mb-4 shadow-sm">
+                            <div class="card-header bg-primary-subtle py-2">
+                                <span class="fw-bold text-primary-emphasis">
+                                    <i class="fas fa-search me-2"></i>Buscador de Insumos y Configuración
+                                </span>
+                            </div>
+                            <div class="card-body bg-light-subtle">
+                                <div class="row g-3 align-items-end">
+                                    <div class="col-md-3">
+                                        <label class="form-label small fw-bold text-primary">1. Familia de Material</label>
+                                        <select id="parentMaterial" class="form-select select2-custom">
+                                            <option value="">Seleccione (Ej: Lino, Seda...)</option>
+                                            @foreach ($materials as $m)
+                                                <option value="{{ $m->id }}">{{ $m->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-bold text-primary">2. Especificación (Color /
+                                            SKU)</label>
+                                        <select id="materialVariant" class="form-select select2-custom" disabled>
+                                            <option value="">Primero seleccione familia...</option>
+                                        </select>
+                                        <div id="materialInfo" class="mt-1 small d-flex justify-content-between d-none">
+                                            <span class="text-muted">Stock: <b id="materialStockValue"
+                                                    class="text-dark">-</b></span>
+                                            <span class="text-muted">Costo: <b id="materialCostValue"
+                                                    class="text-success">$-</b></span>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-2">
+                                        <label class="form-label small fw-bold text-primary">3. Cantidad</label>
+                                        <div class="input-group">
+                                            <input type="number" id="qty" class="form-control" placeholder="0.00"
+                                                step="0.0001">
+                                            <span class="input-group-text bg-white small"
+                                                id="materialUnitLabel">unid</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-2">
+                                        <div class="form-check form-switch mb-2">
+                                            <input class="form-check-input" type="checkbox" role="switch"
+                                                id="materialIsPrimary">
+                                            <label class="form-check-label small fw-bold" for="materialIsPrimary">Material
+                                                Base</label>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-1">
+                                        <button type="button" class="btn btn-primary w-100 shadow-sm" id="addBtn">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {{-- aqui inicia tabla --}}
+                        <div class="table-responsive shadow-sm rounded">
+                            <table class="table table-hover align-middle bg-white" id="materialsTable">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th class="ps-3">Material / SKU</th>
+                                        <th class="text-center">Cant. Requerida</th>
+                                        <th class="text-center">Costo Unit. (Snapshot)</th>
+                                        <th class="text-center">Subtotal</th>
+                                        <th style="width: 50px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="border-top-0">
+                                    <tr id="noMaterialsRow">
+                                        <td colspan="5" class="text-center text-muted py-5">
+                                            <img src="/assets/img/empty-box.svg" alt=""
+                                                style="width: 60px; opacity: 0.5" class="mb-2 d-block mx-auto">
+                                            Aún no has agregado materiales a este producto.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr class="table-light">
+                                        <td colspan="3" class="text-end fw-bold py-3">Costo de Producción (Materiales):
+                                        </td>
+                                        <td class="text-center py-3">
+                                            <span class="badge bg-success fs-6" id="totalMaterialsCost">$0.00</span>
+                                        </td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
                 <!-- ========================================= -->
-                <!-- PASO 3: ASIGNACIÓN DE BORDADOS -->
+                <!-- PASO 4: ASIGNACIÓN DE BORDADOS -->
                 <!-- ========================================= -->
-                <div class="main-card fade-in d-none" id="content-step3">
+                <div class="main-card fade-in d-none" id="content-step4">
                     <div class="section-block">
                         <div class="section-title">
                             <i class="fas fa-vector-square"></i>
                             <span>Asignación de Bordados</span>
-                            <span class="badge-step">Paso 3 de 5</span>
+                            <span class="badge-step">Paso 4 de 6</span>
                         </div>
 
                         <p class="text-muted mb-4">
@@ -271,56 +397,51 @@
 
                         <!-- Lista de bordados disponibles -->
                         <div class="embroidery-selector">
-                            <div class="embroidery-card selected">
-                                <div class="embroidery-thumb">
-                                    <i class="fas fa-image fa-2x text-muted"></i>
-                                </div>
-                                <div class="embroidery-info">
-                                    <div class="embroidery-name">Logo Corporativo - Empresa XYZ</div>
-                                    <div class="embroidery-meta">
-                                        <strong>8,500</strong> puntadas • <strong>55×82</strong> mm • <strong>4</strong>
-                                        colores
-                                    </div>
-                                    <div class="mt-2">
-                                        <span class="embroidery-position">Pecho Izquierdo</span>
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <span class="variant-sku">EXP-001</span>
-                                </div>
-                            </div>
+                            @forelse($designs as $design)
+                                @php
+                                    $export = $design->generalExports->first();
+                                    $stitches = $export ? number_format($export->stitches_count) : 'N/A';
+                                    $width = $export ? $export->width_mm : 0;
+                                    $height = $export ? $export->height_mm : 0;
+                                    $colors = $export ? $export->colors_count : 0;
+                                    $format = $export ? $export->file_format : 'N/A';
+                                    $image = $design->primaryImage ? $design->primaryImage->url : null;
+                                    $sku = $design->slug ?? 'DES-' . $design->id;
+                                @endphp
+                                <div class="embroidery-card" data-id="{{ $design->id }}"
+                                    data-name="{{ $design->name }}" data-stitches="{{ $stitches }}"
+                                    data-dimensions="{{ $width }}×{{ $height }}"
+                                    data-colors="{{ $colors }}" data-format="{{ $format }}">
 
-                            <div class="embroidery-card">
-                                <div class="embroidery-thumb">
-                                    <i class="fas fa-image fa-2x text-muted"></i>
-                                </div>
-                                <div class="embroidery-info">
-                                    <div class="embroidery-name">Escudo Grande - Espalda</div>
-                                    <div class="embroidery-meta">
-                                        <strong>24,000</strong> puntadas • <strong>180×155</strong> mm • <strong>6</strong>
-                                        colores
+                                    <div class="embroidery-thumb">
+                                        @if ($image)
+                                            <img src="{{ asset('storage/' . $image) }}" alt="{{ $design->name }}"
+                                                style="max-width: 100%; max-height: 100%;">
+                                        @else
+                                            <i class="fas fa-image fa-2x text-muted"></i>
+                                        @endif
+                                    </div>
+                                    <div class="embroidery-info">
+                                        <div class="embroidery-name">{{ $design->name }}</div>
+                                        <div class="embroidery-meta">
+                                            <strong>{{ $stitches }}</strong> puntadas •
+                                            <strong>{{ $width }}×{{ $height }}</strong> mm •
+                                            <strong>{{ $colors }}</strong> colores
+                                        </div>
+                                        <div class="mt-2">
+                                            <span class="embroidery-position text-muted">Seleccionar
+                                                posición...</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="variant-sku">{{ $sku }}</span>
                                     </div>
                                 </div>
-                                <div class="text-right">
-                                    <span class="variant-sku">EXP-002</span>
+                            @empty
+                                <div class="col-12 text-center py-4">
+                                    <p class="text-muted">No hay diseños disponibles.</p>
                                 </div>
-                            </div>
-
-                            <div class="embroidery-card">
-                                <div class="embroidery-thumb">
-                                    <i class="fas fa-image fa-2x text-muted"></i>
-                                </div>
-                                <div class="embroidery-info">
-                                    <div class="embroidery-name">Monograma Pequeño</div>
-                                    <div class="embroidery-meta">
-                                        <strong>3,200</strong> puntadas • <strong>30×30</strong> mm • <strong>2</strong>
-                                        colores
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <span class="variant-sku">EXP-003</span>
-                                </div>
-                            </div>
+                            @endforelse
                         </div>
 
                         <!-- Métricas del bordado seleccionado -->
@@ -365,27 +486,18 @@
                             </div>
                         </div>
                     </div>
-
-                    <div class="step-navigation">
-                        <button type="button" class="btn-secondary-custom" onclick="goToStep(2)">
-                            <i class="fas fa-arrow-left"></i> Anterior
-                        </button>
-                        <button type="button" class="btn-primary-custom" onclick="goToStep(4)">
-                            Siguiente: Ficha Técnica <i class="fas fa-arrow-right"></i>
-                        </button>
-                    </div>
                 </div>
 
                 <!-- ========================================= -->
-                <!-- PASO 4: FICHA TÉCNICA Y EXTRAS -->
+                <!-- PASO 5: FICHA TÉCNICA Y EXTRAS -->
                 <!-- ========================================= -->
-                <div class="main-card fade-in d-none" id="content-step4">
+                <div class="main-card fade-in d-none" id="content-step5">
                     <div class="two-columns">
                         <div class="left-column">
                             <div class="section-title">
                                 <i class="fas fa-clipboard-list"></i>
                                 <span>Especificaciones Técnicas</span>
-                                <span class="badge-step">Paso 4 de 5</span>
+                                <span class="badge-step">Paso 5 de 6</span>
                             </div>
 
                             <div class="specs-grid mb-4">
@@ -431,36 +543,58 @@
                                 <span>Servicios Adicionales</span>
                             </div>
 
-                            <div class="extras-list">
-                                <div class="extra-item selected" onclick="toggleExtra(this)">
-                                    <div class="d-flex align-items-center">
-                                        <div class="extra-check"><i class="fas fa-check"></i></div>
-                                        <span class="extra-name">Embolsado Individual</span>
-                                    </div>
-                                    <span class="extra-price">+$5.00</span>
+                            <!-- Buscador de Extras -->
+                            <div class="row mb-4">
+                                <div class="col-md-9">
+                                    <label class="form-label">Buscar Servicio Adicional</label>
+                                    <select class="form-control select2" id="extrasSearch" style="width: 100%;">
+                                        <option value="">Buscar servicio...</option>
+                                        @foreach ($extras as $extra)
+                                            <option value="{{ $extra->id }}" data-price="{{ $extra->price }}"
+                                                data-name="{{ $extra->name }}">
+                                                {{ $extra->name }} - ${{ number_format($extra->price, 2) }}
+                                            </option>
+                                        @endforeach
+                                    </select>
                                 </div>
-                                <div class="extra-item" onclick="toggleExtra(this)">
-                                    <div class="d-flex align-items-center">
-                                        <div class="extra-check"></div>
-                                        <span class="extra-name">Etiqueta de Marca Personalizada</span>
-                                    </div>
-                                    <span class="extra-price">+$12.00</span>
-                                </div>
-                                <div class="extra-item" onclick="toggleExtra(this)">
-                                    <div class="d-flex align-items-center">
-                                        <div class="extra-check"></div>
-                                        <span class="extra-name">Planchado Profesional</span>
-                                    </div>
-                                    <span class="extra-price">+$8.00</span>
-                                </div>
-                                <div class="extra-item selected" onclick="toggleExtra(this)">
-                                    <div class="d-flex align-items-center">
-                                        <div class="extra-check"><i class="fas fa-check"></i></div>
-                                        <span class="extra-name">Alforza Decorativa</span>
-                                    </div>
-                                    <span class="extra-price">+$25.00</span>
+                                <div class="col-md-3">
+                                    <label class="form-label">&nbsp;</label>
+                                    <button type="button" class="btn btn-primary-custom w-100" id="btnAddExtra"
+                                        onclick="addExtra()" disabled>
+                                        <i class="fas fa-plus"></i> Agregar
+                                    </button>
                                 </div>
                             </div>
+
+                            <!-- Tabla de Extras Asignados -->
+                            <div class="table-responsive">
+                                <table class="table table-hover table-striped" id="extrasTable">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Servicio</th>
+                                            <th>Costo Adicional</th>
+                                            <th width="50"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Se llena dinámicamente -->
+                                        <tr id="noExtrasRow">
+                                            <td colspan="3" class="text-center text-muted py-4">
+                                                <i class="fas fa-concierge-bell fa-2x mb-2 d-block"></i>
+                                                No se han agregado servicios adicionales
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <td class="text-end fw-bold">Total Extras:</td>
+                                            <td class="fw-bold" id="totalExtrasCost">$0.00</td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                            <input type="hidden" name="extras_data" id="extrasData">
                         </div>
 
                         <div class="right-column">
@@ -515,26 +649,17 @@
                             </div>
                         </div>
                     </div>
-
-                    <div class="step-navigation">
-                        <button type="button" class="btn-secondary-custom" onclick="goToStep(3)">
-                            <i class="fas fa-arrow-left"></i> Anterior
-                        </button>
-                        <button type="button" class="btn-primary-custom" onclick="goToStep(5)">
-                            Siguiente: Revisión Final <i class="fas fa-arrow-right"></i>
-                        </button>
-                    </div>
                 </div>
 
                 <!-- ========================================= -->
-                <!-- PASO 5: REVISIÓN FINAL -->
+                <!-- PASO 6: REVISIÓN FINAL -->
                 <!-- ========================================= -->
-                <div class="main-card fade-in d-none" id="content-step5">
+                <div class="main-card fade-in d-none" id="content-step6">
                     <div class="section-block">
                         <div class="section-title">
                             <i class="fas fa-clipboard-check"></i>
                             <span>Revisión Final</span>
-                            <span class="badge-step">Paso 5 de 5</span>
+                            <span class="badge-step">Paso 6 de 6</span>
                         </div>
 
                         <div class="row">
@@ -548,6 +673,10 @@
                                 <div class="review-section">
                                     <h5><i class="fas fa-layer-group mr-2"></i> Variantes</h5>
                                     <div id="review-variants"></div>
+                                </div>
+                                <div class="review-section mt-4">
+                                    <h5><i class="fas fa-scroll mr-2"></i> Materiales (BOM)</h5>
+                                    <div id="review-materials"></div>
                                 </div>
                             </div>
                         </div>
@@ -585,7 +714,8 @@
                         <div class="row mt-4">
                             <div class="col-12">
                                 <div class="alert alert-info">
-                                    <i class="fas fa-info-circle"></i> Revise cuidadosamente la información antes de
+                                    <i class="fas fa-info-circle"></i> Revise cuidadosamente la información antes
+                                    de
                                     guardar el producto.
                                     Puede regresar a pasos anteriores si necesita realizar cambios.
                                 </div>
@@ -612,20 +742,13 @@
                                 <span class="summary-stat-value highlight" id="review-total-price">$0.00</span>
                             </div>
                         </div>
-
-                        <div class="d-flex gap-3">
-                            <button type="button" class="btn-secondary-custom" onclick="goToStep(4)">
-                                <i class="fas fa-arrow-left"></i> Anterior
-                            </button>
-                            <button type="submit" class="btn-success-custom">
-                                <i class="fas fa-save"></i> Guardar Producto
-                            </button>
-                        </div>
                     </div>
                 </div>
+
             </form>
         </div>
     </div>
+    <br>
 @stop
 
 @section('css')
@@ -857,8 +980,8 @@
             background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
             border: 2px dashed var(--gray-300);
             border-radius: var(--radius);
-            height: 100%;
-            min-height: 320px;
+            height: auto;
+            min-height: 300px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -1271,6 +1394,59 @@
             color: #fbbf24;
         }
 
+        /* Global Navigation */
+        .global-navigation-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: white;
+            padding: 15px 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 25px;
+            border: 1px solid var(--gray-100);
+            position: sticky;
+            top: 10px;
+            z-index: 1000;
+        }
+
+        .navigation-spacer {
+            flex-grow: 1;
+        }
+
+        .btn-navigation {
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: none;
+        }
+
+        .btn-prev {
+            background: var(--gray-100);
+            color: var(--gray-700);
+        }
+
+        .btn-prev:hover {
+            background: var(--gray-200);
+            transform: translateX(-3px);
+        }
+
+        .btn-next {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-next:hover {
+            opacity: 0.9;
+            transform: translateX(3px);
+            box-shadow: 0 6px 15px rgba(99, 102, 241, 0.4);
+        }
+
         /* Botones */
         .btn-primary-custom {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
@@ -1505,8 +1681,17 @@
 
 @section('js')
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" />
+
     <script>
         let currentStep = 1;
+        const totalSteps = 6;
+        let productMaterials = [];
+        let productExtras = [];
+
+        // Variable para almacenar variantes de materiales
+        let materialVariantsCache = {};
 
         function goToStep(step) {
             // Ocultar paso actual
@@ -1517,7 +1702,7 @@
             for (let i = 1; i < step; i++) {
                 $(`#step${i}`).addClass('completed');
             }
-            for (let i = step; i <= 5; i++) {
+            for (let i = step; i <= 6; i++) {
                 $(`#step${i}`).removeClass('completed');
             }
 
@@ -1526,8 +1711,11 @@
             $(`#content-step${currentStep}`).removeClass('d-none');
             $(`#step${currentStep}`).addClass('active');
 
-            // Si el paso es 5, cargar la revisión
-            if (step === 5) {
+            // Actualizar botones de navegación global
+            updateGlobalNavigation();
+
+            // Si el paso es 6, cargar la revisión
+            if (step === 6) {
                 loadReview();
             }
 
@@ -1538,63 +1726,382 @@
             });
         }
 
-        // Toggle atributos
-        $('.attr-chip').click(function() {
-            $(this).toggleClass('selected');
-        });
-
-        // Toggle extras
-        function toggleExtra(element) {
-            $(element).toggleClass('selected');
-            if ($(element).hasClass('selected')) {
-                $(element).find('.extra-check').html('<i class="fas fa-check"></i>');
+        function updateGlobalNavigation() {
+            // Botón Anterior
+            if (currentStep === 1) {
+                $('#globalPrevBtn').addClass('d-none');
             } else {
-                $(element).find('.extra-check').html('');
+                $('#globalPrevBtn').removeClass('d-none');
+            }
+
+            // Botón Siguiente / Guardar
+            const nextBtn = $('#globalNextBtn');
+            if (currentStep === totalSteps) {
+                nextBtn.html('<i class="fas fa-save"></i> Guardar Producto');
+                nextBtn.removeClass('btn-next').addClass('btn-primary-custom');
+                nextBtn.attr('onclick', 'submitForm()');
+            } else {
+                nextBtn.html('Siguiente <i class="fas fa-arrow-right"></i>');
+                nextBtn.removeClass('btn-primary-custom').addClass('btn-next');
+                nextBtn.attr('onclick', 'nextStep()');
             }
         }
 
-        // Toggle bordados
-        $('.embroidery-card').click(function() {
-            $('.embroidery-card').removeClass('selected');
-            $(this).addClass('selected');
-        });
-
-        function previewImage(event) {
-            const reader = new FileReader();
-            reader.onload = function() {
-                const output = document.getElementById('imageUpload');
-                output.innerHTML = `<img src="${reader.result}" alt="Imagen del producto">`;
-            };
-            reader.readAsDataURL(event.target.files[0]);
+        function nextStep() {
+            if (currentStep < totalSteps) {
+                goToStep(currentStep + 1);
+            }
         }
 
+        function prevStep() {
+            if (currentStep > 1) {
+                goToStep(currentStep - 1);
+            }
+        }
+
+        function submitForm() {
+            // Validar antes de enviar
+            if (validateForm()) {
+                $('#productForm').submit();
+            }
+        }
+
+        function validateForm() {
+            const variants = JSON.parse($('#variantsData').val() || '[]');
+            if (variants.length === 0) {
+                Swal.fire('Error', 'Debe generar al menos una variante para el producto', 'error');
+                goToStep(2);
+                return false;
+            }
+            return true;
+        }
+
+        // ==========================================
+        // LÓGICA DE MATERIALES (BOM) - PASO 3 (ACTUALIZADA)
+        // ==========================================
+
+        function fetchMaterialVariants(parentId) {
+            /* if (materialVariantsCache[parentId]) {
+                 populateMaterialVariants(materialVariantsCache[parentId]);
+                 return;
+             }*/
+
+            // Hacer petición AJAX para obtener las variantes
+            $.ajax({
+                url: '{{ route('material-variants.conversiones', ['materialId' => 'PLACEHOLDER']) }}'.replace(
+                    'PLACEHOLDER', parentId),
+                method: 'GET',
+                success: function(response) {
+                    materialVariantsCache[parentId] = response;
+                    populateMaterialVariants(response);
+                },
+                error: function() {
+                    Swal.fire('Error', 'No se pudieron cargar las variantes del material', 'error');
+                }
+            });
+        }
+
+        //segundo select para variantes y el costo de varianates
+        function populateMaterialVariants(variants) {
+            const $select = $('#materialVariant');
+            $select.empty();
+            $select.append('<option value="">Seleccione una variante...</option>');
+
+            if (variants.length === 0) {
+                $select.append('<option value="" disabled>No hay variantes disponibles</option>');
+                $select.prop('disabled', true);
+                return;
+            }
+
+            variants.forEach(variant => {
+                $select.append(`
+            <option value="${variant.id}" 
+                    data-cost="${variant.cost_base}" 
+                    data-stock="${variant.stock_real}" 
+                    data-unit="${variant.symbol}"
+                    data-sku="${variant.full_name}"> 
+                ${variant.text}
+            </option>
+        `);
+            });
+
+            $select.prop('disabled', false);
+            $select.trigger('change');
+        }
+
+        function updateMaterialInfo(variantData) {
+            const $info = $('#materialInfo');
+            const $stock = $('#materialStockValue');
+            const $cost = $('#materialCostValue');
+            const $unitLabel = $('#materialUnitLabel');
+
+            if (variantData && variantData.cost !== undefined) {
+                $stock.text(variantData.stock || 0);
+                $cost.text('$' + parseFloat(variantData.cost).toFixed(2));
+                $unitLabel.text(variantData.unit || 'unid');
+                $info.removeClass('d-none');
+                $('#addBtn').prop('disabled', false);
+            } else {
+                $info.addClass('d-none');
+                $('#addBtn').prop('disabled', true);
+            }
+        }
+
+        function addMaterialFromForm() {
+            const parentId = $('#parentMaterial').val();
+            const variantId = $('#materialVariant').val();
+            const variantText = $('#materialVariant option:selected').text();
+            const variantData = $('#materialVariant option:selected').data();
+            const qty = parseFloat($('#qty').val());
+            const isPrimary = $('#materialIsPrimary').is(':checked');
+            const parentText = $('#parentMaterial option:selected').text();
+
+            if (!parentId || !variantId || !qty || qty <= 0) {
+                Swal.fire('Error', 'Complete todos los campos requeridos', 'error');
+                return;
+            }
+
+            // Verificar si ya existe
+            if (productMaterials.find(m => m.variant_id == variantId)) {
+                Swal.fire('Atención', 'Esta variante de material ya ha sido agregada.', 'warning');
+                return;
+            }
+
+            const material = {
+                parent_id: parentId,
+                parent_name: parentText,
+                variant_id: variantId,
+                variant_name: variantText.split(' (')[0], // Remover información de stock
+                sku: variantData.sku || '',
+                unit: variantData.unit || 'unid',
+                cost: parseFloat(variantData.cost) || 0,
+                stock: parseInt(variantData.stock) || 0,
+                quantity: qty,
+                is_primary: isPrimary
+            };
+
+            productMaterials.push(material);
+            renderMaterialsTable();
+            resetMaterialForm();
+        }
+
+        function removeMaterial(variantId) {
+            productMaterials = productMaterials.filter(m => m.variant_id != variantId);
+            renderMaterialsTable();
+        }
+
+        function renderMaterialsTable() {
+            const tbody = $('#materialsTable tbody');
+            tbody.empty();
+
+            let totalCost = 0;
+
+            if (productMaterials.length === 0) {
+                tbody.html(`
+                    <tr id="noMaterialsRow">
+                        <td colspan="5" class="text-center text-muted py-5">
+                            <img src="/assets/img/empty-box.svg" alt=""
+                                style="width: 60px; opacity: 0.5" class="mb-2 d-block mx-auto">
+                            Aún no has agregado materiales a este producto.
+                        </td>
+                    </tr>
+                `);
+                $('#totalMaterialsCost').text('$0.00');
+                return;
+            }
+
+            productMaterials.forEach((m, index) => {
+                const subtotal = m.cost * m.quantity;
+                totalCost += subtotal;
+
+                const primaryBadge = m.is_primary ?
+                    '<span class="badge bg-primary ms-1">Base</span>' : '';
+
+                tbody.append(`
+                    <tr>
+                        <td class="ps-3">
+                            <div class="fw-bold">${m.parent_name} - ${m.variant_name}</div>
+                            <div class="text-muted small">SKU: ${m.sku}</div>
+                            ${primaryBadge}
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-info">${m.quantity} ${m.unit}</span>
+                        </td>
+                        <td class="text-center">
+                            $${m.cost.toFixed(2)}
+                        </td>
+                        <td class="text-center fw-bold">
+                            $${subtotal.toFixed(2)}
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                onclick="removeMaterial('${m.variant_id}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `);
+            });
+
+            $('#totalMaterialsCost').text(`$${totalCost.toFixed(2)}`);
+        }
+
+        function resetMaterialForm() {
+            $('#parentMaterial').val(null).trigger('change');
+            $('#materialVariant').empty().prop('disabled', true);
+            $('#qty').val('');
+            $('#materialIsPrimary').prop('checked', false);
+            $('#materialInfo').addClass('d-none');
+            $('#addBtn').prop('disabled', true);
+        }
+
+        // ==========================================
+        // LÓGICA DE EXTRAS (PASO 5)
+        // ==========================================
+
+        function addExtra() {
+            const selectedOption = $('#extrasSearch').find(':selected');
+            const id = $('#extrasSearch').val();
+            const name = selectedOption.data('name');
+            const price = parseFloat(selectedOption.data('price'));
+
+            if (!id) return;
+
+            // Verificar duplicados
+            if (productExtras.find(e => e.id == id)) {
+                Swal.fire('Atención', 'Este servicio ya ha sido agregado.', 'warning');
+                return;
+            }
+
+            productExtras.push({
+                id,
+                name,
+                price
+            });
+            renderExtrasTable();
+
+            // Reset selection
+            $('#extrasSearch').val(null).trigger('change');
+            $('#btnAddExtra').prop('disabled', true);
+        }
+
+        function removeExtra(id) {
+            productExtras = productExtras.filter(e => e.id != id);
+            renderExtrasTable();
+        }
+
+        function renderExtrasTable() {
+            const tbody = $('#extrasTable tbody');
+            tbody.empty();
+            let total = 0;
+
+            if (productExtras.length === 0) {
+                tbody.html(`
+                    <tr id="noExtrasRow">
+                        <td colspan="3" class="text-center text-muted py-4">
+                            <i class="fas fa-concierge-bell fa-2x mb-2 d-block"></i>
+                            No se han agregado servicios adicionales
+                        </td>
+                    </tr>
+                `);
+                $('#totalExtrasCost').text('$0.00');
+                document.getElementById('extrasData').value = '[]';
+                return;
+            }
+
+            productExtras.forEach(extra => {
+                total += extra.price;
+                tbody.append(`
+                    <tr>
+                        <td>${extra.name}</td>
+                        <td>+$${extra.price.toFixed(2)}</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeExtra(${extra.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `);
+            });
+
+            $('#totalExtrasCost').text(`$${total.toFixed(2)}`);
+            document.getElementById('extrasData').value = JSON.stringify(productExtras);
+        }
+
+        // ==========================================
+        // LÓGICA DE VARIANTES (PASO 2)
+        // ==========================================
+
         function generateVariants() {
-            // Lógica para generar variantes
             const sizes = [...document.querySelectorAll('#sizesSelector .attr-chip.selected')]
-                .map(chip => chip.dataset.value);
+                .map(chip => ({
+                    id: chip.dataset.value,
+                    name: chip.textContent.trim()
+                }));
             const colors = [...document.querySelectorAll('#colorsSelector .attr-chip.selected')]
-                .map(chip => chip.dataset.value);
-            const basePrice = parseFloat(document.getElementById('basePrice').value);
+                .map(chip => ({
+                    id: chip.dataset.value,
+                    name: chip.textContent.trim().replace('⬤ ', '')
+                }));
+
+            const basePrice = parseFloat(document.getElementById('basePrice').value) || 0;
             const baseSku = document.getElementById('productSku').value;
 
+            if (sizes.length === 0 || colors.length === 0) {
+                Swal.fire('Atención', 'Debe seleccionar al menos una talla y un color para generar variantes.', 'warning');
+                return;
+            }
+
+            if (!baseSku) {
+                Swal.fire('Atención', 'Debe ingresar un SKU base para el producto.', 'warning');
+                return;
+            }
+
             // Generar combinaciones
-            const variants = [];
+            let currentVariants = JSON.parse(document.getElementById('variantsData').value || '[]');
+            const newVariants = [];
+
             sizes.forEach(size => {
                 colors.forEach(color => {
-                    variants.push({
-                        size,
-                        color,
-                        sku: `${baseSku}-${size}-${color}`,
-                        price: basePrice
-                    });
+                    const sku = `${baseSku}-${size.name}-${color.name}`.toUpperCase()
+                        .replace(/\s+/g, '')
+                        .replace(/[^A-Z0-9-]/g, '');
+
+                    // Verificar si ya existe este SKU
+                    if (!currentVariants.some(v => v.sku === sku)) {
+                        newVariants.push({
+                            size: size.id,
+                            size_name: size.name,
+                            color: color.id,
+                            color_name: color.name,
+                            sku: sku,
+                            price: basePrice,
+                            stock_alert: $('#stockAlert').val() || 5
+                        });
+                    }
                 });
             });
 
-            // Actualizar lista de variantes
+            if (newVariants.length === 0 && currentVariants.length === 0) {
+                Swal.fire('Atención', 'Las variantes seleccionadas ya han sido generadas previamente.', 'info');
+                return;
+            }
+
+            currentVariants = [...currentVariants, ...newVariants];
+            updateVariantsList(currentVariants);
+            updateVariantCount(currentVariants.length);
+            document.getElementById('variantsData').value = JSON.stringify(currentVariants);
+
+            if (newVariants.length > 0) {
+                Swal.fire('Éxito', `Se generaron ${newVariants.length} nuevas variantes.`, 'success');
+            }
+        }
+
+        function removeVariant(index) {
+            let variants = JSON.parse(document.getElementById('variantsData').value || '[]');
+            variants.splice(index, 1);
             updateVariantsList(variants);
             updateVariantCount(variants.length);
-
-            // Guardar datos en campo oculto
             document.getElementById('variantsData').value = JSON.stringify(variants);
         }
 
@@ -1612,32 +2119,50 @@
                 return;
             }
 
-            variants.forEach(variant => {
+            variants.forEach((variant, index) => {
                 const variantItem = document.createElement('div');
                 variantItem.className = 'variant-item';
                 variantItem.innerHTML = `
-                <div class="variant-info">
-                    <span class="variant-sku">${variant.sku}</span>
-                    <div class="variant-attrs">
-                        <span class="variant-attr">Talla: ${variant.size}</span>
-                        <span class="variant-attr">Color: ${variant.color}</span>
+                    <div class="variant-info">
+                        <span class="variant-sku">${variant.sku}</span>
+                        <div class="variant-attrs">
+                            <span class="variant-attr">Talla: ${variant.size_name || variant.size}</span>
+                            <span class="variant-attr">Color: ${variant.color_name || variant.color}</span>
+                        </div>
                     </div>
-                </div>
-                <div class="d-flex align-items-center gap-3">
-                    <span class="variant-price">$${variant.price.toFixed(2)}</span>
-                    <div class="variant-actions">
-                        <button type="button" class="btn-icon btn-icon-light"><i class="fas fa-edit"></i></button>
-                        <button type="button" class="btn-icon btn-icon-danger"><i class="fas fa-trash"></i></button>
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="variant-price">$${variant.price.toFixed(2)}</span>
+                        <div class="variant-actions">
+                            <button type="button" class="btn-icon btn-icon-danger" onclick="removeVariant(${index})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
                 variantsList.appendChild(variantItem);
             });
         }
 
         function updateVariantCount(count) {
-            document.getElementById('variantCount').textContent = `${count} variantes`;
+            document.getElementById('variantCount').textContent = `${count} variante${count !== 1 ? 's' : ''}`;
         }
+
+        // ==========================================
+        // LÓGICA DE BORDADOS (PASO 4)
+        // ==========================================
+
+        function previewImage(event) {
+            const reader = new FileReader();
+            reader.onload = function() {
+                const output = document.getElementById('imageUpload');
+                output.innerHTML = `<img src="${reader.result}" alt="Imagen del producto">`;
+            };
+            reader.readAsDataURL(event.target.files[0]);
+        }
+
+        // ==========================================
+        // LÓGICA DE REVISIÓN (PASO 6)
+        // ==========================================
 
         function loadReview() {
             // Información del producto
@@ -1649,24 +2174,24 @@
             const productDescription = document.getElementById('productDescription').value;
 
             document.getElementById('review-product-info').innerHTML = `
-            <p><strong>Nombre:</strong> ${productName}</p>
-            <p><strong>SKU Base:</strong> ${productSku}</p>
-            <p><strong>Categoría:</strong> ${productCategory}</p>
-            <p><strong>Estado:</strong> ${productStatus}</p>
-            <p><strong>Descripción:</strong> ${productDescription || 'Sin descripción'}</p>
-        `;
+                <p><strong>Nombre:</strong> ${productName}</p>
+                <p><strong>SKU Base:</strong> ${productSku}</p>
+                <p><strong>Categoría:</strong> ${productCategory}</p>
+                <p><strong>Estado:</strong> ${productStatus}</p>
+                <p><strong>Descripción:</strong> ${productDescription || 'Sin descripción'}</p>
+            `;
 
             // Variantes
             const variants = JSON.parse(document.getElementById('variantsData').value || '[]');
             let variantsHtml = '';
             variants.forEach(variant => {
                 variantsHtml += `
-                <div class="variant-review-item">
-                    <p><strong>SKU:</strong> ${variant.sku}</p>
-                    <p><strong>Atributos:</strong> Talla ${variant.size}, Color ${variant.color}</p>
-                    <p><strong>Precio:</strong> $${variant.price.toFixed(2)}</p>
-                </div>
-            `;
+                    <div class="variant-review-item">
+                        <p><strong>SKU:</strong> ${variant.sku}</p>
+                        <p><strong>Atributos:</strong> Talla ${variant.size_name || variant.size}, Color ${variant.color_name || variant.color}</p>
+                        <p><strong>Precio:</strong> $${variant.price.toFixed(2)}</p>
+                    </div>
+                `;
             });
             document.getElementById('review-variants').innerHTML = variantsHtml || '<p>No hay variantes generadas</p>';
             document.getElementById('review-variants-count').textContent = variants.length;
@@ -1680,15 +2205,38 @@
                 const position = card.querySelector('.embroidery-position')?.textContent || 'Sin posición';
 
                 embroideryHtml += `
-                <div class="embroidery-review-item">
-                    <p><strong>Diseño:</strong> ${name}</p>
-                    <p><strong>Especificaciones:</strong> ${meta}</p>
-                    <p><strong>Posición:</strong> ${position}</p>
-                </div>
-            `;
+                    <div class="embroidery-review-item">
+                        <p><strong>Diseño:</strong> ${name}</p>
+                        <p><strong>Especificaciones:</strong> ${meta}</p>
+                        <p><strong>Posición:</strong> ${position}</p>
+                    </div>
+                `;
             });
             document.getElementById('review-embroidery').innerHTML = embroideryHtml || '<p>No hay bordados asignados</p>';
             document.getElementById('review-embroidery-count').textContent = selectedEmbroidery.length;
+
+            // Materiales
+            let materialsHtml = '';
+            let materialsTotal = 0;
+
+            productMaterials.forEach(m => {
+                const cost = m.cost * m.quantity;
+                materialsTotal += cost;
+                materialsHtml += `
+                    <div class="variant-review-item" style="border-left-color: #6366f1;">
+                        <div class="d-flex justify-content-between">
+                            <strong>${m.parent_name} - ${m.variant_name}</strong>
+                            <span>${m.quantity} ${m.unit}</span>
+                        </div>
+                        <div class="d-flex justify-content-between small text-muted">
+                            <span>${m.is_primary ? 'Principal' : 'Secundario'}</span>
+                            <span>$${cost.toFixed(2)}</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('review-materials').innerHTML = materialsHtml || '<p>No se han asignado materiales</p>';
 
             // Ficha técnica
             const tipoTela = document.getElementById('tipoTela')?.value || 'No especificado';
@@ -1699,103 +2247,210 @@
             const notas = document.getElementById('notas')?.value || 'Sin notas';
 
             document.getElementById('review-specs').innerHTML = `
-            <p><strong>Tipo de Tela:</strong> ${tipoTela}</p>
-            <p><strong>Composición:</strong> ${material}</p>
-            <p><strong>Calibre de Hilo:</strong> ${hilo}</p>
-            <p><strong>Color Base:</strong> ${colorTela}</p>
-            <p><strong>Proveedor:</strong> ${proveedor}</p>
-            <p><strong>Notas:</strong> ${notas}</p>
-        `;
+                <p><strong>Tipo de Tela:</strong> ${tipoTela}</p>
+                <p><strong>Composición:</strong> ${material}</p>
+                <p><strong>Calibre de Hilo:</strong> ${hilo}</p>
+                <p><strong>Color Base:</strong> ${colorTela}</p>
+                <p><strong>Proveedor:</strong> ${proveedor}</p>
+                <p><strong>Notas:</strong> ${notas}</p>
+            `;
 
             // Extras
-            const selectedExtras = [...document.querySelectorAll('.extra-item.selected')];
             let extrasHtml = '';
             let extrasTotal = 0;
-            selectedExtras.forEach(extra => {
-                const name = extra.querySelector('.extra-name').textContent;
-                const priceText = extra.querySelector('.extra-price').textContent;
-                const price = parseFloat(priceText.replace('+$', '')) || 0;
-                extrasTotal += price;
 
-                extrasHtml += `
-                <div class="extra-review-item">
-                    <p><strong>Servicio:</strong> ${name}</p>
-                    <p><strong>Costo adicional:</strong> ${priceText}</p>
-                </div>
-            `;
-            });
-            document.getElementById('review-extras').innerHTML = extrasHtml || '<p>No hay servicios adicionales</p>';
-            document.getElementById('review-extras-count').textContent = selectedExtras.length;
+            if (productExtras.length === 0) {
+                extrasHtml = '<p>No hay servicios adicionales</p>';
+            } else {
+                productExtras.forEach(extra => {
+                    extrasTotal += extra.price;
+                    extrasHtml += `
+                        <div class="extra-review-item">
+                            <p><strong>Servicio:</strong> ${extra.name}</p>
+                            <p><strong>Costo adicional:</strong> +$${extra.price.toFixed(2)}</p>
+                        </div>
+                    `;
+                });
+            }
+
+            document.getElementById('review-extras').innerHTML = extrasHtml;
+            document.getElementById('review-extras-count').textContent = productExtras.length;
 
             // Resumen de costos
-            const basePrice = parseFloat(document.getElementById('basePrice')?.value || 350);
+            const basePrice = parseFloat(document.getElementById('basePrice')?.value || 0);
+            const variantsCount = variants.length;
             const totalPrice = basePrice + extrasTotal;
 
             document.getElementById('review-costs').innerHTML = `
-            <p><strong>Precio base por variante:</strong> $${basePrice.toFixed(2)}</p>
-            <p><strong>Costo de extras:</strong> $${extrasTotal.toFixed(2)}</p>
-            <hr>
-            <p><strong>Total por unidad:</strong> $${totalPrice.toFixed(2)}</p> 
-        `;
+                <p><strong>Precio base por variante:</strong> $${basePrice.toFixed(2)}</p>
+                <p><strong>Costo de extras:</strong> $${extrasTotal.toFixed(2)}</p>
+                <p><strong>Número de variantes:</strong> ${variantsCount}</p>
+                <hr>
+                <p><strong>Total por unidad:</strong> $${totalPrice.toFixed(2)}</p> 
+            `;
 
             document.getElementById('review-total-price').textContent = `$${totalPrice.toFixed(2)}`;
         }
 
-        // Validación del formulario antes de enviar
-        document.getElementById('productForm').addEventListener('submit', function(e) {
-            if (currentStep !== 5) {
-                e.preventDefault();
-                alert('Por favor complete todos los pasos antes de guardar');
-                return;
-            }
+        // ==========================================
+        // INICIALIZACIÓN
+        // ==========================================
 
-            // Recolectar todos los datos
-            const formData = {
-                name: document.getElementById('productName').value,
-                sku: document.getElementById('productSku').value,
-                product_category_id: document.getElementById('productCategory').value,
-                status: document.getElementById('productStatus').value,
-                description: document.getElementById('productDescription').value,
-                variants: JSON.parse(document.getElementById('variantsData').value || '[]'),
-                specifications: {
-                    tipo_tela: document.getElementById('tipoTela')?.value,
-                    material: document.getElementById('material')?.value,
-                    hilo: document.getElementById('hilo')?.value,
-                    color_tela: document.getElementById('colorTela')?.value,
-                    proveedor: document.getElementById('proveedor')?.value,
-                    notas: document.getElementById('notas')?.value
-                },
-                extras: [...document.querySelectorAll('.extra-item.selected')].map(extra => ({
-                    name: extra.querySelector('.extra-name').textContent,
-                    price: parseFloat(extra.querySelector('.extra-price').textContent.replace('+$',
-                        ''))
-                }))
-            };
-
-            // Llenar campos ocultos con datos JSON
-            document.getElementById('specificationsData').value = JSON.stringify(formData.specifications);
-            document.getElementById('extrasData').value = JSON.stringify(formData.extras);
-
-            // Validaciones adicionales
-            if (!formData.name || !formData.sku || !formData.product_category_id) {
-                e.preventDefault();
-                alert('Por favor complete los campos obligatorios del producto');
-                return;
-            }
-
-            if (formData.variants.length === 0) {
-                e.preventDefault();
-                alert('Debe generar al menos una variante para el producto');
-                return;
-            }
-        });
-
-        // Inicializar algunos datos por defecto
         $(document).ready(function() {
-            // Generar variantes iniciales basadas en selecciones por defecto
-            setTimeout(() => {
-                generateVariants();
-            }, 500);
+            // Inicializar Select2 para Materiales (Paso 3)
+            $('#parentMaterial').select2({
+                placeholder: 'Seleccione familia de material...',
+                allowClear: true,
+                width: '100%'
+            });
+
+            $('#materialVariant').select2({
+                placeholder: 'Seleccione variante...',
+                disabled: true,
+                width: '100%'
+            });
+
+            // Evento cuando se selecciona una familia de material
+            $('#parentMaterial').on('select2:select', function(e) {
+                const parentId = $(this).val();
+                if (parentId) {
+                    fetchMaterialVariants(parentId);
+                } else {
+                    $('#materialVariant').empty().prop('disabled', true);
+                    $('#materialInfo').addClass('d-none');
+                }
+            });
+
+            // Evento cuando se selecciona una variante de material
+            $('#materialVariant').on('select2:select', function(e) {
+                const selectedOption = $(this).find(':selected');
+                const variantData = selectedOption.data();
+                updateMaterialInfo(variantData);
+            });
+
+            // Botón Agregar Material
+            $('#addBtn').click(function() {
+                addMaterialFromForm();
+            });
+
+            // Inicializar Select2 para Extras (Paso 5)
+            $('#extrasSearch').select2({
+                placeholder: "Buscar servicio...",
+                allowClear: true,
+                width: '100%'
+            });
+
+            // Habilitar botón al seleccionar extra
+            $('#extrasSearch').on('select2:select', function(e) {
+                $('#btnAddExtra').prop('disabled', false);
+            });
+
+            // Inicializar eventos de atributos (Paso 2)
+            $('.attr-chip').click(function() {
+                $(this).toggleClass('selected');
+            });
+
+            // Inicializar eventos de bordados (Paso 4)
+            $('.embroidery-card').click(function() {
+                $('.embroidery-card').removeClass('selected');
+                $(this).addClass('selected');
+
+                // Leer datos
+                const stitches = $(this).data('stitches');
+                const dimensions = $(this).data('dimensions');
+                const colors = $(this).data('colors');
+                const format = $(this).data('format');
+
+                // Actualizar métricas
+                const metricsHtml = `
+                    <div class="metric-card">
+                        <span class="metric-value">${stitches}</span>
+                        <span class="metric-label">Puntadas</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-value">${dimensions}</span>
+                        <span class="metric-label">Dimensiones (mm)</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-value">${colors}</span>
+                        <span class="metric-label">Colores</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-value">${format}</span>
+                        <span class="metric-label">Formato</span>
+                    </div>
+                `;
+                $('.embroidery-metrics').html(metricsHtml);
+            });
+
+            // Validación del formulario antes de enviar
+            $('#productForm').on('submit', function(e) {
+                if (currentStep !== 6) {
+                    e.preventDefault();
+                    Swal.fire('Falta completar', 'Por favor complete todos los pasos antes de guardar',
+                        'error');
+                    goToStep(1);
+                    return;
+                }
+
+                // Recolectar todos los datos
+                const formData = {
+                    name: $('#productName').val(),
+                    sku: $('#productSku').val(),
+                    product_category_id: $('#productCategory').val(),
+                    status: $('#productStatus').val(),
+                    description: $('#productDescription').val(),
+                    variants: JSON.parse($('#variantsData').val() || '[]'),
+                    materials: productMaterials,
+                    specifications: {
+                        tipo_tela: $('#tipoTela').val(),
+                        material: $('#material').val(),
+                        hilo: $('#hilo').val(),
+                        color_tela: $('#colorTela').val(),
+                        proveedor: $('#proveedor').val(),
+                        notas: $('#notas').val()
+                    },
+                    extras: productExtras
+                };
+
+                // Llenar campos ocultos con datos JSON
+                $('#specificationsData').val(JSON.stringify(formData.specifications));
+                $('#extrasData').val(JSON.stringify(formData.extras));
+
+                // Validaciones adicionales
+                if (!formData.name || !formData.sku || !formData.product_category_id) {
+                    e.preventDefault();
+                    Swal.fire('Error', 'Por favor complete los campos obligatorios del producto', 'error');
+                    goToStep(1);
+                    return;
+                }
+
+                if (formData.variants.length === 0) {
+                    e.preventDefault();
+                    Swal.fire('Error', 'Debe generar al menos una variante para el producto', 'error');
+                    goToStep(2);
+                    return;
+                }
+
+                // Mostrar confirmación
+                e.preventDefault();
+                Swal.fire({
+                    title: '¿Guardar producto?',
+                    text: 'Se creará el producto con todas las configuraciones definidas.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, guardar',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Enviar formulario
+                        $(this).off('submit').submit();
+                    }
+                });
+            });
+
+            // Inicializar contador de variantes
+            updateVariantCount(0);
         });
     </script>
 @stop

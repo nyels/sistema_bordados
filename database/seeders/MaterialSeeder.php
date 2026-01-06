@@ -59,8 +59,8 @@ class MaterialSeeder extends Seeder
                         'material_id' => $material->id,
                         'color' => $vName,
                         'sku' => strtoupper(substr($catSlug, 0, 2)) . '-' . rand(1000, 9999),
-                        'current_stock' => rand(5, 100),
-                        'min_stock_alert' => 5
+                        'current_stock' => 0,
+                        'min_stock_alert' => 0
                     ]);
                 }
 

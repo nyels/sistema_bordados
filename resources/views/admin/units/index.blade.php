@@ -29,7 +29,7 @@
             @endforeach
 
             <div class="row">
-                <a href="{{ route('units.create') }}" type="button" class="btn btn-info">
+                <a href="{{ route('units.create') }}" type="button" class="btn btn-primary">
                     Nuevo <i class="fas fa-plus"></i>
                 </a>
             </div>

@@ -349,12 +349,59 @@ class MaterialVariantController extends Controller
             $variants = MaterialVariant::where('material_id', (int) $materialId)
                 ->where('activo', true)
                 ->ordered()
-                ->get(['id', 'sku', 'color', 'current_stock', 'average_cost']);
+                ->get(['id', 'color', 'sku', 'current_stock', 'average_cost']);
 
             return response()->json($variants);
         } catch (\Exception $e) {
             Log::error('Error AJAX getByMaterial: ' . $e->getMessage());
             return response()->json(['error' => 'Error al obtener variantes'], 500);
+        }
+    }
+
+    public function getByMaterial2($materialId)
+    {
+        try {
+            $variants = MaterialVariant::where('material_id', (int) $materialId)
+                ->where('activo', true)
+                ->with([
+                    'material.category.baseUnit',
+                    'material.conversions' // Ahora sí funcionará porque agregaste la relación
+                ])
+                ->ordered()
+                ->get();
+
+            $results = $variants->map(function ($v) {
+                // 1. Obtener la unidad base (ej: ID de "Metros")
+                $baseUnitId = $v->material->category->base_unit_id;
+
+                // 2. Buscar la conversión hacia esa unidad base
+                $conversion = $v->material->conversions
+                    ->where('to_unit_id', $baseUnitId)
+                    ->first();
+
+                // 3. El factor: si existe es el valor (ej: 50.00), si no, es 1
+                $factor = $conversion ? (float) $conversion->conversion_factor : 1.0;
+
+                // 4. Cálculos: Stock total en metros y Costo prorrateado por metro
+                $stockReal = (float) $v->current_stock;
+                $costoBase = (float) $v->average_cost;
+                $simbolo = $v->material->category->baseUnit->symbol ?? 'unid';
+
+                return [
+                    'id' => $v->id,
+                    // Texto: "SKU - Color (50.00 m)"
+                    'text' => "{$v->sku} - {$v->color} (" . number_format($stockReal, 2) . " {$simbolo})",
+                    'stock_real' => number_format($stockReal, 4, '.', ''),
+                    'cost_base' => number_format($costoBase, 4, '.', ''),
+                    'symbol' => $simbolo,
+                    'full_name' => "{$v->sku} - {$v->color}"
+                ];
+            });
+
+            return response()->json($results);
+        } catch (\Exception $e) {
+            Log::error('Error en getByMaterial: ' . $e->getMessage());
+            return response()->json(['error' => 'Error al procesar conversiones'], 500);
         }
     }
 

@@ -719,8 +719,13 @@ Route::delete('/materials/{materialId}/variants/{id}', [App\Http\Controllers\Mat
     ->name('material-variants.destroy')
     ->middleware('auth');
 
+//ajax
 Route::get('/materials/{materialId}/variants-json', [App\Http\Controllers\MaterialVariantController::class, 'getByMaterial'])
     ->name('material-variants.by-material')
+    ->middleware('auth');
+
+Route::get('/materials/{materialId}/variants-json', [App\Http\Controllers\MaterialVariantController::class, 'getByMaterial2'])
+    ->name('material-variants.conversiones')
     ->middleware('auth');
 /*
 |--------------------------------------------------------------------------
@@ -979,6 +984,10 @@ Route::get('productos/ajax/design-exports/{designId}', [App\Http\Controllers\Pro
 Route::get('productos/ajax/attributes', [App\Http\Controllers\ProductController::class, 'getAttributes'])
     ->middleware('auth')
     ->name('admin.products.ajax.attributes');
+
+Route::get('productos/ajax/search-materials', [App\Http\Controllers\ProductController::class, 'searchMaterials'])
+    ->middleware('auth')
+    ->name('admin.products.ajax.search_materials');
 
 /*
 |--------------------------------------------------------------------------

@@ -35,22 +35,22 @@ class AppServiceProvider extends ServiceProvider
 
         try {
             // Inyectar configuraciones globales
-            if (\Schema::hasTable('system_settings')) {
-                $companyName = \App\Models\SystemSetting::getValue('company_name');
+            if (Schema::hasTable('system_settings')) {
+                $companyName = SystemSetting::getValue('company_name');
                 if ($companyName) {
-                    \Config::set('adminlte.title', $companyName);
-                    \Config::set('adminlte.logo', "<b>" . substr($companyName, 0, 3) . "</b> " . substr($companyName, 3));
+                    Config::set('adminlte.title', $companyName);
+                    Config::set('adminlte.logo', "<b>" . substr($companyName, 0, 3) . "</b> " . substr($companyName, 3));
                 }
 
-                $companyLogo = \App\Models\SystemSetting::getValue('company_logo');
-                if ($companyLogo && \Storage::disk('public')->exists($companyLogo)) {
-                    $logoUrl = \Storage::url($companyLogo);
-                    \Config::set('adminlte.logo_img', $logoUrl);
-                    \Config::set('adminlte.preloader.img.path', $logoUrl);
+                $companyLogo = SystemSetting::getValue('company_logo');
+                if ($companyLogo && Storage::disk('public')->exists($companyLogo)) {
+                    $logoUrl = Storage::url($companyLogo);
+                    Config::set('adminlte.logo_img', $logoUrl);
+                    Config::set('adminlte.preloader.img.path', $logoUrl);
 
                     // Activar logo en login
-                    \Config::set('adminlte.auth_logo.enabled', true);
-                    \Config::set('adminlte.auth_logo.img.path', $logoUrl);
+                    Config::set('adminlte.auth_logo.enabled', true);
+                    Config::set('adminlte.auth_logo.img.path', $logoUrl);
                 }
             }
         } catch (\Exception $e) {

@@ -32,7 +32,7 @@
 
                 <div class="card-body">
                     <div class="mb-3">
-                        <a href="{{ route('admin.attributes.create') }}" class="btn btn-info">
+                        <a href="{{ route('admin.attributes.create') }}" class="btn btn-primary">
                             Nuevo Atributo <i class="fas fa-plus"></i>
                         </a>
                     </div>

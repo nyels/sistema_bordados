@@ -28,6 +28,14 @@
         </div>
 
         <div class="card-body">
+            {{-- ACCIONES --}}
+            <div class="row mb-3">
+                <div class="col-12">
+                    <a href="{{ route('admin.purchases.create') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Nueva Orden de Compra
+                    </a>
+                </div>
+            </div>
             {{-- FILTROS --}}
             <form method="GET" action="{{ route('admin.purchases.index') }}" id="filterForm">
                 <div class="row mb-3">
@@ -86,15 +94,6 @@
                     </div>
                 </div>
             </form>
-
-            {{-- ACCIONES --}}
-            <div class="row mb-3">
-                <div class="col-12">
-                    <a href="{{ route('admin.purchases.create') }}" class="btn btn-info">
-                        <i class="fas fa-plus"></i> Nueva Orden de Compra
-                    </a>
-                </div>
-            </div>
 
             <hr>
 

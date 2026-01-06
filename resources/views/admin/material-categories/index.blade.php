@@ -29,7 +29,7 @@
 
         <div class="card-body">
             <div class="row mb-3">
-                <a href="{{ route('material-categories.create') }}" class="btn btn-info">
+                <a href="{{ route('material-categories.create') }}" class="btn btn-primary">
                     Nuevo <i class="fas fa-plus"></i>
                 </a>
             </div>

@@ -98,6 +98,31 @@ class StoreProductRequest extends FormRequest
                 'nullable',
                 'array',
             ],
+
+            // Materiales (BOM) - Fase 3
+            'materials' => [
+                'nullable',
+                'array',
+            ],
+            'materials.*.material_variant_id' => [
+                'required_with:materials',
+                'integer',
+                'exists:material_variants,id',
+            ],
+            'materials.*.quantity' => [
+                'required_with:materials',
+                'numeric',
+                'min:0.0001',
+            ],
+            'materials.*.is_primary' => [
+                'nullable',
+                'boolean',
+            ],
+            'materials.*.notes' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
         ];
     }
 

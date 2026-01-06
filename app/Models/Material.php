@@ -158,4 +158,9 @@ class Material extends Model
     {
         return $this->category?->baseUnit;
     }
+
+    public function conversions()
+    {
+        return $this->hasMany(MaterialUnitConversion::class, 'material_id');
+    }
 }

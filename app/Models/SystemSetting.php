@@ -4,9 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use App\Traits\HasActivityLog;
 
 class SystemSetting extends Model
 {
+    use HasActivityLog;
+
+    public $activityLogNameField = 'label'; // Usar el label (ej: "Nombre de la Empresa") en lugar del ID en los logs
+
     protected $table = 'system_settings';
 
     protected $fillable = [

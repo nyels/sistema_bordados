@@ -21,6 +21,7 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Application_types;
 use App\Models\MaterialVariant;
+use App\Models\Material;
 
 class ProductController extends Controller
 {
@@ -100,7 +101,7 @@ class ProductController extends Controller
     public function create()
     {
         try {
-            // 1. Validar categorías (Single Responsability)
+            // 1. Validar categorías
             $categories = ProductCategory::active()->ordered()->get();
             if ($categories->isEmpty()) {
                 return redirect()->route('product_categories.create')
@@ -109,33 +110,35 @@ class ProductController extends Controller
 
             // 2. Carga de Insumos y Configuración
             $extras = ProductExtra::ordered()->get();
-            $designs = Design::with('categories')->orderBy('name')->get();
+            $designs = Design::with(['categories', 'generalExports'])->orderBy('name')->get();
             $applicationTypes = Application_types::where('activo', true)->orderBy('nombre_aplicacion')->get();
 
-            // 3. Atributos (Las tallas ya vienen ordenadas por el Global Scope del Modelo)
+            // 3. Atributos
             $sizeAttribute = Attribute::with('values')->where('slug', 'talla')->first();
             $colorAttribute = Attribute::with('values')->where('slug', 'color')->first();
 
-            // 4. NUEVO: Materiales para la Fase 3
-            // Cargamos variantes de materiales con su stock para mostrar disponibilidad
-            /* $materials = MaterialVariant::with(['material', 'category', 'unit'])
-                ->whereHas('material', fn($q) => $q->where('activo', true))
-                ->get(); */
-            $materials = MaterialVariant::with(['material.category.baseUnit'])
+            // 4. NUEVO: Materiales para la Fase 3 (Optimizado)
+            // Solo traemos lo estrictamente necesario para el selector
+            /*  $materials = MaterialVariant::with(['material.category.baseUnit'])
                 ->where('activo', true)
                 ->get()
                 ->map(function ($variant) {
-                    // Obtenemos la unidad desde la categoría del material
-                    $unit = $variant->material->category->baseUnit ?? null;
-
                     return [
-                        'id' => $variant->id,
-                        'full_name' => $variant->display_name, // Usa el accessor de tu modelo
-                        'stock' => (float) $variant->current_stock,
-                        'unit_symbol' => $unit ? $unit->symbol : 'unid',
-                        'average_cost' => (float) $variant->average_cost,
+                        'id'            => $variant->id,
+                        'text'          => $variant->sku . ' - ' . ($variant->color ?? 'Sin Color'),
+                        'full_name'     => $variant->display_name, // Suponiendo que tienes este accessor
+                        'stock'         => (float) $variant->current_stock,
+                        'unit_symbol'   => $variant->material->category->baseUnit->symbol ?? 'unid',
+                        'average_cost'  => (float) $variant->average_cost,
                     ];
-                });
+                });*/
+
+            // 4. Materiales (Familias) - Esto alimenta el primer Select
+            $materials = Material::where('activo', true)
+                ->orderBy('name')
+                ->get(['id', 'name']); // Solo necesitamos el ID y Nombre de la familia
+
+
 
             return view('admin.products.create', compact(
                 'categories',
@@ -144,11 +147,15 @@ class ProductController extends Controller
                 'applicationTypes',
                 'sizeAttribute',
                 'colorAttribute',
-                'materials' // <-- Enviamos a la vista
+                'materials'
             ));
         } catch (\Exception $e) {
-            Log::error("Product Create Error [Line {$e->getLine()}]: " . $e->getMessage());
-            return redirect()->route('admin.products.index')->with('error', 'Error interno al cargar el formulario.');
+            Log::error("Product Create Error [Line {$e->getLine()}]: " . $e->getMessage(), [
+                'user_id' => Auth::id(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return redirect()->route('admin.products.index')
+                ->with('error', 'Error interno al cargar el formulario de creación.');
         }
     }
 
@@ -635,5 +642,37 @@ class ProductController extends Controller
         } catch (\Exception $e) {
             return response()->json(['error' => 'Error al obtener atributos'], 500);
         }
+    }
+
+    /**
+     * Buscar materiales para el selector (API)
+     */
+    public function searchMaterials(Request $request)
+    {
+        $term = $request->get('q');
+
+        $materials = MaterialVariant::with(['material', 'material.category', 'material.category.baseUnit'])
+            ->whereHas('material', function ($q) use ($term) {
+                $q->where('name', 'like', "%{$term}%");
+            })
+            ->orWhere('sku', 'like', "%{$term}%")
+            ->orWhere('color', 'like', "%{$term}%")
+            ->limit(20)
+            ->get();
+
+        $results = $materials->map(function ($variant) {
+            $unitSymbol = $variant->material->category->baseUnit->symbol ?? '';
+            return [
+                'id' => $variant->id,
+                'text' => $variant->display_name . " (Stock: {$variant->current_stock} {$unitSymbol})",
+                'sku' => $variant->sku,
+                'unit' => $variant->material->category->baseUnit->name ?? 'Unidad',
+                'symbol' => $unitSymbol,
+                'cost' => $variant->average_cost > 0 ? $variant->average_cost : $variant->last_purchase_cost,
+                'stock' => $variant->current_stock
+            ];
+        });
+
+        return response()->json(['results' => $results]);
     }
 }

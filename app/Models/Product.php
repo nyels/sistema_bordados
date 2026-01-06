@@ -84,6 +84,14 @@ class Product extends Model
             ->withTimestamps();
     }
 
+    public function materials()
+    {
+        return $this->belongsToMany(MaterialVariant::class, 'product_materials', 'product_id', 'material_variant_id')
+            ->using(ProductMaterial::class)
+            ->withPivot(['id', 'quantity', 'is_primary', 'notes'])
+            ->withTimestamps();
+    }
+
     public function images()
     {
         return $this->morphMany(Image::class, 'imageable');

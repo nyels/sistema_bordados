@@ -7,25 +7,25 @@
 
 @section('content')
     <div class="container-fluid py-4">
-        {{-- Header --}}
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h2 class="mb-1" style="font-weight: 700; color: #1f2937;">
-                    <i class="fas fa-industry text-primary mr-2"></i>Centro de Producción
-                </h2>
-                <p class="text-muted mb-0">Gestión de órdenes y auditoría de procesos técnicos.</p>
-            </div>
-            <a href="{{ route('admin.designs.index') }}" class="btn btn-primary"
-                style="border-radius: 8px; font-weight: 600; padding: 10px 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
-                <i class="fas fa-plus mr-2"></i>Nueva Producción
-            </a>
-        </div>
+
 
         {{-- Card Unificada: Filtros + Tabla --}}
-        <div class="card">
-            <div class="card-body">
+        <div class="card card-primary" bis_skin_checked="1">
+            <div class="card-header d-flex flex-column align-items-start" bis_skin_checked="1">
+                <h3 class="card-title mb-1" style="font-weight: bold; font-size: 20px;">
+                    <i class="fas fa-industry text-white mr-2"></i>Gestion de Producciones
+                </h3>
+            </div>
+
+            <div class="card-body ">
                 {{-- Filtros --}}
                 <div class="row align-items-end mb-3">
+                    {{-- ACCIONES --}}
+                    <div class="col-12">
+                        <a href="{{ route('admin.designs.index') }}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Nueva Producción
+                        </a>
+                    </div>
                     <div class="col-md-3">
                         <label class="form-label"
                             style="font-weight: 600; font-size: 12px; color: #6b7280; text-transform: uppercase;">Jerarquía</label>

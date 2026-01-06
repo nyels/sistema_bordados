@@ -17,7 +17,7 @@
         <!-- /.card-header -->
         <div class="card-body" bis_skin_checked="1">
             <div class="row">
-                <a href="{{ route('admin.clientes.create') }}" type="button" class="btn btn-info">
+                <a href="{{ route('admin.clientes.create') }}" type="button" class="btn btn-primary">
                     Nuevo <i class="fas fa-plus"></i></a>
             </div>
             <hr>

@@ -31,7 +31,7 @@
             {{-- FILTROS Y ACCIONES --}}
             <div class="row mb-3">
                 <div class="col-md-6">
-                    <a href="{{ route('materials.create') }}" class="btn btn-info">
+                    <a href="{{ route('materials.create') }}" class="btn btn-primary">
                         Nuevo <i class="fas fa-plus"></i>
                     </a>
                     <a href="{{ route('material-categories.index') }}" class="btn btn-secondary">
