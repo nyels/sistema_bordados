@@ -1141,3 +1141,80 @@ Route::get('attribute-values/get-type/{attributeId}', [App\Http\Controllers\Attr
     ->middleware('auth')
     ->name('admin.attribute-values.get-type')
     ->where('attributeId', '[0-9]+');
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE CATEGORÍAS DE PRODUCTOS (PRODUCT CATEGORIES)
+|--------------------------------------------------------------------------
+*/
+
+Route::get('admin/product_categories', [App\Http\Controllers\ProductCategoryController::class, 'index'])
+    ->middleware('auth')
+    ->name('admin.product_categories.index');
+
+Route::get('admin/product_categories/create', [App\Http\Controllers\ProductCategoryController::class, 'create'])
+    ->middleware('auth')
+    ->name('admin.product_categories.create');
+
+Route::post('admin/product_categories', [App\Http\Controllers\ProductCategoryController::class, 'store'])
+    ->middleware('auth')
+    ->name('admin.product_categories.store');
+
+Route::get('admin/product_categories/{id}', [App\Http\Controllers\ProductCategoryController::class, 'show'])
+    ->middleware('auth')
+    ->name('admin.product_categories.show')
+    ->where('id', '[0-9]+');
+
+Route::get('admin/product_categories/{id}/edit', [App\Http\Controllers\ProductCategoryController::class, 'edit'])
+    ->middleware('auth')
+    ->name('admin.product_categories.edit')
+    ->where('id', '[0-9]+');
+
+Route::put('admin/product_categories/{id}', [App\Http\Controllers\ProductCategoryController::class, 'update'])
+    ->middleware('auth')
+    ->name('admin.product_categories.update')
+    ->where('id', '[0-9]+');
+
+Route::get('admin/product_categories/{id}/confirm-delete', [App\Http\Controllers\ProductCategoryController::class, 'confirmDelete'])
+    ->middleware('auth')
+    ->name('admin.product_categories.confirm_delete')
+    ->where('id', '[0-9]+');
+
+Route::delete('admin/product_categories/{id}', [App\Http\Controllers\ProductCategoryController::class, 'destroy'])
+    ->middleware('auth')
+    ->name('admin.product_categories.destroy')
+    ->where('id', '[0-9]+');
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE EXTRAS DE PRODUCTOS (PRODUCT EXTRAS)
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/product_extras', [App\Http\Controllers\ProductExtraController::class, 'index'])
+    ->name('admin.product_extras.index')
+    ->middleware('auth');
+
+Route::get('/product_extras/nuevo', [App\Http\Controllers\ProductExtraController::class, 'create'])
+    ->name('admin.product_extras.create')
+    ->middleware('auth');
+
+Route::post('/product_extras/create', [App\Http\Controllers\ProductExtraController::class, 'store'])
+    ->name('admin.product_extras.store')
+    ->middleware('auth');
+
+Route::get('/product_extras/edit/{id}', [App\Http\Controllers\ProductExtraController::class, 'edit'])
+    ->name('admin.product_extras.edit')
+    ->middleware('auth');
+
+Route::put('/product_extras/edit/{id}', [App\Http\Controllers\ProductExtraController::class, 'update'])
+    ->name('admin.product_extras.update')
+    ->middleware('auth');
+
+Route::get('/product_extras/confirm_delete/{id}', [App\Http\Controllers\ProductExtraController::class, 'confirm_delete'])
+    ->name('admin.product_extras.confirm_delete')
+    ->middleware('auth');
+
+Route::delete('/product_extras/delete/{id}', [App\Http\Controllers\ProductExtraController::class, 'destroy'])
+    ->name('admin.product_extras.destroy')
+    ->middleware('auth');

@@ -1,19 +1,24 @@
 @extends('adminlte::page')
 
-@section('title', 'Alta de Producto - Sistema de Bordado')
+@section('title', 'Nuevo Producto - Enterprise Configurator')
 
 @section('plugins.Sweetalert2', true)
+@section('plugins.Select2', true)
 
 @section('content_header')
-    <div class="module-header">
+    <div class="module-header fade-in">
         <div class="d-flex justify-content-between align-items-center">
             <div>
-                <h1><i class="fas fa-box-open mr-2"></i> Alta de Producto</h1>
-                <p>Configurador profesional de productos con variantes y bordados</p>
+                <h1 class="text-white"><i class="fas fa-cube mr-2"></i> Ingeniería de Producto</h1>
+                <p class="text-white-50 mb-0">Configurador Master: BOM, Costos y Variantes</p>
             </div>
-            <div>
-                <a href="{{ route('admin.products.index') }}" class="btn-secondary-custom">
-                    <i class="fas fa-times mr-2"></i> Cancelar
+            <div class="d-flex align-items-center gap-3">
+                <div class="live-cost-badge d-none d-md-block">
+                    <span class="label">Costo Producción Est.:</span>
+                    <span class="value" id="headerCost">$0.00</span>
+                </div>
+                <a href="{{ route('admin.products.index') }}" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-times"></i> Cancelar
                 </a>
             </div>
         </div>
@@ -21,1593 +26,731 @@
 @stop
 
 @section('content')
-    <div class="content">
-        <div class="container-fluid">
+    <div class="content-wrapper-custom">
+        <form id="productForm" action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data">
+            @csrf
 
-            <!-- Formulario -->
-            <form method="POST" action="{{ route('admin.products.store') }}" enctype="multipart/form-data" id="productForm">
-                @csrf
+            <div class="stepper-nav-container">
+                <button type="button" class="stepper-arrow stepper-arrow-prev" id="btnPrev" disabled
+                    onclick="navigate(-1)">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
 
-                <!-- PASO 1: INFORMACIÓN BASE DEL PRODUCTO -->
-
-                <!-- Navegación Global (Arriba) -->
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <div>
-                                <button type="button" class="btn btn-secondary btn-navigation px-4 d-none"
-                                    id="globalPrevBtn" onclick="prevStep()">
-                                    <i class="fas fa-arrow-left"></i> Anterior
-                                </button>
-                            </div>
-
-                            <div>
-                                <button type="button" class="btn btn-primary btn-navigation px-4" id="globalNextBtn"
-                                    onclick="nextStep()">
-                                    Siguiente <i class="fas fa-arrow-right ml-2"></i>
-                                </button>
-                            </div>
-                        </div>
-                        {{-- pasos 1 - 6 --}}
-                        <div class="stepper-wrapper">
-                            <div class="stepper-container">
-                                <div class="step-item active" id="step1">
-                                    <div class="step-circle">1</div>
-                                    <span class="step-label">INFO. BÁSICA</span>
-                                </div>
-                                <div class="step-item" id="step2">
-                                    <div class="step-circle">2</div>
-                                    <span class="step-label">VARIANTES</span>
-                                </div>
-                                <div class="step-item" id="step3">
-                                    <div class="step-circle">3</div>
-                                    <span class="step-label">MATERIALES</span>
-                                </div>
-                                <div class="step-item" id="step4">
-                                    <div class="step-circle">4</div>
-                                    <div class="step-line"></div>
-                                    <span class="step-label">BORDADOS</span>
-                                </div>
-                                <div class="step-item" id="step5">
-                                    <div class="step-circle">5</div>
-                                    <span class="step-label">EXTRAS</span>
-                                </div>
-                                <div class="step-item" id="step6">
-                                    <div class="step-circle">6</div>
-                                    <span class="step-label">REVISIÓN</span>
-                                </div>
-                            </div>
-                        </div>
-                        {{-- fin de pasos 1 - 6 --}}
-
+                <div class="stepper-wrapper">
+                    <div class="stepper-item active" data-step="1">
+                        <div class="step-counter">1</div>
+                        <div class="step-name">Definición</div>
                     </div>
-                </div>
-                <!-- ========================================= -->
-                {{-- PASO 1: INFORMACIÓN BASE DEL PRODUCTO --}}
-                <!-- ========================================= -->
-                <div class="main-card fade-in" id="content-step1">
-                    <div class="two-columns">
-                        <div class="left-column">
-                            <div class="section-title">
-                                <i class="fas fa-tag"></i>
-                                <span>Información del Producto</span>
-                                <span class="badge-step">Paso 1 de 6</span>
-                            </div>
-
-                            <div class="row mb-4">
-                                <div class="col-md-8">
-                                    <label class="form-label">Nombre del Producto *</label>
-                                    <input type="text" class="form-control form-control-lg"
-                                        placeholder="Ej: Hipil Tradicional Bordado" name="name" id="productName"
-                                        required>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">SKU Base *</label>
-                                    <input type="text" class="form-control form-control-lg" placeholder="HIP-TRAD"
-                                        name="sku" id="productSku" style="font-family: monospace;" required>
-                                </div>
-                            </div>
-
-                            <div class="row mb-4">
-                                <div class="col-md-6">
-                                    <label class="form-label">Categoría *</label>
-                                    <select class="form-control" name="product_category_id" id="productCategory" required>
-                                        <option value="">Seleccionar categoría...</option>
-                                        @foreach ($categories as $category)
-                                            <option value="{{ $category->id }}">{{ $category->name }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Estado Inicial</label>
-                                    <select class="form-control" name="status" id="productStatus">
-                                        <option value="draft">Borrador</option>
-                                        <option value="active" selected>Activo</option>
-                                        <option value="discontinued">Descontinuado</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="mb-4">
-                                <label class="form-label">Descripción</label>
-                                <textarea class="form-control" rows="3" placeholder="Descripción detallada del producto..." name="description"
-                                    id="productDescription"></textarea>
-                            </div>
-
-                            <!-- Campos ocultos para datos de otros pasos -->
-                            <input type="hidden" name="variants_data" id="variantsData">
-                            <input type="hidden" name="embroidery_data" id="embroideryData">
-                            <input type="hidden" name="specifications_data" id="specificationsData">
-                            <input type="hidden" name="extras_data" id="extrasData">
-                            <input type="hidden" name="designs_data" id="designsData">
-                        </div>
-
-                        <div class="right-column">
-                            <label class="form-label mb-3">Imagen Principal</label>
-                            <div class="product-image-upload" id="imageUpload"
-                                onclick="document.getElementById('imageFile').click()">
-                                <i class="fas fa-cloud-upload-alt"></i>
-                                <span>Click para subir imagen</span>
-                                <small>PNG, JPG hasta 5MB</small>
-                            </div>
-                            <input type="file" name="image" id="imageFile" accept="image/*" style="display: none;"
-                                onchange="previewImage(event)">
-                        </div>
+                    <div class="stepper-item" data-step="2">
+                        <div class="step-counter">2</div>
+                        <div class="step-name">Variantes</div>
+                    </div>
+                    <div class="stepper-item" data-step="3">
+                        <div class="step-counter">3</div>
+                        <div class="step-name">Ingeniería (BOM)</div>
+                    </div>
+                    <div class="stepper-item" data-step="4">
+                        <div class="step-counter">4</div>
+                        <div class="step-name">Diseño</div>
+                    </div>
+                    <div class="stepper-item" data-step="5">
+                        <div class="step-counter">5</div>
+                        <div class="step-name">Finanzas</div>
+                    </div>
+                    <div class="stepper-item" data-step="6">
+                        <div class="step-counter">6</div>
+                        <div class="step-name">Confirmar</div>
                     </div>
                 </div>
 
-                <!-- ========================================= -->
-                <!-- PASO 2: VARIANTES DEL PRODUCTO -->
-                <!-- ========================================= -->
-                <div class="main-card fade-in d-none" id="content-step2">
-                    <div class="section-block">
-                        <div class="section-title">
-                            <i class="fas fa-layer-group"></i>
-                            <span>Generador de Variantes</span>
-                            <span class="badge-step">Paso 2 de 6</span>
-                        </div>
+                <button type="button" class="stepper-arrow stepper-arrow-next" id="btnNext" onclick="navigate(1)">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
 
-                        <p class="text-muted mb-4">
-                            Selecciona los atributos para crear combinaciones automáticas de variantes con SKU único.
-                        </p>
+            <div class="step-content fade-in" id="step1-content"></div>
+            <div class="step-content d-none fade-in" id="step2-content"></div>
+            <div class="step-content d-none fade-in" id="step3-content"></div>
+            <div class="step-content d-none fade-in" id="step4-content"></div>
+            <div class="step-content d-none fade-in" id="step5-content"></div>
+            <div class="step-content d-none fade-in" id="step6-content"></div>
 
-                        <!-- Selector de Tallas -->
-                        <div class="variant-generator mb-4">
-                            <div class="variant-generator-title">
-                                <i class="fas fa-ruler"></i> Tallas Disponibles
-                            </div>
+            <input type="hidden" name="variants_json" id="h_variants">
+            <input type="hidden" name="materials_json" id="h_materials">
+            <input type="hidden" name="embroideries_json" id="h_embroideries">
+            <input type="hidden" name="extras_json" id="h_extras">
+            <input type="hidden" name="financials_json" id="h_financials">
+        </form>
+    </div>
 
-                            <div class="attribute-selector" id="sizesSelector">
-                                @if ($sizeAttribute && $sizeAttribute->values->isNotEmpty())
-                                    @foreach ($sizeAttribute->values as $value)
-                                        <span class="attr-chip" data-attribute="talla" data-value="{{ $value->id }}">
-                                            {{ $value->value }}
-                                        </span>
-                                    @endforeach
-                                @else
-                                    <small class="text-muted">No hay tallas configuradas</small>
-                                @endif
-                            </div>
-                        </div>
+    {{-- MODALS --}}
+    <div class="modal fade" id="materialScopeModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-bullseye mr-2"></i>Definir Alcance del Material</h5>
+                    <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body text-center">
+                    <p class="text-muted mb-4" style="font-size: 1.1rem;">¿Este material se aplica a todas las variantes o
+                        solo a algunas específicas?</p>
 
-
-                        <!-- Selector de Colores -->
-                        <div class="variant-generator mb-4">
-                            <div class="variant-generator-title">
-                                <i class="fas fa-palette"></i> Colores Disponibles
-                            </div>
-
-                            <div class="attribute-selector" id="colorsSelector">
-                                @if ($colorAttribute && $colorAttribute->values->isNotEmpty())
-                                    @foreach ($colorAttribute->values as $value)
-                                        <span class="attr-chip" data-attribute="color" data-value="{{ $value->id }}"
-                                            style="border-color: {{ $value->hex_color ?? '#000' }}; color: {{ $value->hex_color ?? '#000' }};">
-                                            ⬤ {{ $value->value }}
-                                        </span>
-                                    @endforeach
-                                @else
-                                    <small class="text-muted">No hay colores configurados</small>
-                                @endif
-                            </div>
-                        </div>
-
-
-                        <!-- Precio base por variante -->
-                        <div class="row mb-4">
-                            <div class="col-md-4">
-                                <label class="form-label">Precio Base por Variante</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="number" class="form-control" value="350.00" id="basePrice"
-                                        step="0.01">
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Stock de Alerta</label>
-                                <input type="number" class="form-control" value="5" id="stockAlert">
-                            </div>
-                            <div class="col-md-4 d-flex align-items-end">
-                                <button type="button" class="btn-primary-custom w-100" onclick="generateVariants()">
-                                    <i class="fas fa-magic"></i> Generar Variantes
-                                </button>
-                            </div>
-                        </div>
+                    {{-- ALERTA EXPLICATIVA --}}
+                    <div class="bg-light border rounded p-3 mb-4">
+                        <h6 class="mb-2 text-center" style="font-size: 1rem;"><i
+                                class="fas fa-lightbulb text-warning mr-2"></i>¿Cómo funciona?</h6>
+                        <ul class="mb-2 pl-4 text-muted text-left" style="font-size: 0.95rem;">
+                            <li><strong>Global:</strong> Aplica a todas las variantes</li>
+                            <li><strong>Específico:</strong> Solo aplica a las variantes seleccionadas</li>
+                        </ul>
+                        <small class="text-secondary"><i class="fas fa-info-circle mr-1"></i>Si agregas Global +
+                            Específico
+                            del mismo material, los consumos se suman.</small>
                     </div>
 
-                    <!-- Lista de variantes generadas -->
-                    <div class="section-block">
-                        <div class="section-title">
-                            <i class="fas fa-list"></i>
-                            <span>Variantes Generadas</span>
-                            <span class="badge bg-primary text-white" id="variantCount">0 variantes</span>
-                        </div>
+                    {{-- TOGGLE BUTTONS --}}
+                    <div class="d-flex justify-content-center mb-4 gap-3">
+                        <button type="button" class="scope-toggle-btn" id="btnScopeGlobal"
+                            onclick="selectScope('global')">
+                            <i class="fas fa-globe mr-2"></i>GLOBAL
+                        </button>
+                        <button type="button" class="scope-toggle-btn" id="btnScopeSpecific"
+                            onclick="selectScope('specific')">
+                            <i class="fas fa-filter mr-2"></i>ESPECÍFICO
+                        </button>
+                    </div>
+                    <input type="hidden" name="materialScope" id="materialScopeValue" value="">
 
-                        <div class="variants-list" id="variantsList">
-                            <div class="empty-state">
-                                <i class="fas fa-cubes"></i>
-                                <p>No hay variantes generadas aún</p>
-                            </div>
-                        </div>
+                    <div id="specificVariantsContainer" class="d-none text-left">
+                        <label class="font-weight-bold">Selecciona las variantes:</label>
+                        <select class="form-control select2" multiple id="targetVariantsSelect"
+                            style="width:100%"></select>
                     </div>
                 </div>
-
-                <!-- ========================================= -->
-                <!-- PASO 3: MATERIALES (BOM) -->
-                <!-- ========================================= -->
-
-                <div class="main-card fade-in d-none" id="content-step3">
-                    <div class="section-block">
-                        <div class="section-title">
-                            <i class="fas fa-scroll"></i>
-                            <span>Materiales Requeridos (BOM)</span>
-                            <span class="badge-step">Paso 3 de 6</span>
-                        </div>
-
-                        {{-- BUSCADOR INTUITIVO UNIFICADO --}}
-                        <div class="card border-primary-subtle mb-4 shadow-sm">
-                            <div class="card-header bg-primary-subtle py-2">
-                                <span class="fw-bold text-primary-emphasis">
-                                    <i class="fas fa-search me-2"></i>Buscador de Insumos y Configuración
-                                </span>
-                            </div>
-                            <div class="card-body bg-light-subtle">
-                                <div class="row g-3 align-items-end">
-                                    <div class="col-md-3">
-                                        <label class="form-label small fw-bold text-primary">1. Familia de Material</label>
-                                        <select id="parentMaterial" class="form-select select2-custom">
-                                            <option value="">Seleccione (Ej: Lino, Seda...)</option>
-                                            @foreach ($materials as $m)
-                                                <option value="{{ $m->id }}">{{ $m->name }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-
-                                    <div class="col-md-4">
-                                        <label class="form-label small fw-bold text-primary">2. Especificación (Color /
-                                            SKU)</label>
-                                        <select id="materialVariant" class="form-select select2-custom" disabled>
-                                            <option value="">Primero seleccione familia...</option>
-                                        </select>
-                                        <div id="materialInfo" class="mt-1 small d-flex justify-content-between d-none">
-                                            <span class="text-muted">Stock: <b id="materialStockValue"
-                                                    class="text-dark">-</b></span>
-                                            <span class="text-muted">Costo: <b id="materialCostValue"
-                                                    class="text-success">$-</b></span>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-2">
-                                        <label class="form-label small fw-bold text-primary">3. Cantidad</label>
-                                        <div class="input-group">
-                                            <input type="number" id="qty" class="form-control" placeholder="0.00"
-                                                step="0.0001">
-                                            <span class="input-group-text bg-white small"
-                                                id="materialUnitLabel">unid</span>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-2">
-                                        <div class="form-check form-switch mb-2">
-                                            <input class="form-check-input" type="checkbox" role="switch"
-                                                id="materialIsPrimary">
-                                            <label class="form-check-label small fw-bold" for="materialIsPrimary">Material
-                                                Base</label>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-1">
-                                        <button type="button" class="btn btn-primary w-100 shadow-sm" id="addBtn">
-                                            <i class="fas fa-plus"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {{-- aqui inicia tabla --}}
-                        <div class="table-responsive shadow-sm rounded">
-                            <table class="table table-hover align-middle bg-white" id="materialsTable">
-                                <thead class="table-dark">
-                                    <tr>
-                                        <th class="ps-3">Material / SKU</th>
-                                        <th class="text-center">Cant. Requerida</th>
-                                        <th class="text-center">Costo Unit. (Snapshot)</th>
-                                        <th class="text-center">Subtotal</th>
-                                        <th style="width: 50px;"></th>
-                                    </tr>
-                                </thead>
-                                <tbody class="border-top-0">
-                                    <tr id="noMaterialsRow">
-                                        <td colspan="5" class="text-center text-muted py-5">
-                                            <img src="/assets/img/empty-box.svg" alt=""
-                                                style="width: 60px; opacity: 0.5" class="mb-2 d-block mx-auto">
-                                            Aún no has agregado materiales a este producto.
-                                        </td>
-                                    </tr>
-                                </tbody>
-                                <tfoot>
-                                    <tr class="table-light">
-                                        <td colspan="3" class="text-end fw-bold py-3">Costo de Producción (Materiales):
-                                        </td>
-                                        <td class="text-center py-3">
-                                            <span class="badge bg-success fs-6" id="totalMaterialsCost">$0.00</span>
-                                        </td>
-                                        <td></td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
-                    </div>
+                <div class="modal-footer justify-content-center border-top pt-3">
+                    <button type="button" class="btn btn-outline-secondary px-4 py-2" data-dismiss="modal"
+                        style="border-width: 2px; font-weight: 600;">
+                        <i class="fas fa-times mr-2"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary px-4 py-2" onclick="confirmAddMaterial()"
+                        style="font-weight: 600;">
+                        <i class="fas fa-plus mr-2"></i>Agregar al BOM
+                    </button>
                 </div>
-
-                <!-- ========================================= -->
-                <!-- PASO 4: ASIGNACIÓN DE BORDADOS -->
-                <!-- ========================================= -->
-                <div class="main-card fade-in d-none" id="content-step4">
-                    <div class="section-block">
-                        <div class="section-title">
-                            <i class="fas fa-vector-square"></i>
-                            <span>Asignación de Bordados</span>
-                            <span class="badge-step">Paso 4 de 6</span>
-                        </div>
-
-                        <p class="text-muted mb-4">
-                            Selecciona los diseños de bordado disponibles y su posición de aplicación.
-                        </p>
-
-                        <!-- Selector de posición -->
-                        <div class="row mb-4">
-                            <div class="col-md-4">
-                                <label class="form-label">Posición de Aplicación</label>
-                                <select class="form-control" id="applicationPosition">
-                                    <option value="">Seleccionar posición...</option>
-                                    <option value="pecho_izq">Pecho Izquierdo</option>
-                                    <option value="pecho_der">Pecho Derecho</option>
-                                    <option value="espalda">Espalda Completa</option>
-                                    <option value="manga_izq">Manga Izquierda</option>
-                                    <option value="manga_der">Manga Derecha</option>
-                                    <option value="cuello">Cuello</option>
-                                </select>
-                            </div>
-                            <div class="col-md-8">
-                                <label class="form-label">Buscar Diseño</label>
-                                <input type="text" class="form-control"
-                                    placeholder="Buscar por nombre, código o cliente...">
-                            </div>
-                        </div>
-
-                        <!-- Lista de bordados disponibles -->
-                        <div class="embroidery-selector">
-                            @forelse($designs as $design)
-                                @php
-                                    $export = $design->generalExports->first();
-                                    $stitches = $export ? number_format($export->stitches_count) : 'N/A';
-                                    $width = $export ? $export->width_mm : 0;
-                                    $height = $export ? $export->height_mm : 0;
-                                    $colors = $export ? $export->colors_count : 0;
-                                    $format = $export ? $export->file_format : 'N/A';
-                                    $image = $design->primaryImage ? $design->primaryImage->url : null;
-                                    $sku = $design->slug ?? 'DES-' . $design->id;
-                                @endphp
-                                <div class="embroidery-card" data-id="{{ $design->id }}"
-                                    data-name="{{ $design->name }}" data-stitches="{{ $stitches }}"
-                                    data-dimensions="{{ $width }}×{{ $height }}"
-                                    data-colors="{{ $colors }}" data-format="{{ $format }}">
-
-                                    <div class="embroidery-thumb">
-                                        @if ($image)
-                                            <img src="{{ asset('storage/' . $image) }}" alt="{{ $design->name }}"
-                                                style="max-width: 100%; max-height: 100%;">
-                                        @else
-                                            <i class="fas fa-image fa-2x text-muted"></i>
-                                        @endif
-                                    </div>
-                                    <div class="embroidery-info">
-                                        <div class="embroidery-name">{{ $design->name }}</div>
-                                        <div class="embroidery-meta">
-                                            <strong>{{ $stitches }}</strong> puntadas •
-                                            <strong>{{ $width }}×{{ $height }}</strong> mm •
-                                            <strong>{{ $colors }}</strong> colores
-                                        </div>
-                                        <div class="mt-2">
-                                            <span class="embroidery-position text-muted">Seleccionar
-                                                posición...</span>
-                                        </div>
-                                    </div>
-                                    <div class="text-right">
-                                        <span class="variant-sku">{{ $sku }}</span>
-                                    </div>
-                                </div>
-                            @empty
-                                <div class="col-12 text-center py-4">
-                                    <p class="text-muted">No hay diseños disponibles.</p>
-                                </div>
-                            @endforelse
-                        </div>
-
-                        <!-- Métricas del bordado seleccionado -->
-                        <div class="embroidery-metrics">
-                            <div class="metric-card">
-                                <span class="metric-value">8,500</span>
-                                <span class="metric-label">Puntadas</span>
-                            </div>
-                            <div class="metric-card">
-                                <span class="metric-value">55×82</span>
-                                <span class="metric-label">Dimensiones (mm)</span>
-                            </div>
-                            <div class="metric-card">
-                                <span class="metric-value">4</span>
-                                <span class="metric-label">Colores</span>
-                            </div>
-                            <div class="metric-card">
-                                <span class="metric-value">.DST</span>
-                                <span class="metric-label">Formato</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Bordados asignados -->
-                    <div class="section-block">
-                        <div class="section-title">
-                            <i class="fas fa-check-double"></i>
-                            <span>Bordados Asignados al Producto</span>
-                        </div>
-
-                        <div class="variants-list">
-                            <div class="variant-item">
-                                <div class="variant-info">
-                                    <span class="embroidery-position mr-3">Pecho Izquierdo</span>
-                                    <span class="variant-name">Logo Corporativo - Empresa XYZ</span>
-                                </div>
-                                <div class="d-flex align-items-center gap-3">
-                                    <span class="text-muted">8,500 puntadas</span>
-                                    <button type="button" class="btn-icon btn-icon-danger"><i
-                                            class="fas fa-times"></i></button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ========================================= -->
-                <!-- PASO 5: FICHA TÉCNICA Y EXTRAS -->
-                <!-- ========================================= -->
-                <div class="main-card fade-in d-none" id="content-step5">
-                    <div class="two-columns">
-                        <div class="left-column">
-                            <div class="section-title">
-                                <i class="fas fa-clipboard-list"></i>
-                                <span>Especificaciones Técnicas</span>
-                                <span class="badge-step">Paso 5 de 6</span>
-                            </div>
-
-                            <div class="specs-grid mb-4">
-                                <div>
-                                    <label class="form-label">Tipo de Tela</label>
-                                    <input type="text" class="form-control" value="Oxford Premium" id="tipoTela">
-                                </div>
-                                <div>
-                                    <label class="form-label">Composición</label>
-                                    <input type="text" class="form-control" value="60% Algodón / 40% Poliéster"
-                                        id="material">
-                                </div>
-                                <div>
-                                    <label class="form-label">Calibre de Hilo</label>
-                                    <input type="text" class="form-control" value="120" id="hilo">
-                                </div>
-                            </div>
-
-                            <div class="specs-grid cols-2 mb-4">
-                                <div>
-                                    <label class="form-label">Color Base de Tela</label>
-                                    <input type="text" class="form-control" value="Blanco Óptico" id="colorTela">
-                                </div>
-                                <div>
-                                    <label class="form-label">Proveedor</label>
-                                    <select class="form-control" id="proveedor">
-                                        <option>Textiles del Norte S.A.</option>
-                                        <option>Algodones Premium</option>
-                                        <option>Distribuidora Yucatán</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="mb-4">
-                                <label class="form-label">Notas de Producción</label>
-                                <textarea class="form-control" rows="2" placeholder="Instrucciones especiales para producción..."
-                                    id="notas"></textarea>
-                            </div>
-
-                            <!-- Servicios Extras -->
-                            <div class="section-title mt-5">
-                                <i class="fas fa-concierge-bell"></i>
-                                <span>Servicios Adicionales</span>
-                            </div>
-
-                            <!-- Buscador de Extras -->
-                            <div class="row mb-4">
-                                <div class="col-md-9">
-                                    <label class="form-label">Buscar Servicio Adicional</label>
-                                    <select class="form-control select2" id="extrasSearch" style="width: 100%;">
-                                        <option value="">Buscar servicio...</option>
-                                        @foreach ($extras as $extra)
-                                            <option value="{{ $extra->id }}" data-price="{{ $extra->price }}"
-                                                data-name="{{ $extra->name }}">
-                                                {{ $extra->name }} - ${{ number_format($extra->price, 2) }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label">&nbsp;</label>
-                                    <button type="button" class="btn btn-primary-custom w-100" id="btnAddExtra"
-                                        onclick="addExtra()" disabled>
-                                        <i class="fas fa-plus"></i> Agregar
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Tabla de Extras Asignados -->
-                            <div class="table-responsive">
-                                <table class="table table-hover table-striped" id="extrasTable">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Servicio</th>
-                                            <th>Costo Adicional</th>
-                                            <th width="50"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <!-- Se llena dinámicamente -->
-                                        <tr id="noExtrasRow">
-                                            <td colspan="3" class="text-center text-muted py-4">
-                                                <i class="fas fa-concierge-bell fa-2x mb-2 d-block"></i>
-                                                No se han agregado servicios adicionales
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                    <tfoot>
-                                        <tr>
-                                            <td class="text-end fw-bold">Total Extras:</td>
-                                            <td class="fw-bold" id="totalExtrasCost">$0.00</td>
-                                            <td></td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-                            </div>
-                            <input type="hidden" name="extras_data" id="extrasData">
-                        </div>
-
-                        <div class="right-column">
-                            <div class="section-title">
-                                <i class="fas fa-code"></i>
-                                <span>Vista Previa JSON</span>
-                            </div>
-
-                            <div class="json-preview" id="jsonPreview">{
-                                "name": "Hipil Tradicional Bordado",
-                                "sku": "HIP-TRAD",
-                                "category_id": 1,
-                                "specifications": {
-                                "tipo_tela": "Oxford Premium",
-                                "material": "60% Algodón / 40% Poliéster",
-                                "hilo": "120",
-                                "color": "Blanco Óptico",
-                                "proveedor": "Textiles del Norte S.A.",
-                                "notas": ""
-                                },
-                                "variants_count": 6,
-                                "extras": ["Embolsado", "Alforza"],
-                                "embroidery": {
-                                "design_export_id": 1,
-                                "position": "pecho_izquierdo"
-                                }
-                                }</div>
-
-                            <div class="mt-4">
-                                <div class="section-title">
-                                    <i class="fas fa-calculator"></i>
-                                    <span>Resumen de Costos</span>
-                                </div>
-
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span class="text-muted">Precio base variante:</span>
-                                    <span class="font-weight-bold">$350.00</span>
-                                </div>
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span class="text-muted">Embolsado:</span>
-                                    <span>+$5.00</span>
-                                </div>
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span class="text-muted">Alforza:</span>
-                                    <span>+$25.00</span>
-                                </div>
-                                <hr>
-                                <div class="d-flex justify-content-between">
-                                    <span class="font-weight-bold">Total por unidad:</span>
-                                    <span class="font-weight-bold text-success" style="font-size: 18px;">$380.00</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ========================================= -->
-                <!-- PASO 6: REVISIÓN FINAL -->
-                <!-- ========================================= -->
-                <div class="main-card fade-in d-none" id="content-step6">
-                    <div class="section-block">
-                        <div class="section-title">
-                            <i class="fas fa-clipboard-check"></i>
-                            <span>Revisión Final</span>
-                            <span class="badge-step">Paso 6 de 6</span>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="review-section">
-                                    <h5><i class="fas fa-tag mr-2"></i> Información del Producto</h5>
-                                    <div id="review-product-info"></div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="review-section">
-                                    <h5><i class="fas fa-layer-group mr-2"></i> Variantes</h5>
-                                    <div id="review-variants"></div>
-                                </div>
-                                <div class="review-section mt-4">
-                                    <h5><i class="fas fa-scroll mr-2"></i> Materiales (BOM)</h5>
-                                    <div id="review-materials"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row mt-4">
-                            <div class="col-md-6">
-                                <div class="review-section">
-                                    <h5><i class="fas fa-vector-square mr-2"></i> Bordados Asignados</h5>
-                                    <div id="review-embroidery"></div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="review-section">
-                                    <h5><i class="fas fa-clipboard-list mr-2"></i> Ficha Técnica</h5>
-                                    <div id="review-specs"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row mt-4">
-                            <div class="col-md-6">
-                                <div class="review-section">
-                                    <h5><i class="fas fa-concierge-bell mr-2"></i> Servicios Adicionales</h5>
-                                    <div id="review-extras"></div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="review-section">
-                                    <h5><i class="fas fa-calculator mr-2"></i> Resumen de Costos</h5>
-                                    <div id="review-costs"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row mt-4">
-                            <div class="col-12">
-                                <div class="alert alert-info">
-                                    <i class="fas fa-info-circle"></i> Revise cuidadosamente la información antes
-                                    de
-                                    guardar el producto.
-                                    Puede regresar a pasos anteriores si necesita realizar cambios.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="summary-footer">
-                        <div class="summary-stats">
-                            <div>
-                                <span class="summary-stat-label">Variantes</span>
-                                <span class="summary-stat-value" id="review-variants-count">0</span>
-                            </div>
-                            <div>
-                                <span class="summary-stat-label">Bordados</span>
-                                <span class="summary-stat-value" id="review-embroidery-count">0</span>
-                            </div>
-                            <div>
-                                <span class="summary-stat-label">Extras</span>
-                                <span class="summary-stat-value" id="review-extras-count">0</span>
-                            </div>
-                            <div>
-                                <span class="summary-stat-label">Precio Final</span>
-                                <span class="summary-stat-value highlight" id="review-total-price">$0.00</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-            </form>
+            </div>
         </div>
     </div>
-    <br>
+
+    {{-- ================= TEMPLATES (DATA FROM DB) ================= --}}
+
+    {{-- STEP 1: DEFINICIÓN --}}
+    <script type="text/template" id="tpl_step1">
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+            <h5 class="step-title"><i class="fas fa-fingerprint text-primary"></i> Identidad del Producto</h5>
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="form-group">
+                        <label class="font-weight-bold">Nombre Comercial *</label>
+                        <input type="text" class="form-control form-control-lg" name="name" id="inpName" placeholder="Ej: Guayabera Presidencial Lino" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="font-weight-bold">SKU Base (Prefijo) *</label>
+                        <input type="text" class="form-control form-control-lg text-uppercase" name="sku" id="inpSku" placeholder="GUA-PRE-LIN" required>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <label class="font-weight-bold">Categoría</label>
+                    <select class="form-control" name="category_id" id="inpCategory">
+                        @foreach($categories ?? [] as $cat)
+                            <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="font-weight-bold">Estado</label>
+                    <select class="form-control" name="status" id="inpStatus">
+                        <option value="draft">Borrador</option>
+                        <option value="active" selected>Activo</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                     <label class="font-weight-bold">Descripción</label>
+                     <textarea class="form-control" name="description" id="inpDesc" rows="2"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+    </script>
+    </div>
+    </div>
+    </div>
+    </div>
+    </script>
+
+    {{-- STEP 2: VARIANTES --}}
+    <script type="text/template" id="tpl_step2">
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+            <h5 class="step-title"><i class="fas fa-th text-primary"></i> Matriz de Variantes</h5>
+            
+            <div class="row bg-light p-3 rounded mb-4">
+                <div class="col-md-5">
+                    <label class="font-weight-bold">Tallas</label>
+                    <div class="d-flex align-items-start">
+                        <div class="flex-grow-1">
+                            <select class="form-control select2" multiple id="selSizes" data-placeholder="Selecciona tallas...">
+                                @foreach($sizeAttribute->values ?? [] as $val)
+                                    <option value="{{ $val->id }}">{{ $val->value }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <button type="button" class="btn btn-outline-danger ml-2" onclick="$('#selSizes').val(null).trigger('change')" title="Limpiar tallas" style="height: 45px;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <label class="font-weight-bold">Colores</label>
+                    <div class="d-flex align-items-start">
+                        <div class="flex-grow-1">
+                            <select class="form-control select2" multiple id="selColors" data-placeholder="Selecciona colores...">
+                                @foreach($colorAttribute->values ?? [] as $val)
+                                    <option value="{{ $val->id }}" data-hex="{{ $val->hex_color }}">{{ $val->value }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <button type="button" class="btn btn-outline-danger ml-2" onclick="$('#selColors').val(null).trigger('change')" title="Limpiar colores" style="height: 45px;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="button" class="btn btn-primary btn-block" onclick="generateMatrix()"><i class="fas fa-bolt"></i> Generar</button>
+                </div>
+            </div>
+
+            <div id="variantsTableContainer" class="table-responsive d-none">
+                <table class="table table-hover align-middle">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>SKU Generado</th>
+                            <th>Variante</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="variantsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</script>
+
+    {{-- STEP 3: BOM (ENGINEERING) --}}
+    <script type="text/template" id="tpl_step3">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white font-weight-bold">Catálogo de Insumos</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label>Familia de Material</label>
+                        <select class="form-control select2" id="bomFamilySelector">
+                            <option value="">Seleccione Familia...</option>
+                            @foreach($materials ?? [] as $m)
+                                <option value="{{ $m->id }}">{{ $m->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Material Específico / Color</label>
+                        <select class="form-control select2" id="bomMaterialSelector" disabled></select>
+                        <div id="materialInfo" class="mt-2 small d-none p-2 bg-light rounded border">
+                            <div>Stock: <b id="matStock">-</b> | Costo: <b id="matCost" class="text-success">$-</b></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Cantidad (Consumo)</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="bomQty" placeholder="0.00" step="0.01">
+                            <div class="input-group-append">
+                                <span class="input-group-text" id="bomUnit">unid</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-check mb-3">
+                         <input class="form-check-input" type="checkbox" id="materialIsPrimary">
+                         <label class="form-check-label small" for="materialIsPrimary">Material Base (Principal)</label>
+                    </div>
+                    <button type="button" class="btn btn-success btn-block" onclick="prepareAddMaterial()">
+                        <i class="fas fa-plus-circle"></i> Agregar al BOM
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between">
+                    <span class="font-weight-bold">Bill of Materials (BOM)</span>
+                    <span class="badge badge-light border" id="bomTotalCostBadge">Costo Total: $0.00</span>
+                </div>
+                <div class="card-body p-0 table-responsive">
+                    <table class="table table-striped mb-0" id="bomTable">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>Insumo</th>
+                                <th>Variantes</th>
+                                <th>Consumo</th>
+                                <th>Alcance</th>
+                                <th>Costo</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="bomTableBody">
+                            <tr><td colspan="6" class="text-center text-muted py-4">Sin materiales asignados</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</script>
+
+    {{-- STEP 4: DESIGN (EMBROIDERY) --}}
+    <script type="text/template" id="tpl_step4">
+    <div class="card shadow-sm border-0">
+        <div class="card-body">
+            <div class="d-flex justify-content-between mb-3">
+                <h5 class="step-title"><i class="fas fa-vector-square text-primary"></i> Biblioteca de Diseños</h5>
+                <input type="text" class="form-control w-25" placeholder="Buscar diseño..." id="searchDesign">
+            </div>
+
+            <div class="design-grid-container">
+                <div class="row" id="designGrid">
+                    @forelse($designs as $design)
+                        @php
+                            $export = $design->generalExports->first();
+                            $stitches = $export ? number_format($export->stitches_count) : 'N/A';
+                            $stitchesRaw = $export->stitches_count ?? 0;
+                            $dimensions = $export ? ($export->width_mm . 'x' . $export->height_mm . ' mm') : 'N/A';
+                            $colors = $export ? $export->colors_count : 0;
+                            $appType = $export->application_type ?? 'General';
+                            $image = $design->primaryImage ? $design->primaryImage->url : null;
+                        @endphp
+                        <div class="col-md-3 col-sm-6 mb-4">
+                            <div class="card h-100 design-card" 
+                                 onclick="toggleDesign(this, {{ $design->id }}, '{{ $design->name }}', {{ $stitchesRaw }})">
+                                <div class="card-img-top design-thumb d-flex align-items-center justify-content-center bg-light" style="height: 140px;">
+                                    @if($image)
+                                        <img src="{{ asset('storage/' . $image) }}" style="max-height: 120px; max-width: 100%;">
+                                    @else
+                                        <i class="fas fa-image fa-3x text-muted"></i>
+                                    @endif
+                                </div>
+                                <div class="card-body p-3">
+                                    <h6 class="text-truncate mb-2 font-weight-bold" title="{{ $design->name }}">{{ $design->name }}</h6>
+                                    <div class="mb-2">
+                                        <span class="badge badge-secondary">{{ ucfirst($appType) }}</span>
+                                    </div>
+                                    <div class="row text-center small">
+                                        <div class="col-4">
+                                            <i class="fas fa-ruler-combined text-primary d-block mb-1"></i>
+                                            <strong class="d-block">{{ $dimensions }}</strong>
+                                        </div>
+                                        <div class="col-4">
+                                            <i class="fas fa-palette text-info d-block mb-1"></i>
+                                            <strong class="d-block">{{ $colors }} col</strong>
+                                        </div>
+                                        <div class="col-4">
+                                            <i class="fas fa-th text-success d-block mb-1"></i>
+                                            <strong class="d-block">{{ $stitches }}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="check-overlay"><i class="fas fa-check-circle"></i></div>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="col-12 text-center text-muted">No hay diseños disponibles</div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+    </div>
+</script>
+
+    {{-- STEP 5: FINANZAS Y EXTRAS --}}
+    <script type="text/template" id="tpl_step5">
+    <div class="row">
+        <div class="col-md-5">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white font-weight-bold">Servicios Adicionales (Extras)</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label>Agregar Servicio</label>
+                        <select class="form-control select2" id="extrasSelector">
+                            <option value="">Seleccionar servicio...</option>
+                            @foreach($extras ?? [] as $extra)
+                                <option value="{{ $extra->id }}" data-price="{{ $extra->cost_addition }}" data-name="{{ $extra->name }}">
+                                    {{ $extra->name }} (+${{ number_format($extra->cost_addition, 2) }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <button type="button" class="btn btn-success btn-block mb-3" onclick="addExtra()">
+                        <i class="fas fa-plus-circle mr-2"></i> Agregar Servicio
+                    </button>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead class="bg-light"><tr><th>Servicio</th><th class="text-right">Costo</th><th></th></tr></thead>
+                            <tbody id="extrasTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-7">
+            <div class="card border-primary shadow-sm h-100">
+                <div class="card-header bg-primary text-white text-center">
+                    <h5 class="mb-0"><i class="fas fa-calculator mr-2"></i> Motor de Precios</h5>
+                </div>
+                <div class="card-body">
+                    
+                    {{-- DESGLOSE DE MATERIALES --}}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0 text-uppercase small text-muted"><i class="fas fa-boxes mr-2"></i>Materiales (BOM)</h6>
+                            <span class="font-weight-bold text-primary" id="finMatCost">$0.00</span>
+                        </div>
+                        <div id="finMaterialsList" class="bg-light rounded p-2 small" style="max-height: 120px; overflow-y: auto;">
+                            <span class="text-muted">Sin materiales...</span>
+                        </div>
+                    </div>
+                    
+                    {{-- BORDADOS --}}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0 text-uppercase small text-muted"><i class="fas fa-tshirt mr-2"></i>Bordados</h6>
+                            <span class="font-weight-bold text-info" id="finEmbCost">$0.00</span>
+                        </div>
+                        <div class="row bg-light rounded p-2 mx-0">
+                            <div class="col-6 small">
+                                <span class="text-muted">Total Puntadas:</span>
+                                <strong class="d-block" id="finTotalStitches">0</strong>
+                            </div>
+                            <div class="col-6">
+                                <label class="small text-muted mb-0">$/1000 pts:</label>
+                                <input type="number" class="form-control form-control-sm" id="finStitchRate" value="1.00" step="0.01" min="0" onchange="recalcFinance()">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {{-- EXTRAS --}}
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0 text-uppercase small text-muted"><i class="fas fa-concierge-bell mr-2"></i>Servicios Extras</h6>
+                        <span class="font-weight-bold text-warning" id="finExtrasTotal">$0.00</span>
+                    </div>
+                    
+                    {{-- TOTAL --}}
+                    <div class="alert alert-dark text-center py-3 mb-3">
+                        <small class="text-uppercase d-block mb-1">Costo Total de Producción</small>
+                        <h3 class="font-weight-bold mb-0" id="finTotalCost">$0.00</h3>
+                    </div>
+
+                    {{-- MARGEN --}}
+                    <div class="form-group">
+                        <label>Margen de Ganancia (%)</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control font-weight-bold text-primary" id="finMargin" value="35" onkeyup="recalcFinance()">
+                            <div class="input-group-append"><span class="input-group-text">%</span></div>
+                        </div>
+                        <small class="text-muted">Fórmula: Costo / (1 - Margen)</small>
+                    </div>
+
+                    {{-- PRECIO SUGERIDO --}}
+                    <div class="alert alert-success text-center mb-3">
+                        <small class="text-uppercase">Precio Sugerido</small>
+                        <h2 class="font-weight-bold mb-0" id="finSuggestedPrice">$0.00</h2>
+                    </div>
+                    
+                    {{-- PRECIO FINAL --}}
+                    <div class="form-group text-center">
+                        <label class="small text-muted">Precio Final (Manual)</label>
+                        <input type="number" class="form-control text-center font-weight-bold form-control-lg" name="base_price" id="inpBasePrice" step="0.01">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</script>
+
+    {{-- STEP 6: REVIEW --}}
+    <script type="text/template" id="tpl_step6">
+    <div class="card shadow-sm">
+        <div class="card-header bg-success text-white">Confirmación de Ingeniería</div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6><i class="fas fa-box mr-2"></i> Producto</h6>
+                    <p id="revProductInfo" class="text-muted pl-4"></p>
+                    
+                    <h6 class="mt-4"><i class="fas fa-th mr-2"></i> Variantes Generadas (<span id="revVarCount">0</span>)</h6>
+                    <div id="revVariants" class="pl-4 small text-muted" style="max-height:100px; overflow-y:auto"></div>
+                </div>
+                <div class="col-md-6 border-left">
+                    <h6><i class="fas fa-calculator mr-2"></i> Resumen Financiero</h6>
+                    <table class="table table-sm mt-2">
+                        <tr><td>Costo Materiales:</td><td class="text-right" id="revMatCost"></td></tr>
+                        <tr><td>Costo Extras:</td><td class="text-right" id="revExtraCost"></td></tr>
+                        <tr class="font-weight-bold table-active"><td>Precio Venta:</td><td class="text-right text-success h5" id="revPrice"></td></tr>
+                    </table>
+                    
+                    <h6 class="mt-3"><i class="fas fa-clipboard-list mr-2"></i> Estructura</h6>
+                    <ul class="small text-muted">
+                        <li>Materiales en BOM: <span id="revBomCount">0</span></li>
+                        <li>Bordados Asignados: <span id="revEmbCount">0</span></li>
+                        <li>Servicios Extras: <span id="revExtraCount">0</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</script>
+
 @stop
 
 @section('css')
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Mantener todos los estilos originales de la propuesta */
+        /* ESTILOS ENTERPRISE */
         :root {
-            --primary: #3b82f6;
-            --primary-dark: #2563eb;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --dark: #1e293b;
-            --gray-50: #f8fafc;
-            --gray-100: #f1f5f9;
-            --gray-200: #e2e8f0;
-            --gray-300: #cbd5e1;
-            --gray-400: #94a3b8;
-            --gray-500: #64748b;
-            --gray-600: #475569;
-            --gray-700: #334155;
-            --gray-800: #1e293b;
-            --radius: 12px;
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            --primary-ent: #2c3e50;
+            --accent-ent: #3498db;
+            --success-ent: #27ae60;
         }
 
-        * {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        }
-
-        body {
-            background: var(--gray-100);
-            color: var(--gray-700);
-            font-size: 14px;
-        }
-
-        /* Header del módulo */
-        .module-header {
-            background: linear-gradient(135deg, var(--dark) 0%, #334155 100%);
-            padding: 24px 32px;
-            color: white;
-            margin: -24px -15px 24px -15px;
-        }
-
-        .module-header h1 {
-            font-size: 24px;
-            font-weight: 600;
-            margin: 0;
-        }
-
-        .module-header p {
-            opacity: 0.7;
-            margin: 4px 0 0;
-            font-size: 14px;
-        }
-
-        /* Stepper mejorado */
-        .stepper-container {
-            display: flex;
-            justify-content: center;
-            gap: 0;
-            margin-bottom: 32px;
-            padding: 0 60px;
-        }
-
-        .step-item {
-            display: flex;
-            align-items: center;
-            flex: 1;
-            position: relative;
-        }
-
-        .step-item:not(:last-child)::after {
-            content: '';
-            flex: 1;
-            height: 3px;
-            background: var(--gray-200);
-            margin: 0 12px;
-            border-radius: 2px;
-            transition: background 0.3s;
-        }
-
-        .step-item.completed:not(:last-child)::after {
-            background: var(--success);
-        }
-
-        .step-item.active:not(:last-child)::after {
-            background: linear-gradient(90deg, var(--primary) 50%, var(--gray-200) 50%);
-        }
-
-        .step-circle {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: white;
-            border: 3px solid var(--gray-200);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 16px;
-            color: var(--gray-400);
-            transition: all 0.3s;
-            flex-shrink: 0;
-        }
-
-        .step-item.active .step-circle {
-            border-color: var(--primary);
-            background: var(--primary);
-            color: white;
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
-        }
-
-        .step-item.completed .step-circle {
-            border-color: var(--success);
-            background: var(--success);
-            color: white;
-        }
-
-        .step-label {
-            position: absolute;
-            top: 54px;
-            left: 50%;
-            transform: translateX(-50%);
-            white-space: nowrap;
-            font-size: 12px;
-            font-weight: 500;
-            color: var(--gray-400);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .step-item.active .step-label {
-            color: var(--primary);
-            font-weight: 600;
-        }
-
-        .step-item.completed .step-label {
-            color: var(--success);
-        }
-
-        /* Cards principales */
-        .main-card {
-            background: white;
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            overflow: hidden;
-            border: 1px solid var(--gray-200);
-        }
-
-        /* Secciones internas */
-        .section-block {
-            padding: 24px;
-            border-bottom: 1px solid var(--gray-100);
-        }
-
-        .section-block:last-child {
-            border-bottom: none;
-        }
-
-        .section-title {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 15px;
-            font-weight: 600;
-            color: var(--gray-800);
-            margin-bottom: 20px;
-        }
-
-        .section-title i {
-            width: 32px;
-            height: 32px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        /* SCOPE TOGGLE BUTTONS (Modal) */
+        .scope-toggle-btn {
+            background: #fff;
+            border: 2px solid #dee2e6;
             border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 14px;
-        }
-
-        .section-title .badge-step {
-            background: var(--gray-100);
-            color: var(--gray-500);
-            font-size: 11px;
-            padding: 4px 10px;
-            border-radius: 20px;
-            margin-left: auto;
-        }
-
-        /* Form controls mejorados */
-        .form-label {
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--gray-600);
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            margin-bottom: 6px;
-        }
-
-        .form-control,
-        .form-select {
-            border: 2px solid var(--gray-200);
-            border-radius: 8px;
-            padding: 10px 14px;
-            font-size: 14px;
-            transition: all 0.2s;
-            background: var(--gray-50);
-        }
-
-        .form-control:focus,
-        .form-select:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-            background: white;
-        }
-
-        .form-control-lg {
-            padding: 14px 16px;
-            font-size: 16px;
-        }
-
-        /* Imagen del producto */
-        .product-image-upload {
-            background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
-            border: 2px dashed var(--gray-300);
-            border-radius: var(--radius);
-            height: auto;
-            min-height: 300px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .product-image-upload:hover {
-            border-color: var(--primary);
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(59, 130, 246, 0.1) 100%);
-        }
-
-        .product-image-upload i {
-            font-size: 48px;
-            color: var(--gray-300);
-            margin-bottom: 16px;
-        }
-
-        .product-image-upload span {
-            color: var(--gray-500);
-            font-weight: 500;
-        }
-
-        .product-image-upload small {
-            color: var(--gray-400);
-            margin-top: 4px;
-        }
-
-        .product-image-upload img {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        /* Generador de variantes */
-        .variant-generator {
-            background: var(--gray-50);
-            border-radius: var(--radius);
-            padding: 20px;
-            border: 1px solid var(--gray-200);
-        }
-
-        .variant-generator-title {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--gray-700);
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .variant-generator-title i {
-            color: var(--primary);
-        }
-
-        /* Lista de variantes */
-        .variants-list {
-            max-height: 280px;
-            overflow-y: auto;
-            border: 1px solid var(--gray-200);
-            border-radius: 8px;
-            background: white;
-        }
-
-        .variant-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--gray-100);
-            transition: background 0.2s;
-        }
-
-        .variant-item:last-child {
-            border-bottom: none;
-        }
-
-        .variant-item:hover {
-            background: var(--gray-50);
-        }
-
-        .variant-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .variant-name {
-            font-weight: 500;
-            color: var(--gray-700);
-        }
-
-        .variant-attrs {
-            display: flex;
-            gap: 6px;
-        }
-
-        .variant-attr {
-            background: var(--gray-100);
-            color: var(--gray-600);
-            padding: 3px 10px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 500;
-        }
-
-        .variant-sku {
-            font-family: 'SF Mono', 'Consolas', monospace;
-            background: var(--dark);
-            color: #fbbf24;
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-
-        .variant-price {
-            font-weight: 600;
-            color: var(--success);
-        }
-
-        .variant-actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        .btn-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 6px;
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-icon-light {
-            background: var(--gray-100);
-            color: var(--gray-500);
-        }
-
-        .btn-icon-light:hover {
-            background: var(--gray-200);
-            color: var(--gray-700);
-        }
-
-        .btn-icon-danger {
-            background: #fef2f2;
-            color: var(--danger);
-        }
-
-        .btn-icon-danger:hover {
-            background: #fee2e2;
-        }
-
-        /* Empty state */
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--gray-400);
-        }
-
-        .empty-state i {
-            font-size: 40px;
-            margin-bottom: 12px;
-            opacity: 0.5;
-        }
-
-        .empty-state p {
-            margin: 0;
-            font-size: 13px;
-        }
-
-        /* Badges de atributo selector */
-        .attribute-selector {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 8px;
-        }
-
-        .attr-chip {
-            padding: 8px 16px;
-            border: 2px solid var(--gray-200);
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            background: white;
-        }
-
-        .attr-chip:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-        }
-
-        .attr-chip.selected {
-            background: var(--primary);
-            border-color: var(--primary);
-            color: white;
-        }
-
-        /* Paso 2: Ficha Técnica */
-        .specs-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
-        }
-
-        .specs-grid.cols-2 {
-            grid-template-columns: repeat(2, 1fr);
-        }
-
-        .specs-grid.cols-4 {
-            grid-template-columns: repeat(4, 1fr);
-        }
-
-        /* Métricas de bordado */
-        .embroidery-metrics {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
-            margin-top: 16px;
-        }
-
-        .metric-card {
-            background: linear-gradient(135deg, var(--gray-50) 0%, white 100%);
-            border: 1px solid var(--gray-200);
-            border-radius: 10px;
-            padding: 16px;
-            text-align: center;
-        }
-
-        .metric-value {
-            font-size: 22px;
-            font-weight: 700;
-            color: var(--gray-800);
-            display: block;
-        }
-
-        .metric-label {
-            font-size: 11px;
-            color: var(--gray-500);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-top: 4px;
-        }
-
-        /* Selector de bordados */
-        .embroidery-selector {
-            background: var(--gray-50);
-            border-radius: var(--radius);
-            padding: 20px;
-            border: 1px solid var(--gray-200);
-        }
-
-        .embroidery-card {
-            background: white;
-            border: 2px solid var(--gray-200);
-            border-radius: 10px;
-            padding: 16px;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            gap: 16px;
-            margin-bottom: 12px;
-        }
-
-        .embroidery-card:hover {
-            border-color: var(--primary);
-        }
-
-        .embroidery-card.selected {
-            border-color: var(--primary);
-            background: rgba(59, 130, 246, 0.05);
-        }
-
-        .embroidery-thumb {
-            width: 80px;
-            height: 80px;
-            background: var(--gray-100);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .embroidery-thumb img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
-
-        .embroidery-info {
-            flex: 1;
-        }
-
-        .embroidery-name {
-            font-weight: 600;
-            color: var(--gray-800);
-            margin-bottom: 4px;
-        }
-
-        .embroidery-meta {
-            font-size: 12px;
-            color: var(--gray-500);
-        }
-
-        .embroidery-position {
-            background: var(--warning);
-            color: white;
-            padding: 3px 10px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-
-        /* Extras / Servicios */
-        .extras-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .extra-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 14px 16px;
-            background: white;
-            border: 1px solid var(--gray-200);
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .extra-item:hover {
-            border-color: var(--primary);
-        }
-
-        .extra-item.selected {
-            border-color: var(--success);
-            background: rgba(16, 185, 129, 0.05);
-        }
-
-        .extra-item.selected .extra-check {
-            background: var(--success);
-            border-color: var(--success);
-            color: white;
-        }
-
-        .extra-check {
-            width: 24px;
-            height: 24px;
-            border: 2px solid var(--gray-300);
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 12px;
-            transition: all 0.2s;
-        }
-
-        .extra-name {
-            font-weight: 500;
-            color: var(--gray-700);
-        }
-
-        .extra-price {
-            font-weight: 600;
-            color: var(--success);
-        }
-
-        /* Footer de resumen */
-        .summary-footer {
-            background: linear-gradient(135deg, var(--dark) 0%, #334155 100%);
-            padding: 20px 24px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            color: white;
-        }
-
-        .summary-stats {
-            display: flex;
-            gap: 32px;
-        }
-
-        .summary-stat-label {
-            font-size: 11px;
-            opacity: 0.7;
-            text-transform: uppercase;
-        }
-
-        .summary-stat-value {
-            font-size: 20px;
-            font-weight: 700;
-        }
-
-        .summary-stat-value.highlight {
-            color: #fbbf24;
-        }
-
-        /* Global Navigation */
-        .global-navigation-container {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: white;
-            padding: 15px 25px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            margin-bottom: 25px;
-            border: 1px solid var(--gray-100);
-            position: sticky;
-            top: 10px;
-            z-index: 1000;
-        }
-
-        .navigation-spacer {
-            flex-grow: 1;
-        }
-
-        .btn-navigation {
-            padding: 10px 24px;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border: none;
-        }
-
-        .btn-prev {
-            background: var(--gray-100);
-            color: var(--gray-700);
-        }
-
-        .btn-prev:hover {
-            background: var(--gray-200);
-            transform: translateX(-3px);
-        }
-
-        .btn-next {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-        }
-
-        .btn-next:hover {
-            opacity: 0.9;
-            transform: translateX(3px);
-            box-shadow: 0 6px 15px rgba(99, 102, 241, 0.4);
-        }
-
-        /* Botones */
-        .btn-primary-custom {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            border: none;
-            color: white;
-            padding: 12px 28px;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn-primary-custom:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-        }
-
-        .btn-secondary-custom {
-            background: white;
-            border: 2px solid var(--gray-200);
-            color: var(--gray-600);
             padding: 12px 24px;
-            border-radius: 8px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-        }
-
-        .btn-secondary-custom:hover {
-            border-color: var(--gray-300);
-            background: var(--gray-50);
-            text-decoration: none;
-            color: var(--gray-600);
-        }
-
-        .btn-success-custom {
-            background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
-            border: none;
-            color: white;
-            padding: 14px 32px;
-            border-radius: 8px;
+            font-size: 0.95rem;
             font-weight: 600;
-            font-size: 15px;
+            color: #6c757d;
             cursor: pointer;
-            transition: all 0.2s;
-            display: inline-flex;
+            transition: all 0.2s ease;
+            margin: 0 8px;
+        }
+
+        .scope-toggle-btn:hover {
+            border-color: var(--accent-ent, #3498db);
+            color: var(--accent-ent, #3498db);
+        }
+
+        .scope-toggle-btn.active {
+            background: var(--accent-ent, #3498db);
+            border-color: var(--accent-ent, #3498db);
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+        }
+
+        /* FIX: Hide AdminLTE footer on this page to remove white space at bottom */
+        .main-footer {
+            display: none !important;
+        }
+
+        /* Ensure wrapper takes full height but no more */
+        .content-wrapper {
+            min-height: 100vh !important;
+            padding-bottom: 0 !important;
+        }
+
+        .module-header {
+            background: linear-gradient(135deg, var(--primary-ent), #34495e);
+            padding: 2rem;
+            border-radius: 0 0 15px 15px;
+            margin-bottom: 2rem;
+        }
+
+        .live-cost-badge {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 5px 15px;
+            border-radius: 20px;
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .live-cost-badge .value {
+            font-weight: 700;
+            color: #2ecc71;
+            margin-left: 5px;
+        }
+
+        /* STEPPER NAVIGATION CONTAINER (Carousel Style) */
+        .stepper-nav-container {
+            display: flex;
             align-items: center;
-            gap: 10px;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 2rem;
+            padding: 0 10px;
         }
 
-        .btn-success-custom:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        /* PREMIUM CAROUSEL ARROWS */
+        .stepper-arrow {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid #dee2e6;
+            background: #fff;
+            color: #6c757d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-shrink: 0;
         }
 
-        /* Layout dos columnas */
-        .two-columns {
-            display: grid;
-            grid-template-columns: 1fr 380px;
-            gap: 0;
+        .stepper-arrow:hover:not(:disabled) {
+            background: var(--accent-ent, #3498db);
+            border-color: var(--accent-ent, #3498db);
+            color: #fff;
+            transform: scale(1.1);
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
         }
 
-        .two-columns .left-column {
-            padding: 24px;
+        .stepper-arrow:active:not(:disabled) {
+            transform: scale(0.95);
         }
 
-        .two-columns .right-column {
-            background: var(--gray-50);
-            border-left: 1px solid var(--gray-200);
-            padding: 24px;
+        .stepper-arrow:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            background: #f8f9fa;
         }
 
-        /* JSON Preview */
-        .json-preview {
-            background: var(--dark);
-            border-radius: 8px;
-            padding: 16px;
-            font-family: 'SF Mono', 'Consolas', monospace;
-            font-size: 11px;
-            color: #a5f3fc;
-            max-height: 200px;
-            overflow-y: auto;
-            white-space: pre-wrap;
+        .stepper-arrow i {
+            font-size: 1.2rem;
         }
 
-        /* Navegación entre pasos */
-        .step-navigation {
+        .stepper-arrow-next.btn-success-mode {
+            background: var(--success-ent, #27ae60) !important;
+            border-color: var(--success-ent, #27ae60) !important;
+            color: #fff !important;
+            animation: pulse-success 1.5s infinite;
+        }
+
+        @keyframes pulse-success {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(39, 174, 96, 0.4);
+            }
+
+            50% {
+                box-shadow: 0 0 0 10px rgba(39, 174, 96, 0);
+            }
+        }
+
+        /* STEPPER */
+        .stepper-wrapper {
             display: flex;
             justify-content: space-between;
-            padding: 20px 24px;
-            background: var(--gray-50);
-            border-top: 1px solid var(--gray-200);
-        }
-
-        /* Responsive */
-        @media (max-width: 1200px) {
-            .two-columns {
-                grid-template-columns: 1fr;
-            }
-
-            .two-columns .right-column {
-                border-left: none;
-                border-top: 1px solid var(--gray-200);
-            }
-
-            .specs-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .embroidery-metrics {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        /* Tabs internos */
-        .internal-tabs {
-            display: flex;
-            gap: 4px;
-            background: var(--gray-100);
-            padding: 4px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-
-        .internal-tab {
+            position: relative;
+            padding: 0 10px;
             flex: 1;
-            padding: 10px 16px;
-            border: none;
-            background: transparent;
-            border-radius: 6px;
-            font-weight: 500;
-            color: var(--gray-500);
+            max-width: 800px;
+        }
+
+        .stepper-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 40px;
+            right: 40px;
+            height: 2px;
+            background: #e0e0e0;
+            z-index: 0;
+        }
+
+        .stepper-item {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            width: 80px;
+            opacity: 0.6;
+            transition: all 0.3s;
+        }
+
+        .stepper-item.active {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .stepper-item.completed .step-counter {
+            background: var(--success-ent);
+            border-color: var(--success-ent);
+            color: white;
+        }
+
+        .step-counter {
+            width: 35px;
+            height: 35px;
+            background: #fff;
+            border: 2px solid #bdc3c7;
+            border-radius: 50%;
+            margin: 0 auto 5px;
+            line-height: 31px;
+            font-weight: bold;
+            color: #7f8c8d;
+            transition: all 0.3s;
+        }
+
+        .stepper-item.active .step-counter {
+            border-color: var(--accent-ent);
+            color: var(--accent-ent);
+            box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.2);
+        }
+
+        .step-name {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* CARDS & COMPONENTS */
+        .card-radio label {
             cursor: pointer;
+            padding: 10px 20px;
+            border: 2px solid #eee;
+            border-radius: 8px;
             transition: all 0.2s;
         }
 
-        .internal-tab.active {
-            background: white;
-            color: var(--gray-800);
-            box-shadow: var(--shadow-sm);
+        .custom-control-input:checked~.custom-control-label::before {
+            background-color: var(--accent-ent);
+            border-color: var(--accent-ent);
         }
 
-        /* Quick add */
-        .quick-add-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr auto;
-            gap: 12px;
-            align-items: end;
-            margin-bottom: 20px;
+        .card-radio input:checked+label {
+            border-color: var(--accent-ent);
+            background: rgba(52, 152, 219, 0.05);
+            color: var(--accent-ent);
         }
 
-        /* Animaciones */
         .fade-in {
-            animation: fadeIn 0.3s ease;
+            animation: fadeIn 0.4s ease-in-out;
         }
 
         @keyframes fadeIn {
@@ -1622,835 +765,873 @@
             }
         }
 
-        /* Estilos para la sección de revisión */
-        .review-section {
-            background: var(--gray-50);
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 15px;
-            border: 1px solid var(--gray-200);
+        .badge-scope-global {
+            background: #e8f6f3;
+            color: #1abc9c;
+            border: 1px solid #1abc9c;
         }
 
-        .review-section h5 {
-            display: flex;
-            align-items: center;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--gray-700);
-            margin-bottom: 12px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid var(--gray-200);
+        .badge-scope-specific {
+            background: #fef9e7;
+            color: #f1c40f;
+            border: 1px solid #f1c40f;
         }
 
-        .review-section p {
-            margin-bottom: 8px;
-            font-size: 13px;
+        /* DESIGN GRID */
+        .design-card {
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+            position: relative;
         }
 
-        .review-section strong {
-            color: var(--gray-800);
-            min-width: 120px;
-            display: inline-block;
+        .design-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
 
-        .review-section .variant-review-item {
-            background: white;
-            padding: 10px;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            border-left: 3px solid var(--primary);
+        .design-card.selected {
+            border-color: var(--accent-ent);
+            background: #f0f8ff;
         }
 
-        .review-section .embroidery-review-item {
-            background: white;
-            padding: 10px;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            border-left: 3px solid var(--warning);
+        .check-overlay {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            color: var(--success-ent);
+            font-size: 1.2rem;
+            display: none;
         }
 
-        .review-section .extra-review-item {
-            background: white;
-            padding: 10px;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            border-left: 3px solid var(--success);
+        .design-card.selected .check-overlay {
+            display: block;
+        }
+
+        .stop-propagation {
+            cursor: default;
+        }
+
+        /* --- VISUAL NORMALIZATION (FIX) --- */
+
+        /* Define consistent height / visual variables locally if needed, or just use values */
+
+        /* GLOBAL: Force same height for all interactive elements in forms */
+        input.form-control,
+        select.form-control,
+        .btn-block,
+        /* Target the 'Generar' button */
+        .select2-container .select2-selection--single,
+        .select2-container .select2-selection--multiple {
+            height: 45px !important;
+            /* Premium height, consistent for ALL */
+            min-height: 45px !important;
+            display: flex !important;
+            align-items: center !important;
+            font-size: 0.95rem !important;
+            border-radius: 8px !important;
+        }
+
+        /* Ensure Textareas maintain their own height/rows */
+        textarea.form-control {
+            height: auto !important;
+            min-height: 100px;
+            padding: 12px !important;
+            font-size: 0.95rem !important;
+            align-items: flex-start !important;
+        }
+
+        /* Button specific alignment */
+        .btn {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-weight: 600 !important;
+            letter-spacing: 0.5px !important;
+            text-transform: uppercase !important;
+            font-size: 0.85rem !important;
+        }
+
+        /* --- PREMIUM SELECT2 BUTTONS (NUCLEAR FIX) --- */
+
+        /* 1. Ensure space for the button in the text container */
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            padding-right: 40px !important;
+            line-height: 45px !important;
+            /* Match height */
+            padding-left: 10px !important;
+            color: #495057 !important;
+        }
+
+        /* 2. Hide the original 'x' text container completely */
+        .select2-container--default .select2-selection--single .select2-selection__clear {
+            position: absolute !important;
+            right: 10px !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            height: 24px !important;
+            width: 24px !important;
+            padding: 0 !important;
+            margin: 0 !important;
+
+            visibility: hidden !important;
+            /* HIde the text 'x' */
+
+            background-color: rgba(231, 76, 60, 0.1) !important;
+            border-radius: 50% !important;
+            z-index: 100 !important;
+        }
+
+        /* 3. Show the ICON using visibility: visible on pseudo-element */
+        .select2-container--default .select2-selection--single .select2-selection__clear::after {
+            content: "\f00d";
+            /* fa-times */
+            font-family: "Font Awesome 5 Free";
+            font-weight: 900;
+            font-size: 13px !important;
+            color: #e74c3c !important;
+
+            visibility: visible !important;
+            /* FORCE VISIBILITY */
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__clear:hover {
+            background-color: #e74c3c !important;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__clear:hover::after {
+            color: white !important;
+        }
+
+        /* Fix Arrow Position */
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 43px !important;
+            /* Slightly less than container */
+            top: 1px !important;
+            right: 10px !important;
+        }
+
+        /* --- MULTIPLE SELECT FIXES --- */
+
+        /* Container style */
+        .select2-container--default .select2-selection--multiple {
+            border: 1px solid #ced4da !important;
+            /* Standard Bootstrap Border */
+            background-color: #ffffff !important;
+            /* White background (was gray) */
+            padding-bottom: 0px !important;
+            padding-top: 0px !important;
+            transition: all 0.2s;
+            overflow: hidden !important;
+        }
+
+        /* HIDE the container-level clear button (phantom X on left) */
+        .select2-container--default .select2-selection--multiple .select2-selection__clear {
+            display: none !important;
+        }
+
+        .select2-container--default.select2-container--focus .select2-selection--multiple {
+            border-color: #80bdff !important;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+        }
+
+        /* Fix Multiple rendered chips alignment */
+        .select2-container--default .select2-selection--multiple .select2-selection__rendered {
+            display: flex !important;
+            align-items: center !important;
+            flex-wrap: wrap !important;
+            padding-left: 5px !important;
+            min-height: 45px !important;
+            /* Match container */
+        }
+
+        /* Choice (Chip) Style */
+        .select2-container--default .select2-selection--multiple .select2-selection__choice {
+            background-color: var(--primary-ent, #2c3e50) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 6px !important;
+            padding: 6px 32px 6px 12px !important;
+            /* More padding left, space for X right */
+            font-size: 0.9rem !important;
+            margin-top: 4px !important;
+            margin-bottom: 4px !important;
+            margin-left: 4px !important;
+            margin-right: 4px !important;
+            position: relative !important;
+            height: 30px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+        }
+
+        /* NUCLEAR: Remove the phantom left X completely */
+        .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+            position: absolute !important;
+            right: 4px !important;
+            left: auto !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            width: 20px !important;
+            height: 20px !important;
+            border: none !important;
+            border-radius: 50% !important;
+            background: rgba(255, 255, 255, 0.2) !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            font-size: 0 !important;
+            /* HIDE THE TEXT X */
+            color: transparent !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+        }
+
+        .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+            background: rgba(255, 255, 255, 0.4) !important;
+        }
+
+        /* Show ICON using ::after */
+        .select2-container--default .select2-selection--multiple .select2-selection__choice__remove::after {
+            content: "\f00d";
+            font-family: "Font Awesome 5 Free";
+            font-weight: 900;
+            font-size: 10px !important;
+            color: white !important;
+        }
+
+        /* Search Field */
+        .select2-container--default .select2-search--inline .select2-search__field {
+            margin-top: 0 !important;
+            height: 30px !important;
+            line-height: 30px !important;
+            margin-left: 5px !important;
+            font-size: 0.95rem !important;
+        }
+
+        /* Standardize labels */
+        label {
+            font-size: 0.8rem !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.5px;
+            color: #5a6268;
+            margin-bottom: 6px !important;
+            text-transform: uppercase;
         }
     </style>
 @stop
 
 @section('js')
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" />
-
     <script>
-        let currentStep = 1;
-        const totalSteps = 6;
-        let productMaterials = [];
-        let productExtras = [];
-
-        // Variable para almacenar variantes de materiales
-        let materialVariantsCache = {};
-
-        function goToStep(step) {
-            // Ocultar paso actual
-            $(`#content-step${currentStep}`).addClass('d-none');
-            $(`#step${currentStep}`).removeClass('active');
-
-            // Marcar pasos anteriores como completados
-            for (let i = 1; i < step; i++) {
-                $(`#step${i}`).addClass('completed');
+        // --- STATE MANAGEMENT ---
+        const State = {
+            step: 1,
+            definition: {},
+            variants: [],
+            bom: [],
+            designs: [], // {id, name, stitches, position}
+            extras: [], // {id, name, price}
+            financials: {
+                material_cost: 0,
+                embroidery_cost: 0,
+                extras_cost: 0,
+                total_cost: 0,
+                margin: 35,
+                price: 0
             }
-            for (let i = step; i <= 6; i++) {
-                $(`#step${i}`).removeClass('completed');
+        };
+
+        $(document).ready(function() {
+            loadTemplates();
+            initPlugins();
+            updateButtons();
+
+            // Listener para cambio de Familia de Material (Paso 3)
+            // Usamos delegación de eventos porque el select se crea dinámicamente
+            $(document).on('change', '#bomFamilySelector', function() {
+                const familyId = $(this).val();
+                fetchMaterialVariants(familyId);
+            });
+
+            // Listener para cambio de variante de material
+            $(document).on('change', '#bomMaterialSelector', function() {
+                const opt = $(this).find(':selected');
+                if (opt.val()) {
+                    $('#matStock').text(opt.data('stock'));
+                    $('#matCost').text('$' + parseFloat(opt.data('cost')).toFixed(2));
+                    // Update unit label
+                    $('#bomUnit').text(opt.data('unit') || 'unid');
+                    $('#materialInfo').removeClass('d-none');
+                } else {
+                    $('#materialInfo').addClass('d-none');
+                    $('#bomUnit').text('unid');
+                }
+            });
+
+            // Reset modal when opened - both buttons inactive
+            $('#materialScopeModal').on('show.bs.modal', function() {
+                $('.scope-toggle-btn').removeClass('active');
+                $('#materialScopeValue').val('');
+                $('#specificVariantsContainer').addClass('d-none');
+            });
+
+            // Inicializar Select2 en el modal
+            $('#targetVariantsSelect').select2({
+                dropdownParent: $('#materialScopeModal'),
+                placeholder: "Seleccione variantes...",
+                width: '100%'
+            });
+        });
+
+        // Scope selection toggle function
+        window.selectScope = function(scope) {
+            // Remove active from all buttons
+            $('.scope-toggle-btn').removeClass('active');
+
+            // Add active to clicked button
+            if (scope === 'global') {
+                $('#btnScopeGlobal').addClass('active');
+                $('#specificVariantsContainer').addClass('d-none');
+            } else {
+                $('#btnScopeSpecific').addClass('active');
+                $('#specificVariantsContainer').removeClass('d-none');
             }
 
-            // Mostrar nuevo paso
-            currentStep = step;
-            $(`#content-step${currentStep}`).removeClass('d-none');
-            $(`#step${currentStep}`).addClass('active');
+            // Set value
+            $('#materialScopeValue').val(scope);
+        };
 
-            // Actualizar botones de navegación global
-            updateGlobalNavigation();
+        function loadTemplates() {
+            try {
+                $('#step1-content').html($('#tpl_step1').html());
+            } catch (e) {}
+            try {
+                $('#step2-content').html($('#tpl_step2').html());
+            } catch (e) {}
+            try {
+                $('#step3-content').html($('#tpl_step3').html());
+            } catch (e) {}
+            try {
+                $('#step4-content').html($('#tpl_step4').html());
+            } catch (e) {}
+            try {
+                $('#step5-content').html($('#tpl_step5').html());
+            } catch (e) {}
+            try {
+                $('#step6-content').html($('#tpl_step6').html());
+            } catch (e) {}
+        }
 
-            // Si el paso es 6, cargar la revisión
-            if (step === 6) {
-                loadReview();
-            }
-
-            // Scroll al inicio
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
+        function initPlugins() {
+            $('.select2').select2({
+                width: '100%',
+                placeholder: "Seleccione...",
+                allowClear: true
             });
         }
 
-        function updateGlobalNavigation() {
-            // Botón Anterior
-            if (currentStep === 1) {
-                $('#globalPrevBtn').addClass('d-none');
-            } else {
-                $('#globalPrevBtn').removeClass('d-none');
+        // --- NAVIGATION ---
+        window.navigate = function(direction) {
+            if (direction === 1 && !validateStep(State.step)) return;
+            const nextStep = State.step + direction;
+            if (nextStep > 6) {
+                submitForm();
+                return;
             }
+            if (nextStep < 1) return;
 
-            // Botón Siguiente / Guardar
-            const nextBtn = $('#globalNextBtn');
-            if (currentStep === totalSteps) {
-                nextBtn.html('<i class="fas fa-save"></i> Guardar Producto');
-                nextBtn.removeClass('btn-next').addClass('btn-primary-custom');
-                nextBtn.attr('onclick', 'submitForm()');
-            } else {
-                nextBtn.html('Siguiente <i class="fas fa-arrow-right"></i>');
-                nextBtn.removeClass('btn-primary-custom').addClass('btn-next');
-                nextBtn.attr('onclick', 'nextStep()');
+            $(`#step${State.step}-content`).addClass('d-none');
+            $(`.stepper-item[data-step="${State.step}"]`).removeClass('active').addClass('completed');
+
+            State.step = nextStep;
+
+            $(`#step${State.step}-content`).removeClass('d-none');
+            $(`.stepper-item[data-step="${State.step}"]`).addClass('active');
+
+            // Logic Hooks
+            if (State.step === 5) renderExtrasTable(); // Render table if logic needed
+            if (State.step === 6) renderReview();
+
+            updateButtons();
+            window.scrollTo(0, 0);
+        };
+
+        function validateStep(step) {
+            if (step === 1) {
+                const name = $('#inpName').val();
+                const sku = $('#inpSku').val();
+                if (!name || !sku) {
+                    Swal.fire('Falta información', 'Nombre y SKU son obligatorios', 'warning');
+                    return false;
+                }
+                State.definition = {
+                    name,
+                    sku,
+                    category: $('#inpCategory option:selected').text(),
+                    desc: $('#inpDesc').val()
+                };
             }
-        }
-
-        function nextStep() {
-            if (currentStep < totalSteps) {
-                goToStep(currentStep + 1);
+            if (step === 2 && State.variants.length === 0) {
+                Swal.fire('Atención', 'Genere al menos una variante', 'warning');
+                return false;
             }
-        }
-
-        function prevStep() {
-            if (currentStep > 1) {
-                goToStep(currentStep - 1);
-            }
-        }
-
-        function submitForm() {
-            // Validar antes de enviar
-            if (validateForm()) {
-                $('#productForm').submit();
-            }
-        }
-
-        function validateForm() {
-            const variants = JSON.parse($('#variantsData').val() || '[]');
-            if (variants.length === 0) {
-                Swal.fire('Error', 'Debe generar al menos una variante para el producto', 'error');
-                goToStep(2);
+            if (step === 4 && State.designs.length === 0) {
+                Swal.fire('Atención', 'Seleccione al menos un diseño o bordado', 'warning');
                 return false;
             }
             return true;
+            return true;
         }
 
-        // ==========================================
-        // LÓGICA DE MATERIALES (BOM) - PASO 3 (ACTUALIZADA)
-        // ==========================================
-
-        function fetchMaterialVariants(parentId) {
-            /* if (materialVariantsCache[parentId]) {
-                 populateMaterialVariants(materialVariantsCache[parentId]);
-                 return;
-             }*/
-
-            // Hacer petición AJAX para obtener las variantes
-            $.ajax({
-                url: '{{ route('material-variants.conversiones', ['materialId' => 'PLACEHOLDER']) }}'.replace(
-                    'PLACEHOLDER', parentId),
-                method: 'GET',
-                success: function(response) {
-                    materialVariantsCache[parentId] = response;
-                    populateMaterialVariants(response);
-                },
-                error: function() {
-                    Swal.fire('Error', 'No se pudieron cargar las variantes del material', 'error');
-                }
-            });
-        }
-
-        //segundo select para variantes y el costo de varianates
-        function populateMaterialVariants(variants) {
-            const $select = $('#materialVariant');
-            $select.empty();
-            $select.append('<option value="">Seleccione una variante...</option>');
-
-            if (variants.length === 0) {
-                $select.append('<option value="" disabled>No hay variantes disponibles</option>');
-                $select.prop('disabled', true);
-                return;
-            }
-
-            variants.forEach(variant => {
-                $select.append(`
-            <option value="${variant.id}" 
-                    data-cost="${variant.cost_base}" 
-                    data-stock="${variant.stock_real}" 
-                    data-unit="${variant.symbol}"
-                    data-sku="${variant.full_name}"> 
-                ${variant.text}
-            </option>
-        `);
-            });
-
-            $select.prop('disabled', false);
-            $select.trigger('change');
-        }
-
-        function updateMaterialInfo(variantData) {
-            const $info = $('#materialInfo');
-            const $stock = $('#materialStockValue');
-            const $cost = $('#materialCostValue');
-            const $unitLabel = $('#materialUnitLabel');
-
-            if (variantData && variantData.cost !== undefined) {
-                $stock.text(variantData.stock || 0);
-                $cost.text('$' + parseFloat(variantData.cost).toFixed(2));
-                $unitLabel.text(variantData.unit || 'unid');
-                $info.removeClass('d-none');
-                $('#addBtn').prop('disabled', false);
+        function updateButtons() {
+            $('#btnPrev').prop('disabled', State.step === 1);
+            if (State.step === 6) {
+                $('#btnNext').html('<i class="fas fa-check"></i>').addClass('btn-success-mode');
             } else {
-                $info.addClass('d-none');
-                $('#addBtn').prop('disabled', true);
+                $('#btnNext').html('<i class="fas fa-chevron-right"></i>').removeClass('btn-success-mode');
             }
         }
 
-        function addMaterialFromForm() {
-            const parentId = $('#parentMaterial').val();
-            const variantId = $('#materialVariant').val();
-            const variantText = $('#materialVariant option:selected').text();
-            const variantData = $('#materialVariant option:selected').data();
-            const qty = parseFloat($('#qty').val());
-            const isPrimary = $('#materialIsPrimary').is(':checked');
-            const parentText = $('#parentMaterial option:selected').text();
+        // --- STEP 2: VARIANTS ---
+        window.generateMatrix = function() {
+            const sizes = $('#selSizes').select2('data');
+            const colors = $('#selColors').select2('data');
+            const baseSku = $('#inpSku').val();
 
-            if (!parentId || !variantId || !qty || qty <= 0) {
-                Swal.fire('Error', 'Complete todos los campos requeridos', 'error');
+            if (!sizes.length || !colors.length || !baseSku) {
+                Swal.fire('Error', 'Verifique SKU base, tallas y colores', 'error');
                 return;
             }
 
-            // Verificar si ya existe
-            if (productMaterials.find(m => m.variant_id == variantId)) {
-                Swal.fire('Atención', 'Esta variante de material ya ha sido agregada.', 'warning');
+            const tbody = $('#variantsTableBody');
+            let addedCount = 0;
+            let duplicateCount = 0;
+
+            sizes.forEach(s => {
+                colors.forEach(c => {
+                    // Check if this combination already exists
+                    const exists = State.variants.find(v =>
+                        v.size_id == s.id && v.color_id == c.id
+                    );
+
+                    if (exists) {
+                        duplicateCount++;
+                        return; // Skip duplicate
+                    }
+
+                    const sku = `${baseSku}-${s.text.charAt(0)}-${c.text.substring(0,3)}`.toUpperCase();
+                    const tempId = Math.random().toString(36).substr(2, 9);
+
+                    State.variants.push({
+                        temp_id: tempId,
+                        sku,
+                        size: s.text,
+                        color: c.text,
+                        size_id: s.id,
+                        color_id: c.id
+                    });
+
+                    tbody.append(`<tr data-id="${tempId}">
+                        <td class="font-weight-bold text-primary">${sku}</td>
+                        <td>${s.text} / ${c.text}</td>
+                        <td><button class="btn btn-sm btn-danger" onclick="removeVariant('${tempId}', this)"><i class="fas fa-trash"></i></button></td>
+                    </tr>`);
+
+                    addedCount++;
+                });
+            });
+
+            $('#variantsTableContainer').removeClass('d-none');
+
+            // Feedback to user
+            if (duplicateCount > 0 && addedCount > 0) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Variantes generadas',
+                    html: `<b>${addedCount}</b> variantes nuevas agregadas.<br><b>${duplicateCount}</b> duplicadas omitidas.`,
+                    timer: 2500,
+                    showConfirmButton: false
+                });
+            } else if (duplicateCount > 0 && addedCount === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Sin cambios',
+                    text: 'Todas las combinaciones ya existen.',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            } else if (addedCount > 0) {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Generado!',
+                    text: `${addedCount} variantes agregadas.`,
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            }
+
+            // Clear selections after generating
+            $('#selSizes').val(null).trigger('change');
+            $('#selColors').val(null).trigger('change');
+        };
+
+        window.removeVariant = function(id, btn) {
+            State.variants = State.variants.filter(v => v.temp_id !== id);
+            $(btn).closest('tr').remove();
+        };
+
+        // --- STEP 3: MATERIALS (AJAX RESTORED) ---
+        // Variable temporal para el modal
+        let tempMaterial = null;
+
+        window.fetchMaterialVariants = function(familyId) {
+            if (!familyId) {
+                $('#bomMaterialSelector').empty().prop('disabled', true);
                 return;
             }
 
-            const material = {
-                parent_id: parentId,
-                parent_name: parentText,
-                variant_id: variantId,
-                variant_name: variantText.split(' (')[0], // Remover información de stock
-                sku: variantData.sku || '',
-                unit: variantData.unit || 'unid',
-                cost: parseFloat(variantData.cost) || 0,
-                stock: parseInt(variantData.stock) || 0,
-                quantity: qty,
-                is_primary: isPrimary
+            // URL original que usabas para traer conversiones/variantes
+            const url = '{{ route('material-variants.conversiones', ['materialId' => ':id']) }}'.replace(':id',
+                familyId);
+
+            $.get(url, function(data) {
+                const sel = $('#bomMaterialSelector');
+                sel.empty().prop('disabled', false).append('<option value="">Seleccione...</option>');
+
+                data.forEach(v => {
+                    // Adaptar según la respuesta JSON real de tu controlador
+                    // Asumiendo estructura: {id, text, cost_base, stock_real, symbol}
+                    sel.append(
+                        `<option value="${v.id}" data-cost="${v.cost_base}" data-stock="${v.stock_real}" data-unit="${v.symbol}" data-name="${v.text}">${v.text}</option>`
+                    );
+                });
+            }).fail(function() {
+                Swal.fire('Error', 'No se pudieron cargar las variantes', 'error');
+            });
+        };
+
+        window.prepareAddMaterial = function() {
+            const matId = $('#bomMaterialSelector').val();
+            const qty = parseFloat($('#bomQty').val());
+
+            if (!matId || !qty) {
+                Swal.fire('Error', 'Complete los datos del material', 'warning');
+                return;
+            }
+
+            const opt = $('#bomMaterialSelector option:selected');
+            tempMaterial = {
+                material_id: matId,
+                name: opt.data('name'),
+                cost: parseFloat(opt.data('cost')),
+                unit: opt.data('unit'),
+                qty: qty,
+                is_primary: $('#materialIsPrimary').is(':checked')
             };
 
-            productMaterials.push(material);
-            renderMaterialsTable();
-            resetMaterialForm();
-        }
+            // Llenar selector de variantes en modal
+            const vSel = $('#targetVariantsSelect');
+            vSel.empty();
+            State.variants.forEach(v => {
+                vSel.append(`<option value="${v.temp_id}">${v.sku} (${v.size}/${v.color})</option>`);
+            });
 
-        function removeMaterial(variantId) {
-            productMaterials = productMaterials.filter(m => m.variant_id != variantId);
-            renderMaterialsTable();
-        }
+            $('#materialScopeModal').modal('show');
+        };
 
-        function renderMaterialsTable() {
-            const tbody = $('#materialsTable tbody');
-            tbody.empty();
+        window.confirmAddMaterial = function() {
+            const scope = $('#materialScopeValue').val();
+            let targets = [];
 
-            let totalCost = 0;
-
-            if (productMaterials.length === 0) {
-                tbody.html(`
-                    <tr id="noMaterialsRow">
-                        <td colspan="5" class="text-center text-muted py-5">
-                            <img src="/assets/img/empty-box.svg" alt=""
-                                style="width: 60px; opacity: 0.5" class="mb-2 d-block mx-auto">
-                            Aún no has agregado materiales a este producto.
-                        </td>
-                    </tr>
-                `);
-                $('#totalMaterialsCost').text('$0.00');
+            // Validate that scope was selected
+            if (!scope) {
+                Swal.fire('Error', 'Seleccione un alcance (Global o Específico)', 'warning');
                 return;
             }
 
-            productMaterials.forEach((m, index) => {
-                const subtotal = m.cost * m.quantity;
-                totalCost += subtotal;
-
-                const primaryBadge = m.is_primary ?
-                    '<span class="badge bg-primary ms-1">Base</span>' : '';
-
-                tbody.append(`
-                    <tr>
-                        <td class="ps-3">
-                            <div class="fw-bold">${m.parent_name} - ${m.variant_name}</div>
-                            <div class="text-muted small">SKU: ${m.sku}</div>
-                            ${primaryBadge}
-                        </td>
-                        <td class="text-center">
-                            <span class="badge bg-info">${m.quantity} ${m.unit}</span>
-                        </td>
-                        <td class="text-center">
-                            $${m.cost.toFixed(2)}
-                        </td>
-                        <td class="text-center fw-bold">
-                            $${subtotal.toFixed(2)}
-                        </td>
-                        <td>
-                            <button type="button" class="btn btn-sm btn-outline-danger" 
-                                onclick="removeMaterial('${m.variant_id}')">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `);
-            });
-
-            $('#totalMaterialsCost').text(`$${totalCost.toFixed(2)}`);
-        }
-
-        function resetMaterialForm() {
-            $('#parentMaterial').val(null).trigger('change');
-            $('#materialVariant').empty().prop('disabled', true);
-            $('#qty').val('');
-            $('#materialIsPrimary').prop('checked', false);
-            $('#materialInfo').addClass('d-none');
-            $('#addBtn').prop('disabled', true);
-        }
-
-        // ==========================================
-        // LÓGICA DE EXTRAS (PASO 5)
-        // ==========================================
-
-        function addExtra() {
-            const selectedOption = $('#extrasSearch').find(':selected');
-            const id = $('#extrasSearch').val();
-            const name = selectedOption.data('name');
-            const price = parseFloat(selectedOption.data('price'));
-
-            if (!id) return;
-
-            // Verificar duplicados
-            if (productExtras.find(e => e.id == id)) {
-                Swal.fire('Atención', 'Este servicio ya ha sido agregado.', 'warning');
-                return;
+            // Validate Scope Targets
+            if (scope === 'specific') {
+                targets = $('#targetVariantsSelect').val();
+                if (!targets || !targets.length) {
+                    Swal.fire('Error', 'Seleccione variantes destino', 'warning');
+                    return;
+                }
+                // Sort targets to ensure consistency in comparison
+                targets.sort();
             }
 
-            productExtras.push({
-                id,
-                name,
-                price
+            // Check if Material + Scope + Targets combination exists (LOGIC FIX)
+            const existingIndex = State.bom.findIndex(item => {
+                if (item.material_id != tempMaterial.material_id) return false;
+                if (item.scope !== scope) return false;
+
+                // Compare arrays for specific scope
+                // Using join to create a comparable string signature
+                const itemTargets = (item.targets || []).sort().join(',');
+                const newTargets = targets.join(',');
+
+                return itemTargets === newTargets;
             });
-            renderExtrasTable();
 
-            // Reset selection
-            $('#extrasSearch').val(null).trigger('change');
-            $('#btnAddExtra').prop('disabled', true);
-        }
+            if (existingIndex > -1) {
+                // ACCUMULATE (UPDATE EXISTING)
+                const existing = State.bom[existingIndex];
 
-        function removeExtra(id) {
-            productExtras = productExtras.filter(e => e.id != id);
-            renderExtrasTable();
-        }
+                // Precise JS addition (avoid floating point errors)
+                const currentQty = parseFloat(existing.qty);
+                const addedQty = parseFloat(tempMaterial.qty);
+                const newQty = (currentQty * 100 + addedQty * 100) / 100;
 
-        function renderExtrasTable() {
-            const tbody = $('#extrasTable tbody');
+                existing.qty = newQty;
+                existing.calculated_total = existing.cost * existing.qty;
+
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Material Actualizado',
+                    text: `Se sumaron las cantidades. Nuevo total: ${existing.qty} ${existing.unit}`,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            } else {
+                // ADD NEW
+                const costTotal = tempMaterial.cost * tempMaterial.qty;
+                State.bom.push({
+                    ...tempMaterial,
+                    scope,
+                    targets,
+                    calculated_total: costTotal
+                });
+            }
+
+            $('#materialScopeModal').modal('hide');
+
+            renderBOM();
+            recalcFinance();
+
+            // Reset form
+            $('#bomQty').val('');
+            $('#bomMaterialSelector').val('').trigger('change');
+            $('input[name="materialScope"][value="global"]').prop('checked', true).trigger('change');
+            $('#targetVariantsSelect').val(null).trigger('change');
+        };
+
+        function renderBOM() {
+            const tbody = $('#bomTableBody');
             tbody.empty();
             let total = 0;
 
-            if (productExtras.length === 0) {
-                tbody.html(`
-                    <tr id="noExtrasRow">
-                        <td colspan="3" class="text-center text-muted py-4">
-                            <i class="fas fa-concierge-bell fa-2x mb-2 d-block"></i>
-                            No se han agregado servicios adicionales
-                        </td>
-                    </tr>
-                `);
-                $('#totalExtrasCost').text('$0.00');
-                document.getElementById('extrasData').value = '[]';
-                return;
-            }
+            State.bom.forEach((m, idx) => {
+                total += m.calculated_total;
 
-            productExtras.forEach(extra => {
-                total += extra.price;
-                tbody.append(`
-                    <tr>
-                        <td>${extra.name}</td>
-                        <td>+$${extra.price.toFixed(2)}</td>
-                        <td>
-                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeExtra(${extra.id})">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `);
-            });
+                let badge = '';
+                let variantInfo = '';
 
-            $('#totalExtrasCost').text(`$${total.toFixed(2)}`);
-            document.getElementById('extrasData').value = JSON.stringify(productExtras);
-        }
-
-        // ==========================================
-        // LÓGICA DE VARIANTES (PASO 2)
-        // ==========================================
-
-        function generateVariants() {
-            const sizes = [...document.querySelectorAll('#sizesSelector .attr-chip.selected')]
-                .map(chip => ({
-                    id: chip.dataset.value,
-                    name: chip.textContent.trim()
-                }));
-            const colors = [...document.querySelectorAll('#colorsSelector .attr-chip.selected')]
-                .map(chip => ({
-                    id: chip.dataset.value,
-                    name: chip.textContent.trim().replace('⬤ ', '')
-                }));
-
-            const basePrice = parseFloat(document.getElementById('basePrice').value) || 0;
-            const baseSku = document.getElementById('productSku').value;
-
-            if (sizes.length === 0 || colors.length === 0) {
-                Swal.fire('Atención', 'Debe seleccionar al menos una talla y un color para generar variantes.', 'warning');
-                return;
-            }
-
-            if (!baseSku) {
-                Swal.fire('Atención', 'Debe ingresar un SKU base para el producto.', 'warning');
-                return;
-            }
-
-            // Generar combinaciones
-            let currentVariants = JSON.parse(document.getElementById('variantsData').value || '[]');
-            const newVariants = [];
-
-            sizes.forEach(size => {
-                colors.forEach(color => {
-                    const sku = `${baseSku}-${size.name}-${color.name}`.toUpperCase()
-                        .replace(/\s+/g, '')
-                        .replace(/[^A-Z0-9-]/g, '');
-
-                    // Verificar si ya existe este SKU
-                    if (!currentVariants.some(v => v.sku === sku)) {
-                        newVariants.push({
-                            size: size.id,
-                            size_name: size.name,
-                            color: color.id,
-                            color_name: color.name,
-                            sku: sku,
-                            price: basePrice,
-                            stock_alert: $('#stockAlert').val() || 5
-                        });
-                    }
-                });
-            });
-
-            if (newVariants.length === 0 && currentVariants.length === 0) {
-                Swal.fire('Atención', 'Las variantes seleccionadas ya han sido generadas previamente.', 'info');
-                return;
-            }
-
-            currentVariants = [...currentVariants, ...newVariants];
-            updateVariantsList(currentVariants);
-            updateVariantCount(currentVariants.length);
-            document.getElementById('variantsData').value = JSON.stringify(currentVariants);
-
-            if (newVariants.length > 0) {
-                Swal.fire('Éxito', `Se generaron ${newVariants.length} nuevas variantes.`, 'success');
-            }
-        }
-
-        function removeVariant(index) {
-            let variants = JSON.parse(document.getElementById('variantsData').value || '[]');
-            variants.splice(index, 1);
-            updateVariantsList(variants);
-            updateVariantCount(variants.length);
-            document.getElementById('variantsData').value = JSON.stringify(variants);
-        }
-
-        function updateVariantsList(variants) {
-            const variantsList = document.getElementById('variantsList');
-            variantsList.innerHTML = '';
-
-            if (variants.length === 0) {
-                variantsList.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-cubes"></i>
-                        <p>No hay variantes generadas aún</p>
-                    </div>
-                `;
-                return;
-            }
-
-            variants.forEach((variant, index) => {
-                const variantItem = document.createElement('div');
-                variantItem.className = 'variant-item';
-                variantItem.innerHTML = `
-                    <div class="variant-info">
-                        <span class="variant-sku">${variant.sku}</span>
-                        <div class="variant-attrs">
-                            <span class="variant-attr">Talla: ${variant.size_name || variant.size}</span>
-                            <span class="variant-attr">Color: ${variant.color_name || variant.color}</span>
-                        </div>
-                    </div>
-                    <div class="d-flex align-items-center gap-3">
-                        <span class="variant-price">$${variant.price.toFixed(2)}</span>
-                        <div class="variant-actions">
-                            <button type="button" class="btn-icon btn-icon-danger" onclick="removeVariant(${index})">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-                variantsList.appendChild(variantItem);
-            });
-        }
-
-        function updateVariantCount(count) {
-            document.getElementById('variantCount').textContent = `${count} variante${count !== 1 ? 's' : ''}`;
-        }
-
-        // ==========================================
-        // LÓGICA DE BORDADOS (PASO 4)
-        // ==========================================
-
-        function previewImage(event) {
-            const reader = new FileReader();
-            reader.onload = function() {
-                const output = document.getElementById('imageUpload');
-                output.innerHTML = `<img src="${reader.result}" alt="Imagen del producto">`;
-            };
-            reader.readAsDataURL(event.target.files[0]);
-        }
-
-        // ==========================================
-        // LÓGICA DE REVISIÓN (PASO 6)
-        // ==========================================
-
-        function loadReview() {
-            // Información del producto
-            const productName = document.getElementById('productName').value;
-            const productSku = document.getElementById('productSku').value;
-            const productCategory = document.getElementById('productCategory').options[document.getElementById(
-                'productCategory').selectedIndex].text;
-            const productStatus = document.getElementById('productStatus').value;
-            const productDescription = document.getElementById('productDescription').value;
-
-            document.getElementById('review-product-info').innerHTML = `
-                <p><strong>Nombre:</strong> ${productName}</p>
-                <p><strong>SKU Base:</strong> ${productSku}</p>
-                <p><strong>Categoría:</strong> ${productCategory}</p>
-                <p><strong>Estado:</strong> ${productStatus}</p>
-                <p><strong>Descripción:</strong> ${productDescription || 'Sin descripción'}</p>
-            `;
-
-            // Variantes
-            const variants = JSON.parse(document.getElementById('variantsData').value || '[]');
-            let variantsHtml = '';
-            variants.forEach(variant => {
-                variantsHtml += `
-                    <div class="variant-review-item">
-                        <p><strong>SKU:</strong> ${variant.sku}</p>
-                        <p><strong>Atributos:</strong> Talla ${variant.size_name || variant.size}, Color ${variant.color_name || variant.color}</p>
-                        <p><strong>Precio:</strong> $${variant.price.toFixed(2)}</p>
-                    </div>
-                `;
-            });
-            document.getElementById('review-variants').innerHTML = variantsHtml || '<p>No hay variantes generadas</p>';
-            document.getElementById('review-variants-count').textContent = variants.length;
-
-            // Bordados
-            const selectedEmbroidery = [...document.querySelectorAll('.embroidery-card.selected')];
-            let embroideryHtml = '';
-            selectedEmbroidery.forEach(card => {
-                const name = card.querySelector('.embroidery-name').textContent;
-                const meta = card.querySelector('.embroidery-meta').textContent;
-                const position = card.querySelector('.embroidery-position')?.textContent || 'Sin posición';
-
-                embroideryHtml += `
-                    <div class="embroidery-review-item">
-                        <p><strong>Diseño:</strong> ${name}</p>
-                        <p><strong>Especificaciones:</strong> ${meta}</p>
-                        <p><strong>Posición:</strong> ${position}</p>
-                    </div>
-                `;
-            });
-            document.getElementById('review-embroidery').innerHTML = embroideryHtml || '<p>No hay bordados asignados</p>';
-            document.getElementById('review-embroidery-count').textContent = selectedEmbroidery.length;
-
-            // Materiales
-            let materialsHtml = '';
-            let materialsTotal = 0;
-
-            productMaterials.forEach(m => {
-                const cost = m.cost * m.quantity;
-                materialsTotal += cost;
-                materialsHtml += `
-                    <div class="variant-review-item" style="border-left-color: #6366f1;">
-                        <div class="d-flex justify-content-between">
-                            <strong>${m.parent_name} - ${m.variant_name}</strong>
-                            <span>${m.quantity} ${m.unit}</span>
-                        </div>
-                        <div class="d-flex justify-content-between small text-muted">
-                            <span>${m.is_primary ? 'Principal' : 'Secundario'}</span>
-                            <span>$${cost.toFixed(2)}</span>
-                        </div>
-                    </div>
-                `;
-            });
-
-            document.getElementById('review-materials').innerHTML = materialsHtml || '<p>No se han asignado materiales</p>';
-
-            // Ficha técnica
-            const tipoTela = document.getElementById('tipoTela')?.value || 'No especificado';
-            const material = document.getElementById('material')?.value || 'No especificado';
-            const hilo = document.getElementById('hilo')?.value || 'No especificado';
-            const colorTela = document.getElementById('colorTela')?.value || 'No especificado';
-            const proveedor = document.getElementById('proveedor')?.value || 'No especificado';
-            const notas = document.getElementById('notas')?.value || 'Sin notas';
-
-            document.getElementById('review-specs').innerHTML = `
-                <p><strong>Tipo de Tela:</strong> ${tipoTela}</p>
-                <p><strong>Composición:</strong> ${material}</p>
-                <p><strong>Calibre de Hilo:</strong> ${hilo}</p>
-                <p><strong>Color Base:</strong> ${colorTela}</p>
-                <p><strong>Proveedor:</strong> ${proveedor}</p>
-                <p><strong>Notas:</strong> ${notas}</p>
-            `;
-
-            // Extras
-            let extrasHtml = '';
-            let extrasTotal = 0;
-
-            if (productExtras.length === 0) {
-                extrasHtml = '<p>No hay servicios adicionales</p>';
-            } else {
-                productExtras.forEach(extra => {
-                    extrasTotal += extra.price;
-                    extrasHtml += `
-                        <div class="extra-review-item">
-                            <p><strong>Servicio:</strong> ${extra.name}</p>
-                            <p><strong>Costo adicional:</strong> +$${extra.price.toFixed(2)}</p>
-                        </div>
-                    `;
-                });
-            }
-
-            document.getElementById('review-extras').innerHTML = extrasHtml;
-            document.getElementById('review-extras-count').textContent = productExtras.length;
-
-            // Resumen de costos
-            const basePrice = parseFloat(document.getElementById('basePrice')?.value || 0);
-            const variantsCount = variants.length;
-            const totalPrice = basePrice + extrasTotal;
-
-            document.getElementById('review-costs').innerHTML = `
-                <p><strong>Precio base por variante:</strong> $${basePrice.toFixed(2)}</p>
-                <p><strong>Costo de extras:</strong> $${extrasTotal.toFixed(2)}</p>
-                <p><strong>Número de variantes:</strong> ${variantsCount}</p>
-                <hr>
-                <p><strong>Total por unidad:</strong> $${totalPrice.toFixed(2)}</p> 
-            `;
-
-            document.getElementById('review-total-price').textContent = `$${totalPrice.toFixed(2)}`;
-        }
-
-        // ==========================================
-        // INICIALIZACIÓN
-        // ==========================================
-
-        $(document).ready(function() {
-            // Inicializar Select2 para Materiales (Paso 3)
-            $('#parentMaterial').select2({
-                placeholder: 'Seleccione familia de material...',
-                allowClear: true,
-                width: '100%'
-            });
-
-            $('#materialVariant').select2({
-                placeholder: 'Seleccione variante...',
-                disabled: true,
-                width: '100%'
-            });
-
-            // Evento cuando se selecciona una familia de material
-            $('#parentMaterial').on('select2:select', function(e) {
-                const parentId = $(this).val();
-                if (parentId) {
-                    fetchMaterialVariants(parentId);
+                if (m.scope === 'global') {
+                    badge = '<span class="badge badge-pill badge-secondary">Global</span>';
+                    variantInfo = '<span class="text-muted small">Aplica a todas</span>';
                 } else {
-                    $('#materialVariant').empty().prop('disabled', true);
-                    $('#materialInfo').addClass('d-none');
-                }
-            });
+                    badge = '<span class="badge badge-pill badge-info">Específico</span>';
 
-            // Evento cuando se selecciona una variante de material
-            $('#materialVariant').on('select2:select', function(e) {
-                const selectedOption = $(this).find(':selected');
-                const variantData = selectedOption.data();
-                updateMaterialInfo(variantData);
-            });
+                    if (m.targets && m.targets.length > 0) {
+                        const targetNames = m.targets.map(tid => {
+                            const v = State.variants.find(va => va.temp_id === tid);
+                            // ONLY Name/Color, NO SKU
+                            return v ?
+                                `<span class="badge badge-light border mr-1 mb-1" style="font-size: 0.85rem;">${v.size} / ${v.color}</span>` :
+                                '';
+                        }).join('');
 
-            // Botón Agregar Material
-            $('#addBtn').click(function() {
-                addMaterialFromForm();
-            });
-
-            // Inicializar Select2 para Extras (Paso 5)
-            $('#extrasSearch').select2({
-                placeholder: "Buscar servicio...",
-                allowClear: true,
-                width: '100%'
-            });
-
-            // Habilitar botón al seleccionar extra
-            $('#extrasSearch').on('select2:select', function(e) {
-                $('#btnAddExtra').prop('disabled', false);
-            });
-
-            // Inicializar eventos de atributos (Paso 2)
-            $('.attr-chip').click(function() {
-                $(this).toggleClass('selected');
-            });
-
-            // Inicializar eventos de bordados (Paso 4)
-            $('.embroidery-card').click(function() {
-                $('.embroidery-card').removeClass('selected');
-                $(this).addClass('selected');
-
-                // Leer datos
-                const stitches = $(this).data('stitches');
-                const dimensions = $(this).data('dimensions');
-                const colors = $(this).data('colors');
-                const format = $(this).data('format');
-
-                // Actualizar métricas
-                const metricsHtml = `
-                    <div class="metric-card">
-                        <span class="metric-value">${stitches}</span>
-                        <span class="metric-label">Puntadas</span>
-                    </div>
-                    <div class="metric-card">
-                        <span class="metric-value">${dimensions}</span>
-                        <span class="metric-label">Dimensiones (mm)</span>
-                    </div>
-                    <div class="metric-card">
-                        <span class="metric-value">${colors}</span>
-                        <span class="metric-label">Colores</span>
-                    </div>
-                    <div class="metric-card">
-                        <span class="metric-value">${format}</span>
-                        <span class="metric-label">Formato</span>
-                    </div>
-                `;
-                $('.embroidery-metrics').html(metricsHtml);
-            });
-
-            // Validación del formulario antes de enviar
-            $('#productForm').on('submit', function(e) {
-                if (currentStep !== 6) {
-                    e.preventDefault();
-                    Swal.fire('Falta completar', 'Por favor complete todos los pasos antes de guardar',
-                        'error');
-                    goToStep(1);
-                    return;
-                }
-
-                // Recolectar todos los datos
-                const formData = {
-                    name: $('#productName').val(),
-                    sku: $('#productSku').val(),
-                    product_category_id: $('#productCategory').val(),
-                    status: $('#productStatus').val(),
-                    description: $('#productDescription').val(),
-                    variants: JSON.parse($('#variantsData').val() || '[]'),
-                    materials: productMaterials,
-                    specifications: {
-                        tipo_tela: $('#tipoTela').val(),
-                        material: $('#material').val(),
-                        hilo: $('#hilo').val(),
-                        color_tela: $('#colorTela').val(),
-                        proveedor: $('#proveedor').val(),
-                        notas: $('#notas').val()
-                    },
-                    extras: productExtras
-                };
-
-                // Llenar campos ocultos con datos JSON
-                $('#specificationsData').val(JSON.stringify(formData.specifications));
-                $('#extrasData').val(JSON.stringify(formData.extras));
-
-                // Validaciones adicionales
-                if (!formData.name || !formData.sku || !formData.product_category_id) {
-                    e.preventDefault();
-                    Swal.fire('Error', 'Por favor complete los campos obligatorios del producto', 'error');
-                    goToStep(1);
-                    return;
-                }
-
-                if (formData.variants.length === 0) {
-                    e.preventDefault();
-                    Swal.fire('Error', 'Debe generar al menos una variante para el producto', 'error');
-                    goToStep(2);
-                    return;
-                }
-
-                // Mostrar confirmación
-                e.preventDefault();
-                Swal.fire({
-                    title: '¿Guardar producto?',
-                    text: 'Se creará el producto con todas las configuraciones definidas.',
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonText: 'Sí, guardar',
-                    cancelButtonText: 'Cancelar'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        // Enviar formulario
-                        $(this).off('submit').submit();
+                        variantInfo =
+                            `<div class="small text-muted mb-1"><strong>Aplica en:</strong></div><div class="d-flex flex-wrap">${targetNames}</div>`;
+                    } else {
+                        variantInfo =
+                            '<span class="text-danger small"><i class="fas fa-exclamation-triangle"></i> Sin asignación</span>';
                     }
-                });
-            });
+                }
 
-            // Inicializar contador de variantes
-            updateVariantCount(0);
-        });
+                tbody.append(`<tr>
+                <td class="align-middle border-right">
+                    <div class="font-weight-bold text-dark">${m.name}</div>
+                    ${m.is_primary ? '<span class="badge badge-warning text-white"><i class="fas fa-star text-white"></i> Principal</span>' : ''}
+                </td>
+                <td class="align-middle border-right" style="max-width: 300px;">
+                    ${variantInfo}
+                </td>
+                <td class="align-middle font-weight-bold text-center">${m.qty} ${m.unit}</td>
+                <td class="align-middle text-center">${badge}</td>
+                <td class="align-middle font-weight-bold text-right">$${m.calculated_total.toFixed(2)}</td>
+                <td class="align-middle text-center"><button class="btn btn-sm btn-outline-danger btn-icon rounded-circle" onclick="removeBOM(${idx})"><i class="fas fa-trash"></i></button></td>
+            </tr>`);
+            });
+            State.financials.material_cost = total;
+            $('#bomTotalCostBadge').text(`Costo Total: $${total.toFixed(2)}`);
+        }
+
+        window.removeBOM = function(idx) {
+            State.bom.splice(idx, 1);
+            renderBOM();
+            recalcFinance();
+        };
+
+        // --- STEP 4: DESIGNS ---
+        window.toggleDesign = function(el, id, name, stitches) {
+            const card = $(el);
+            const isSelected = card.hasClass('selected');
+
+            if (isSelected) {
+                card.removeClass('selected');
+                State.designs = State.designs.filter(d => d.id !== id);
+            } else {
+                card.addClass('selected');
+                State.designs.push({
+                    id,
+                    name,
+                    stitches: stitches || 0
+                });
+            }
+
+            // Recalcular finanzas inmediatamente
+            recalcFinance();
+        };
+
+        window.updateDesignPosition = function(id, pos) {
+            const d = State.designs.find(d => d.id === id);
+            if (d) d.position = pos;
+        };
+
+        // --- STEP 5: EXTRAS & FINANCE ---
+        window.addExtra = function() {
+            const sel = $('#extrasSelector option:selected');
+            const id = $('#extrasSelector').val();
+
+            if (!id) return;
+            if (State.extras.find(e => e.id == id)) {
+                Swal.fire('Ya agregado', '', 'info');
+                return;
+            }
+
+            State.extras.push({
+                id,
+                name: sel.data('name'),
+                price: parseFloat(sel.data('price'))
+            });
+            renderExtrasTable();
+            recalcFinance();
+        };
+
+        function renderExtrasTable() {
+            const tbody = $('#extrasTableBody');
+            tbody.empty();
+            let total = 0;
+            State.extras.forEach((e, idx) => {
+                total += e.price;
+                tbody.append(`<tr>
+                <td>${e.name}</td>
+                <td class="text-right">$${e.price.toFixed(2)}</td>
+                <td><i class="fas fa-trash text-danger" style="cursor:pointer" onclick="removeExtra(${idx})"></i></td>
+            </tr>`);
+            });
+            State.financials.extras_cost = total;
+        }
+
+        window.removeExtra = function(idx) {
+            State.extras.splice(idx, 1);
+            renderExtrasTable();
+            recalcFinance();
+        };
+
+        window.recalcFinance = function() {
+            const f = State.financials;
+
+            // Calcular total de puntadas de diseños seleccionados
+            const totalStitches = State.designs.reduce((sum, d) => sum + (d.stitches || 0), 0);
+
+            // Obtener la tasa por 1000 puntadas (default 1.00)
+            const stitchRate = parseFloat($('#finStitchRate').val()) || 1.00;
+
+            // Calcular costo de bordado: (puntadas / 1000) * tasa
+            f.embroidery_cost = (totalStitches / 1000) * stitchRate;
+
+            // Calcular costo total
+            f.total_cost = f.material_cost + f.embroidery_cost + f.extras_cost;
+
+            // Renderizar lista de materiales
+            const matList = $('#finMaterialsList');
+            if (State.bom.length > 0) {
+                let html = '';
+                State.bom.forEach(m => {
+                    html += `<div class="d-flex justify-content-between py-1 border-bottom">
+                        <span>${m.name} <small class="text-muted">(${m.qty} ${m.unit})</small></span>
+                        <span class="font-weight-bold">$${m.calculated_total.toFixed(2)}</span>
+                    </div>`;
+                });
+                matList.html(html);
+            } else {
+                matList.html('<span class="text-muted">Sin materiales...</span>');
+            }
+
+            // Actualizar UI
+            $('#finMatCost').text(`$${f.material_cost.toFixed(2)}`);
+            $('#finEmbCost').text(`$${f.embroidery_cost.toFixed(2)}`);
+            $('#finTotalStitches').text(totalStitches.toLocaleString());
+            $('#finExtrasTotal').text(`$${f.extras_cost.toFixed(2)}`);
+            $('#finTotalCost').text(`$${f.total_cost.toFixed(2)}`);
+            $('#headerCost').text(`$${f.total_cost.toFixed(2)}`);
+
+            // Calcular precio sugerido con margen
+            const margin = parseFloat($('#finMargin').val()) || 0;
+            if (margin < 100) {
+                f.price = f.total_cost / (1 - (margin / 100));
+            }
+            $('#finSuggestedPrice').text(`$${f.price.toFixed(2)}`);
+            $('#inpBasePrice').val(f.price.toFixed(2));
+        };
+
+        // --- STEP 6: REVIEW ---
+        window.renderReview = function() {
+            $('#revProductInfo').html(`
+            <b>${State.definition.name}</b><br>
+            SKU: ${State.definition.sku}<br>
+            Categoría: ${State.definition.category}
+        `);
+
+            $('#revVarCount').text(State.variants.length);
+            $('#revVariants').html(State.variants.map(v => `${v.size} / ${v.color}`).join('<br>'));
+
+            $('#revMatCost').text(`$${State.financials.material_cost.toFixed(2)}`);
+            $('#revExtraCost').text(`$${State.financials.extras_cost.toFixed(2)}`);
+            $('#revPrice').text(`$${State.financials.price.toFixed(2)}`);
+
+            $('#revBomCount').text(State.bom.length);
+            $('#revEmbCount').text(State.designs.length);
+            $('#revExtraCount').text(State.extras.length);
+        };
+
+        // --- SUBMIT ---
+        window.submitForm = function() {
+            $('#h_variants').val(JSON.stringify(State.variants));
+            $('#h_materials').val(JSON.stringify(State.bom));
+            $('#h_embroideries').val(JSON.stringify(State.designs));
+            $('#h_extras').val(JSON.stringify(State.extras));
+            $('#h_financials').val(JSON.stringify(State.financials));
+
+            Swal.fire({
+                title: '¿Crear Producto?',
+                text: `Precio Final: $${State.financials.price.toFixed(2)}`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, Fabricar'
+            }).then((res) => {
+                if (res.isConfirmed) $('#productForm').submit();
+            });
+        };
     </script>
 @stop

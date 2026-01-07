@@ -366,9 +366,27 @@ return [
             'url' => 'produccion',
         ],
         [
-            'text' => 'Productos y Bordados',
-            'url'  => 'gestion-productos', // La URL que definimos en el paso anterior
+            'text' => 'Gestion de productos',
+            'url'  => 'gestion-productos',
             'icon' => 'fas fa-fw fa-box-open',
+            'submenu' => [
+                [
+                    'text' => 'Productos',
+                    'icon' => 'fas fa-list',
+                    'url'  => 'gestion-productos', // La URL que definimos en el paso anterior
+                ],
+                [
+                    'text' => 'Categorias de Productos',
+                    'icon' => 'fas fa-list',
+                    'url'  => 'product-categories',
+                ],
+                [
+                    'text' => 'Productos Extras',
+                    'icon' => 'fas fa-list',
+                    'url'  => 'product-extras',
+                ],
+
+            ],
         ],
         [
             'text' => 'Compras',

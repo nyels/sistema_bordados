@@ -119,7 +119,7 @@ class ProductController extends Controller
 
             // 4. NUEVO: Materiales para la Fase 3 (Optimizado)
             // Solo traemos lo estrictamente necesario para el selector
-            /*  $materials = MaterialVariant::with(['material.category.baseUnit'])
+            /*  $materials = MaterialVariant::with(['material.category.baseUnit']) 
                 ->where('activo', true)
                 ->get()
                 ->map(function ($variant) {
