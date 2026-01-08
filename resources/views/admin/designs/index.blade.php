@@ -1,4 +1,4 @@
-@extends('adminlte::page')
+﻿@extends('adminlte::page')
 
 @section('title', 'Diseños')
 
@@ -298,7 +298,7 @@
                                         <div class="variant-selected-info">
                                             <div class="variant-name-price">
                                                 <h6 id="variantName">Selecciona una variante</h6>
-                                                <span id="variantPrice" class="price-badge">$0.00</span>
+                                                <span id="variantPrice" class="price-badge" hidden>$0.00</span>
                                             </div>
                                             <span id="variantSku" class="sku-text" hidden>SKU: ---</span>
                                         </div>
@@ -416,8 +416,8 @@
 @section('css')
     <style>
         /* ============================================
-                                                                        PLACEHOLDERS Y UTILIDADES
-                                                                        ============================================ */
+                                                                                                                PLACEHOLDERS Y UTILIDADES
+                                                                                                                ============================================ */
         .no-img-placeholder {
             width: 45px;
             height: 45px;
@@ -432,8 +432,8 @@
         }
 
         /* ============================================
-                                                                        MODAL PREMIUM - ESTRUCTURA BASE
-                                                                        ============================================ */
+                                                                                                                MODAL PREMIUM - ESTRUCTURA BASE
+                                                                                                                ============================================ */
         .modal-premium {
             border-radius: 30px;
             border: none;
@@ -443,9 +443,9 @@
         }
 
         /* ============================================
-                                                                        BOTÓN CERRAR MODAL - ARREGLADO
-                                                                        Estilos para el botón de cerrar (X) que estaba flotando mal
-                                                                        ============================================ */
+                                                                                                                BOTÓN CERRAR MODAL - ARREGLADO
+                                                                                                                Estilos para el botón de cerrar (X) que estaba flotando mal
+                                                                                                                ============================================ */
         .modal-close-premium {
             position: absolute;
             top: 12px;
@@ -482,16 +482,16 @@
         }
 
         /* ============================================
-                                                                        APPLE HIG MODAL - SISTEMA DE DISEÑO PREMIUM
-                                                                        8pt Grid System | Claridad | Deferencia | Profundidad
-                                                                        ============================================ */
+                                                                                                                APPLE HIG MODAL - SISTEMA DE DISEÑO PREMIUM
+                                                                                                                8pt Grid System | Claridad | Deferencia | Profundidad
+                                                                                                                ============================================ */
 
         /* COLUMNA IZQUIERDA */
         .modal-left-column {
             display: flex;
             flex-direction: column;
             background: #ffffff;
-            padding: 24px;
+            padding: 24px 28px;
             position: relative;
             border-right: 1px solid #f1f5f9;
         }
@@ -502,7 +502,7 @@
             flex-direction: column;
             background: #f9fafb;
             overflow: hidden;
-            padding: 24px;
+            padding: 24px 28px;
             max-height: 600px;
         }
 
@@ -697,16 +697,16 @@
         }
 
         /* ============================================
-                                                                        BOTONES DE ACCIÓN - SISTEMA UNIFICADO PREMIUM
-                                                                        Ambas columnas usan el mismo sistema
-                                                                        ============================================ */
+                                                                                                                BOTONES DE ACCIÓN - SISTEMA UNIFICADO PREMIUM
+                                                                                                                Ambas columnas usan el mismo sistema
+                                                                                                                ============================================ */
 
         /* Contenedor de acciones - BASE COMÚN */
         .design-actions,
         .variant-actions {
             display: flex;
             gap: 12px;
-            padding: 16px 0 0 0;
+            padding: 16px 8px 16px 8px;
             margin-top: auto;
             border-top: 1px solid #e5e7eb;
         }
@@ -829,8 +829,8 @@
         }
 
         /* ============================================
-                                                                        COLUMNA DERECHA - VARIANTES Y PRODUCCIÓN
-                                                                        ============================================ */
+                                                                                                                COLUMNA DERECHA - VARIANTES Y PRODUCCIÓN
+                                                                                                                ============================================ */
 
         /* Tabs del Modal */
         .modal-tabs-container {
@@ -1057,7 +1057,7 @@
         .variant-name-price {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: center;
             margin-bottom: 4px;
         }
 
@@ -1241,8 +1241,8 @@
         }
 
         /* ================================================
-                                           HOVER OVERLAY PARA AÑADIR PRODUCCIÓN
-                                           ================================================ */
+                                                                                   HOVER OVERLAY PARA AÑADIR PRODUCCIÓN
+                                                                                   ================================================ */
 
         /* Overlay en IMAGEN PRINCIPAL - posicionado abajo */
         .main-image-wrapper .image-production-overlay {
@@ -1425,8 +1425,8 @@
         }
 
         /* ============================================
-                                           PAGE HEADER - Enterprise/SaaS Style
-                                           ============================================ */
+                                                                                   PAGE HEADER - Enterprise/SaaS Style
+                                                                                   ============================================ */
         .page-header-wrapper {
             display: flex;
             justify-content: space-between;
@@ -1478,8 +1478,8 @@
         }
 
         /* ============================================
-                                                                        ESTILOS DEL GRID DE TARJETAS
-                                                                        ============================================ */
+                                                                                                                ESTILOS DEL GRID DE TARJETAS
+                                                                                                                ============================================ */
         .surface {
             background: #fff;
             border-radius: 16px;
@@ -1629,8 +1629,8 @@
         }
 
         /* ============================================
-                                                                        MODAL DE CONFIRMACIÓN ELIMINAR
-                                                                        ============================================ */
+                                                                                                                MODAL DE CONFIRMACIÓN ELIMINAR
+                                                                                                                ============================================ */
         .modal-delete-apple {
             border-radius: 24px;
             border: none;
@@ -1765,8 +1765,8 @@
         }
 
         /* ============================================
-                                                                        ESTADOS DE CARGA
-                                                                        ============================================ */
+                                                                                                                ESTADOS DE CARGA
+                                                                                                                ============================================ */
         .modal-loading-overlay {
             position: absolute;
             top: 0;
@@ -1823,9 +1823,9 @@
         }
 
         /* ============================================
-                                                                        RESPONSIVE - BREAKPOINTS ESTÁNDAR
-                                                                        xs: <576px | sm: 576-767px | md: 768-991px | lg: 992-1199px | xl: ≥1200px
-                                                                        ============================================ */
+                                                                                                                RESPONSIVE - BREAKPOINTS ESTÁNDAR
+                                                                                                                xs: <576px | sm: 576-767px | md: 768-991px | lg: 992-1199px | xl: ≥1200px
+                                                                                                                ============================================ */
 
         /* ===== XL: Pantallas grandes (≥1200px) ===== */
         @media (min-width: 1200px) {
@@ -2183,8 +2183,8 @@
         }
 
         /* ============================================
-                                           WEB APP / PWA - OPTIMIZACIONES TOUCH & MOBILE
-                                           ============================================ */
+                                                                                   WEB APP / PWA - OPTIMIZACIONES TOUCH & MOBILE
+                                                                                   ============================================ */
 
         /* Touch Target mínimo 44x44px (Apple HIG / Material Design) */
         .design-card,
@@ -3830,15 +3830,15 @@
                             <div class="design-image">
                                 ${imageUrl
                                     ? `<img src="${imageUrl}" alt="${escapeHtml(design.name)}" loading="lazy"
-                                                                        onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                                                       <div class="no-image" style="display: none;">
-                                                                           <i class="fas fa-image fa-3x mb-2 text-gray-300"></i>
-                                                                           <span>Sin imagen</span>
-                                                                       </div>`
+                                                                                                                onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                                                                               <div class="no-image" style="display: none;">
+                                                                                                                   <i class="fas fa-image fa-3x mb-2 text-gray-300"></i>
+                                                                                                                   <span>Sin imagen</span>
+                                                                                                               </div>`
                                     : `<div class="no-image">
-                                                                           <i class="fas fa-image fa-3x mb-2 text-gray-300"></i>
-                                                                           <span>Sin imagen</span>
-                                                                       </div>`
+                                                                                                                   <i class="fas fa-image fa-3x mb-2 text-gray-300"></i>
+                                                                                                                   <span>Sin imagen</span>
+                                                                                                               </div>`
                                 }
                             </div>
 

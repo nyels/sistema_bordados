@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Image;
+use App\Jobs\ProcessDesignImage;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
@@ -42,10 +43,6 @@ class ImageService
         array $options = []
     ): Image {
         try {
-            Log::info('=== INICIO SUBIDA DE IMAGEN ===');
-            Log::info('Tipo: ' . $imageableType);
-            Log::info('ID: ' . $imageableId);
-
             // Validaciones iniciales
             if (!$file->isValid()) {
                 throw new \Exception('El archivo subido no es válido');
@@ -82,14 +79,6 @@ class ImageService
             $detectedFormat = $request->input("_file_{$fieldName}_format");
             $correctExtension = $detectedFormat ? strtolower($detectedFormat) : $this->getCorrectExtension($file);
 
-            Log::info('Detección de formato de imagen', [
-                'campo' => $fieldName,
-                'formato_detectado' => $detectedFormat ?? 'fallback',
-                'extension_original' => $file->getClientOriginalExtension(),
-                'extension_final' => $correctExtension,
-                'mime_type' => $file->getMimeType()
-            ]);
-
             // Generar nombre con nomenclatura: nombre_designs_principal_timestamp_hash.ext
             $designName  = $options['design_name']  ?? 'design';
             $variantName = $options['variant_name'] ?? null;
@@ -118,10 +107,6 @@ class ImageService
                 $fileName = "{$designSlug}_{$timestamp}_{$hash}.{$correctExtension}";
             }
 
-            Log::info('Nombre generado con extensión corregida: ' . $fileName);
-            Log::info('Extensión original: ' . $file->getClientOriginalExtension());
-            Log::info('Extensión corregida: ' . $correctExtension);
-
             // Definir ruta basada en tipo de archivo
             $year = date('Y');
             $month = date('m');
@@ -140,16 +125,12 @@ class ImageService
                     break;
             }
 
-            Log::info('Ruta destino: ' . $path);
-
             // Guardar original
             $filePath = $file->storeAs($path, $fileName, 'public');
 
             if (!$filePath) {
                 throw new \Exception('No se pudo guardar el archivo en storage');
             }
-
-            Log::info('Archivo guardado en: ' . $filePath);
 
             if (!Storage::disk('public')->exists($filePath)) {
                 throw new \Exception('El archivo no existe después de guardarlo');
@@ -159,17 +140,18 @@ class ImageService
             $fullPath = Storage::disk('public')->path($filePath);
             $imageSize = @getimagesize($fullPath);
 
-            // --- SE ADAPTA: EXTRACCIÓN DE COLOR DOMINANTE Y PALETA COMPLETA ---
+            // --- COLOR EXTRACTION DISABLED FOR PERFORMANCE ---
+            // TODO: Move to background job/queue for better UX
             $dominantColorHex = null;
             $colorPalette = null;
 
-            // ACTUALIZACIÓN: Se añade validación de archivo existente antes de procesar con ColorThief
+            /*
+            // ColorThief extraction - uncomment to enable (adds ~1-3 seconds per image)
             if ($imageSize !== false && $detectedType === 'image' && file_exists($fullPath)) {
                 try {
                     $rgb = ColorThief::getColor($fullPath);
                     if ($rgb) {
                         $dominantColorHex = sprintf("#%02x%02x%02x", $rgb[0], $rgb[1], $rgb[2]);
-                        Log::info('Color dominante detectado: ' . $dominantColorHex);
                     }
 
                     $palette = ColorThief::getPalette($fullPath, 8);
@@ -177,25 +159,20 @@ class ImageService
                         $hexPalette = array_map(function ($color) {
                             return sprintf("#%02x%02x%02x", $color[0], $color[1], $color[2]);
                         }, $palette);
-                        // ACTUALIZACIÓN: Se asegura que el JSON sea válido
                         $colorPalette = json_encode($hexPalette);
-                        Log::info('Paleta de colores detectada:', $hexPalette);
                     }
                 } catch (\Exception $e) {
-                    Log::warning('No se pudo extraer el color o paleta: ' . $e->getMessage());
+                    // Ignore ColorThief errors
                 }
             }
+            */
 
             if ($imageSize === false) {
-                Log::warning('⚠️ No se pudieron obtener dimensiones con getimagesize', [
-                    'file' => $file->getClientOriginalName()
-                ]);
                 $imageSize = [null, null];
             }
 
             // Si es imagen primaria, desactivar las demás
             if ($isPrimary) {
-                Log::info('Desactivando otras imágenes primarias');
                 Image::where('imageable_type', $imageableType)
                     ->where('imageable_id', $imageableId)
                     ->update(['is_primary' => false]);
@@ -203,7 +180,6 @@ class ImageService
 
             // Obtener el siguiente orden
             $order = $options['order'] ?? $this->getNextOrder($imageableType, $imageableId);
-            Log::info('Orden asignado: ' . $order);
 
             // Crear registro en la base de datos
             $imageData = [
@@ -229,37 +205,22 @@ class ImageService
                 ])
             ];
 
-            Log::info('Datos de imagen a guardar:', $imageData);
-
             $image = Image::create($imageData);
 
             if (!$image) {
                 throw new \Exception('No se pudo crear el registro de imagen en la base de datos');
             }
 
-            Log::info('Imagen registrada con ID: ' . $image->id);
-
-            // Generar thumbnails optimizados (en segundo plano, no bloquea)
-            if ($detectedType === 'image' && $imageSize !== false) {
-                try {
-                    $this->generateThumbnails($image, $fullPath);
-                    Log::info('Thumbnails generados para imagen ID: ' . $image->id);
-                } catch (\Exception $e) {
-                    Log::warning('No se pudieron generar thumbnails: ' . $e->getMessage());
-                    // No lanzar excepción - la imagen original ya está guardada
-                }
-            }
-
-            Log::info('=== FIN SUBIDA DE IMAGEN EXITOSA ===');
+            // Thumbnails are generated via LAZY LOADING in Image model
+            // (on first access to thumbnail_small_url or thumbnail_medium_url)
+            // No queue/worker needed - instant upload, thumbnails created on-demand
 
             return $image;
         } catch (\Exception $e) {
-            Log::error('=== ERROR AL SUBIR IMAGEN ===');
-            Log::error('Mensaje: ' . $e->getMessage());
+            Log::error('Error al subir imagen: ' . $e->getMessage());
 
             if (isset($filePath) && Storage::disk('public')->exists($filePath)) {
                 Storage::disk('public')->delete($filePath);
-                Log::info('Archivo eliminado por error en BD');
             }
 
             throw $e;

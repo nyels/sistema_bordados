@@ -141,10 +141,6 @@
                                                         </button>
                                                     </div>
                                                 </div>
-                                                <p class="file-name mt-2 text-muted small text-center"
-                                                    id="filename_{{ $setting->key }}">
-                                                    {{ $setting->value ? basename($setting->value) : '' }}
-                                                </p>
                                             </div>
                                         </div>
                                     @break
@@ -276,9 +272,9 @@
                     // Click en zona -> Click en input
                     zone.on('click', function(e) {
                         if ($(e.target).closest('.btn-remove').length)
-                    return; // Si es botón eliminar, no abrir
+                            return; // Si es botón eliminar, no abrir
                         if ($(e.target).is(fileInput))
-                    return; // Evitar recursión si el evento viene del input
+                            return; // Evitar recursión si el evento viene del input
                         fileInput.trigger('click');
                     });
 

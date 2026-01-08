@@ -24,8 +24,8 @@ class ProveedorController extends Controller
      */
     public function create()
     {
-        $estados = Estado::all();
-        $giros = Giro::all();
+        $estados = Estado::all()->where('activo', true);
+        $giros = Giro::all()->where('activo', true);
         return view('admin.proveedores.create', compact('estados', 'giros'));
     }
 

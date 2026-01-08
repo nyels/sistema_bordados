@@ -101,12 +101,8 @@ class ProductController extends Controller
     public function create()
     {
         try {
-            // 1. Validar categorías
+            // 1. Cargar categorías (sin bloquear si están vacías)
             $categories = ProductCategory::active()->ordered()->get();
-            if ($categories->isEmpty()) {
-                return redirect()->route('product_categories.create')
-                    ->with('info', 'Debe crear al menos una categoría antes de continuar.');
-            }
 
             // 2. Carga de Insumos y Configuración
             $extras = ProductExtra::ordered()->get();

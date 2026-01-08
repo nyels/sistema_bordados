@@ -53,9 +53,10 @@ class DatabaseSeeder extends Seeder
             SystemSettingsSeeder::class,
             UnitsSeeder::class,
             MaterialCategoriesSeeder::class,
-            MaterialSeeder::class,
+            ProductSystemSeeder::class, // Added for correct Extras/Categories
         ]);
 
+        /* DEMO DATA REMOVED FOR SIMULATION
         // Tablas: attributes y attribute_values
         $color = Attribute::create(['name' => 'COLOR', 'slug' => 'color']);
         $talla = Attribute::create(['name' => 'TALLA', 'slug' => 'talla']);
@@ -225,6 +226,9 @@ class DatabaseSeeder extends Seeder
                 'cadera' => 110.0,
                 'largo' => 75.0,
             ]
+                'largo' => 75.0,
+            ]
         );
+        */
     }
 }

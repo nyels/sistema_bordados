@@ -359,10 +359,17 @@ class ProductService
 
             $materialVariantId = $material['material_variant_id'];
 
+            // Logica de Trazabilidad por Variante (Enterprise)
+            $activeForVariants = null;
+            if (isset($material['scope']) && $material['scope'] === 'specific' && !empty($material['targets'])) {
+                $activeForVariants = json_encode($material['targets']);
+            }
+
             $syncData[$materialVariantId] = [
                 'quantity' => (float) $material['quantity'],
                 'is_primary' => !empty($material['is_primary']),
                 'notes' => $material['notes'] ?? null,
+                'active_for_variants' => $activeForVariants,
             ];
         }
 

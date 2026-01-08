@@ -3,6 +3,13 @@
 {{-- Filtros, agrupamiento por variante, acordeones --}}
 {{-- ============================================= --}}
 
+{{-- Fix z-index for SweetAlert2 to appear above Bootstrap modals --}}
+<style>
+    .swal2-container-high-zindex {
+        z-index: 99999 !important;
+    }
+</style>
+
 {{-- Header Compacto --}}
 <div class="production-header-compact">
     <h5 class="production-title-compact">
@@ -241,17 +248,18 @@
                 {{-- Error General --}}
                 <div class="form-error-alert" id="formError" style="display: none;"></div>
 
-                {{-- Acciones --}}
-                <div class="form-actions" id="formActions" style="display: none;">
-                    <button type="button" id="btnCancelExport" class="btn-premium btn-premium-outline">
-                        Cancelar
-                    </button>
-                    <button type="button" id="btnSaveExport" class="btn-premium btn-premium-primary" disabled>
-                        <i class="fas fa-save"></i>
-                        <span id="btnSaveText">Guardar</span>
-                    </button>
-                </div>
             </form>
+        </div>
+
+        {{-- Acciones --}}
+        <div class="form-actions" id="formActions" style="display: none;">
+            <button type="button" id="btnCancelExport" class="btn-premium btn-premium-outline">
+                Cancelar
+            </button>
+            <button type="button" id="btnSaveExport" class="btn-premium btn-premium-primary" disabled>
+                <i class="fas fa-save"></i>
+                <span id="btnSaveText">Guardar</span>
+            </button>
         </div>
     </div>
 </div>
@@ -512,6 +520,18 @@
         --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
         --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    /* ============================================= */
+    /* LAYOUT PRINCIPAL */
+    /* ============================================= */
+    .production-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        min-height: 0;
+        position: relative;
     }
 
     /* ============================================= */
@@ -1183,24 +1203,27 @@
         align-items: center;
         justify-content: center;
         gap: 8px;
-        padding: 10px 20px;
-        border-radius: var(--radius-md);
+        padding: 14px 20px;
+        border-radius: 12px;
         font-size: 14px;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s ease;
         border: none;
         text-decoration: none;
+        min-height: 52px;
+        /* Standardize height with design-actions */
     }
 
     .btn-premium-primary {
         background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
         color: #fff;
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
     }
 
     .btn-premium-primary:hover {
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
         color: #fff;
         text-decoration: none;
     }
@@ -1219,7 +1242,8 @@
 
     .btn-premium-outline {
         background: transparent;
-        border: 1.5px solid var(--gray-300);
+        border: 2px solid var(--gray-300);
+        /* Match thickness with danger button */
         color: var(--gray-700);
     }
 
@@ -1556,7 +1580,7 @@
     .form-scroll-area {
         flex: 1;
         overflow-y: auto;
-        padding-right: 4px;
+        padding: 0px 10px 0px 10px;
     }
 
     /* Upload Zone */
@@ -2512,6 +2536,33 @@
             min-height: 48px;
         }
     }
+
+    /* ============================================= */
+    /* ACCIONES DEL FORMULARIO (MODIFICADO - MATCH INDEX) */
+    /* ============================================= */
+    .form-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: auto;
+        padding-top: 17px;
+        border-top: 1px solid var(--gray-200);
+        margin-bottom: 12px;
+        padding-bottom: 4px;
+        width: 100%;
+        padding-left: 16px;
+        padding-right: 16px;
+        box-sizing: border-box;
+    }
+
+    .form-actions button {
+        flex: 1;
+        /* Misma proporción */
+        justify-content: center;
+        height: 52px;
+        /* Standard height */
+        min-height: 52px;
+    }
 </style>
 
 <script>
@@ -3000,7 +3051,11 @@
                         showCancelButton: true,
                         confirmButtonText: msg.btn,
                         cancelButtonText: 'Cancelar',
-                        confirmButtonColor: '#2563eb'
+                        confirmButtonColor: '#2563eb',
+                        // Fix z-index to appear above Bootstrap modal
+                        customClass: {
+                            container: 'swal2-container-high-zindex'
+                        }
                     }).then(function(result) {
                         if (result.isConfirmed) {
                             $.ajax({
@@ -3190,7 +3245,7 @@
                     editData = editData || null;
                     hideAllStates();
 
-                    // Mostrar botón de volver por defecto (se oculta en showEmptyState si no hay archivos)
+                    // Mostrar botón de volver por defecto
                     $('#btnBackToList').show();
 
                     if (editData) {
@@ -3212,7 +3267,8 @@
                         $('#inputHeight').val(editData.height_mm || 0);
 
                         autoReadSuccess = editData.auto_read_success;
-                        $('#technicalData, #formFields, #formActions').show();
+                        $('#technicalData, #formFields').show();
+                        $('#formActions').css('display', 'flex');
                         $('#manualEntryAlert').hide();
                         $('#btnSaveExport').prop('disabled', false);
                     } else {
@@ -3227,7 +3283,7 @@
 
                     $('#exportDesignId').val(currentDesignId);
                     $('#exportVariantId').val(currentVariantId || '');
-                    $('#productionForm').show();
+                    $('#productionForm').css('display', 'flex');
                 }
 
                 function hideForm() {
@@ -3319,7 +3375,8 @@
                         $('#colorsPreview').show();
                     }
 
-                    $('#technicalData, #formFields, #formActions').show();
+                    $('#technicalData, #formFields').show();
+                    $('#formActions').css('display', 'flex');
                     $('#btnSaveExport').prop('disabled', false);
                 }
 
@@ -3333,7 +3390,8 @@
                     $('#inputStitches, #inputColors, #inputWidth, #inputHeight').val('');
 
                     $('.tech-card').addClass('has-error');
-                    $('#technicalData, #formFields, #formActions').show();
+                    $('#technicalData, #formFields').show();
+                    $('#formActions').css('display', 'flex');
                     $('#btnSaveExport').prop('disabled', false);
                 }
 
@@ -3503,7 +3561,11 @@
                             title: title,
                             text: text,
                             timer: 2500,
-                            showConfirmButton: false
+                            showConfirmButton: false,
+                            // Fix z-index to appear above Bootstrap modal
+                            customClass: {
+                                container: 'swal2-container-high-zindex'
+                            }
                         });
                     }
                 }
@@ -3515,7 +3577,11 @@
                             title: title,
                             text: text,
                             confirmButtonText: 'Entendido',
-                            confirmButtonColor: '#2563eb'
+                            confirmButtonColor: '#2563eb',
+                            // Fix z-index to appear above Bootstrap modal
+                            customClass: {
+                                container: 'swal2-container-high-zindex'
+                            }
                         });
                     } else {
                         alert(title + '\n' + text);
@@ -3678,10 +3744,15 @@
                             text: options.text,
                             icon: options.icon,
                             showCancelButton: true,
+                            reverseButtons: true, // Cancel left, Confirm right
                             confirmButtonColor: options.confirmColor || '#2563eb',
                             cancelButtonColor: '#6b7280',
                             confirmButtonText: options.confirmText,
-                            cancelButtonText: 'Cancelar'
+                            cancelButtonText: 'Cancelar',
+                            // Fix z-index to appear above Bootstrap modal
+                            customClass: {
+                                container: 'swal2-container-high-zindex'
+                            }
                         }).then(function(result) {
                             if (result.isConfirmed) {
                                 changeStatusWithFeedback(exportId, newStatus, options);
@@ -3735,10 +3806,15 @@
                             text: 'Esta acción no se puede deshacer',
                             icon: 'warning',
                             showCancelButton: true,
+                            reverseButtons: true, // Cancel left, Confirm right
                             confirmButtonColor: '#ef4444',
                             cancelButtonColor: '#6b7280',
                             confirmButtonText: 'Sí, eliminar',
-                            cancelButtonText: 'Cancelar'
+                            cancelButtonText: 'Cancelar',
+                            // Fix z-index to appear above Bootstrap modal
+                            customClass: {
+                                container: 'swal2-container-high-zindex'
+                            }
                         }).then(function(result) {
                             if (result.isConfirmed) {
                                 performDelete(id);

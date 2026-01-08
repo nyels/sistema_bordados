@@ -88,7 +88,7 @@ class Product extends Model
     {
         return $this->belongsToMany(MaterialVariant::class, 'product_materials', 'product_id', 'material_variant_id')
             ->using(ProductMaterial::class)
-            ->withPivot(['id', 'quantity', 'is_primary', 'notes'])
+            ->withPivot(['id', 'quantity', 'is_primary', 'notes', 'active_for_variants'])
             ->withTimestamps();
     }
 

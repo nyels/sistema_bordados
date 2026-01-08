@@ -7,7 +7,7 @@
 
 @section('content')
     <br>
-    <div class="col-md-4">
+    <div class="col-12 col-md-6 col-lg-4">
 
         {{-- MENSAJES FLASH --}}
         @foreach (['success', 'error', 'info'] as $msg)
@@ -60,18 +60,13 @@
                         @enderror
 
                         <!-- Botones de acción -->
-                        <div class="row mt-4">
-                            <div class="col-12">
-                                <div class="text-right">
-                                    <a href="{{ route('admin.categorias.index') }}" class="btn btn-secondary"
-                                        style="margin-right: 10px; padding: 8px 20px;">
-                                        <i class="fas fa-times-circle"></i> Regresar
-                                    </a>
-                                    <button type="submit" class="btn btn-primary" style="padding: 8px 20px;">
-                                        <i class="fas fa-save"></i> Guardar
-                                    </button>
-                                </div>
-                            </div>
+                        <div class="d-flex flex-column flex-sm-row justify-content-end mt-4">
+                            <a href="{{ route('admin.categorias.index') }}" class="btn btn-secondary mb-2 mb-sm-0 mr-sm-2">
+                                <i class="fas fa-times-circle"></i> Regresar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Guardar
+                            </button>
                         </div>
 
                     </div>

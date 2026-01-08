@@ -3,66 +3,77 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\ProductCategory;
 use App\Models\ProductExtra;
-use App\Models\Product;
-use App\Models\DesignExport; // Tu tabla existente
-use App\Models\Application_types; // Tu tabla existente
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class ProductSystemSeeder extends Seeder
 {
     public function run(): void
     {
         DB::transaction(function () {
-            // 1. Crear Categoría
-            $cat = ProductCategory::create([
-                'name' => 'Cosmetiqueras',
-                'slug' => 'cosmetiqueras',
-                'description' => 'Línea de viaje y belleza'
-            ]);
 
-            // 2. Crear Extras
-            $extra1 = ProductExtra::create([
-                'name' => 'Forro Impermeable',
-                'cost_addition' => 15.00,
-                'price_addition' => 35.00
-            ]);
+            // --- SERVICIOS EXTRAS ESTANDARIZADOS (Contexto Artesanal / Hipil) ---
 
-            $extra2 = ProductExtra::create([
-                'name' => 'Cierre Reforzado',
-                'cost_addition' => 5.00,
-                'price_addition' => 12.00
-            ]);
+            // CÁLCULO REALISTA (Base 2025):
+            // - Mano de Obra: ~$35 - $40 MXN / hora (incluyendo cargas sociales)
+            // - Luz Comercial: ~$5.00 MXN / kWh
+            // - Plancha Industrial: 1500W (1.5 kWh)
 
-            // 3. Crear Producto Maestro
-            $product = Product::create([
-                'product_category_id' => $cat->id,
-                'name' => 'Cosmetiquera Mezclilla XL',
-                'sku' => 'COSM-001',
-                'specifications' => ['tela' => 'Mezclilla', 'hilo' => 'Poliéster'],
-                'status' => 'active'
-            ]);
+            $extras = [
+                [
+                    'uuid' => (string) Str::uuid(),
+                    'name' => 'Planchado y Vaporizado (Delicado)',
+                    // Tiempo: 20 min/prenda (Hipil lino). 
+                    // Labor: $12.00 | Luz: $2.50 | Agua/Insumos: $0.50
+                    'cost_addition' => 15.00,
+                    'price_addition' => 45.00 // Margen x3 por riesgo de prenda
+                ],
+                [
+                    'uuid' => (string) Str::uuid(),
+                    'name' => 'Empaquetado Artesanal (Doblado + Bolsa)',
+                    // Tiempo: 10 min.
+                    // Labor: $6.00 | Bolsa/Cinta/Sticker: $4.00
+                    'cost_addition' => 10.00,
+                    'price_addition' => 25.00
+                ],
+                [
+                    'uuid' => (string) Str::uuid(),
+                    'name' => 'Servicio Express (Entrega < 24h)',
+                    // Costo: 2 Horas Extra (Overtime) o Turno Nocturno
+                    'cost_addition' => 100.00,
+                    'price_addition' => 250.00 // Premium por urgencia
+                ],
+                [
+                    'uuid' => (string) Str::uuid(),
+                    'name' => 'Cosido de Etiqueta Personalizada',
+                    // Tiempo: 5-8 min (Descoser, centrar, coser).
+                    // Labor: $5.00 | Hilo/Desgaste: $1.00
+                    'cost_addition' => 6.00,
+                    'price_addition' => 18.00
+                ],
+                [
+                    'uuid' => (string) Str::uuid(),
+                    'name' => 'Lavado y Suavizado (Lino)',
+                    // Proceso delicado, no industrial masivo.
+                    // Jabón especial + Agua + Secado aire + Tiempo
+                    'cost_addition' => 25.00,
+                    'price_addition' => 65.00
+                ],
+                [
+                    'uuid' => (string) Str::uuid(),
+                    'name' => 'Caja de Regalo Rígida (Premium)',
+                    // Costo directo proveedor (Caja + Papel China + Moño)
+                    'cost_addition' => 45.00,
+                    'price_addition' => 90.00
+                ]
+            ];
 
-            $product->extras()->attach([$extra1->id, $extra2->id]);
-
-            // 4. Crear Variantes
-            $variant = $product->variants()->create([
-                'sku_variant' => 'COSM-001-AZUL',
-                'price' => 180.00,
-                'stock_alert' => 5
-            ]);
-
-            // 5. Vincular con tus datos reales (Ajusta los IDs según tu DB)
-            // Tomamos el primer bordado y la primera posición que existan en tu DB
-            $designExport = DesignExport::first();
-            $appType = Application_types::first();
-
-            if ($designExport && $appType) {
-                $variant->designExports()->attach($designExport->id, [
-                    'application_type_id' => $appType->id,
-                    'notes' => 'Bordado frontal estándar'
-                ]);
+            foreach ($extras as $data) {
+                ProductExtra::updateOrCreate(
+                    ['name' => $data['name']],
+                    $data
+                );
             }
         });
     }

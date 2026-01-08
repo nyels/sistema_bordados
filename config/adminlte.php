@@ -346,42 +346,61 @@ return [
             'route'  => 'admin.designs.index',
             'icon' => 'fas fa-fw fa-palette',
             'active' => ['admin/designs*'],
-            /*'classes' => 'bg-blue text-white'*/
-            /* 'submenu' => [
+            'submenu' => [
                 [
-                    'text' => 'Listado de Diseños',
-                    'icon' => 'fas fa-list',
+                    'text' => 'Categorias de diseño',
+                    'url' => 'categorias',
+                    //  'icon' => 'fas fa-fw fa-tags',
+                ],
+                [
+                    'text' => 'Diseños',
+                    //  'icon' => 'fas fa-plus-circle',
                     'url'  => 'admin/designs',
                 ],
-                [
-                    'text' => 'Nuevo Diseño',
-                    'icon' => 'fas fa-plus-circle',
-                    'url'  => 'admin/designs/create',
-                ],
-            ],*/
+            ],
         ],
         [
             'text' => 'Producción',
             'icon' => 'fas fa-fw fa-industry',
             'url' => 'produccion',
         ],
+
+        [
+            'text' => 'Materiales',
+            'url' => 'material-categories',
+            'icon' => 'fas fa-fw fa-layer-group',
+            'submenu' => [
+                [
+                    'text' => 'Categorias',
+                    'url' => 'material-categories',
+                    //  'icon' => 'fas fa-fw fa-layer-group',
+                ],
+                [
+                    'text' => 'Catalogo',
+                    'url' => 'materials',
+                    //  'icon' => 'fas fa-fw fa-cubes',
+                ],
+            ],
+        ],
+
+
         [
             'text' => 'Gestion de productos',
             'url'  => 'gestion-productos',
             'icon' => 'fas fa-fw fa-box-open',
             'submenu' => [
                 [
-                    'text' => 'Productos',
-                    'icon' => 'fas fa-list',
-                    'url'  => 'gestion-productos', // La URL que definimos en el paso anterior
-                ],
-                [
                     'text' => 'Categorias de Productos',
-                    'icon' => 'fas fa-list',
+                    //  'icon' => 'fas fa-list',
                     'url'  => 'product-categories',
                 ],
                 [
-                    'text' => 'Productos Extras',
+                    'text' => 'Productos',
+                    //  'icon' => 'fas fa-list',
+                    'url'  => 'gestion-productos', // La URL que definimos en el paso anterior
+                ],
+                [
+                    'text' => 'Servicios extras',
                     'icon' => 'fas fa-list',
                     'url'  => 'product-extras',
                 ],
@@ -419,31 +438,19 @@ return [
                     'url' => 'attributes',
                     'icon' => 'fas fa-fw fa-list',
                 ],
-                [
-                    'text' => 'Categorias de diseño',
-                    'url' => 'categorias',
-                    'icon' => 'fas fa-fw fa-tags',
-                ],
-                [
-                    'text' => 'Categorias de Material',
-                    'url' => 'material-categories',
-                    'icon' => 'fas fa-fw fa-layer-group',
-                ],
+
+
                 [
                     'text' => 'Estados',
                     'url' => 'estados',
                     'icon' => 'fas fa-fw fa-map-marker-alt',
                 ],
                 [
-                    'text' => 'Giro',
+                    'text' => 'Giro proveedores',
                     'url' => 'giros',
                     'icon' => 'fas fa-fw fa-briefcase',
                 ],
-                [
-                    'text' => 'Materiales',
-                    'url' => 'materials',
-                    'icon' => 'fas fa-fw fa-cubes',
-                ],
+
                 [
                     'text' => 'Recomendaciones',
                     'url' => 'recomendaciones',

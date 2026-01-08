@@ -389,12 +389,14 @@ class MaterialVariantController extends Controller
 
                 return [
                     'id' => $v->id,
-                    // Texto: "SKU - Color (50.00 m)"
-                    'text' => "{$v->sku} - {$v->color} (" . number_format($stockReal, 2) . " {$simbolo})",
+                    'text' => "{$v->material->name} - {$v->color} ({$v->sku})", // More descriptive text for Select2
+                    'family_name' => $v->material->name,
+                    'variant_name' => $v->color,
+                    'sku' => $v->sku,
                     'stock_real' => number_format($stockReal, 4, '.', ''),
                     'cost_base' => number_format($costoBase, 4, '.', ''),
                     'symbol' => $simbolo,
-                    'full_name' => "{$v->sku} - {$v->color}"
+                    'stock_display' => "Stock: " . number_format($stockReal, 2) . " {$simbolo}"
                 ];
             });
 

@@ -134,8 +134,9 @@
                         <label class="label">
                             Categorías <span class="text-danger">*</span>
                         </label>
-                        <select name="categories[]" class="input @error('categories') is-invalid @enderror" multiple
-                            size="6" required>
+                        <select name="categories[]" id="categoriesSelect"
+                            class="form-control @error('categories') is-invalid @enderror" required>
+                            <option value=""></option>
                             @foreach ($categories as $category)
                                 <option value="{{ $category->id }}"
                                     {{ in_array($category->id, old('categories', [])) ? 'selected' : '' }}>
@@ -145,7 +146,7 @@
                         </select>
                         <div id="categories-error" class="text-danger small mt-1" style="display: none;"></div>
                         <small class="hint">
-                            Selecciona una o varias categorías
+                            Selecciona una categoría
                         </small>
                         @error('categories')
                             <small class="text-danger d-block">{{ $message }}</small>
@@ -173,8 +174,8 @@
 @section('css')
     <style>
         /* ============================================
-               MATERIAL DESIGN / APPLE HIG - BASE STYLES
-               ============================================ */
+                                           MATERIAL DESIGN / APPLE HIG - BASE STYLES
+                                           ============================================ */
         :root {
             --primary: #2563eb;
             --primary-light: #3b82f6;
@@ -261,8 +262,8 @@
         }
 
         /* ============================================
-               ALERTA MODERNA
-               ============================================ */
+                                           ALERTA MODERNA
+                                           ============================================ */
         .alert-modern {
             font-size: var(--font-size-sm);
             padding: 12px 16px;
@@ -278,8 +279,8 @@
         }
 
         /* ============================================
-               DROPZONE - DISEÑO MODERNO
-               ============================================ */
+                                           DROPZONE - DISEÑO MODERNO
+                                           ============================================ */
         .dropzone {
             border: 2px dashed var(--gray-300);
             border-radius: var(--radius-lg);
@@ -410,8 +411,8 @@
         }
 
         /* ============================================
-               IMAGE ANALYSIS CARD - DISEÑO DESCRIPTIVO (foto 2)
-               ============================================ */
+                                           IMAGE ANALYSIS CARD - DISEÑO DESCRIPTIVO (foto 2)
+                                           ============================================ */
         .image-analysis-card {
             background: #fff;
             border: 1px solid var(--gray-200);
@@ -607,8 +608,8 @@
         }
 
         /* ============================================
-                                                                                                           ESTILOS DEL SPINNER PREMIUM (AGREGADOS)
-                                                                                                           ============================================ */
+                                                                                                                                       ESTILOS DEL SPINNER PREMIUM (AGREGADOS)
+                                                                                                                                       ============================================ */
         .modal-loading-overlay {
             position: fixed;
             top: 0;
@@ -666,8 +667,8 @@
         }
 
         /* ============================================
-                                                                                                           BARRA DE PROGRESO PREMIUM
-                                                                                                           ============================================ */
+                                                                                                                                       BARRA DE PROGRESO PREMIUM
+                                                                                                                                       ============================================ */
         .progress-container-premium {
             width: 100%;
             max-width: 320px;
@@ -780,12 +781,87 @@
         .progress-error .progress-text {
             color: #dc2626;
         }
+
+        /* ============================================
+               SELECT2 PREMIUM STYLING (Match .input design)
+               ============================================ */
+        .select2-container--default .select2-selection--single {
+            border: 1px solid var(--gray-200) !important;
+            border-radius: var(--radius-md) !important;
+            height: auto !important;
+            padding: 10px 14px !important;
+            background: var(--gray-50) !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            color: var(--gray-700) !important;
+            line-height: 1.5 !important;
+            padding: 0 !important;
+            font-size: var(--font-size-base) !important;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 100% !important;
+            top: 0 !important;
+            right: 10px !important;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__placeholder {
+            color: var(--gray-400) !important;
+        }
+
+        .select2-container--default.select2-container--focus .select2-selection--single,
+        .select2-container--default.select2-container--open .select2-selection--single {
+            border-color: var(--primary) !important;
+            background: #fff !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+        }
+
+        .select2-dropdown {
+            border: 1px solid var(--gray-200) !important;
+            border-radius: var(--radius-md) !important;
+            box-shadow: var(--shadow-lg) !important;
+            margin-top: 4px !important;
+        }
+
+        .select2-container--default .select2-search--dropdown .select2-search__field {
+            border: 1px solid var(--gray-200) !important;
+            border-radius: var(--radius-sm) !important;
+            padding: 10px 12px !important;
+            font-size: var(--font-size-base) !important;
+        }
+
+        .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable {
+            background: var(--primary) !important;
+            color: white !important;
+        }
+
+        .select2-container--default .select2-results__option--selected {
+            background: var(--gray-100) !important;
+        }
+
+        .select2-results__option {
+            padding: 10px 14px !important;
+            font-size: var(--font-size-base) !important;
+        }
     </style>
 @stop
 
 @section('js')
     {{-- AGREGADO: Librería Color Thief para extraer paletas de colores --}}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.0/color-thief.umd.js"></script>
+
+    {{-- Select2 para categorías --}}
+    <script>
+        $(document).ready(function() {
+            $('#categoriesSelect').select2({
+                placeholder: 'Buscar y seleccionar categorías...',
+                allowClear: true,
+                width: '100%'
+            });
+        });
+    </script>
 
     <script>
         // ============================================
@@ -1224,6 +1300,7 @@
             dropzone.classList.remove('has-preview');
 
             // Mostrar contenido original del dropzone
+            dropzone.style.display = 'flex'; // RESTAURAR DROPZONE
             dropzoneContent.style.display = 'block';
             preview.classList.remove('active');
 
@@ -1353,6 +1430,8 @@
                 </div>
             `;
 
+            // OCULTAR DROPZONE Y MOSTRAR CARD
+            dropzone.style.display = 'none';
             fileInfoContainer.innerHTML = fileInfoHTML;
         }
 

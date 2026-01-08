@@ -17,11 +17,13 @@ class ProductMaterial extends Pivot
         'quantity',
         'is_primary',
         'notes',
+        'active_for_variants',
     ];
 
     protected $casts = [
         'quantity' => 'decimal:4',
         'is_primary' => 'boolean',
+        'active_for_variants' => 'array',
     ];
 
     /**
