@@ -37,7 +37,7 @@
             </div>
             <!-- /.card-header -->
             <div class="card-body" bis_skin_checked="1">
-                <form method="post" action="{{ route('admin.giros.destroy', $giro->id) }}">
+                <form id="deleteForm" method="post" action="{{ route('admin.giros.destroy', $giro->id) }}">
                     @csrf
                     @method('DELETE')
                     <div class="col-md-12">
@@ -98,6 +98,23 @@
 
 @section('js')
     <script>
-        console.log("Hi, I'm using the Laravel-AdminLTE package!");
+        document.getElementById('deleteForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            Swal.fire({
+                title: '¿Está seguro?',
+                text: "¡No podrás revertir esto!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminarlo',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    this.submit();
+                }
+            });
+        });
     </script>
 @stop

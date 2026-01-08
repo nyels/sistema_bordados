@@ -15,7 +15,7 @@
                 <h3 class="card-title">Registrar Nueva Producción</h3>
             </div>
             <div class="card-body">
-                <form action="{{ route('admin.produccion.store') }}" method="POST" enctype="multipart/form-data">
+                <form action="{{ route('admin.production.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
 
                     <div class="form-group">
@@ -45,7 +45,7 @@
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-save mr-1"></i> Guardar Producción
                         </button>
-                        <a href="{{ route('admin.produccion.index') }}" class="btn btn-secondary">
+                        <a href="{{ route('admin.production.index') }}" class="btn btn-secondary">
                             Cancelar
                         </a>
                     </div>

@@ -49,8 +49,8 @@
                 </div>
             </div>
             <div class="card-footer">
-                <a href="{{ route('admin.produccion.index') }}" class="btn btn-secondary">Volver</a>
-                <a href="{{ route('admin.produccion.edit', $export->id) }}" class="btn btn-primary">Editar</a>
+                <a href="{{ route('admin.production.index') }}" class="btn btn-secondary">Volver</a>
+                <a href="{{ route('admin.production.edit', $export->id) }}" class="btn btn-primary">Editar</a>
             </div>
         </div>
     </div>

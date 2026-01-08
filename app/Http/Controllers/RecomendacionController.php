@@ -36,12 +36,28 @@ class RecomendacionController extends Controller
                 'string',
                 'max:255',
                 'regex:/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/',
-                'unique:recomendacion,nombre_recomendacion',
             ],
         ]);
         try {
+            $nombre = strtoupper(trim($request->nombre_recomendacion));
+
+            // Buscar si ya existe (activo o inactivo)
+            $existingRecomendacion = Recomendacion::where('nombre_recomendacion', $nombre)->first();
+
+            if ($existingRecomendacion) {
+                if ($existingRecomendacion->activo) {
+                    return back()->withErrors(['nombre_recomendacion' => 'El nombre de la recomendación ya ha sido registrado.'])->withInput();
+                } else {
+                    // Reactivar si existía pero estaba eliminado logicamente
+                    $existingRecomendacion->activo = true;
+                    $existingRecomendacion->fecha_baja = null; // Limpiar fecha de baja si existe
+                    $existingRecomendacion->save();
+                    return redirect()->route('admin.recomendaciones.index')->with('success', 'Recomendación reactivada exitosamente');
+                }
+            }
+
             $recomendacion = new Recomendacion();
-            $recomendacion->nombre_recomendacion = strtoupper(trim($request->nombre_recomendacion));
+            $recomendacion->nombre_recomendacion = $nombre;
             $recomendacion->save();
             return redirect()->route('admin.recomendaciones.index')->with('success', 'Recomendación guardada exitosamente');
         } catch (\Exception $e) {

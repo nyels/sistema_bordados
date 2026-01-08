@@ -512,7 +512,21 @@ class DesignExportController extends Controller
                 'status' => 'required|in:borrador,pendiente,aprobado,archivado',
             ]);
 
+            $previousStatus = $export->status;
             $newStatus = $validated['status'];
+
+            // Solo registrar si el estado realmente cambió
+            if ($previousStatus !== $newStatus) {
+                // Registrar en historial de cambios de estado
+                \App\Models\DesignExportStatusHistory::create([
+                    'design_export_id' => $export->id,
+                    'previous_status' => $previousStatus,
+                    'new_status' => $newStatus,
+                    'changed_by' => Auth::id(),
+                    'notes' => $request->input('notes'),
+                ]);
+            }
+
             $updateData = ['status' => $newStatus];
 
             if ($newStatus === 'aprobado' && $export->status !== 'aprobado') {

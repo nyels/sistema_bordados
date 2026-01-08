@@ -108,6 +108,15 @@ class DesignExport extends Model
     }
 
     /**
+     * Relación con el historial de cambios de estado.
+     */
+    public function statusHistory()
+    {
+        return $this->hasMany(DesignExportStatusHistory::class, 'design_export_id')
+            ->orderBy('created_at', 'desc');
+    }
+
+    /**
      * Accesor para las dimensiones formateadas.
      * IMPORTANTE: Este accesor ya existe, pero se verifica que funcione correctamente.
      * Formato esperado por el frontend: "100x150 mm"

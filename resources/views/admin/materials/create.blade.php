@@ -29,7 +29,7 @@
         </div>
 
         <div class="card-body">
-            <form method="POST" action="{{ route('materials.store') }}">
+            <form method="POST" action="{{ route('admin.materials.store') }}">
                 @csrf
 
                 <div class="row">
@@ -119,7 +119,7 @@
                 <hr>
 
                 <div class="text-center">
-                    <a href="{{ route('materials.index') }}" class="btn btn-secondary">
+                    <a href="{{ route('admin.materials.index') }}" class="btn btn-secondary">
                         <i class="fas fa-times-circle"></i> Regresar
                     </a>
                     <button type="submit" class="btn btn-primary">

@@ -2134,7 +2134,7 @@
                 }
 
                 // URL original que usabas para traer conversiones/variantes
-                const url = '{{ route('material-variants.conversiones', ['materialId' => ':id']) }}'.replace(':id',
+                const url = '{{ route('admin.material-variants.conversiones', ['materialId' => ':id']) }}'.replace(':id',
                     familyId);
 
                 $.get(url, function(data) {

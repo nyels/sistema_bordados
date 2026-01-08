@@ -1,3 +1,14 @@
+{{-- Nombre del diseño para trazabilidad --}}
+<div class="d-flex align-items-center mt-2 col-12 justify-content-center">
+    <i class="fas fa-palette text-muted mr-1" style="font-size: 1rem;"></i>
+    <span class="text-muted" style="font-size: 1.5rem; font-weight: 500;">
+        Diseño: <strong style="color: #374151;">{{ $export->design->name ?? 'Sin diseño' }}</strong>
+        @if ($export->variant)
+            <span class="mx-1">›</span> {{ $export->variant->name }}
+        @endif
+    </span>
+</div>
+
 <div class="modal-header border-0 pb-0 " style="background: #fff;">
     <div class="d-flex align-items-center w-50 justify-content-between">
         <div class="d-flex align-items-center">
@@ -6,14 +17,15 @@
                 <i class="fas fa-file-code" style="font-size: 1.5rem;"></i>
             </div>
             <div>
-                <h5 class="modal-title font-weight-bold mb-0"
-                    style="font-size: 1.2rem; color: #111827; line-height: 1.2;">{{ $export->file_name }}</h5>
+                <h3 class="modal-title font-weight-bold mb-0"
+                    style="font-size: 1.2rem; color: #111827; line-height: 1.2;">{{ $export->file_name }}</h3>
                 <div class="d-flex align-items-center mt-1">
                     <span class="badge badge-pill border mr-2"
                         style="background: #f3f4f6; color: #374151; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; border-color: #e5e7eb; padding: 4px 10px;">{{ strtolower($export->file_format ?? 'PES') }}</span>
                     <span class="text-muted"
                         style="font-size: 1rem; font-weight: 500;">{{ $export->formatted_file_size }}</span>
                 </div>
+
             </div>
         </div>
         <button type="button" class="modal-close-premium" data-dismiss="modal" aria-label="Close">
@@ -113,8 +125,75 @@
                     style="font-weight: 700; color: #374151; font-size: 12px; text-transform: uppercase; margin-bottom: 12px;">
                     Colores Detectados</h6>
                 <div class="color-grid-lg" style="display: flex; flex-wrap: wrap; gap: 8px;">
-                    @if ($export->colors_detected && is_array($export->colors_detected))
-                        @foreach ($export->colors_detected as $color)
+                    @php
+                        $colorsToShow = [];
+                        $colorSource = 'none';
+
+                        // 1. Intentar obtener de colors_detected del export
+                        $detectedColors = $export->colors_detected;
+
+                        // FIX: Manejar caso de doble codificación (string JSON guardado como string)
+                        if (is_string($detectedColors)) {
+                            $decoded = json_decode($detectedColors, true);
+                            if (is_array($decoded)) {
+                                $detectedColors = $decoded;
+                            }
+                        }
+
+                        if ($detectedColors && is_array($detectedColors) && count($detectedColors) > 0) {
+                            // Formato 1: array de objetos con 'hex' => [['hex' => '#FF0000'], ...]
+                            if (
+                                isset($detectedColors[0]) &&
+                                is_array($detectedColors[0]) &&
+                                isset($detectedColors[0]['hex'])
+                            ) {
+                                $colorsToShow = $detectedColors;
+                                $colorSource = 'export';
+                            }
+                            // Formato 2: array simple de strings hex => ['#FF0000', '#00FF00', ...]
+                            elseif (isset($detectedColors[0]) && is_string($detectedColors[0])) {
+                                $colorsToShow = array_map(fn($hex) => ['hex' => $hex], $detectedColors);
+                                $colorSource = 'export';
+                            }
+                            // Formato 3: array asociativo con nombres => ['Rojo' => '#FF0000', ...]
+                            elseif (!isset($detectedColors[0])) {
+                                $colorsToShow = array_map(
+                                    fn($hex, $name) => ['hex' => $hex, 'name' => $name],
+                                    $detectedColors,
+                                    array_keys($detectedColors),
+                                );
+                                $colorSource = 'export';
+                            }
+                        }
+
+                        // 2. Fallback a image.color_palette
+                        if (empty($colorsToShow) && $export->image && $export->image->color_palette) {
+                            $palette = is_string($export->image->color_palette)
+                                ? json_decode($export->image->color_palette, true)
+                                : $export->image->color_palette;
+                            if (is_array($palette) && count($palette) > 0) {
+                                $colorsToShow = array_map(fn($hex) => ['hex' => $hex], $palette);
+                                $colorSource = 'image';
+                            }
+                        }
+
+                        // 3. Fallback a image.dominant_color
+                        if (empty($colorsToShow) && $export->image && $export->image->dominant_color) {
+                            $colorsToShow = [['hex' => $export->image->dominant_color]];
+                            $colorSource = 'dominant';
+                        }
+                    @endphp
+
+                    @if (count($colorsToShow) > 0)
+                        @if ($colorSource !== 'export')
+                            <div class="w-100 mb-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Colores obtenidos de la imagen
+                                </small>
+                            </div>
+                        @endif
+                        @foreach ($colorsToShow as $color)
                             <div class="color-swatch"
                                 style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
                                 <div class="color-swatch-box"
@@ -171,62 +250,63 @@
 
         <div class="tab-pane fade" id="history-content" role="tabpanel" aria-labelledby="history-tab">
             <div class="premium-timeline py-2" style="max-height: 400px; overflow-y: auto; padding-right: 10px;">
-                @php
-                    // Suponiendo que tienes una relación 'activities' o similar.
-                    // Si no, aquí se listan los hitos basados en el modelo actual.
-                    $history = collect();
-
-                    // Hito: Creación
-                    $history->push([
-                        'title' => 'Archivo Creado',
-                        'user' => $export->creator->name ?? 'Sistema',
-                        'date' => $export->created_at,
-                        'icon' => 'fa-plus-circle',
-                        'color' => '#3b82f6',
-                    ]);
-
-                    // Hito: Aprobación (Si existe)
-                    if ($export->approved_at || $export->status == 'aprobado') {
-                        $history->push([
-                            'title' => 'Archivo Aprobado',
-                            'user' => $export->approver->name ?? 'Supervisor',
-                            'date' => $export->updated_at,
-                            'icon' => 'fa-check-double',
-                            'color' => '#10b981',
-                        ]);
-                    }
-
-                    // Ordenar: Lo más reciente primero (SaaS style)
-                    $history = $history->sortByDesc('date');
-                @endphp
-
-                @foreach ($history as $event)
-                    <div class="timeline-item d-flex mb-4" style="gap: 16px; position: relative;">
-                        @if (!$loop->last)
+                {{-- Historial completo de cambios de estado desde la BD (MÁS RECIENTE PRIMERO) --}}
+                @if ($export->statusHistory && $export->statusHistory->count() > 0)
+                    @foreach ($export->statusHistory->sortByDesc('created_at') as $historyItem)
+                        <div class="timeline-item d-flex mb-4" style="gap: 16px; position: relative;">
                             <div
-                                style="position: absolute; left: 11px; top: 24px; bottom: -30px; width: 2px; background: #e5e7eb;">
+                                style="position: absolute; left: 13px; top: 28px; bottom: -30px; width: 2px; background: #d1d5db;">
                             </div>
-                        @endif
-
-                        <div
-                            style="width: 24px; height: 24px; background: #fff; border: 2px solid {{ $event['color'] }}; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 1; flex-shrink: 0;">
-                            <i class="fas {{ $event['icon'] }}"
-                                style="font-size: 10px; color: {{ $event['color'] }};"></i>
-                        </div>
-
-                        <div class="flex-grow-1">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <span
-                                    style="font-size: 14px; font-weight: 700; color: #111827;">{{ $event['title'] }}</span>
-                                <span
-                                    style="font-size: 11px; color: #9ca3af; font-weight: 500;">{{ $event['date']->diffForHumans() }}</span>
+                            <div
+                                style="width: 28px; height: 28px; background: #fff; border: 2px solid {{ $historyItem->status_color }}; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 1; flex-shrink: 0;">
+                                <i class="fas {{ $historyItem->status_icon }}"
+                                    style="font-size: 12px; color: {{ $historyItem->status_color }};"></i>
                             </div>
-                            <p style="font-size: 13px; color: #6b7280; margin: 2px 0 0;">Por {{ $event['user'] }}</p>
-                            <span
-                                style="font-size: 11px; color: #9ca3af;">{{ $event['date']->translatedFormat('d M, Y - h:i A') }}</span>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <span style="font-size: 16px; font-weight: 700; color: #111827;">
+                                        {{ $historyItem->previous_status_label }} →
+                                        {{ $historyItem->new_status_label }}
+                                    </span>
+                                    <span
+                                        style="font-size: 13px; color: #374151; font-weight: 600;">{{ $historyItem->created_at->diffForHumans() }}</span>
+                                </div>
+                                <p style="font-size: 14px; color: #4b5563; margin: 4px 0 0; font-weight: 500;">Por
+                                    {{ $historyItem->changedByUser->name ?? 'Sistema' }}</p>
+                                @if ($historyItem->notes)
+                                    <p style="font-size: 13px; color: #4b5563; margin: 4px 0 0; font-style: italic;">
+                                        "{{ $historyItem->notes }}"</p>
+                                @endif
+                                <span
+                                    style="font-size: 13px; color: #6b7280; font-weight: 500;">{{ $historyItem->created_at->translatedFormat('d M, Y - h:i A') }}</span>
+                            </div>
                         </div>
+                    @endforeach
+                @else
+                    <div class="text-center py-3">
+                        <small class="text-muted"><i class="fas fa-info-circle mr-1"></i> Sin cambios de estado
+                            registrados</small>
                     </div>
-                @endforeach
+                @endif
+
+                {{-- Evento de creación siempre al final (es el más antiguo) --}}
+                <div class="timeline-item d-flex mb-4" style="gap: 16px; position: relative;">
+                    <div
+                        style="width: 28px; height: 28px; background: #fff; border: 2px solid #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 1; flex-shrink: 0;">
+                        <i class="fas fa-plus-circle" style="font-size: 12px; color: #3b82f6;"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <span style="font-size: 16px; font-weight: 700; color: #111827;">Archivo Creado</span>
+                            <span
+                                style="font-size: 13px; color: #374151; font-weight: 600;">{{ $export->created_at->diffForHumans() }}</span>
+                        </div>
+                        <p style="font-size: 14px; color: #4b5563; margin: 4px 0 0; font-weight: 500;">Por
+                            {{ $export->creator->name ?? 'Sistema' }}</p>
+                        <span
+                            style="font-size: 13px; color: #6b7280; font-weight: 500;">{{ $export->created_at->translatedFormat('d M, Y - h:i A') }}</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

@@ -27,12 +27,12 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0 bg-transparent p-0">
                     <li class="breadcrumb-item">
-                        <a href="{{ route('materials.index') }}">
+                        <a href="{{ route('admin.materials.index') }}">
                             <i class="fas fa-boxes"></i> Materiales
                         </a>
                     </li>
                     <li class="breadcrumb-item">
-                        <a href="{{ route('material-conversions.index', $material->id) }}">
+                        <a href="{{ route('admin.material-conversions.index', $material->id) }}">
                             {{ $material->name }}
                         </a>
                     </li>
@@ -50,7 +50,7 @@
         </div>
 
         <div class="card-body">
-            <form method="POST" action="{{ route('material-conversions.store', $material->id) }}">
+            <form method="POST" action="{{ route('admin.material-conversions.store', $material->id) }}">
                 @csrf
                 <input type="hidden" name="material_id" value="{{ $material->id }}">
 
@@ -198,7 +198,7 @@
                 <hr>
 
                 <div class="text-center">
-                    <a href="{{ route('material-conversions.index', $material->id) }}" class="btn btn-secondary">
+                    <a href="{{ route('admin.material-conversions.index', $material->id) }}" class="btn btn-secondary">
                         <i class="fas fa-times-circle"></i> Regresar
                     </a>
                     <button type="submit" class="btn btn-primary">

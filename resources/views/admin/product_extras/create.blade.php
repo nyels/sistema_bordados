@@ -111,8 +111,9 @@
                             <div class="input-group input-group-sm">
                                 <input type="number" name="minutes_addition"
                                     class="form-control form-control-sm @error('minutes_addition') is-invalid @enderror"
-                                    value="{{ old('minutes_addition', '0') }}" min="0" max="9999"
-                                    placeholder="0">
+                                    value="{{ old('minutes_addition', '0') }}" min="0" max="9999" step="1"
+                                    onkeypress="return event.charCode >= 48 && event.charCode <= 57"
+                                    oninput="this.value = this.value.replace(/[^0-9]/g, '')" placeholder="0">
                                 <div class="input-group-append">
                                     <span class="input-group-text">minutos</span>
                                 </div>

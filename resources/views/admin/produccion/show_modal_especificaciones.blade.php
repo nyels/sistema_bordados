@@ -1,4 +1,16 @@
+{{-- Nombre del diseño para trazabilidad --}}
+<div class="d-flex align-items-center mt-2 col-12 justify-content-center">
+    <i class="fas fa-palette text-muted mr-1" style="font-size: 1rem;"></i>
+    <span class="text-muted" style="font-size: 1.5rem; font-weight: 500;">
+        Diseño: <strong style="color: #374151;">{{ $export->design->name ?? 'Sin diseño' }}</strong>
+        @if ($export->variant)
+            <span class="mx-1">›</span> {{ $export->variant->name }}
+        @endif
+    </span>
+</div>
+
 <div class="modal-header border-0 pb-0 " style="background: #fff;">
+
     <div class="d-flex align-items-center w-50 justify-content-between">
         <div class="d-flex align-items-center">
             <div class="icon-box bg-primary-light rounded-lg mr-3 d-flex align-items-center justify-content-center"
@@ -6,14 +18,15 @@
                 <i class="fas fa-file-code" style="font-size: 1.5rem;"></i>
             </div>
             <div>
-                <h5 class="modal-title font-weight-bold mb-0"
-                    style="font-size: 1.2rem; color: #111827; line-height: 1.2;">{{ $export->file_name }}</h5>
+                <h3 class="modal-title font-weight-bold mb-0"
+                    style="font-size: 1.2rem; color: #111827; line-height: 1.2;">{{ $export->file_name }}</h3>
                 <div class="d-flex align-items-center mt-1">
                     <span class="badge badge-pill border mr-2"
                         style="background: #f3f4f6; color: #374151; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; border-color: #e5e7eb; padding: 4px 10px;">{{ strtolower($export->file_format ?? 'PES') }}</span>
                     <span class="text-muted"
                         style="font-size: 1rem; font-weight: 500;">{{ $export->formatted_file_size }}</span>
                 </div>
+
             </div>
         </div>
         <button type="button" class="modal-close-premium" data-dismiss="modal" aria-label="Close">
@@ -102,8 +115,71 @@
             style="font-weight: 700; color: #374151; font-size: 12px; text-transform: uppercase; margin-bottom: 12px;">
             Colores Detectados</h6>
         <div class="color-grid-lg" style="display: flex; flex-wrap: wrap; gap: 8px;">
-            @if ($export->colors_detected && is_array($export->colors_detected))
-                @foreach ($export->colors_detected as $color)
+            @php
+                $colorsToShow = [];
+                $colorSource = 'none';
+
+                // 1. Intentar obtener de colors_detected del export
+                $detectedColors = $export->colors_detected;
+
+                // FIX: Manejar caso de doble codificación (string JSON guardado como string)
+                if (is_string($detectedColors)) {
+                    $decoded = json_decode($detectedColors, true);
+                    if (is_array($decoded)) {
+                        $detectedColors = $decoded;
+                    }
+                }
+
+                if ($detectedColors && is_array($detectedColors) && count($detectedColors) > 0) {
+                    // Formato 1: array de objetos con 'hex' => [['hex' => '#FF0000'], ...]
+                    if (isset($detectedColors[0]) && is_array($detectedColors[0]) && isset($detectedColors[0]['hex'])) {
+                        $colorsToShow = $detectedColors;
+                        $colorSource = 'export';
+                    }
+                    // Formato 2: array simple de strings hex => ['#FF0000', '#00FF00', ...]
+                    elseif (isset($detectedColors[0]) && is_string($detectedColors[0])) {
+                        $colorsToShow = array_map(fn($hex) => ['hex' => $hex], $detectedColors);
+                        $colorSource = 'export';
+                    }
+                    // Formato 3: array asociativo con nombres => ['Rojo' => '#FF0000', ...]
+                    elseif (!isset($detectedColors[0])) {
+                        $colorsToShow = array_map(
+                            fn($hex, $name) => ['hex' => $hex, 'name' => $name],
+                            $detectedColors,
+                            array_keys($detectedColors),
+                        );
+                        $colorSource = 'export';
+                    }
+                }
+
+                // 2. Fallback a image.color_palette
+                if (empty($colorsToShow) && $export->image && $export->image->color_palette) {
+                    $palette = is_string($export->image->color_palette)
+                        ? json_decode($export->image->color_palette, true)
+                        : $export->image->color_palette;
+                    if (is_array($palette) && count($palette) > 0) {
+                        $colorsToShow = array_map(fn($hex) => ['hex' => $hex], $palette);
+                        $colorSource = 'image';
+                    }
+                }
+
+                // 3. Fallback a image.dominant_color
+                if (empty($colorsToShow) && $export->image && $export->image->dominant_color) {
+                    $colorsToShow = [['hex' => $export->image->dominant_color]];
+                    $colorSource = 'dominant';
+                }
+            @endphp
+
+            @if (count($colorsToShow) > 0)
+                @if ($colorSource !== 'export')
+                    <div class="w-100 mb-2">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Colores obtenidos de la imagen
+                        </small>
+                    </div>
+                @endif
+                @foreach ($colorsToShow as $color)
                     <div class="color-swatch"
                         style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
                         <div class="color-swatch-box"

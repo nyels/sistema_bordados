@@ -36,13 +36,28 @@ class EstadoController extends Controller
                 'string',
                 'max:255',
                 'regex:/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/',
-                'unique:estados,nombre_estado'
             ],
         ]);
 
         try {
+            $nombre = strtoupper(trim($request->nombre_estado));
+
+            // Buscar si ya existe (activo o inactivo)
+            $existingEstado = Estado::where('nombre_estado', $nombre)->first();
+
+            if ($existingEstado) {
+                if ($existingEstado->activo) {
+                    return back()->withErrors(['nombre_estado' => 'El nombre del estado ya ha sido registrado.'])->withInput();
+                } else {
+                    // Reactivar si existía pero estaba eliminado (soft delete lógico)
+                    $existingEstado->activo = true;
+                    $existingEstado->save();
+                    return redirect()->route('admin.estados.index')->with('success', 'Estado reactivado exitosamente');
+                }
+            }
+
             $estado = new Estado();
-            $estado->nombre_estado = strtoupper(trim($request->nombre_estado));
+            $estado->nombre_estado = $nombre;
             $estado->save();
 
             return redirect()->route('admin.estados.index')->with('success', 'Estado creado exitosamente');

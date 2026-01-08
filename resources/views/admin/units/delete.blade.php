@@ -14,7 +14,7 @@
         </div>
 
         <div class="card-body">
-            <form method="post" action="{{ route('units.destroy', $unit->id) }}">
+            <form method="post" action="{{ route('admin.units.destroy', $unit->id) }}">
                 @csrf
                 @method('DELETE')
 
@@ -47,7 +47,7 @@
                 </div>
 
                 <div class="text-center">
-                    <a href="{{ route('units.index') }}" class="btn btn-secondary">
+                    <a href="{{ route('admin.units.index') }}" class="btn btn-secondary">
                         <i class="fas fa-times-circle"></i> Regresar
                     </a>
                     <button type="submit" class="btn btn-danger">

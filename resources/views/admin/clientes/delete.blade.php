@@ -41,7 +41,7 @@
         </div>
 
         <div class="card-body">
-            <form method="post" action="{{ route('admin.clientes.destroy', $cliente->id) }}">
+            <form id="deleteForm" method="post" action="{{ route('admin.clientes.destroy', $cliente->id) }}">
                 @csrf
                 @method('DELETE')
 
@@ -229,7 +229,7 @@
                                 <i class="fas fa-times-circle"></i> Regresar
                             </a>
                             <button type="submit" class="btn btn-danger">
-                                <i class="fas fa-save"></i> Eliminar
+                                <i class="fas fa-trash-alt"></i> Eliminar
                             </button>
                         </div>
                     </div>
@@ -443,6 +443,27 @@
 
             input.value = value;
         }
+
+        // SweetAlert2 para eliminar cliente
+        document.getElementById('deleteForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: "¡Eliminarás este cliente y todos sus datos asociados!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33', // Rojo
+                cancelButtonColor: '#6c757d', // Gris (Secondary)
+                confirmButtonText: 'Sí, confirmar',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    this.submit();
+                }
+            });
+        });
     </script>
 
 @stop

@@ -28,7 +28,7 @@
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb mb-0 bg-transparent p-0">
                             <li class="breadcrumb-item">
-                                <a href="{{ route('materials.index') }}">
+                                <a href="{{ route('admin.materials.index') }}">
                                     <i class="fas fa-boxes"></i> Materiales
                                 </a>
                             </li>
@@ -61,10 +61,10 @@
             {{-- ACCIONES --}}
             <div class="row mb-3">
                 <div class="col-md-6">
-                    <a href="{{ route('materials.index') }}" class="btn btn-secondary">
+                    <a href="{{ route('admin.materials.index') }}" class="btn btn-secondary">
                         <i class="fas fa-arrow-left"></i> Volver a Materiales
                     </a>
-                    <a href="{{ route('material-conversions.create', $material->id) }}" class="btn btn-info">
+                    <a href="{{ route('admin.material-conversions.create', $material->id) }}" class="btn btn-info">
                         Nueva Conversión <i class="fas fa-plus"></i>
                     </a>
                 </div>
@@ -126,11 +126,11 @@
                                 </td>
                                 <td class="align-middle">
                                     <div class="d-flex justify-content-center align-items-center gap-1">
-                                        <a href="{{ route('material-conversions.edit', [$material->id, $conversion->id]) }}"
+                                        <a href="{{ route('admin.material-conversions.edit', [$material->id, $conversion->id]) }}"
                                             class="btn btn-warning btn-sm btn-action" title="Editar">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <a href="{{ route('material-conversions.confirm_delete', [$material->id, $conversion->id]) }}"
+                                        <a href="{{ route('admin.material-conversions.confirm_delete', [$material->id, $conversion->id]) }}"
                                             class="btn btn-danger btn-sm btn-action" title="Eliminar">
                                             <i class="fas fa-trash"></i>
                                         </a>

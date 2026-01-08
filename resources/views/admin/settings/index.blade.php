@@ -33,7 +33,7 @@
                 @foreach ($groups as $group)
                     <li class="nav-item">
                         <a class="nav-link {{ $activeGroup === $group ? 'active' : '' }}"
-                            href="{{ route('settings.index', ['group' => $group]) }}">
+                            href="{{ route('admin.settings.index', ['group' => $group]) }}">
                             @switch($group)
                                 @case('general')
                                     <i class="fas fa-home"></i> General
@@ -60,9 +60,9 @@
             </ul>
 
             {{-- FORMULARIO DE CONFIGURACIONES --}}
-            <form method="POST" action="{{ route('admin.settings.update') }}" enctype="multipart/form-data">
+            <form method="POST" action="{{ route('admin.settings.bulk-update') }}" enctype="multipart/form-data">
                 @csrf
-                @method('put')
+                @method('PUT')
                 <input type="hidden" name="group" value="{{ $activeGroup }}">
 
                 <div class="row">

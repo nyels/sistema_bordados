@@ -17,7 +17,8 @@
             </div>
             <!-- /.card-header -->
             <div class="card-body" bis_skin_checked="1">
-                <form method="post" action="{{ route('admin.categorias.destroy', $category->id) }}">
+                <form id="deleteForm" action="{{ route('admin.categories.destroy', $category->id) }}" method="POST"
+                    style="display: inline-block;">
                     @csrf
                     @method('DELETE')
                     <div class="col-md-12">
@@ -47,12 +48,12 @@
                         <div class="row mt-4">
                             <div class="col-12">
                                 <div class="text-right">
-                                    <a href="{{ route('admin.categorias.index') }}" class="btn btn-secondary"
+                                    <a href="{{ route('admin.categories.index') }}" class="btn btn-secondary"
                                         style="margin-right: 10px; padding: 8px 20px;">
                                         <i class="fas fa-times-circle"></i> Regresar
                                     </a>
                                     <button type="submit" class="btn btn-danger" style="padding: 8px 20px;">
-                                        <i class="fas fa-save"></i> Eliminar
+                                        <i class="fas fa-trash-alt"></i> Eliminar
                                     </button>
                                 </div>
                             </div>
@@ -72,5 +73,25 @@
 @stop
 
 @section('js')
-    <script></script>
+    <script>
+        document.getElementById('deleteForm').addEventListener('submit', function(e) {
+            e.preventDefault(); // Detener el envío automático
+
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: "¡Eliminarás esta categoría y TODO su contenido asociado!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33', // Rojo para acción destructiva
+                cancelButtonColor: '#6c757d', // Gris para cancelar
+                confirmButtonText: 'Sí, confirmar',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true // Pone Cancelar a la Izquierda y Confirmar a la Derecha
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    this.submit(); // Enviar el formulario si se confirma
+                }
+            });
+        });
+    </script>
 @stop

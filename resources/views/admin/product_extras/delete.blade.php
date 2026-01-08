@@ -53,12 +53,12 @@
                         <a href="{{ route('admin.product_extras.index') }}" class="btn btn-secondary">
                             <i class="fas fa-times-circle"></i> Cancelar
                         </a>
-                        <form action="{{ route('admin.product_extras.destroy', $extra->id) }}" method="POST"
-                            class="d-inline">
+                        <form id="deleteForm" action="{{ route('admin.product_extras.destroy', $extra->id) }}"
+                            method="POST" class="d-inline">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="btn btn-danger">
-                                <i class="fas fa-trash"></i> Sí, Eliminar
+                                <i class="fas fa-trash-alt"></i> Sí, Eliminar
                             </button>
                         </form>
                     </div>
@@ -73,6 +73,24 @@
 
 @section('js')
     <script>
-        console.log("ProductExtra Delete View");
+        document.getElementById('deleteForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: "¡Eliminarás este extra y no se podrá recuperar!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33', // Rojo
+                cancelButtonColor: '#6c757d', // Gris
+                confirmButtonText: 'Sí, confirmar',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    this.submit();
+                }
+            });
+        });
     </script>
 @stop

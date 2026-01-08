@@ -33,11 +33,21 @@
                                         <th>Slug:</th>
                                         <td><code>{{ $attribute->slug }}</code></td>
                                     </tr>
+                                    @if ($attribute->values->count() > 0)
+                                        <tr class="table-warning">
+                                            <th>Valores asociados:</th>
+                                            <td class="text-danger font-weight-bold">
+                                                <i class="fas fa-exclamation-circle"></i> {{ $attribute->values->count() }}
+                                                elementos
+                                            </td>
+                                        </tr>
+                                    @endif
                                 </table>
                             </div>
                         </div>
 
-                        <form method="POST" action="{{ route('admin.attributes.destroy', $attribute->id) }}">
+                        <form id="deleteForm" method="POST"
+                            action="{{ route('admin.attributes.destroy', $attribute->id) }}">
                             @csrf
                             @method('DELETE')
 
@@ -61,4 +71,24 @@
 @stop
 
 @section('js')
+    <script>
+        document.getElementById('deleteForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            Swal.fire({
+                title: '¿Está seguro?',
+                text: "¡No podrás revertir esto!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminarlo',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    this.submit();
+                }
+            });
+        });
+    </script>
 @stop

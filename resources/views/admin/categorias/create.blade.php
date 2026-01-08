@@ -37,7 +37,7 @@
             </div>
             <!-- /.card-header -->
             <div class="card-body" bis_skin_checked="1">
-                <form method="post" action="{{ route('admin.categorias.store') }}">
+                <form method="post" action="{{ route('admin.categories.store') }}">
                     @csrf
                     @method('POST')
                     <div class="col-md-12">
@@ -61,7 +61,7 @@
 
                         <!-- Botones de acción -->
                         <div class="d-flex flex-column flex-sm-row justify-content-end mt-4">
-                            <a href="{{ route('admin.categorias.index') }}" class="btn btn-secondary mb-2 mb-sm-0 mr-sm-2">
+                            <a href="{{ route('admin.categories.index') }}" class="btn btn-secondary mb-2 mb-sm-0 mr-sm-2">
                                 <i class="fas fa-times-circle"></i> Regresar
                             </a>
                             <button type="submit" class="btn btn-primary">

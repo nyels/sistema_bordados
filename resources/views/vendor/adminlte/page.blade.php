@@ -50,6 +50,56 @@
                 font-size: 16px;
             }
         }
+
+        /* Sidebar Submenu Improvements (Premium Look) */
+        .nav-treeview>.nav-item>.nav-link {
+            padding-left: 2.2rem;
+            /* Más indentación para jerarquía visual */
+        }
+
+        /* Más espacio entre icono y texto */
+        .nav-sidebar .nav-link p {
+            margin-left: 0.3rem;
+        }
+
+        /* Submenú activo: Fondo sutil y borde indicador */
+        .nav-treeview>.nav-item>.nav-link.active,
+        .nav-treeview>.nav-item>.nav-link.active:hover {
+            background-color: rgba(255, 255, 255, 0.08) !important;
+            border-left: 4px solid #3b82f6;
+            /* Azul premium */
+            color: #fff !important;
+        }
+
+        /* Efecto hover en items no activos */
+        .nav-sidebar .nav-item>.nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        /* ============================================
+           SIDEBAR SECTION HEADERS WITH DIVIDERS
+           ============================================ */
+        .nav-sidebar .nav-header {
+            padding: 0.8rem 1rem 0.5rem 1rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: #9ca3af;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 0.5rem;
+            margin-top: 0.8rem;
+        }
+
+        /* Primer header sin margen superior */
+        .nav-sidebar .nav-header:first-child {
+            margin-top: 0;
+        }
+
+        /* Efecto hover en headers */
+        .nav-sidebar .nav-header:hover {
+            color: #d1d5db;
+        }
     </style>
 @stop
 

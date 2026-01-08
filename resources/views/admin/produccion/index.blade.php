@@ -111,7 +111,7 @@
                                             style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 8px; background: #f3f4f6;">
                                         </div>
 
-                                        <img data-src="{{ route('admin.produccion.preview', $export->id) }}" alt="Preview"
+                                        <img data-src="{{ route('admin.production.preview', $export->id) }}" alt="Preview"
                                             class="embroidery-thumbnail lazy-preview" data-id="{{ $export->id }}"
                                             data-name="{{ $export->variant->name ?? ($export->design->name ?? 'Diseño') }}"
                                             style="width: 100%; height: 100%; object-fit: contain; border-radius: 8px; background: #f9fafb; padding: 4px; border: 2px solid #e5e7eb; cursor: pointer; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); opacity: 0;">
@@ -121,7 +121,7 @@
                                 {{-- Especificaciones --}}
                                 <td style="padding: 16px; vertical-align: middle;">
                                     <div class="specs-wrapper btn-view-details"
-                                        data-url="{{ route('admin.produccion.show', $export->id) }}?type=specs"
+                                        data-url="{{ route('admin.production.show', $export->id) }}?type=specs"
                                         style="font-size: 14px; line-height: 1.6;">
                                         <span class="d-block text-dark"><strong>Puntadas:</strong>
                                             {{ number_format($export->stitches_count) }}</span>
@@ -172,7 +172,7 @@
                                     <div class="d-flex justify-content-center align-items-center" style="gap: 8px;">
                                         {{-- 1. Ver (siempre visible - azul) --}}
                                         <a href="javascript:void(0)" class="btn-action btn-view-details"
-                                            data-url="{{ route('admin.produccion.show', $export->id) }}?type=details"
+                                            data-url="{{ route('admin.production.show', $export->id) }}?type=details"
                                             title="Ver detalles"
                                             style="width: 32px; height: 32px; border-radius: 6px; background: #fff; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s ease; border: 1px solid #e5e7eb; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                                             <i class="fas fa-eye" style="color: #2563eb; font-size: 14px;"></i>
@@ -181,14 +181,14 @@
                                         {{-- 2. Editar / Revertir / Restaurar --}}
                                         @if ($status == 'borrador' || $status == 'pendiente')
                                             {{-- Borrador o Pendiente: Editar disponible --}}
-                                            <a href="{{ route('admin.produccion.edit', $export->id) }}" class="btn-action"
+                                            <a href="{{ route('admin.production.edit', $export->id) }}" class="btn-action"
                                                 title="Editar"
                                                 style="width: 32px; height: 32px; border-radius: 6px; background: #fff; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s ease; border: 1px solid #e5e7eb; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                                                 <i class="fas fa-pen" style="color: #374151; font-size: 13px;"></i>
                                             </a>
                                         @elseif ($status == 'aprobado')
                                             {{-- Aprobado: Revertir a pendiente --}}
-                                            <form action="{{ route('admin.produccion.revert', $export->id) }}"
+                                            <form action="{{ route('admin.production.revert', $export->id) }}"
                                                 method="POST" class="d-inline">
                                                 @csrf
                                                 <button type="submit" class="btn-action" title="Revertir a pendiente"
@@ -198,7 +198,7 @@
                                             </form>
                                         @elseif ($status == 'archivado')
                                             {{-- Archivado: Restaurar a aprobado --}}
-                                            <form action="{{ route('admin.produccion.restore', $export->id) }}"
+                                            <form action="{{ route('admin.production.restore', $export->id) }}"
                                                 method="POST" class="d-inline">
                                                 @csrf
                                                 <button type="submit" class="btn-action" title="Restaurar a aprobado"
@@ -211,7 +211,7 @@
                                         {{-- 3. Botón de estado (CÍRCULO) --}}
                                         @if ($status == 'borrador')
                                             {{-- Borrador: Solicitar aprobación --}}
-                                            <form action="{{ route('admin.produccion.request', $export->id) }}"
+                                            <form action="{{ route('admin.production.request', $export->id) }}"
                                                 method="POST" class="d-inline">
                                                 @csrf
                                                 <button type="submit" class="btn-action" title="Solicitar aprobación"
@@ -222,7 +222,7 @@
                                             </form>
                                         @elseif ($status == 'pendiente')
                                             {{-- Pendiente: Aprobar --}}
-                                            <form action="{{ route('admin.produccion.approve', $export->id) }}"
+                                            <form action="{{ route('admin.production.approve', $export->id) }}"
                                                 method="POST" class="d-inline">
                                                 @csrf
                                                 <button type="submit" class="btn-action" title="Aprobar"
@@ -232,7 +232,7 @@
                                             </form>
                                         @elseif ($status == 'aprobado')
                                             {{-- Aprobado: Archivar --}}
-                                            <form action="{{ route('admin.produccion.archive', $export->id) }}"
+                                            <form action="{{ route('admin.production.archive', $export->id) }}"
                                                 method="POST" class="d-inline">
                                                 @csrf
                                                 <button type="submit" class="btn-action" title="Archivar"
@@ -243,9 +243,8 @@
                                         @endif
 
                                         {{-- 4. Eliminar --}}
-                                        <form action="{{ route('admin.produccion.destroy', $export->id) }}"
-                                            method="POST" class="d-inline"
-                                            onsubmit="return confirm('¿Estás seguro de eliminar esta producción? esta acción no se puede deshacer.');">
+                                        <form action="{{ route('admin.production.destroy', $export->id) }}"
+                                            method="POST" class="d-inline form-eliminar">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn-action" title="Eliminar"
@@ -263,7 +262,7 @@
                                         <i class="fas fa-inbox fa-3x mb-3"></i>
                                         <p class="mb-0" style="font-size: 16px;">No hay producciones registradas
                                         </p>
-                                        <a href="{{ route('admin.produccion.create') }}" class="btn btn-primary mt-3">
+                                        <a href="{{ route('admin.production.create') }}" class="btn btn-primary mt-3">
                                             <i class="fas fa-plus mr-1"></i>Crear primera producción
                                         </a>
                                     </div>
@@ -760,6 +759,27 @@
             $('#limpiarFiltros').on('click', () => {
                 $('#filtroJerarquia, #filtroEstado').val('');
                 table.search('').columns().search('').draw();
+            });
+
+            // SweetAlert2 para eliminar producciones
+            $(document).on('submit', '.form-eliminar', function(e) {
+                e.preventDefault();
+
+                Swal.fire({
+                    title: '¿Estás seguro?',
+                    text: "¡Eliminarás esta producción y no se podrá recuperar!",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33', // Rojo
+                    cancelButtonColor: '#6c757d', // Gris (Secondary)
+                    confirmButtonText: 'Sí, confirmar',
+                    cancelButtonText: 'Cancelar',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        this.submit();
+                    }
+                });
             });
         });
     </script>

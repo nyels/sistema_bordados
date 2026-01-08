@@ -28,7 +28,7 @@
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb mb-0 bg-transparent p-0">
                             <li class="breadcrumb-item">
-                                <a href="{{ route('materials.index') }}">
+                                <a href="{{ route('admin.materials.index') }}">
                                     <i class="fas fa-boxes"></i> Materiales
                                 </a>
                             </li>
@@ -65,10 +65,10 @@
             {{-- ACCIONES --}}
             <div class="row mb-3">
                 <div class="col-md-6">
-                    <a href="{{ route('materials.index') }}" class="btn btn-secondary">
+                    <a href="{{ route('admin.materials.index') }}" class="btn btn-secondary">
                         <i class="fas fa-arrow-left"></i> Volver a Materiales
                     </a>
-                    <a href="{{ route('material-variants.create', $material->id) }}" class="btn btn-info">
+                    <a href="{{ route('admin.material-variants.create', $material->id) }}" class="btn btn-info">
                         Nueva Variante <i class="fas fa-plus"></i>
                     </a>
 
@@ -139,11 +139,11 @@
                                 </td>
                                 <td class="text-center">
                                     <div class="d-flex justify-content-center align-items-center gap-1">
-                                        <a href="{{ route('material-variants.edit', [$material->id, $variant->id]) }}"
+                                        <a href="{{ route('admin.material-variants.edit', [$material->id, $variant->id]) }}"
                                             class="btn btn-warning btn-sm" title="Editar">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <a href="{{ route('material-variants.confirm_delete', [$material->id, $variant->id]) }}"
+                                        <a href="{{ route('admin.material-variants.confirm_delete', [$material->id, $variant->id]) }}"
                                             class="btn btn-danger btn-sm" title="Eliminar">
                                             <i class="fas fa-trash"></i>
                                         </a>
@@ -156,7 +156,7 @@
                                     <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
                                     No hay variantes registradas para este material
                                     <br>
-                                    <a href="{{ route('material-variants.create', $material->id) }}"
+                                    <a href="{{ route('admin.material-variants.create', $material->id) }}"
                                         class="btn btn-info btn-sm mt-2">
                                         <i class="fas fa-plus"></i> Crear primera variante
                                     </a>

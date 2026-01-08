@@ -29,7 +29,7 @@
 
         <div class="card-body">
             <div class="row mb-3">
-                <a href="{{ route('material-categories.create') }}" class="btn btn-primary">
+                <a href="{{ route('admin.material-categories.create') }}" class="btn btn-primary">
                     Nuevo <i class="fas fa-plus"></i>
                 </a>
             </div>
@@ -70,11 +70,11 @@
                                 </td>
                                 <td>
                                     <div class="d-flex justify-content-center align-items-center gap-1">
-                                        <a href="{{ route('material-categories.edit', $category->id) }}"
+                                        <a href="{{ route('admin.material-categories.edit', $category->id) }}"
                                             class="btn btn-warning btn-sm" title="Editar">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <a href="{{ route('material-categories.confirm_delete', $category->id) }}"
+                                        <a href="{{ route('admin.material-categories.confirm_delete', $category->id) }}"
                                             class="btn btn-danger btn-sm" title="Eliminar">
                                             <i class="fas fa-trash"></i>
                                         </a>

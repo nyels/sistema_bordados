@@ -34,8 +34,24 @@ class GiroController extends Controller
             'nombre_giro' => ['required', 'string', 'max:255', 'regex:/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/'],
         ]);
         try {
+            $nombre = strtoupper(trim($request->nombre_giro));
+
+            // Buscar si ya existe (activo o inactivo)
+            $existingGiro = Giro::where('nombre_giro', $nombre)->first();
+
+            if ($existingGiro) {
+                if ($existingGiro->activo) {
+                    return back()->withErrors(['nombre_giro' => 'El nombre del giro ya ha sido registrado.'])->withInput();
+                } else {
+                    // Reactivar si existía pero estaba eliminado logicamente
+                    $existingGiro->activo = true;
+                    $existingGiro->save();
+                    return redirect()->route('admin.giros.index')->with('success', 'Giro reactivado exitosamente');
+                }
+            }
+
             $giro = new Giro();
-            $giro->nombre_giro = strtoupper(trim($request->nombre_giro));
+            $giro->nombre_giro = $nombre;
             $giro->save();
             return redirect()->route('admin.giros.index')->with('success', 'Giro guardado exitosamente');
         } catch (\Exception $e) {

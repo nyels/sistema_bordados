@@ -18,7 +18,10 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         // ✅ Asegurar que el middleware se aplique solo a rutas específicas
-        $middleware->appendToGroup('web', \App\Http\Middleware\SecureFileUpload::class);
+        $middleware->appendToGroup('web', [
+            \App\Http\Middleware\SecureFileUpload::class,
+            \App\Http\Middleware\PreventBackHistory::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

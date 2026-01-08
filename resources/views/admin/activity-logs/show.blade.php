@@ -143,8 +143,8 @@
             </div>
 
             <div class="card-footer bg-white text-right">
-                <a href="{{ route('activity-logs.show', $log->uuid) }}" class="btn btn-sm btn-info">
-                    <i class="fas fa-eye"></i>
+                <a href="{{ route('admin.activity-logs.index') }}" class="btn btn-sm btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Volver
                 </a>
             </div>
         </div>

@@ -28,7 +28,7 @@
                     </div>
                     <div class="col-auto">
                         <div class="d-flex">
-                            <a href="{{ route('admin.produccion.preview', $export->id) }}?download=1"
+                            <a href="{{ route('admin.production.preview', $export->id) }}?download=1"
                                 class="btn btn-premium-download-alt mr-2 shadow-sm">
                                 <i class="fas fa-file-download"></i>
                                 <span class="d-none d-md-inline ml-2">SVG</span>

@@ -15,7 +15,7 @@
                 <h3 class="card-title">Editar Información</h3>
             </div>
             <div class="card-body">
-                <form action="{{ route('admin.produccion.update', $export->id) }}" method="POST"
+                <form action="{{ route('admin.production.update', $export->id) }}" method="POST"
                     enctype="multipart/form-data">
                     @csrf
                     @method('PUT')
@@ -50,7 +50,7 @@
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-save mr-1"></i> Actualizar
                         </button>
-                        <a href="{{ route('admin.produccion.index') }}" class="btn btn-secondary">
+                        <a href="{{ route('admin.production.index') }}" class="btn btn-secondary">
                             Cancelar
                         </a>
                     </div>

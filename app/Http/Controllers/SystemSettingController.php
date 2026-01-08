@@ -166,12 +166,12 @@ class SystemSettingController extends Controller
 
             if ($updated === 0) {
                 return redirect()
-                    ->route('settings.index', ['group' => $group])
+                    ->route('admin.settings.index', ['group' => $group])
                     ->with('info', 'No se detectaron cambios en la configuración.');
             }
 
             return redirect()
-                ->route('settings.index', ['group' => $group])
+                ->route('admin.settings.index', ['group' => $group])
                 ->with('success', 'Se actualizaron ' . $updated . ' configuraciones correctamente.');
         } catch (\Exception $e) {
             DB::rollBack();

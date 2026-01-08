@@ -153,13 +153,7 @@
                             </ul>
                         </div>
 
-                        {{-- CONFIRMACIÓN --}}
-                        <div class="custom-control custom-checkbox mb-3">
-                            <input type="checkbox" class="custom-control-input" id="confirmCancel" required>
-                            <label class="custom-control-label text-danger" for="confirmCancel">
-                                <strong>Confirmo que deseo cancelar esta orden de compra</strong>
-                            </label>
-                        </div>
+
                     </div>
                 </div>
             </div>
@@ -187,7 +181,6 @@
             const $textarea = $('#cancellation_reason');
             const $charCount = $('#charCount');
             const $btnCancel = $('#btnCancel');
-            const $confirmCheck = $('#confirmCancel');
 
             function updateCharCount() {
                 const length = $textarea.val().length;
@@ -204,23 +197,36 @@
             updateCharCount();
 
             // Validación del formulario
+            // Validación del formulario con SweetAlert2
             $('#cancelForm').on('submit', function(e) {
-                if (!$confirmCheck.is(':checked')) {
-                    e.preventDefault();
-                    alert('Debe confirmar que desea cancelar la orden de compra');
-                    return false;
-                }
+                e.preventDefault();
 
                 if ($textarea.val().length < 10) {
-                    e.preventDefault();
-                    alert('El motivo de cancelación debe tener al menos 10 caracteres');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de validación',
+                        text: 'El motivo de cancelación debe tener al menos 10 caracteres',
+                        confirmButtonText: 'Entendido'
+                    });
                     $textarea.focus();
                     return false;
                 }
 
-                return confirm(
-                    '¿Está completamente seguro de cancelar esta orden de compra?\n\nEsta acción NO se puede deshacer.'
-                );
+                Swal.fire({
+                    title: '¿Está seguro?',
+                    text: "Esta acción marcará la orden como cancelada permanentemente y no se podrá deshacer.",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33', // Rojo
+                    cancelButtonColor: '#6c757d', // Gris
+                    confirmButtonText: 'Sí, cancelar orden',
+                    cancelButtonText: 'Volver',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        this.submit();
+                    }
+                });
             });
         });
     </script>

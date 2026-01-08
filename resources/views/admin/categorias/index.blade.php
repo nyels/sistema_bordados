@@ -17,7 +17,7 @@
         <!-- /.card-header -->
         <div class="card-body" bis_skin_checked="1">
             <div class="row">
-                <a href="{{ route('admin.categorias.create') }}" type="button" class="btn btn-primary">
+                <a href="{{ route('admin.categories.create') }}" type="button" class="btn btn-primary">
                     Nuevo <i class="fas fa-plus"></i></a>
             </div>
             <hr>
@@ -37,10 +37,10 @@
                                 <td>{{ $loop->iteration }}</td>
                                 <td>{{ mb_strtoupper($category->name, 'UTF-8') }}</td>
                                 <td style="text-align: center;">
-                                    <a class="btn btn-warning" href="{{ route('admin.categorias.edit', $category->id) }}"><i
+                                    <a class="btn btn-warning" href="{{ route('admin.categories.edit', $category->id) }}"><i
                                             class="fas fa-edit"></i></a>
                                     <a class="btn btn-danger"
-                                        href="{{ route('admin.categorias.confirm_delete', $category->id) }}"><i
+                                        href="{{ route('admin.categories.confirm_delete', $category->id) }}"><i
                                             class="fas fa-trash"></i></a>
                                 </td>
                             </tr>

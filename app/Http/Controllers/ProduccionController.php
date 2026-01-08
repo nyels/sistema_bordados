@@ -87,7 +87,7 @@ class ProduccionController extends Controller
             DesignExport::create($data);
 
             // Redirigimos al usuario con un mensaje de éxito
-            return redirect()->route('admin.produccion.index')
+            return redirect()->route('admin.production.index')
                 ->with('success', 'Producción creada correctamente en estado Borrador.');
         } catch (\Exception $e) {
             Log::error('Error al guardar producción: ' . $e->getMessage());
@@ -102,8 +102,14 @@ class ProduccionController extends Controller
     public function show(string $id)
     {
         try {
-            // Buscamos la producción por su ID
-            $export = DesignExport::findOrFail($id);
+            // Buscamos la producción por su ID con todas las relaciones necesarias
+            $export = DesignExport::with([
+                'design',
+                'variant',
+                'creator',
+                'image',
+                'statusHistory.changedByUser'
+            ])->findOrFail($id);
 
             // Si la petición viene de un modal (AJAX), devolvemos solo la vista parcial
             if (request()->ajax()) {
@@ -180,7 +186,7 @@ class ProduccionController extends Controller
             // Actualizamos el registro
             $export->update($data);
 
-            return redirect()->route('admin.produccion.index')
+            return redirect()->route('admin.production.index')
                 ->with('success', 'Producción actualizada correctamente.');
         } catch (\Exception $e) {
             Log::error('Error al actualizar producción: ' . $e->getMessage());
@@ -208,12 +214,31 @@ class ProduccionController extends Controller
     // --- ACCIONES DE ESTADO ---
 
     /**
+     * Registra el cambio de estado en el historial.
+     * Helper method para evitar duplicación de código.
+     */
+    private function recordStatusChange(DesignExport $export, string $previousStatus, string $newStatus): void
+    {
+        \App\Models\DesignExportStatusHistory::create([
+            'design_export_id' => $export->id,
+            'previous_status' => $previousStatus,
+            'new_status' => $newStatus,
+            'changed_by' => Auth::id(),
+        ]);
+    }
+
+    /**
      * Cambia el estado a 'pendiente' para solicitar revisión.
      */
     public function requestApproval($id)
     {
         try {
             $export = DesignExport::findOrFail($id);
+            $previousStatus = $export->status;
+
+            // Registrar en historial antes de actualizar
+            $this->recordStatusChange($export, $previousStatus, 'pendiente');
+
             $export->update(['status' => 'pendiente']);
             return back()->with('success', 'Solicitud de aprobación enviada.');
         } catch (\Exception $e) {
@@ -229,6 +254,11 @@ class ProduccionController extends Controller
     {
         try {
             $export = DesignExport::findOrFail($id);
+            $previousStatus = $export->status;
+
+            // Registrar en historial antes de actualizar
+            $this->recordStatusChange($export, $previousStatus, 'aprobado');
+
             $export->update([
                 'status' => 'aprobado',
                 'approved_by' => Auth::id(),
@@ -248,6 +278,11 @@ class ProduccionController extends Controller
     {
         try {
             $export = DesignExport::findOrFail($id);
+            $previousStatus = $export->status;
+
+            // Registrar en historial antes de actualizar
+            $this->recordStatusChange($export, $previousStatus, 'archivado');
+
             $export->update(['status' => 'archivado']);
             return back()->with('success', 'Producción archivada correctamente.');
         } catch (\Exception $e) {
@@ -263,6 +298,11 @@ class ProduccionController extends Controller
     {
         try {
             $export = DesignExport::findOrFail($id);
+            $previousStatus = $export->status;
+
+            // Registrar en historial antes de actualizar
+            $this->recordStatusChange($export, $previousStatus, 'pendiente');
+
             $export->update(['status' => 'pendiente']);
             return back()->with('success', 'Estado revertido a pendiente.');
         } catch (\Exception $e) {
@@ -278,11 +318,39 @@ class ProduccionController extends Controller
     {
         try {
             $export = DesignExport::findOrFail($id);
+            $previousStatus = $export->status;
+
+            // Registrar en historial antes de actualizar
+            $this->recordStatusChange($export, $previousStatus, 'aprobado');
+
             $export->update(['status' => 'aprobado']);
             return back()->with('success', 'Producción restaurada a aprobado.');
         } catch (\Exception $e) {
             Log::error('Error al restaurar producción: ' . $e->getMessage());
             return back()->with('error', 'Error al restaurar: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Descarga el archivo de la producción.
+     */
+    public function download($id)
+    {
+        try {
+            $export = DesignExport::findOrFail($id);
+
+            // Verificar que existe el archivo
+            if (!$export->file_path || !Storage::disk('public')->exists($export->file_path)) {
+                return back()->with('error', 'El archivo no existe o fue eliminado.');
+            }
+
+            $filePath = Storage::disk('public')->path($export->file_path);
+            $fileName = $export->file_name ?: basename($export->file_path);
+
+            return response()->download($filePath, $fileName);
+        } catch (\Exception $e) {
+            Log::error('Error al descargar archivo de producción: ' . $e->getMessage());
+            return back()->with('error', 'Error al descargar el archivo: ' . $e->getMessage());
         }
     }
 }

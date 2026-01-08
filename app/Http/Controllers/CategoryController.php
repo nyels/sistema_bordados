@@ -62,7 +62,7 @@ class CategoryController extends Controller
             $category = Category::create($validated);
 
             return redirect()
-                ->route('admin.categorias.index')
+                ->route('admin.categories.index')
                 ->with('success', 'Categoría creada exitosamente');
         } catch (\Exception $e) {
             Log::error('Error al crear la categoría: ' . $e->getMessage());
@@ -136,7 +136,7 @@ class CategoryController extends Controller
             $category->update($validated);
 
             return redirect()
-                ->route('admin.categorias.index')
+                ->route('admin.categories.index')
                 ->with('success', 'Categoría actualizada exitosamente');
         } catch (\Exception $e) {
             Log::error('Error al actualizar la categoría: ' . $e->getMessage());
@@ -156,7 +156,7 @@ class CategoryController extends Controller
             ->where('is_active', true)
             ->firstOrFail();
         if (!$category) {
-            return redirect()->route('admin.categorias.index')->with('error', 'Categoría no encontrada');
+            return redirect()->route('admin.categories.index')->with('error', 'Categoría no encontrada');
         }
 
         return view('admin.categorias.delete', compact('category'));
@@ -180,7 +180,7 @@ class CategoryController extends Controller
             $category->delete();
 
             return redirect()
-                ->route('admin.categorias.index')
+                ->route('admin.categories.index')
                 ->with('success', 'Categoría eliminada exitosamente');
         } catch (\Exception $e) {
             Log::error('Error al eliminar la categoría: ' . $e->getMessage());

@@ -37,7 +37,7 @@
             </div>
 
             <div class="card-body" bis_skin_checked="1">
-                <form method="post" action="{{ route('admin.categorias.update', $category->id) }}">
+                <form method="post" action="{{ route('admin.categories.update', $category->id) }}">
                     @csrf
                     @method('PUT')
 
@@ -69,7 +69,7 @@
 
                         <div class="row mt-4">
                             <div class="col-12 text-right">
-                                <a href="{{ route('admin.categorias.index') }}" class="btn btn-secondary"
+                                <a href="{{ route('admin.categories.index') }}" class="btn btn-secondary"
                                     style="margin-right: 10px;">
                                     <i class="fas fa-times-circle"></i> Regresar
                                 </a>

@@ -65,12 +65,12 @@
                             <i class="fas fa-times-circle"></i> Cancelar
                         </a>
                         @if ($category->products_count == 0)
-                            <form action="{{ route('admin.product_categories.destroy', $category->id) }}" method="POST"
-                                class="d-inline">
+                            <form id="deleteForm" action="{{ route('admin.product_categories.destroy', $category->id) }}"
+                                method="POST" class="d-inline">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-danger">
-                                    <i class="fas fa-trash"></i> Sí, Eliminar
+                                    <i class="fas fa-trash-alt"></i> Sí, Eliminar
                                 </button>
                             </form>
                         @endif
@@ -86,6 +86,24 @@
 
 @section('js')
     <script>
-        console.log("ProductCategory Delete View");
+        document.getElementById('deleteForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: "¡Eliminarás esta categoría y su contenido asociado!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33', // Rojo
+                cancelButtonColor: '#6c757d', // Gris
+                confirmButtonText: 'Sí, confirmar',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    this.submit();
+                }
+            });
+        });
     </script>
 @stop

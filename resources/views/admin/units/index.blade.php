@@ -29,7 +29,7 @@
             @endforeach
 
             <div class="row">
-                <a href="{{ route('units.create') }}" type="button" class="btn btn-primary">
+                <a href="{{ route('admin.units.create') }}" type="button" class="btn btn-primary">
                     Nuevo <i class="fas fa-plus"></i>
                 </a>
             </div>
@@ -60,11 +60,11 @@
                                 </td>
                                 <td class="text-center">
                                     <div class="d-flex justify-content-center align-items-center gap-1">
-                                        <a href="{{ route('units.edit', $unit->id) }}" class="btn btn-warning btn-sm"
+                                        <a href="{{ route('admin.units.edit', $unit->id) }}" class="btn btn-warning btn-sm"
                                             title="Editar">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <a href="{{ route('units.confirm_delete', $unit->id) }}"
+                                        <a href="{{ route('admin.units.confirm_delete', $unit->id) }}"
                                             class="btn btn-danger btn-sm" title="Eliminar">
                                             <i class="fas fa-trash"></i>
                                         </a>
