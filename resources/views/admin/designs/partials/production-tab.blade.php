@@ -3049,8 +3049,8 @@
                         text: msg.text,
                         icon: msg.icon,
                         showCancelButton: true,
-                        confirmButtonText: msg.btn,
                         cancelButtonText: 'Cancelar',
+                        confirmButtonText: msg.btn,
                         confirmButtonColor: '#2563eb',
                         // Fix z-index to appear above Bootstrap modal
                         customClass: {

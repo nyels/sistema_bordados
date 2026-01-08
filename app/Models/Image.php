@@ -68,7 +68,8 @@ class Image extends Model
 
     /**
      * Obtiene la URL del thumbnail pequeño (para listados).
-     * Si no existe, lo genera automáticamente (LAZY LOADING).
+     * Si no existe el thumbnail, usa la imagen original.
+     * OPTIMIZADO: No genera thumbnails on-demand para mejor performance.
      */
     public function getThumbnailSmallUrlAttribute(): ?string
     {
@@ -81,20 +82,15 @@ class Image extends Model
             return asset('storage/' . $this->thumbnail_small);
         }
 
-        // Lazy generation: intentar generar si no existe
-        $thumbnailPath = $this->generateThumbnailIfNeeded('small');
-
-        if ($thumbnailPath) {
-            return asset('storage/' . $thumbnailPath);
-        }
-
-        // Fallback: imagen original
+        // PERFORMANCE OPTIMIZADO: Usar imagen original en lugar de generar thumbnail
+        // El browser renderiza la imagen pequeña via CSS
         return asset('storage/' . $this->file_path);
     }
 
     /**
      * Obtiene la URL del thumbnail mediano (para galerías).
-     * Si no existe, lo genera automáticamente (LAZY LOADING).
+     * Si no existe el thumbnail, usa la imagen original.
+     * OPTIMIZADO: No genera thumbnails on-demand para mejor performance.
      */
     public function getThumbnailMediumUrlAttribute(): ?string
     {
@@ -107,14 +103,8 @@ class Image extends Model
             return asset('storage/' . $this->thumbnail_medium);
         }
 
-        // Lazy generation: intentar generar si no existe
-        $thumbnailPath = $this->generateThumbnailIfNeeded('medium');
-
-        if ($thumbnailPath) {
-            return asset('storage/' . $thumbnailPath);
-        }
-
-        // Fallback: imagen original
+        // PERFORMANCE OPTIMIZADO: Usar imagen original en lugar de generar thumbnail
+        // El browser renderiza la imagen pequeña via CSS
         return asset('storage/' . $this->file_path);
     }
 

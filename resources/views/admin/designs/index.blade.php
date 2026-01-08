@@ -323,14 +323,15 @@
 
                                         {{-- ACCIONES VARIANTES --}}
                                         <div class="variant-actions">
-                                            <a href="#" id="btnAddVariant" class="btn-add-variant">
-                                                <i class="fas fa-plus"></i>
-                                                Nueva Variante
-                                            </a>
+
                                             <a href="#" id="btnEditVariants" class="btn-edit-variant disabled"
                                                 style="pointer-events: none; opacity: 0.5;">
                                                 <i class="fas fa-pencil-alt"></i>
                                                 Editar Variante
+                                            </a>
+                                            <a href="#" id="btnAddVariant" class="btn-add-variant">
+                                                <i class="fas fa-plus"></i>
+                                                Nueva Variante
                                             </a>
                                         </div>
                                     </div>
@@ -416,8 +417,8 @@
 @section('css')
     <style>
         /* ============================================
-                                                                                                                PLACEHOLDERS Y UTILIDADES
-                                                                                                                ============================================ */
+                                                                                                                            PLACEHOLDERS Y UTILIDADES
+                                                                                                                            ============================================ */
         .no-img-placeholder {
             width: 45px;
             height: 45px;
@@ -432,8 +433,8 @@
         }
 
         /* ============================================
-                                                                                                                MODAL PREMIUM - ESTRUCTURA BASE
-                                                                                                                ============================================ */
+                                                                                                                            MODAL PREMIUM - ESTRUCTURA BASE
+                                                                                                                            ============================================ */
         .modal-premium {
             border-radius: 30px;
             border: none;
@@ -443,9 +444,9 @@
         }
 
         /* ============================================
-                                                                                                                BOTÓN CERRAR MODAL - ARREGLADO
-                                                                                                                Estilos para el botón de cerrar (X) que estaba flotando mal
-                                                                                                                ============================================ */
+                                                                                                                            BOTÓN CERRAR MODAL - ARREGLADO
+                                                                                                                            Estilos para el botón de cerrar (X) que estaba flotando mal
+                                                                                                                            ============================================ */
         .modal-close-premium {
             position: absolute;
             top: 12px;
@@ -482,9 +483,9 @@
         }
 
         /* ============================================
-                                                                                                                APPLE HIG MODAL - SISTEMA DE DISEÑO PREMIUM
-                                                                                                                8pt Grid System | Claridad | Deferencia | Profundidad
-                                                                                                                ============================================ */
+                                                                                                                            APPLE HIG MODAL - SISTEMA DE DISEÑO PREMIUM
+                                                                                                                            8pt Grid System | Claridad | Deferencia | Profundidad
+                                                                                                                            ============================================ */
 
         /* COLUMNA IZQUIERDA */
         .modal-left-column {
@@ -697,9 +698,9 @@
         }
 
         /* ============================================
-                                                                                                                BOTONES DE ACCIÓN - SISTEMA UNIFICADO PREMIUM
-                                                                                                                Ambas columnas usan el mismo sistema
-                                                                                                                ============================================ */
+                                                                                                                            BOTONES DE ACCIÓN - SISTEMA UNIFICADO PREMIUM
+                                                                                                                            Ambas columnas usan el mismo sistema
+                                                                                                                            ============================================ */
 
         /* Contenedor de acciones - BASE COMÚN */
         .design-actions,
@@ -829,8 +830,8 @@
         }
 
         /* ============================================
-                                                                                                                COLUMNA DERECHA - VARIANTES Y PRODUCCIÓN
-                                                                                                                ============================================ */
+                                                                                                                            COLUMNA DERECHA - VARIANTES Y PRODUCCIÓN
+                                                                                                                            ============================================ */
 
         /* Tabs del Modal */
         .modal-tabs-container {
@@ -1241,8 +1242,8 @@
         }
 
         /* ================================================
-                                                                                   HOVER OVERLAY PARA AÑADIR PRODUCCIÓN
-                                                                                   ================================================ */
+                                                                                               HOVER OVERLAY PARA AÑADIR PRODUCCIÓN
+                                                                                               ================================================ */
 
         /* Overlay en IMAGEN PRINCIPAL - posicionado abajo */
         .main-image-wrapper .image-production-overlay {
@@ -1425,8 +1426,8 @@
         }
 
         /* ============================================
-                                                                                   PAGE HEADER - Enterprise/SaaS Style
-                                                                                   ============================================ */
+                                                                                               PAGE HEADER - Enterprise/SaaS Style
+                                                                                               ============================================ */
         .page-header-wrapper {
             display: flex;
             justify-content: space-between;
@@ -1478,8 +1479,8 @@
         }
 
         /* ============================================
-                                                                                                                ESTILOS DEL GRID DE TARJETAS
-                                                                                                                ============================================ */
+                                                                                                                            ESTILOS DEL GRID DE TARJETAS
+                                                                                                                            ============================================ */
         .surface {
             background: #fff;
             border-radius: 16px;
@@ -1629,8 +1630,8 @@
         }
 
         /* ============================================
-                                                                                                                MODAL DE CONFIRMACIÓN ELIMINAR
-                                                                                                                ============================================ */
+                                                                                                                            MODAL DE CONFIRMACIÓN ELIMINAR
+                                                                                                                            ============================================ */
         .modal-delete-apple {
             border-radius: 24px;
             border: none;
@@ -1765,8 +1766,8 @@
         }
 
         /* ============================================
-                                                                                                                ESTADOS DE CARGA
-                                                                                                                ============================================ */
+                                                                                                                            ESTADOS DE CARGA
+                                                                                                                            ============================================ */
         .modal-loading-overlay {
             position: absolute;
             top: 0;
@@ -1823,9 +1824,9 @@
         }
 
         /* ============================================
-                                                                                                                RESPONSIVE - BREAKPOINTS ESTÁNDAR
-                                                                                                                xs: <576px | sm: 576-767px | md: 768-991px | lg: 992-1199px | xl: ≥1200px
-                                                                                                                ============================================ */
+                                                                                                                            RESPONSIVE - BREAKPOINTS ESTÁNDAR
+                                                                                                                            xs: <576px | sm: 576-767px | md: 768-991px | lg: 992-1199px | xl: ≥1200px
+                                                                                                                            ============================================ */
 
         /* ===== XL: Pantallas grandes (≥1200px) ===== */
         @media (min-width: 1200px) {
@@ -2183,8 +2184,8 @@
         }
 
         /* ============================================
-                                                                                   WEB APP / PWA - OPTIMIZACIONES TOUCH & MOBILE
-                                                                                   ============================================ */
+                                                                                               WEB APP / PWA - OPTIMIZACIONES TOUCH & MOBILE
+                                                                                               ============================================ */
 
         /* Touch Target mínimo 44x44px (Apple HIG / Material Design) */
         .design-card,
@@ -3830,15 +3831,15 @@
                             <div class="design-image">
                                 ${imageUrl
                                     ? `<img src="${imageUrl}" alt="${escapeHtml(design.name)}" loading="lazy"
-                                                                                                                onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                                                                                               <div class="no-image" style="display: none;">
-                                                                                                                   <i class="fas fa-image fa-3x mb-2 text-gray-300"></i>
-                                                                                                                   <span>Sin imagen</span>
-                                                                                                               </div>`
+                                                                                                                            onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                                                                                           <div class="no-image" style="display: none;">
+                                                                                                                               <i class="fas fa-image fa-3x mb-2 text-gray-300"></i>
+                                                                                                                               <span>Sin imagen</span>
+                                                                                                                           </div>`
                                     : `<div class="no-image">
-                                                                                                                   <i class="fas fa-image fa-3x mb-2 text-gray-300"></i>
-                                                                                                                   <span>Sin imagen</span>
-                                                                                                               </div>`
+                                                                                                                               <i class="fas fa-image fa-3x mb-2 text-gray-300"></i>
+                                                                                                                               <span>Sin imagen</span>
+                                                                                                                           </div>`
                                 }
                             </div>
 
