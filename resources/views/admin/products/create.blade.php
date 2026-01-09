@@ -9,8 +9,8 @@
     <div class="module-header fade-in">
         <div class="d-flex justify-content-between align-items-center">
             <div>
-                <h1 class="text-white"><i class="fas fa-cube mr-2"></i> Ingeniería de Producto</h1>
-                <p class="text-white-50 mb-0">Configurador Master: BOM, Costos y Variantes</p>
+                <h1 class="text-white"><i class="fas fa-cube mr-2"></i> Configurador de Productos</h1>
+                <p class="text-white-50 mb-0">Crea tu producto paso a paso: define, configura y publica</p>
             </div>
             <div class="d-flex align-items-center gap-3">
                 <div class="live-cost-badge d-none d-md-block">
@@ -37,29 +37,29 @@
                 </button>
 
                 <div class="stepper-wrapper">
-                    <div class="stepper-item active" data-step="1">
+                    <div class="stepper-item active" data-step="1" onclick="navigateToStep(1)" style="cursor:pointer;">
                         <div class="step-counter">1</div>
                         <div class="step-name">Definición</div>
                     </div>
-                    <div class="stepper-item" data-step="2">
+                    <div class="stepper-item" data-step="2" onclick="navigateToStep(2)" style="cursor:pointer;">
                         <div class="step-counter">2</div>
-                        <div class="step-name">Variantes</div>
+                        <div class="step-name">Presentaciones <span class="step-badge d-none" id="badgeStep2"></span></div>
                     </div>
-                    <div class="stepper-item" data-step="3">
+                    <div class="stepper-item" data-step="3" onclick="navigateToStep(3)" style="cursor:pointer;">
                         <div class="step-counter">3</div>
-                        <div class="step-name">Ingeniería (BOM)</div>
+                        <div class="step-name">Receta <span class="step-badge d-none" id="badgeStep3"></span></div>
                     </div>
-                    <div class="stepper-item" data-step="4">
+                    <div class="stepper-item" data-step="4" onclick="navigateToStep(4)" style="cursor:pointer;">
                         <div class="step-counter">4</div>
-                        <div class="step-name">Diseño</div>
+                        <div class="step-name">Diseño <span class="step-badge d-none" id="badgeStep4"></span></div>
                     </div>
-                    <div class="stepper-item" data-step="5">
+                    <div class="stepper-item" data-step="5" onclick="navigateToStep(5)" style="cursor:pointer;">
                         <div class="step-counter">5</div>
-                        <div class="step-name">Finanzas</div>
+                        <div class="step-name">Precio</div>
                     </div>
-                    <div class="stepper-item" data-step="6">
+                    <div class="stepper-item" data-step="6" onclick="navigateToStep(6)" style="cursor:pointer;">
                         <div class="step-counter">6</div>
-                        <div class="step-name">Confirmar</div>
+                        <div class="step-name">¡Listo!</div>
                     </div>
                 </div>
 
@@ -230,6 +230,10 @@
     <div class="card shadow-sm border-0">
         <div class="card-body p-4">
             <h5 class="step-title"><i class="fas fa-fingerprint text-primary"></i> Identidad del Producto</h5>
+            <p class="step-description text-muted mb-4">
+                <i class="fas fa-lightbulb text-warning mr-1"></i>
+                Define la información básica que identifica tu producto. El <strong>nombre comercial</strong> es como tus clientes lo conocerán.
+            </p>
             <div class="row">
                 {{-- LEFT COLUMN: FORM FIELDS --}}
                 <div class="col-md-8">
@@ -329,7 +333,12 @@
         <script type="text/template" id="tpl_step2">
     <div class="card shadow-sm border-0">
         <div class="card-body p-4">
-            <h5 class="step-title"><i class="fas fa-th text-primary"></i> Matriz de Variantes</h5>
+            <h5 class="step-title"><i class="fas fa-th text-primary"></i> Presentaciones del Producto</h5>
+            <p class="step-description text-muted mb-4">
+                <i class="fas fa-lightbulb text-warning mr-1"></i>
+                Las <strong>presentaciones</strong> son las combinaciones de talla y color que ofrecerás. 
+                Ejemplo: Si vendes en tallas S, M, L y colores Azul y Rojo, tendrás 6 presentaciones diferentes.
+            </p>
             
             <div class="row">
                 {{-- LEFT COLUMN: Selectors --}}
@@ -408,6 +417,40 @@
 
         {{-- STEP 3: BOM (ENGINEERING) --}}
         <script type="text/template" id="tpl_step3">
+    <div class="card shadow-sm border-0 mb-3">
+        <div class="card-body p-4">
+            <h5 class="step-title"><i class="fas fa-boxes text-primary"></i> Receta del Producto</h5>
+            <p class="step-description text-muted mb-3">
+                <i class="fas fa-lightbulb text-warning mr-1"></i>
+                Lista los <strong>materiales necesarios</strong> para fabricar cada unidad. 
+                Como una receta de cocina: ¿qué ingredientes necesitas y cuánto de cada uno?
+            </p>
+            <!-- Visual Flow Indicator -->
+            <div class="flow-indicator mb-4 p-3 bg-light rounded border">
+                <div class="d-flex justify-content-between align-items-center text-center">
+                    <div class="flow-step">
+                        <span class="badge badge-primary rounded-circle mr-1" style="width:24px;height:24px;line-height:24px;">1</span>
+                        <small class="d-block text-muted">Familia</small>
+                    </div>
+                    <i class="fas fa-chevron-right text-muted"></i>
+                    <div class="flow-step">
+                        <span class="badge badge-secondary rounded-circle mr-1" style="width:24px;height:24px;line-height:24px;">2</span>
+                        <small class="d-block text-muted">Material</small>
+                    </div>
+                    <i class="fas fa-chevron-right text-muted"></i>
+                    <div class="flow-step">
+                        <span class="badge badge-secondary rounded-circle mr-1" style="width:24px;height:24px;line-height:24px;">3</span>
+                        <small class="d-block text-muted">Cantidad</small>
+                    </div>
+                    <i class="fas fa-chevron-right text-muted"></i>
+                    <div class="flow-step">
+                        <span class="badge badge-success rounded-circle mr-1" style="width:24px;height:24px;line-height:24px;">4</span>
+                        <small class="d-block text-muted">Agregar</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="row">
         <div class="col-md-4">
             <div class="card shadow-sm h-100">
@@ -454,18 +497,18 @@
                     
                     {{-- INLINE SCOPE SELECTION --}}
                     <div class="form-group">
-                        <label>Alcance del Material</label>
+                        <label>¿Aplica a todas las presentaciones?</label>
                         <div class="d-flex gap-2 mb-2">
                             <button type="button" class="btn btn-outline-secondary btn-sm flex-fill scope-inline-btn active" data-scope="global" onclick="setInlineScope('global')">
-                                <i class="fas fa-globe"></i> Global
+                                <i class="fas fa-globe"></i> Todas
                             </button>
                             <button type="button" class="btn btn-outline-secondary btn-sm flex-fill scope-inline-btn" data-scope="specific" onclick="setInlineScope('specific')">
-                                <i class="fas fa-filter"></i> Específico
+                                <i class="fas fa-filter"></i> Solo algunas
                             </button>
                         </div>
                         <input type="hidden" id="inlineScopeValue" value="global">
                         <div id="inlineVariantsContainer" class="d-none">
-                            <select class="form-control select2" multiple id="inlineTargetVariants" data-placeholder="Seleccione variantes..."></select>
+                            <select class="form-control select2" multiple id="inlineTargetVariants" data-placeholder="Seleccione presentaciones..."></select>
                         </div>
                     </div>
                     
@@ -474,7 +517,7 @@
                          <label class="form-check-label small" for="materialIsPrimary">Material Base (Principal)</label>
                     </div>
                     <button type="button" class="btn btn-success btn-block" onclick="addMaterialDirect()">
-                        <i class="fas fa-plus-circle"></i> Agregar al BOM
+                        <i class="fas fa-plus-circle"></i> Agregar a la Receta
                     </button>
                 </div>
             </div>
@@ -482,7 +525,7 @@
         <div class="col-md-8">
             <div class="card shadow-sm h-100">
                 <div class="card-header bg-white d-flex justify-content-between">
-                    <span class="font-weight-bold">Bill of Materials (BOM)</span>
+                    <span class="font-weight-bold">Lista de Ingredientes</span>
                     <span class="badge badge-light border" id="bomTotalCostBadge">Costo Total: $0.00</span>
                 </div>
                 <div class="card-body p-0 table-responsive">
@@ -511,14 +554,21 @@
         <script type="text/template" id="tpl_step4">
     <div class="card shadow-sm border-0">
         <div class="card-body">
-                <h5 class="step-title"><i class="fas fa-vector-square text-primary"></i> Biblioteca de Diseños</h5>
-                <div class="d-flex align-items-center">
+                <h5 class="step-title"><i class="fas fa-vector-square text-primary"></i> Diseños de Bordado</h5>
+                <p class="step-description text-muted mb-3">
+                    <i class="fas fa-lightbulb text-warning mr-1"></i>
+                    Selecciona los <strong>diseños de bordado</strong> que aplicarás a tu producto. 
+                    Haz clic en un diseño para configurar su posición (pecho, manga, espalda, etc.).
+                </p>
+                <div class="d-flex align-items-center justify-content-between mb-3">
                     {{-- FIX: No Embroidery Toggle --}}
-                    <div class="custom-control custom-switch mr-4">
+                    <div class="custom-control custom-switch">
                         <input type="checkbox" class="custom-control-input" id="toggleNoDesign" onchange="toggleNoDesignMode()">
-                        <label class="custom-control-label font-weight-bold text-muted" for="toggleNoDesign">Producto Sin Bordado/Liso</label>
+                        <label class="custom-control-label font-weight-bold" for="toggleNoDesign">
+                            <i class="fas fa-tshirt mr-1"></i> Este producto es liso (sin bordado)
+                        </label>
                     </div>
-                    <input type="text" class="form-control" style="width: 200px;" placeholder="Buscar diseño..." id="searchDesign">
+                    <input type="text" class="form-control" style="width: 200px;" placeholder="🔍 Buscar diseño..." id="searchDesign">
                 </div>
             </div>
 
@@ -579,6 +629,16 @@
 
         {{-- STEP 5: FINANZAS Y EXTRAS --}}
         <script type="text/template" id="tpl_step5">
+    <div class="card shadow-sm border-0 mb-3">
+        <div class="card-body p-4">
+            <h5 class="step-title"><i class="fas fa-calculator text-primary"></i> Tu Precio y Ganancia</h5>
+            <p class="step-description text-muted mb-0">
+                <i class="fas fa-lightbulb text-warning mr-1"></i>
+                Revisa cuánto te <strong>cuesta producir</strong> cada unidad y define 
+                <strong>cuánto quieres ganar</strong>. El sistema calculará el precio sugerido automáticamente.
+            </p>
+        </div>
+    </div>
     <div class="row">
         <div class="col-md-5">
             <div class="card shadow-sm h-100">
@@ -612,14 +672,14 @@
         <div class="col-md-7">
             <div class="card border-primary shadow-sm h-100">
                 <div class="card-header bg-primary text-white text-center py-3">
-                    <h5 class="mb-0"><i class="fas fa-calculator mr-2"></i> Motor de Precios</h5>
+                    <h5 class="mb-0"><i class="fas fa-coins mr-2"></i> Calculadora de Precios</h5>
                 </div>
                 <div class="card-body">
                     
                     {{-- DESGLOSE DE MATERIALES --}}
                     <div class="mb-4 pb-3 border-bottom">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h6 class="mb-0 font-weight-bold"><i class="fas fa-boxes mr-2 text-primary"></i>Materiales (BOM)</h6>
+                            <h6 class="mb-0 font-weight-bold"><i class="fas fa-boxes mr-2 text-primary"></i>Materiales (Receta)</h6>
                             <span class="h5 font-weight-bold text-primary mb-0" id="finMatCost">$0.00</span>
                         </div>
                         <div id="finMaterialsList" class="bg-light rounded p-3" style="max-height: 150px; overflow-y: auto;">
@@ -708,10 +768,15 @@
         <script type="text/template" id="tpl_step6">
     <div class="card shadow-sm border-0">
         <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-            <span><i class="fas fa-clipboard-check mr-2"></i>Confirmación de Ingeniería</span>
-            <span class="badge badge-light px-3 py-2">Paso Final</span>
+            <span><i class="fas fa-clipboard-check mr-2"></i>¡Último Paso! Revisa y Confirma</span>
+            <span class="badge badge-light px-3 py-2"><i class="fas fa-rocket mr-1"></i> Listo para Crear</span>
         </div>
         <div class="card-body">
+            <p class="step-description text-muted mb-4">
+                <i class="fas fa-lightbulb text-warning mr-1"></i>
+                Verifica que toda la información esté correcta antes de guardar. 
+                <strong>Una vez creado</strong>, podrás editar el producto desde el catálogo.
+            </p>
             <div class="row">
                 {{-- LEFT COLUMN: All Items --}}
                 <div class="col-md-6 border-right">
@@ -720,20 +785,20 @@
                         <h6 class="font-weight-bold mb-2"><i class="fas fa-fingerprint mr-2 text-primary"></i>Identidad del Producto</h6>
                         <div class="bg-light rounded p-3">
                             <h5 id="revProductName" class="font-weight-bold mb-1"></h5>
-                            <p class="mb-0"><strong>SKU:</strong> <code id="revProductSku"></code></p>
+                            <p class="mb-0"><strong>Código Único:</strong> <code id="revProductSku"></code></p>
                             <p class="mb-0"><strong>Categoría:</strong> <span id="revProductCategory"></span></p>
                         </div>
                     </div>
                     
                     {{-- Variants --}}
                     <div class="mb-4">
-                        <h6 class="font-weight-bold mb-2"><i class="fas fa-th mr-2 text-info"></i>Variantes (<span id="revVarCount">0</span>)</h6>
+                        <h6 class="font-weight-bold mb-2"><i class="fas fa-th mr-2 text-info"></i>Presentaciones (<span id="revVarCount">0</span>)</h6>
                         <div id="revVariants" class="bg-light rounded p-2" style="max-height:100px; overflow-y:auto"></div>
                     </div>
                     
                     {{-- BOM Materials --}}
                     <div class="mb-4">
-                        <h6 class="font-weight-bold mb-2"><i class="fas fa-boxes mr-2 text-primary"></i>Materiales BOM (<span id="revBomCount">0</span>)</h6>
+                        <h6 class="font-weight-bold mb-2"><i class="fas fa-boxes mr-2 text-primary"></i>Receta de Materiales (<span id="revBomCount">0</span>)</h6>
                         <div id="revBomList" class="bg-light rounded p-2" style="max-height:150px; overflow-y:auto"></div>
                     </div>
                     
@@ -1462,9 +1527,12 @@
             // Flag for async validation bypass
             let bypassBomValidation = false;
 
-            // --- SKU GENERATION ---
+            // --- SKU GENERATION (ENTERPRISE-GRADE) ---
+            // Format: [NAME_INITIALS]-[CATEGORY_CODE]-[UNIQUE_ID]
+            // Example: GUPR-CAM-A7K2
             window.generateSKU = function() {
                 const name = $('#inpName').val().trim();
+                const categoryId = $('#inpCategory').val();
                 const categoryText = $('#inpCategory option:selected').text().trim();
 
                 if (!name) {
@@ -1472,17 +1540,42 @@
                     return;
                 }
 
-                // Generate from first 3 letters of each word (max 3 words)
-                const words = name.split(/\s+/).slice(0, 3);
-                const namePart = words.map(w => w.substring(0, 3).toUpperCase()).join('-');
+                // STEP 1: Generate name part (first letter of first 4 words, uppercase)
+                const cleanName = name.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, ''); // Remove special chars
+                const words = cleanName.split(/\s+/).filter(w => w.length > 0).slice(0, 4);
+                let namePart = words.map(w => {
+                    // Handle accented characters
+                    const normalized = w.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                    return normalized.charAt(0).toUpperCase();
+                }).join('');
 
-                // Add category abbreviation
-                const catPart = categoryText.substring(0, 3).toUpperCase();
+                // Ensure minimum 2 characters (pad with first word letters if needed)
+                if (namePart.length < 2 && words.length > 0) {
+                    const firstWord = words[0].normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+                    namePart = firstWord.substring(0, Math.max(2, 4 - namePart.length));
+                }
 
-                // Add sequence number (could be from server in production)
-                const seq = String(Math.floor(Math.random() * 999) + 1).padStart(3, '0');
+                // STEP 2: Generate category code (only if category is selected)
+                let catPart = '';
+                if (categoryId && categoryText && !categoryText.includes('--')) {
+                    // Take first 3 consonants or chars from category
+                    const cleanCat = categoryText.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+                    catPart = cleanCat.replace(/[^A-Z]/g, '').substring(0, 3);
+                }
 
-                const sku = `${namePart}-${catPart}-${seq}`;
+                // STEP 3: Generate unique ID (timestamp-based, alphanumeric for compactness)
+                // Using last 4 chars of timestamp base36 for uniqueness + randomness
+                const timestamp = Date.now().toString(36).toUpperCase();
+                const uniqueId = timestamp.slice(-4);
+
+                // STEP 4: Assemble SKU (clean format, no consecutive dashes)
+                let sku;
+                if (catPart) {
+                    sku = `${namePart}-${catPart}-${uniqueId}`;
+                } else {
+                    sku = `${namePart}-${uniqueId}`;
+                }
+
                 $('#inpSku').val(sku);
             };
 
@@ -1955,10 +2048,38 @@
                 }
                 if (step === 4) {
                     const isNoDesign = $('#toggleNoDesign').is(':checked');
-                    if (!isNoDesign && State.designs.length === 0) {
-                        Swal.fire('Atención', 'Seleccione un diseño o active "Producto Liso"', 'warning');
-                        return false;
+                    // If toggle is ON or designs are selected, proceed
+                    if (isNoDesign || State.designs.length > 0) {
+                        return true;
                     }
+
+                    // REVOLUTIONARY: Suggestive validation (not restrictive)
+                    // Offer user a choice instead of just blocking
+                    Swal.fire({
+                        title: '💡 Este producto no tiene bordados',
+                        html: `<p class="mb-3">No has seleccionado ningún diseño de bordado.</p>
+                               <p class="text-muted">¿Es un <strong>producto liso</strong> (sin bordado) o necesitas agregar diseños?</p>`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        showDenyButton: true,
+                        confirmButtonText: '<i class="fas fa-tshirt mr-1"></i> Sí, es liso',
+                        denyButtonText: '<i class="fas fa-vector-square mr-1"></i> Agregar diseño',
+                        cancelButtonText: 'Cancelar',
+                        confirmButtonColor: '#28a745',
+                        denyButtonColor: '#17a2b8'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // User confirms it's a liso product - activate toggle and proceed
+                            $('#toggleNoDesign').prop('checked', true).trigger('change');
+                            navigate(1); // Retry navigation
+                        } else if (result.isDenied) {
+                            // User wants to add design - stay on step but don't navigate
+                            // No action needed, they remain on Step 4
+                        }
+                        // If cancelled, also stay on step
+                    });
+
+                    return false; // Block immediate navigation, wait for user choice
                 }
                 return true;
             }
@@ -1983,6 +2104,67 @@
                     $('#btnNext').html('<i class="fas fa-check"></i>').addClass('btn-success-mode');
                 } else {
                     $('#btnNext').html('<i class="fas fa-chevron-right"></i>').removeClass('btn-success-mode');
+                }
+            }
+
+            // --- REVOLUTIONARY: Direct stepper navigation ---
+            window.navigateToStep = function(targetStep) {
+                const currentStep = State.step;
+
+                // Going backward is always allowed (no validation needed)
+                if (targetStep < currentStep) {
+                    // Navigate directly backward
+                    while (State.step > targetStep) {
+                        State.step--;
+                    }
+                    render();
+                    updateStepper();
+                    updateButtons();
+                    return;
+                }
+
+                // Going forward requires validation of all steps in between
+                if (targetStep > currentStep) {
+                    // Validate current step before moving
+                    if (!validateStep(currentStep)) {
+                        return; // Validation failed, stay on current step
+                    }
+
+                    // For direct jumps, we just move one step at a time with validation
+                    // This ensures proper state management
+                    navigate(1);
+                }
+
+                // Same step - do nothing
+            };
+
+            // --- REVOLUTIONARY: Dynamic badges in stepper ---
+            function updateStepperBadges() {
+                // Badge for Step 2 (Presentaciones/Variants count)
+                const variantCount = State.variants.length;
+                if (variantCount > 0) {
+                    $('#badgeStep2').text(variantCount).removeClass('d-none');
+                } else {
+                    $('#badgeStep2').addClass('d-none');
+                }
+
+                // Badge for Step 3 (Receta/BOM cost)
+                const bomCost = State.bom.reduce((sum, m) => sum + (m.cost || 0), 0);
+                if (State.bom.length > 0) {
+                    $('#badgeStep3').text('$' + bomCost.toFixed(0)).removeClass('d-none');
+                } else {
+                    $('#badgeStep3').addClass('d-none');
+                }
+
+                // Badge for Step 4 (Diseño/Designs count)
+                const designCount = State.designs.length;
+                const isNoDesign = $('#toggleNoDesign').is(':checked');
+                if (designCount > 0) {
+                    $('#badgeStep4').text(designCount).removeClass('d-none');
+                } else if (isNoDesign) {
+                    $('#badgeStep4').text('Liso').removeClass('d-none');
+                } else {
+                    $('#badgeStep4').addClass('d-none');
                 }
             }
 

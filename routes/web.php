@@ -147,6 +147,30 @@ Route::post('admin/designs/{design}/variants/{variant}/exports', [App\Http\Contr
     ->name('admin.variants.exports.store')
     ->middleware('auth');
 
+// AJAX: Obtener contador de exportaciones del diseño (para pestaña Producción)
+Route::get('admin/designs/{design}/exports-count', [App\Http\Controllers\DesignExportController::class, 'getDesignExportsCount'])
+    ->name('admin.designs.exports-count')
+    ->middleware('auth');
+
+// AJAX: Obtener exportaciones de una variante específica (para contador de producción)
+Route::get('admin/designs/{design}/variants/{variant}/exports/ajax', [App\Http\Controllers\DesignExportController::class, 'getVariantExports'])
+    ->name('admin.variants.exports.ajax')
+    ->middleware('auth');
+
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE VISUALIZADOR DE BORDADOS (STANDALONE)
+|--------------------------------------------------------------------------
+*/
+Route::get('admin/visualizer', [App\Http\Controllers\VisualizerController::class, 'index'])
+    ->name('admin.visualizer.index')
+    ->middleware('auth');
+
+Route::post('admin/visualizer/analyze', [App\Http\Controllers\VisualizerController::class, 'analyze'])
+    ->name('admin.visualizer.analyze')
+    ->middleware('auth');
+
 /*
 |--------------------------------------------------------------------------
 | RUTAS AJAX PARA EXPORTACIONES (MODAL)

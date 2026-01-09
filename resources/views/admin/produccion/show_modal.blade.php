@@ -9,7 +9,7 @@
     </span>
 </div>
 
-<div class="modal-header border-0 pb-0 " style="background: #fff;">
+<div class="modal-header border-0 pb-0 pt-4" style="background: #fff;">
     <div class="d-flex align-items-center w-50 justify-content-between">
         <div class="d-flex align-items-center">
             <div class="icon-box bg-primary-light rounded-lg mr-3 d-flex align-items-center justify-content-center"
@@ -195,12 +195,16 @@
                         @endif
                         @foreach ($colorsToShow as $color)
                             <div class="color-swatch"
-                                style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
-                                <div class="color-swatch-box"
-                                    style="width: 32px; height: 32px; border-radius: 8px; background-color: {{ $color['hex'] ?? '#000' }}; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                                style="display: flex; flex-direction: column; align-items: center; gap: 6px; width: 80px; margin-bottom: 8px;">
+                                <div class="color-swatch-box shadow-sm mb-1"
+                                    style="width: 48px; height: 48px; border-radius: 12px; background-color: {{ $color['hex'] ?? '#000' }}; border: 2px solid #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.1); cursor: help; transition: transform 0.2s;"
+                                    title="{{ $color['name'] ?? '' }} ({{ $color['hex'] ?? '' }})"
+                                    onmouseover="this.style.transform='scale(1.1)'"
+                                    onmouseout="this.style.transform='scale(1)'">
                                 </div>
-                                <span class="color-swatch-label"
-                                    style="font-size: 10px; font-weight: 600; color: #374151; font-family: monospace;">{{ $color['hex'] ?? '#000000' }}</span>
+                                <span
+                                    class="color-swatch-label text-dark font-weight-bold bg-white px-2 py-1 rounded shadow-sm border"
+                                    style="font-size: 0.85rem; font-family: monospace; letter-spacing: 0.5px;">{{ $color['hex'] ?? '#000000' }}</span>
                             </div>
                         @endforeach
                     @else

@@ -2658,11 +2658,28 @@
                     }
                 };
 
-                // Cargar datos - V5 con agrupamiento
+
+                // ============================================
+                // ENTERPRISE: Variables para cancelación de requests
+                // ============================================
+                var pendingProductionRequest = null;
+                var loadRequestVersion = 0;
+
+                // Cargar datos - V5 con agrupamiento + cancelación de requests
                 function loadProductionData() {
+                    // CRITICAL: Cancelar request anterior si existe
+                    if (pendingProductionRequest && typeof pendingProductionRequest.abort === 'function') {
+                        pendingProductionRequest.abort();
+                        console.log('[ProductionTab] Previous request aborted - context changed');
+                    }
+
                     currentDesignId = $('#modalDesignId').val();
                     currentVariantId = $('#modalVariantId').val();
                     currentContext = currentVariantId ? 'variant' : 'design';
+
+                    // Incrementar versión para ignorar respuestas obsoletas
+                    loadRequestVersion++;
+                    var myVersion = loadRequestVersion;
 
                     if (!currentDesignId) {
                         showEmptyState();
@@ -2684,8 +2701,14 @@
 
                     if (currentContext === 'design') {
                         // Vista principal: cargar agrupado
-                        $.get(urls.exportsGrouped(currentDesignId))
+                        pendingProductionRequest = $.get(urls.exportsGrouped(currentDesignId))
                             .done(function(response) {
+                                // Verificar que esta respuesta es para el request actual
+                                if (myVersion !== loadRequestVersion) {
+                                    console.log('[ProductionTab] Stale design response ignored');
+                                    return;
+                                }
+
                                 $('#productionLoading').hide();
 
                                 if (response.success) {
@@ -2718,14 +2741,27 @@
                                     showEmptyState();
                                 }
                             })
-                            .fail(function() {
+                            .fail(function(jqXHR, textStatus) {
+                                // Ignorar errores de abort (son intencionales)
+                                if (textStatus === 'abort') {
+                                    console.log('[ProductionTab] Design request aborted intentionally');
+                                    return;
+                                }
+                                if (myVersion !== loadRequestVersion) return;
                                 $('#productionLoading').hide();
                                 showEmptyState();
                             });
                     } else {
                         // Vista de variante: lista simple
-                        $.get(urls.variantExports(currentDesignId, currentVariantId))
+                        pendingProductionRequest = $.get(urls.variantExports(currentDesignId,
+                                currentVariantId))
                             .done(function(response) {
+                                // Verificar que esta respuesta es para el request actual
+                                if (myVersion !== loadRequestVersion) {
+                                    console.log('[ProductionTab] Stale variant response ignored');
+                                    return;
+                                }
+
                                 $('#productionLoading').hide();
 
                                 var displayCount = response.count || 0;
@@ -2751,7 +2787,14 @@
 
                                 $('#productionTotalCount').text(displayCount);
                             })
-                            .fail(function() {
+                            .fail(function(jqXHR, textStatus) {
+                                // Ignorar errores de abort (son intencionales)
+                                if (textStatus === 'abort') {
+                                    console.log(
+                                    '[ProductionTab] Variant request aborted intentionally');
+                                    return;
+                                }
+                                if (myVersion !== loadRequestVersion) return;
                                 $('#productionLoading').hide();
                                 showEmptyState();
                                 $('#productionTotalCount').text('0');

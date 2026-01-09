@@ -67,7 +67,9 @@ def analyze_embroidery_file(file_path, output_svg=False):
         "min_x": 0,
         "min_y": 0,
         "max_x": 0,
-        "max_y": 0
+        "max_y": 0,
+        "jumps": 0,
+        "machine_compatibility": "Desconocida"
     }
     
     # Verificar que el archivo existe
@@ -76,15 +78,24 @@ def analyze_embroidery_file(file_path, output_svg=False):
         return result
     
     # Obtener información básica del archivo
-    result["file_name"] = os.path.basename(file_path)
-    result["file_format"] = os.path.splitext(file_path)[1].upper().replace(".", "")
+    file_name = os.path.basename(file_path)
+    file_ext = os.path.splitext(file_path)[1].lower()
+    
+    result["file_name"] = file_name
+    result["file_format"] = file_ext.replace(".", "").upper()
     result["file_size"] = os.path.getsize(file_path)
+
+    # 1. FILTRO DE SEGURIDAD: ¿Podemos leerlo? (.EMB)
+    if file_ext == '.emb':
+        result["error"] = "El archivo .EMB es de diseño (Wilcom). No se puede visualizar directamente. Por favor suba también el .DST o .PES para visualizar."
+        return result
     
     try:
-        # Leer el archivo de bordado
+        # Cargar el patrón
         pattern = pyembroidery.read(file_path)
         
         if pattern is None:
+            # Fallback a mensaje genérico si pyembroidery retorna None
             result["error"] = "No se pudo leer el archivo. Formato no soportado o archivo corrupto."
             return result
         
@@ -97,7 +108,6 @@ def analyze_embroidery_file(file_path, output_svg=False):
                 # Escribir el patrón al archivo temporal
                 pyembroidery.write(pattern, temp_path)
                 # Leer el contenido del SVG
-                # Contenido del SVG
                 with open(temp_path, "r", encoding="utf-8") as f:
                     svg_content = f.read()
                 
@@ -134,9 +144,10 @@ def analyze_embroidery_file(file_path, output_svg=False):
                 if os.path.exists(temp_path):
                     os.remove(temp_path)
 
-        # Contar puntadas (solo comandos STITCH)
+        # Contar puntadas (solo comandos STITCH) y SALTOS (Jumps)
         stitch_count = 0
         color_changes = 0
+        jumps = 0
         
         for stitch in pattern.stitches:
             command = stitch[2] & pyembroidery.COMMAND_MASK
@@ -144,8 +155,11 @@ def analyze_embroidery_file(file_path, output_svg=False):
                 stitch_count += 1
             elif command == pyembroidery.COLOR_CHANGE:
                 color_changes += 1
+            elif command == pyembroidery.JUMP:
+                jumps += 1
         
         result["total_stitches"] = stitch_count
+        result["jumps"] = jumps
         
         # Obtener dimensiones (bounds retorna min_x, min_y, max_x, max_y en 1/10 mm)
         bounds = pattern.bounds()
@@ -192,13 +206,23 @@ def analyze_embroidery_file(file_path, output_svg=False):
         if not colors and color_changes > 0:
             result["colors_count"] = color_changes + 1
         
+        # 3. DETERMINAR COMPATIBILIDAD (Lógica de negocio)
+        compatibilidad = "Desconocida"
+        if file_ext == '.dst': compatibilidad = "Tajima / Industrial (Universal)"
+        elif file_ext == '.pes': compatibilidad = "Brother / Babylock"
+        elif file_ext == '.jef': compatibilidad = "Janome"
+        elif file_ext == '.exp': compatibilidad = "Melco / Bernina"
+        elif file_ext == '.vp3': compatibilidad = "Husqvarna Viking / Pfaff"
+        elif file_ext == '.xxx': compatibilidad = "Singer"
+        
+        result["machine_compatibility"] = compatibilidad
+
         result["success"] = True
         
     except Exception as e:
         result["error"] = f"Error al procesar el archivo: {str(e)}"
     
     return result
-
 
 def main():
     """Función principal del script."""
@@ -217,15 +241,14 @@ def main():
     result = analyze_embroidery_file(file_path, output_svg)
     
     # Imprimir resultado como JSON o SVG
-    if output_svg and result["success"]:
+    if output_svg and result.get("success"):
         # Imprimir solo el SVG si fue exitoso
         print(result["svg"])
     else:
         print(json.dumps(result, ensure_ascii=False))
     
     # Código de salida
-    sys.exit(0 if result["success"] else 1)
-
+    sys.exit(0 if result.get("success") else 1)
 
 if __name__ == "__main__":
     main()

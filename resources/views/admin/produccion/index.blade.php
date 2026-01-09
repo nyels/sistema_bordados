@@ -304,21 +304,23 @@
                         </div>
 
                         {{-- Controles Flotantes --}}
-                        <div class="zoom-controls">
-                            <button type="button" class="zoom-btn" id="btnZoomIn" title="Acercar (Rueda Arriba)">
-                                <i class="fas fa-search-plus"></i>
-                            </button>
-                            <button type="button" class="zoom-btn" id="btnZoomOut" title="Alejar (Rueda Abajo)">
-                                <i class="fas fa-search-minus"></i>
-                            </button>
-                            <button type="button" class="zoom-btn" id="btnZoomReset" title="Restaurar Vista">
-                                <i class="fas fa-sync-alt"></i>
-                            </button>
-                            <div style="width: 1px; background: #e5e7eb; margin: 0 5px;"></div>
-                            <a href="#" id="zoomDownload" target="_blank" class="zoom-btn"
-                                title="Ver SVG Completo" style="text-decoration: none;">
-                                <i class="fas fa-external-link-alt"></i>
-                            </a>
+                        <div id="prodToolbar"
+                            class="position-absolute d-flex align-items-center bg-white rounded shadow-sm px-3 py-2"
+                            style="bottom: 20px; z-index: 10; left: 50%; transform: translateX(-50%); border: 1px solid #e2e8f0; border-radius: 12px; gap: 8px;">
+                            <button type="button" class="btn btn-sm btn-light border" id="btnZoomOut" title="Alejar"><i
+                                    class="fas fa-minus text-secondary"></i></button>
+                            <button type="button" class="btn btn-sm btn-light border" id="btnZoomReset"
+                                title="Resetear"><i class="fas fa-compress-arrows-alt text-secondary"></i></button>
+                            <button type="button" class="btn btn-sm btn-light border" id="btnZoomIn" title="Acercar"><i
+                                    class="fas fa-plus text-primary"></i></button>
+
+                            <div style="width: 1px; height: 20px; background: #e5e7eb; margin: 0 4px;"></div>
+
+                            <button type="button" class="btn btn-sm btn-light border" id="btnFullscreen"
+                                title="Pantalla Completa"><i class="fas fa-expand text-dark"></i></button>
+                            <a href="#" id="btnProdDownload" download
+                                class="btn btn-sm btn-primary shadow-sm font-weight-bold" title="Descargar Imagen"><i
+                                    class="fas fa-download mr-1"></i> Descargar</a>
                         </div>
                     </div>
                 </div>
@@ -667,9 +669,8 @@
                     $('#zoomImage').attr('src', src);
                     $('#zoomModalTitle').text(name);
 
-                    // Asegurar que abrimos el explorador con herramientas en la pestaña nueva
-                    const explorerUrl = src.includes('?') ? `${src}&explorer=1` : `${src}?explorer=1`;
-                    $('#zoomDownload').attr('href', explorerUrl);
+                    // Configurar descarga directa de la imagen (High Quality source)
+                    $('#btnProdDownload').attr('href', src).attr('download', name);
 
                     // Resetear estado
                     currentScale = 1;
@@ -703,6 +704,118 @@
                 transX = 0;
                 transY = 0;
                 updateTransform();
+            });
+
+            $('#btnFullscreen').on('click', function() {
+                const elem = document.querySelector('#zoomModal .modal-content');
+                if (!document.fullscreenElement) {
+                    elem.requestFullscreen().catch(err => {
+                        console.error(
+                            `Error attempting to enable full-screen mode: ${err.message}`);
+                    });
+                } else {
+                    document.exitFullscreen();
+                }
+            });
+
+            // Descarga HD para Producción (Botón "Descargar")
+            $('#btnProdDownload').on('click', function(e) {
+                e.preventDefault();
+                const url = $(this).attr('href');
+                if (!url) return;
+
+                const btn = $(this);
+                const originalHtml = btn.html();
+
+                // 1. Obtener nombre limpio del título del modal
+                let rawTitle = $('#zoomModalTitle').text().trim();
+                let filename = rawTitle.replace(/[\/\\:*?"<>|]/g, '_') || 'diseno'; // Sanitize filename
+                filename += '_HD.png';
+
+                btn.html('<i class="fas fa-spinner fa-spin"></i>').prop('disabled', true);
+
+                fetch(url)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network error');
+                        return response.blob();
+                    })
+                    .then(blob => blob.text().then(text => ({
+                        blob,
+                        text
+                    })))
+                    .then(({
+                        blob,
+                        text
+                    }) => {
+                        const isSvg = text.trim().startsWith('<svg') || url.toLowerCase().includes(
+                            '.svg');
+
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        const img = new Image();
+                        img.crossOrigin = "Anonymous";
+
+                        // Promesa para cargar la imagen y dibujar
+                        return new Promise((resolve, reject) => {
+                            img.onload = () => {
+                                // Configurar canvas
+                                if (isSvg) {
+                                    // SVG: Usar dimensiones del viewBox escaladas 4x
+                                    // (El SVG se carga en img con sus dimensiones definidas, pero para el canvas queremos forzar alta resolución)
+                                    // NOTA: Renderizar SVG en <img src="data:..."> a veces no escala bien si no se define width/height en el SVG string.
+                                    // Una técnica mejor es definir el tamaño del canvas grande, y dibujar la imagen.
+
+                                    // Estrategia: Detectar tamaño base, multiplicar por 4
+                                    let w = img.naturalWidth || 800;
+                                    let h = img.naturalHeight || 800;
+                                    const scale = 4;
+
+                                    canvas.width = w * scale;
+                                    canvas.height = h * scale;
+
+                                    // Dibujar escalado
+                                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                                } else {
+                                    // Raster: Usar tamaño natural (no podemos inventar resolución si no existe)
+                                    canvas.width = img.naturalWidth;
+                                    canvas.height = img.naturalHeight;
+                                    ctx.drawImage(img, 0, 0);
+                                }
+                                resolve(canvas.toDataURL('image/png'));
+                            };
+                            img.onerror = reject;
+
+                            if (isSvg) {
+                                // Para SVGs, usamos base64 content para asegurar renderizado correcto
+                                img.src = 'data:image/svg+xml;base64,' + btoa(unescape(
+                                    encodeURIComponent(text)));
+                            } else {
+                                img.src = URL.createObjectURL(blob);
+                            }
+                        });
+                    })
+                    .then(pngUrl => {
+                        // Descargar PNG
+                        const a = document.createElement('a');
+                        a.href = pngUrl;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        btn.html(originalHtml).prop('disabled', false);
+                    })
+                    .catch(err => {
+                        console.error('Error generando HD:', err);
+                        // Fallback: Descarga original
+                        const a = document.createElement('a');
+                        a.href = url;
+                        // Intentar mantener nombre si es posible, sino default
+                        a.download = filename.replace('_HD.png', '');
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        btn.html(originalHtml).prop('disabled', false);
+                    });
             });
 
             // Paneo con el mouse

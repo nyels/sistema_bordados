@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 
+
 class DesignExportController extends Controller
 {
     protected EmbroideryAnalyzerService $analyzer;
@@ -304,7 +305,7 @@ class DesignExportController extends Controller
             return back()->with('error', 'Archivo no encontrado.');
         }
 
-        return Storage::disk('public')->download($export->file_path, $export->file_name);
+        return response()->download(Storage::disk('public')->path($export->file_path), $export->file_name);
     }
 
     // =====================================================================
@@ -743,6 +744,28 @@ class DesignExportController extends Controller
             return response()->json(['success' => true, 'data' => $exports, 'count' => $exports->count()]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'data' => []], 500);
+        }
+    }
+
+    /**
+     * AJAX: Obtener contador de exportaciones de un diseño (sin incluir variantes)
+     * Usado por el contador de producción en la pestaña del modal
+     */
+    public function getDesignExportsCount(Design $design)
+    {
+        try {
+            // Contar exportaciones directas del diseño (sin variant_id)
+            $count = DesignExport::where('design_id', $design->id)
+                ->whereNull('design_variant_id')
+                ->count();
+
+            return response()->json([
+                'success' => true,
+                'count' => $count,
+                'design_id' => $design->id
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'count' => 0], 500);
         }
     }
 

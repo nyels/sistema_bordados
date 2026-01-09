@@ -344,6 +344,12 @@ return [
                     'icon' => 'fas fa-fw fa-images',
                     'active' => ['admin/designs*'],
                 ],
+                [
+                    'text' => 'Visualizador (BETA)',
+                    'url' => 'admin/visualizer',
+                    'icon' => 'fas fa-fw fa-eye',
+                    'active' => ['admin/visualizer*'],
+                ],
             ],
         ],
         [
@@ -477,7 +483,7 @@ return [
             'active' => ['admin/activity-logs*', 'admin/settings*'],
             'submenu' => [
                 [
-                    'text' => 'Configuración General',
+                    'text' => 'Configuración',
                     'url' => 'admin/settings',
                     'icon' => 'fas fa-fw fa-wrench',
                     'active' => ['admin/settings*'],

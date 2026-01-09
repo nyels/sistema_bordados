@@ -421,8 +421,8 @@
 @section('css')
     <style>
         /* ============================================
-                                                                                                                                PLACEHOLDERS Y UTILIDADES
-                                                                                                                                ============================================ */
+                                                                                                                                                                        PLACEHOLDERS Y UTILIDADES
+                                                                                                                                                                        ============================================ */
         .no-img-placeholder {
             width: 45px;
             height: 45px;
@@ -437,8 +437,8 @@
         }
 
         /* ============================================
-                                                                                                                                MODAL PREMIUM - ESTRUCTURA BASE
-                                                                                                                                ============================================ */
+                                                                                                                                                                        MODAL PREMIUM - ESTRUCTURA BASE
+                                                                                                                                                                        ============================================ */
         .modal-premium {
             border-radius: 30px;
             border: none;
@@ -448,9 +448,9 @@
         }
 
         /* ============================================
-                                                                                                                                BOTÓN CERRAR MODAL - ARREGLADO
-                                                                                                                                Estilos para el botón de cerrar (X) que estaba flotando mal
-                                                                                                                                ============================================ */
+                                                                                                                                                                        BOTÓN CERRAR MODAL - ARREGLADO
+                                                                                                                                                                        Estilos para el botón de cerrar (X) que estaba flotando mal
+                                                                                                                                                                        ============================================ */
         .modal-close-premium {
             position: absolute;
             top: 12px;
@@ -487,9 +487,9 @@
         }
 
         /* ============================================
-                                                                                                                                APPLE HIG MODAL - SISTEMA DE DISEÑO PREMIUM
-                                                                                                                                8pt Grid System | Claridad | Deferencia | Profundidad
-                                                                                                                                ============================================ */
+                                                                                                                                                                        APPLE HIG MODAL - SISTEMA DE DISEÑO PREMIUM
+                                                                                                                                                                        8pt Grid System | Claridad | Deferencia | Profundidad
+                                                                                                                                                                        ============================================ */
 
         /* COLUMNA IZQUIERDA */
         .modal-left-column {
@@ -702,9 +702,9 @@
         }
 
         /* ============================================
-                                                                                                                                BOTONES DE ACCIÓN - SISTEMA UNIFICADO PREMIUM
-                                                                                                                                Ambas columnas usan el mismo sistema
-                                                                                                                                ============================================ */
+                                                                                                                                                                        BOTONES DE ACCIÓN - SISTEMA UNIFICADO PREMIUM
+                                                                                                                                                                        Ambas columnas usan el mismo sistema
+                                                                                                                                                                        ============================================ */
 
         /* Contenedor de acciones - BASE COMÚN */
         .design-actions,
@@ -834,8 +834,8 @@
         }
 
         /* ============================================
-                                                                                                                                COLUMNA DERECHA - VARIANTES Y PRODUCCIÓN
-                                                                                                                                ============================================ */
+                                                                                                                                                                        COLUMNA DERECHA - VARIANTES Y PRODUCCIÓN
+                                                                                                                                                                        ============================================ */
 
         /* Tabs del Modal */
         .modal-tabs-container {
@@ -1246,8 +1246,8 @@
         }
 
         /* ================================================
-                                                                                                   HOVER OVERLAY PARA AÑADIR PRODUCCIÓN
-                                                                                                   ================================================ */
+                                                                                                                                           HOVER OVERLAY PARA AÑADIR PRODUCCIÓN
+                                                                                                                                           ================================================ */
 
         /* Overlay en IMAGEN PRINCIPAL - posicionado abajo */
         .main-image-wrapper .image-production-overlay {
@@ -1430,8 +1430,8 @@
         }
 
         /* ============================================
-                                                                                                   PAGE HEADER - Enterprise/SaaS Style
-                                                                                                   ============================================ */
+                                                                                                                                           PAGE HEADER - Enterprise/SaaS Style
+                                                                                                                                           ============================================ */
         .page-header-wrapper {
             display: flex;
             justify-content: space-between;
@@ -1483,8 +1483,8 @@
         }
 
         /* ============================================
-                                                                                                                                ESTILOS DEL GRID DE TARJETAS
-                                                                                                                                ============================================ */
+                                                                                                                                                                        ESTILOS DEL GRID DE TARJETAS
+                                                                                                                                                                        ============================================ */
         .surface {
             background: #fff;
             border-radius: 16px;
@@ -1634,8 +1634,8 @@
         }
 
         /* ============================================
-                                                                                                                                MODAL DE CONFIRMACIÓN ELIMINAR
-                                                                                                                                ============================================ */
+                                                                                                                                                                        MODAL DE CONFIRMACIÓN ELIMINAR
+                                                                                                                                                                        ============================================ */
         .modal-delete-apple {
             border-radius: 24px;
             border: none;
@@ -1770,8 +1770,8 @@
         }
 
         /* ============================================
-                                                                                                                                ESTADOS DE CARGA
-                                                                                                                                ============================================ */
+                                                                                                                                                                        ESTADOS DE CARGA
+                                                                                                                                                                        ============================================ */
         .modal-loading-overlay {
             position: absolute;
             top: 0;
@@ -1828,9 +1828,9 @@
         }
 
         /* ============================================
-                                                                                                                                RESPONSIVE - BREAKPOINTS ESTÁNDAR
-                                                                                                                                xs: <576px | sm: 576-767px | md: 768-991px | lg: 992-1199px | xl: ≥1200px
-                                                                                                                                ============================================ */
+                                                                                                                                                                        RESPONSIVE - BREAKPOINTS ESTÁNDAR
+                                                                                                                                                                        xs: <576px | sm: 576-767px | md: 768-991px | lg: 992-1199px | xl: ≥1200px
+                                                                                                                                                                        ============================================ */
 
         /* ===== XL: Pantallas grandes (≥1200px) ===== */
         @media (min-width: 1200px) {
@@ -2188,8 +2188,8 @@
         }
 
         /* ============================================
-                                                                                                   WEB APP / PWA - OPTIMIZACIONES TOUCH & MOBILE
-                                                                                                   ============================================ */
+                                                                                                                                           WEB APP / PWA - OPTIMIZACIONES TOUCH & MOBILE
+                                                                                                                                           ============================================ */
 
         /* Touch Target mínimo 44x44px (Apple HIG / Material Design) */
         .design-card,
@@ -2464,6 +2464,19 @@
         let isViewingDesignImage = true;
 
         // ============================================
+        // CACHE DE CONTADORES DE PRODUCCIÓN (ENTERPRISE-LEVEL)
+        // Evita flickering al cambiar entre variantes/diseño
+        // Includes AbortController for request cancellation on rapid context switches
+        // ============================================
+        const productionCountCache = {
+            design: {}, // { designId: count }
+            variant: {}, // { variantId: count }
+            loading: new Set(), // Prevent duplicate fetches
+            requestVersion: 0, // Tracks current context to cancel stale responses
+            abortController: null // AbortController for cancelling pending requests
+        };
+
+        // ============================================
         // INICIALIZACIÓN: EVENT LISTENERS EN CARDS
         // ============================================
         document.querySelectorAll('.design-card').forEach(card => {
@@ -2507,6 +2520,14 @@
         });
 
         // ============================================
+        // CLEANUP: Limpiar cache de producción al cerrar modal
+        // ============================================
+        $('#designModal').on('hidden.bs.modal', function() {
+            clearProductionCountCache();
+            document.getElementById('productionTotalCount').innerText = '0';
+        });
+
+        // ============================================
         // FUNCIÓN: LIMPIAR MODAL
         // ============================================
         function clearModal() {
@@ -2521,7 +2542,8 @@
             document.getElementById('galleryCount').innerText = '0';
             document.getElementById('variantsTotalCount').innerText = '0';
             document.getElementById('variantsContentCount').innerText = '0';
-            document.getElementById('productionTotalCount').innerText = '0';
+            // NO resetear productionTotalCount aquí para evitar flickering
+            // El valor se actualizará cuando se cargue el nuevo diseño
             document.getElementById('noImageLabel').style.setProperty('display', 'none', 'important');
             document.getElementById('imageDescription').innerText = 'Imagen Principal del Diseño';
 
@@ -2715,12 +2737,13 @@
             updateVariantInfoForDesign();
             updateEditVariantsButton();
             updateMainImageProductionBadge(); // Actualizar badge de imagen principal
+            updateProductionTabCount(); // Actualizar contador de producción en pestaña
 
             // Si la pestaña de producción está activa, recargar los datos del diseño principal
             if ($('#production-tab').hasClass('active') || $('#production-content').hasClass('active show')) {
-                // Disparar evento para que production-tab.blade.php recargue los datos
-                if (typeof loadProductionData === 'function') {
-                    loadProductionData();
+                // Disparar recarga de datos de producción para el nuevo contexto (diseño principal)
+                if (typeof window.loadProductionData === 'function') {
+                    window.loadProductionData();
                 }
             }
         }
@@ -2849,6 +2872,150 @@
                 badge.textContent = '';
                 badge.dataset.count = '0';
             }
+        }
+
+        // ============================================
+        // FUNCIÓN: ACTUALIZAR CONTADOR DE PRODUCCIÓN EN PESTAÑA
+        // Enterprise-level: Actualizaciones instantáneas con cache + AbortController
+        // ============================================
+        function updateProductionTabCount(forceRefresh = false) {
+            const designId = currentDesign?.id;
+            const variantId = document.getElementById('modalVariantId')?.value;
+            const counterEl = document.getElementById('productionTotalCount');
+
+            if (!counterEl) return;
+
+            if (!designId) {
+                counterEl.innerText = '0';
+                return;
+            }
+
+            // Determinar la clave de cache
+            const cacheKey = variantId && variantId !== '' ? `variant_${variantId}` : `design_${designId}`;
+            const cacheType = variantId && variantId !== '' ? 'variant' : 'design';
+            const cacheId = variantId && variantId !== '' ? variantId : designId;
+
+            // ========== PASO 1: ACTUALIZACIÓN INSTANTÁNEA DESDE CACHE ==========
+            if (productionCountCache[cacheType][cacheId] !== undefined && !forceRefresh) {
+                counterEl.innerText = productionCountCache[cacheType][cacheId];
+                return; // Cache hit - no need to fetch
+            }
+
+            // ========== PASO 2: CANCELAR REQUEST ANTERIOR SI EXISTE ==========
+            if (productionCountCache.abortController) {
+                productionCountCache.abortController.abort();
+                console.log('[Counter] Previous request aborted - context changed');
+            }
+
+            // Crear nuevo AbortController para este request
+            productionCountCache.abortController = new AbortController();
+            const signal = productionCountCache.abortController.signal;
+
+            // Incrementar versión como medida de seguridad adicional
+            productionCountCache.requestVersion++;
+            const myVersion = productionCountCache.requestVersion;
+
+            // Resetear contador a 0 INMEDIATAMENTE
+            counterEl.innerText = '0';
+
+            const endpoint = variantId && variantId !== '' ?
+                `/admin/designs/${designId}/variants/${variantId}/exports/ajax` :
+                `/admin/designs/${designId}/exports-count`;
+
+            fetch(endpoint, {
+                    signal
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
+                .then(data => {
+                    // Doble verificación: versión + request no fue abortado
+                    if (myVersion !== productionCountCache.requestVersion) {
+                        return; // Versión obsoleta
+                    }
+
+                    if (data.success) {
+                        const count = data.count || 0;
+                        // Guardar en cache
+                        productionCountCache[cacheType][cacheId] = count;
+                        // Actualizar UI
+                        counterEl.innerText = count;
+                    }
+                })
+                .catch(error => {
+                    // Ignorar errores de abort (son intencionales)
+                    if (error.name === 'AbortError') {
+                        console.log('[Counter] Request aborted intentionally');
+                        return;
+                    }
+                    console.error('Error cargando contador de producción:', error);
+                    // En caso de error real, solo resetear si somos la versión actual
+                    if (myVersion === productionCountCache.requestVersion) {
+                        counterEl.innerText = '0';
+                    }
+                });
+        }
+
+        // ============================================
+        // FUNCIÓN: PRELLENAR CACHE DE PRODUCCIÓN AL ABRIR MODAL
+        // Se llama cuando se carga un diseño para tener los contadores listos
+        // ============================================
+        function prefetchProductionCounts(designId, variants) {
+            if (!designId) return;
+
+            // Prefetch contador del diseño principal
+            const designCacheKey = `design_${designId}`;
+            if (!productionCountCache.loading.has(designCacheKey)) {
+                productionCountCache.loading.add(designCacheKey);
+                fetch(`/admin/designs/${designId}/exports-count`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            productionCountCache.design[designId] = data.count || 0;
+                            // Si estamos en diseño principal, actualizar UI
+                            const currentVarId = document.getElementById('modalVariantId')?.value;
+                            if ((!currentVarId || currentVarId === '') && currentDesign?.id == designId) {
+                                document.getElementById('productionTotalCount').innerText = data.count || 0;
+                            }
+                        }
+                    })
+                    .finally(() => productionCountCache.loading.delete(designCacheKey));
+            }
+
+            // Prefetch contadores de todas las variantes
+            if (variants && variants.length > 0) {
+                variants.forEach(variant => {
+                    const varCacheKey = `variant_${variant.id}`;
+                    if (!productionCountCache.loading.has(varCacheKey)) {
+                        productionCountCache.loading.add(varCacheKey);
+                        fetch(`/admin/designs/${designId}/variants/${variant.id}/exports/ajax`)
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data.success) {
+                                    productionCountCache.variant[variant.id] = data.count || 0;
+                                }
+                            })
+                            .finally(() => productionCountCache.loading.delete(varCacheKey));
+                    }
+                });
+            }
+        }
+
+        // ============================================
+        // FUNCIÓN: LIMPIAR CACHE DE PRODUCCIÓN
+        // Se llama cuando se cierra el modal
+        // ============================================
+        function clearProductionCountCache() {
+            // Cancelar cualquier request pendiente
+            if (productionCountCache.abortController) {
+                productionCountCache.abortController.abort();
+                productionCountCache.abortController = null;
+            }
+            productionCountCache.design = {};
+            productionCountCache.variant = {};
+            productionCountCache.loading.clear();
+            productionCountCache.requestVersion = 0;
         }
 
         // ============================================
@@ -3057,6 +3224,9 @@
             currentGalleryIndex = 0;
             isViewingDesignImage = true;
 
+            // ENTERPRISE: Prellenar cache de contadores de producción para actualizaciones instantáneas
+            prefetchProductionCounts(design.id, currentVariants);
+
             // Datos del diseño
             document.getElementById('modalDesignTitle').innerText = design.name;
             document.getElementById('modalDesignDesc').innerText = design.description || 'Sin descripción';
@@ -3107,6 +3277,8 @@
 
             const exportsCount = design.exports_count || 0;
             document.getElementById('productionTotalCount').innerText = exportsCount;
+            // Guardar en cache para uso instantáneo
+            productionCountCache.design[design.id] = exportsCount;
 
             // Renderizar tabs de variantes
             const tabsContainer = document.getElementById('variantTabs');
@@ -3320,6 +3492,7 @@
             }
 
             updateEditVariantsButton();
+            updateProductionTabCount(); // Actualizar contador de producción en pestaña
         }
 
         // ============================================
@@ -3835,15 +4008,15 @@
                             <div class="design-image">
                                 ${imageUrl
                                     ? `<img src="${imageUrl}" alt="${escapeHtml(design.name)}" loading="lazy"
-                                                                                                                                onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                                                                                                               <div class="no-image" style="display: none;">
-                                                                                                                                   <i class="fas fa-image fa-3x mb-2 text-gray-300"></i>
-                                                                                                                                   <span>Sin imagen</span>
-                                                                                                                               </div>`
+                                                                                                                                                                        onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                                                                                                                                       <div class="no-image" style="display: none;">
+                                                                                                                                                                           <i class="fas fa-image fa-3x mb-2 text-gray-300"></i>
+                                                                                                                                                                           <span>Sin imagen</span>
+                                                                                                                                                                       </div>`
                                     : `<div class="no-image">
-                                                                                                                                   <i class="fas fa-image fa-3x mb-2 text-gray-300"></i>
-                                                                                                                                   <span>Sin imagen</span>
-                                                                                                                               </div>`
+                                                                                                                                                                           <i class="fas fa-image fa-3x mb-2 text-gray-300"></i>
+                                                                                                                                                                           <span>Sin imagen</span>
+                                                                                                                                                                       </div>`
                                 }
                             </div>
 
