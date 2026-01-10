@@ -80,3 +80,49 @@
         </div>
     </div>
 </div>
+
+{{-- Unidad Base Compatible (solo para unidades de compra) --}}
+<div class="row mt-3" id="compatible_unit_section" style="{{ old('is_base', $unit->is_base ?? false) ? 'display: none;' : '' }}">
+    <div class="col-md-6">
+        <div class="form-group">
+            <label for="compatible_base_unit_id" class="font-weight-bold">
+                <i class="fas fa-link text-info mr-1"></i>
+                Compatible con Unidad Base
+            </label>
+            <select name="compatible_base_unit_id" id="compatible_base_unit_id"
+                class="form-control @error('compatible_base_unit_id') is-invalid @enderror">
+                <option value="">-- Seleccionar unidad base --</option>
+                @foreach($baseUnits ?? [] as $baseUnit)
+                    <option value="{{ $baseUnit->id }}"
+                        {{ old('compatible_base_unit_id', $unit->compatible_base_unit_id ?? '') == $baseUnit->id ? 'selected' : '' }}>
+                        {{ $baseUnit->name }} ({{ $baseUnit->symbol }})
+                    </option>
+                @endforeach
+            </select>
+            @error('compatible_base_unit_id')
+                <span class="invalid-feedback">{{ $message }}</span>
+            @enderror
+            <small class="form-text text-muted">
+                <i class="fas fa-info-circle mr-1"></i>
+                Indica a qué unidad base se puede convertir esta unidad de compra.
+                <br>Ejemplo: ROLLO 50M es compatible con METRO.
+            </small>
+        </div>
+    </div>
+</div>
+
+@push('js')
+<script>
+$(function() {
+    // Mostrar/ocultar sección de unidad compatible según el checkbox
+    $('#is_base').on('change', function() {
+        if ($(this).is(':checked')) {
+            $('#compatible_unit_section').slideUp();
+            $('#compatible_base_unit_id').val('');
+        } else {
+            $('#compatible_unit_section').slideDown();
+        }
+    });
+});
+</script>
+@endpush

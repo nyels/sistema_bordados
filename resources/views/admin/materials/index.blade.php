@@ -30,17 +30,17 @@
         <div class="card-body">
             {{-- FILTROS Y ACCIONES --}}
             <div class="row mb-3">
-                <div class="col-md-6">
-                    <a href="{{ route('admin.materials.create') }}" class="btn btn-primary">
+                <div class="col-md-12 d-flex align-items-center flex-wrap">
+                    <a href="{{ route('admin.materials.create') }}" class="btn btn-primary mr-2 mb-2">
                         Nuevo <i class="fas fa-plus"></i>
                     </a>
-                    <a href="{{ route('admin.material-categories.index') }}" class="btn btn-secondary">
+                    <a href="{{ route('admin.material-categories.index') }}" class="btn btn-secondary mr-3 mb-2">
                         <i class="fas fa-layer-group"></i> Categorías
                     </a>
-                </div>
-                <div class="col-md-6">
-                    <form method="GET" action="{{ route('admin.materials.index') }}" class="form-inline justify-content-end">
-                        <select name="category" class="form-control form-control-sm mr-2" onchange="this.form.submit()">
+
+                    <form id="filterForm" method="GET" action="{{ route('admin.materials.index') }}"
+                        class="form-inline mb-2">
+                        <select name="category" class="form-control form-control-sm mr-2">
                             <option value="">Todas las categorías</option>
                             @foreach ($categories as $category)
                                 <option value="{{ $category->id }}"
@@ -76,62 +76,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($materials as $material)
-                            <tr>
-                                <td>{{ $loop->iteration }}</td>
-                                <td>
-                                    <span class="badge badge-primary">{{ $material->category->name ?? 'N/A' }}</span>
-                                </td>
-                                <td>
-                                    <strong>{{ $material->name }}</strong>
-                                    @if ($material->description)
-                                        <br><small class="text-muted">{{ Str::limit($material->description, 50) }}</small>
-                                    @endif
-                                </td>
-
-                                <td>{{ $material->composition ?? '-' }}</td>
-                                <td>
-                                    <span class="badge badge-secondary">
-                                        {{ $material->category->baseUnit->symbol ?? 'N/A' }}
-                                    </span>
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge badge-info">{{ $material->active_variants_count }}</span>
-                                </td>
-
-                                <td class="text-center align-middle">
-                                    <div class="d-flex justify-content-center align-items-center gap-1">
-                                        {{-- Botón Variantes --}}
-                                        <a href="{{ route('admin.material-variants.index', $material->id) }}"
-                                            class="btn btn-info btn-sm d-flex align-items-center justify-content-center"
-                                            style="width: 32px; height: 32px;" title="Ver Variantes">
-                                            <i class="fas fa-palette"></i>
-                                        </a>
-
-                                        {{-- Botón Conversiones --}}
-                                        <a href="{{ route('admin.material-conversions.index', $material->id) }}"
-                                            class="btn btn-secondary btn-sm d-flex align-items-center justify-content-center"
-                                            style="width: 32px; height: 32px;" title="Conversiones">
-                                            <i class="fas fa-exchange-alt"></i>
-                                        </a>
-
-                                        {{-- Botón Editar --}}
-                                        <a href="{{ route('admin.materials.edit', $material->id) }}"
-                                            class="btn btn-warning btn-sm d-flex align-items-center justify-content-center"
-                                            style="width: 32px; height: 32px;" title="Editar">
-                                            <i class="fas fa-edit text-white"></i>
-                                        </a>
-
-                                        {{-- Botón Eliminar --}}
-                                        <a href="{{ route('admin.materials.confirm_delete', $material->id) }}"
-                                            class="btn btn-danger btn-sm d-flex align-items-center justify-content-center"
-                                            style="width: 32px; height: 32px;" title="Eliminar">
-                                            <i class="fas fa-trash"></i>
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
+                        @include('admin.materials.partials.table_rows')
                     </tbody>
                 </table>
             </div>
@@ -195,59 +140,114 @@
 @section('js')
     <script>
         $(function() {
-            if ($.fn.DataTable.isDataTable('#example1')) {
-                $('#example1').DataTable().destroy();
+            var table;
+
+            // Helper to get DataTables options
+            function getTableOptions() {
+                return {
+                    "pageLength": 10,
+                    "language": {
+                        "emptyTable": "No hay información",
+                        "info": "Mostrando _START_ a _END_ de _TOTAL_ Materiales",
+                        "infoEmpty": "Mostrando 0 a 0 de 0 Materiales",
+                        "infoFiltered": "(Filtrado de _MAX_ total Materiales)",
+                        "lengthMenu": "Mostrar _MENU_ Materiales",
+                        "loadingRecords": "Cargando...",
+                        "processing": "Procesando...",
+                        "search": "Buscador:",
+                        "zeroRecords": "Sin resultados encontrados",
+                        "paginate": {
+                            "first": "Primero",
+                            "last": "Ultimo",
+                            "next": "Siguiente",
+                            "previous": "Anterior"
+                        }
+                    },
+                    "responsive": true,
+                    "lengthChange": true,
+                    "autoWidth": false,
+                    "buttons": [{
+                            text: '<i class="fas fa-copy"></i> COPIAR',
+                            extend: 'copy',
+                            className: 'btn btn-default'
+                        },
+                        {
+                            text: '<i class="fas fa-file-pdf"></i> PDF',
+                            extend: 'pdf',
+                            className: 'btn btn-danger'
+                        },
+                        {
+                            text: '<i class="fas fa-file-csv"></i> CSV',
+                            extend: 'csv',
+                            className: 'btn btn-info'
+                        },
+                        {
+                            text: '<i class="fas fa-file-excel"></i> EXCEL',
+                            extend: 'excel',
+                            className: 'btn btn-success'
+                        },
+                        {
+                            text: '<i class="fas fa-print"></i> IMPRIMIR',
+                            extend: 'print',
+                            className: 'btn btn-default'
+                        }
+                    ]
+                };
             }
 
-            $("#example1").DataTable({
-                "pageLength": 10,
-                "language": {
-                    "emptyTable": "No hay información",
-                    "info": "Mostrando _START_ a _END_ de _TOTAL_ Materiales",
-                    "infoEmpty": "Mostrando 0 a 0 de 0 Materiales",
-                    "infoFiltered": "(Filtrado de _MAX_ total Materiales)",
-                    "lengthMenu": "Mostrar _MENU_ Materiales",
-                    "loadingRecords": "Cargando...",
-                    "processing": "Procesando...",
-                    "search": "Buscador:",
-                    "zeroRecords": "Sin resultados encontrados",
-                    "paginate": {
-                        "first": "Primero",
-                        "last": "Ultimo",
-                        "next": "Siguiente",
-                        "previous": "Anterior"
+            // Initialize DataTable
+            function initDataTable() {
+                if ($.fn.DataTable.isDataTable('#example1')) {
+                    table = $('#example1').DataTable();
+                } else {
+                    table = $("#example1").DataTable(getTableOptions());
+                    table.buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+                }
+            }
+
+            initDataTable();
+
+            // Function to fetch data via AJAX
+            function fetchResults() {
+                let form = $('#filterForm');
+                let url = form.attr('action') + '?' + form.serialize();
+
+                $.ajax({
+                    url: url,
+                    type: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(response) {
+                        table.clear();
+
+                        var newRows = $(response.html).filter('tr');
+                        // Check for empty row if applicable, otherwise simple add
+                        // In this case MaterialController returns ALL matching rows or empty list.
+                        if (newRows.length > 0) {
+                            table.rows.add(newRows.toArray());
+                        }
+
+                        table.draw();
+                    },
+                    error: function(xhr) {
+                        console.error("Error loading data:", xhr);
                     }
-                },
-                "responsive": true,
-                "lengthChange": true,
-                "autoWidth": false,
-                "buttons": [{
-                        text: '<i class="fas fa-copy"></i> COPIAR',
-                        extend: 'copy',
-                        className: 'btn btn-default'
-                    },
-                    {
-                        text: '<i class="fas fa-file-pdf"></i> PDF',
-                        extend: 'pdf',
-                        className: 'btn btn-danger'
-                    },
-                    {
-                        text: '<i class="fas fa-file-csv"></i> CSV',
-                        extend: 'csv',
-                        className: 'btn btn-info'
-                    },
-                    {
-                        text: '<i class="fas fa-file-excel"></i> EXCEL',
-                        extend: 'excel',
-                        className: 'btn btn-success'
-                    },
-                    {
-                        text: '<i class="fas fa-print"></i> IMPRIMIR',
-                        extend: 'print',
-                        className: 'btn btn-default'
-                    }
-                ]
-            }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+                });
+            }
+
+            // Event Listeners
+            $('#filterForm select[name="category"]').on('change', function() {
+                fetchResults();
+
+                // Toggle Clear Button
+                if ($(this).val()) {
+                    // Ideally we would show the clear button here, but it's server-rendered.
+                    // For now, simpler to just filter.
+                }
+            });
+
+            // Handle Clear Button if it exists (prevent default reload if desired? No, reload is fine for clearing)
         });
     </script>
 @stop

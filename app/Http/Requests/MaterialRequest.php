@@ -28,7 +28,7 @@ class MaterialRequest extends FormRequest
                 'string',
                 'min:2',
                 'max:100',
-                'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-\_\.]+$/u',
+                'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-\_\:%\:]+$/u',
                 Rule::unique('materials', 'name')
                     ->where('material_category_id', $this->input('material_category_id'))
                     ->ignore($materialId),
@@ -37,13 +37,13 @@ class MaterialRequest extends FormRequest
                 'nullable',
                 'string',
                 'max:100',
-                'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-\_\.\%\/]+$/u',
+                'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-\_\,\.\%\:\;]+$/u',
             ],
             'description' => [
                 'nullable',
                 'string',
                 'max:500',
-                'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\.\,\-\_\(\)]+$/u',
+                'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\.\,\-\_\(\)\%\:\;]+$/u',
             ],
         ];
     }

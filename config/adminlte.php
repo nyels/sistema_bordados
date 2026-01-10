@@ -344,13 +344,14 @@ return [
                     'icon' => 'fas fa-fw fa-images',
                     'active' => ['admin/designs*'],
                 ],
-                [
-                    'text' => 'Visualizador (BETA)',
-                    'url' => 'admin/visualizer',
-                    'icon' => 'fas fa-fw fa-eye',
-                    'active' => ['admin/visualizer*'],
-                ],
+
             ],
+        ],
+        [
+            'text' => 'Visualizador (BETA)',
+            'url' => 'admin/visualizer',
+            'icon' => 'fas fa-fw fa-eye',
+            'active' => ['admin/visualizer*'],
         ],
         [
             'text' => 'Producción',
@@ -413,7 +414,7 @@ return [
                     'active' => ['admin/product-categories*'],
                 ],
                 [
-                    'text' => 'Catálogo de Productos',
+                    'text' => 'Catálogo',
                     'url' => 'admin/products',
                     'icon' => 'fas fa-fw fa-th-list',
                     'active' => ['admin/products*'],
@@ -439,6 +440,12 @@ return [
             'icon' => 'fas fa-fw fa-database',
             'active' => ['attributes*', 'attribute-values*', 'estados*', 'giros*', 'recomendaciones*', 'tipos_aplicacion*', 'admin/units*'],
             'submenu' => [
+                [
+                    'text' => 'Unidades de Medida',
+                    'url' => 'admin/units',
+                    'icon' => 'fas fa-fw fa-ruler-combined',
+                    'active' => ['admin/units*'],
+                ],
                 [
                     'text' => 'Atributos',
                     'url' => 'attributes',
@@ -469,12 +476,7 @@ return [
                     'icon' => 'fas fa-fw fa-palette',
                     'active' => ['tipos_aplicacion*'],
                 ],
-                [
-                    'text' => 'Unidades de Medida',
-                    'url' => 'admin/units',
-                    'icon' => 'fas fa-fw fa-ruler-combined',
-                    'active' => ['admin/units*'],
-                ],
+
             ],
         ],
         [

@@ -77,8 +77,8 @@
         }
 
         /* ============================================
-           SIDEBAR SECTION HEADERS WITH DIVIDERS
-           ============================================ */
+                       SIDEBAR SECTION HEADERS WITH DIVIDERS
+                       ============================================ */
         .nav-sidebar .nav-header {
             padding: 0.8rem 1rem 0.5rem 1rem;
             font-size: 0.75rem;
@@ -182,4 +182,26 @@
             });
         </script>
     @endif
+
+    {{-- Sidebar Auto-Scroll al expandir menús --}}
+    <script>
+        $(function() {
+            $('[data-widget="treeview"]').on('expanded.lte.treeview', function() {
+                setTimeout(function() {
+                    var $lastOpened = $('.nav-sidebar .menu-open').last();
+
+                    if ($lastOpened.length) {
+                        var $lastItem = $lastOpened.find('> .nav-treeview > .nav-item').last();
+
+                        if ($lastItem.length) {
+                            $lastItem[0].scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'nearest'
+                            });
+                        }
+                    }
+                }, 100);
+            });
+        });
+    </script>
 @stop

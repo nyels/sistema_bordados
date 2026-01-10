@@ -317,6 +317,12 @@
                                         </td>
                                         <td class="text-right">
                                             ${{ number_format($item->unit_price, 2) }}
+                                            @if ($item->conversion_factor != 1 && $item->converted_quantity > 0)
+                                                <br>
+                                                <small class="text-muted">
+                                                    ${{ number_format($item->subtotal / $item->converted_quantity, 2) }}/{{ $item->materialVariant->material->category->baseUnit->symbol ?? '' }}
+                                                </small>
+                                            @endif
                                         </td>
                                         <td class="text-right font-weight-bold">
                                             ${{ number_format($item->subtotal, 2) }}
@@ -412,7 +418,7 @@
                                 @foreach ($receptions as $reception)
                                     <div class="time-label">
                                         <span class="bg-{{ $reception->status_color }}">
-                                            {{ $reception->received_at->format('d/m/Y') }}
+                                            {{ $reception->received_at->format('d/m/y') }}
                                         </span>
                                     </div>
 
@@ -710,10 +716,11 @@
         }
 
         .timeline>div>.timeline-item>.time {
-            color: #999;
+            color: #6c757d;
             float: right;
             padding: 10px;
-            font-size: 12px;
+            font-size: 15px;
+            font-weight: bold;
         }
 
         .timeline>div>.timeline-item>.timeline-header {

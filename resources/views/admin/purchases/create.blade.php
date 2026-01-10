@@ -360,12 +360,22 @@
                 $selectMaterial.prop('disabled', true).html('<option value="">Cargando...</option>');
 
                 $.ajax({
-                    url: `/purchases/ajax/materials/${categoryId}`,
+                    url: `/admin/purchases/ajax/materials/${categoryId}`,
                     method: 'GET',
                     headers: {
                         'X-CSRF-TOKEN': csrfToken
                     },
                     success: function(data) {
+                        if (data.length === 0) {
+                            $selectMaterial.html('<option value="">No hay materiales</option>');
+                            Swal.fire({
+                                icon: 'info',
+                                title: 'Sin materiales',
+                                text: 'No hay materiales registrados en esta categoría',
+                                confirmButtonColor: '#3085d6'
+                            });
+                            return;
+                        }
                         let options = '<option value="">Seleccionar material...</option>';
                         data.forEach(function(material) {
                             const composition = material.composition ?
@@ -375,9 +385,20 @@
                         });
                         $selectMaterial.html(options).prop('disabled', false);
                     },
-                    error: function() {
+                    error: function(xhr) {
                         $selectMaterial.html('<option value="">Error al cargar</option>');
-                        alert('Error al cargar materiales');
+                        console.error('Error loading materials:', xhr);
+                        let msg = 'No se pudieron cargar los materiales.';
+                        if (xhr.status === 404) msg =
+                            'Ruta no encontrada (404). Contacte al administrador.';
+                        if (xhr.status === 500) msg = 'Error interno del servidor (500).';
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error al cargar materiales',
+                            text: xhr.responseJSON?.message || msg,
+                            confirmButtonColor: '#d33'
+                        });
                     }
                 });
             });
@@ -399,12 +420,22 @@
                 $selectVariant.prop('disabled', true).html('<option value="">Cargando...</option>');
 
                 $.ajax({
-                    url: `/purchases/ajax/variants/${materialId}`,
+                    url: `/admin/purchases/ajax/variants/${materialId}`,
                     method: 'GET',
                     headers: {
                         'X-CSRF-TOKEN': csrfToken
                     },
                     success: function(data) {
+                        if (data.length === 0) {
+                            $selectVariant.html('<option value="">No hay variantes</option>');
+                            Swal.fire({
+                                icon: 'info',
+                                title: 'Sin variantes',
+                                text: 'Este material no tiene variantes (SKU/colores) registradas',
+                                confirmButtonColor: '#3085d6'
+                            });
+                            return;
+                        }
                         let options = '<option value="">Seleccionar variante...</option>';
                         data.forEach(function(variant) {
                             const color = variant.color ? ` - ${variant.color}` : '';
@@ -416,9 +447,18 @@
                         });
                         $selectVariant.html(options).prop('disabled', false);
                     },
-                    error: function() {
+                    error: function(xhr) {
                         $selectVariant.html('<option value="">Error al cargar</option>');
-                        alert('Error al cargar variantes');
+                        console.error('Error loading variants:', xhr);
+                        let msg = 'No se pudieron cargar las variantes.';
+                        if (xhr.status === 404) msg = 'Ruta no encontrada (404).';
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error al cargar variantes',
+                            text: xhr.responseJSON?.message || msg,
+                            confirmButtonColor: '#d33'
+                        });
                     }
                 });
             });
@@ -442,12 +482,22 @@
                 $selectUnit.prop('disabled', true).html('<option value="">Cargando...</option>');
 
                 $.ajax({
-                    url: `/purchases/ajax/units/${currentItem.material_id}`,
+                    url: `/admin/purchases/ajax/units/${currentItem.material_id}`,
                     method: 'GET',
                     headers: {
                         'X-CSRF-TOKEN': csrfToken
                     },
                     success: function(data) {
+                        if (!data.units || data.units.length === 0) {
+                            $selectUnit.html('<option value="">No hay unidades</option>');
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Sin unidades de compra',
+                                text: 'Este material no tiene unidades de compra configuradas. Configure las conversiones primero.',
+                                confirmButtonColor: '#f0ad4e'
+                            });
+                            return;
+                        }
                         let options = '<option value="">Seleccionar unidad...</option>';
                         data.units.forEach(function(unit) {
                             const isBase = unit.is_base ? ' (Base)' : '';
@@ -456,9 +506,18 @@
                         });
                         $selectUnit.html(options).prop('disabled', false);
                     },
-                    error: function() {
+                    error: function(xhr) {
                         $selectUnit.html('<option value="">Error al cargar</option>');
-                        alert('Error al cargar unidades');
+                        console.error('Error loading units:', xhr);
+                        let msg = 'No se pudieron cargar las unidades de compra.';
+                        if (xhr.status === 404) msg = 'Ruta no encontrada (404).';
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error al cargar unidades',
+                            text: xhr.responseJSON?.message || msg,
+                            confirmButtonColor: '#d33'
+                        });
                     }
                 });
             });
@@ -542,7 +601,12 @@
                 );
 
                 if (exists) {
-                    alert('Este material con esta unidad ya está agregado');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Item duplicado',
+                        text: 'Este material con esta unidad ya está agregado a la orden',
+                        confirmButtonColor: '#f0ad4e'
+                    });
                     return;
                 }
 
@@ -600,7 +664,7 @@
                         `<br><small class="text-info">= ${item.converted_quantity.toFixed(2)} ${item.base_unit_symbol}</small>` :
                         '';
                     const unitCostInfo = item.conversion_factor != 1 ?
-                        `<br><small class="text-muted">$${item.converted_unit_cost.toFixed(4)}/${item.base_unit_symbol}</small>` :
+                        `<br><small class="text-muted">$${item.converted_unit_cost.toFixed(2)}/${item.base_unit_symbol}</small>` :
                         '';
 
                     html += `
@@ -756,13 +820,23 @@
             $('#purchaseForm').on('submit', function(e) {
                 if (items.length === 0) {
                     e.preventDefault();
-                    alert('Debe agregar al menos un item a la orden de compra');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Sin items',
+                        text: 'Debe agregar al menos un item a la orden de compra',
+                        confirmButtonColor: '#f0ad4e'
+                    });
                     return false;
                 }
 
                 if (!$('#proveedor_id').val()) {
                     e.preventDefault();
-                    alert('Debe seleccionar un proveedor');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Proveedor requerido',
+                        text: 'Debe seleccionar un proveedor para la orden',
+                        confirmButtonColor: '#f0ad4e'
+                    });
                     return false;
                 }
 

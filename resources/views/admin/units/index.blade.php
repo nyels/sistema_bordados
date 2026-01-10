@@ -42,6 +42,7 @@
                             <th>Nombre</th>
                             <th>Símbolo</th>
                             <th>Tipo</th>
+                            <th>Compatible con</th>
                             <th style="text-align: center;">Acciones</th>
                         </tr>
                     </thead>
@@ -58,14 +59,29 @@
                                         <span class="badge badge-secondary">Compra</span>
                                     @endif
                                 </td>
+                                <td>
+                                    @if ($unit->is_base)
+                                        <span class="text-muted">-</span>
+                                    @elseif ($unit->compatibleBaseUnit)
+                                        <span class="badge badge-success">
+                                            <i class="fas fa-link mr-1"></i>
+                                            {{ $unit->compatibleBaseUnit->name }}
+                                        </span>
+                                    @else
+                                        <span class="badge badge-warning">
+                                            <i class="fas fa-exclamation-triangle mr-1"></i>
+                                            Sin configurar
+                                        </span>
+                                    @endif
+                                </td>
                                 <td class="text-center">
                                     <div class="d-flex justify-content-center align-items-center gap-1">
                                         <a href="{{ route('admin.units.edit', $unit->id) }}" class="btn btn-warning btn-sm"
                                             title="Editar">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <a href="{{ route('admin.units.confirm_delete', $unit->id) }}"
-                                            class="btn btn-danger btn-sm" title="Eliminar">
+                                        <a href="{{ route('admin.units.confirm_delete', $unit->id) }}" class="btn btn-danger btn-sm"
+                                            title="Eliminar">
                                             <i class="fas fa-trash"></i>
                                         </a>
                                     </div>

@@ -344,6 +344,7 @@
                 $('#resultCard').addClass('d-none');
                 $('#uploadCard').removeClass('d-none');
                 fileInput.val(''); // Reset input
+                fileInput.click(); // Open system dialog
             });
 
             // "Centrar Vista" (Reset Zoom/Pan - Placeholder for now)
@@ -374,7 +375,9 @@
                     return;
                 }
 
-                const validExts = ['dst', 'pes', 'jef', 'exp', 'vp3', 'xxx'];
+                const validExts = ['dst', 'pes', 'jef', 'jef+', 'exp', 'vp3', 'vip', 'xxx', 'hus', 'pec', 'sew',
+                    'shv', 'tap', 'tbf', 'u01', '10o', 'emd', 'csd', 'pcs', 'ksm'
+                ];
                 if (!validExts.includes(ext)) {
                     Swal.fire({
                         icon: 'error',

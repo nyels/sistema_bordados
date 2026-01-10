@@ -50,15 +50,15 @@ class ProveedorController extends Controller
         ]);
         try {
             $proveedor = new Proveedor();
-            $proveedor->nombre_proveedor = strtoupper(trim($request->nombre_proveedor));
+            $proveedor->nombre_proveedor = mb_strtoupper(trim($request->nombre_proveedor), 'UTF-8');
             $proveedor->giro_id = $request->giro_id;
-            $proveedor->direccion = strtoupper(trim($request->direccion));
+            $proveedor->direccion = mb_strtoupper(trim($request->direccion), 'UTF-8');
             $proveedor->codigo_postal = $request->codigo_postal;
             $proveedor->telefono = $request->telefono;
             $proveedor->email = $request->email;
             $proveedor->estado_id = $request->estado_id;
-            $proveedor->ciudad = strtoupper(trim($request->ciudad));
-            $proveedor->nombre_contacto = strtoupper(trim($request->nombre_contacto));
+            $proveedor->ciudad = mb_strtoupper(trim($request->ciudad), 'UTF-8');
+            $proveedor->nombre_contacto = mb_strtoupper(trim($request->nombre_contacto), 'UTF-8');
             $proveedor->telefono_contacto = $request->telefono_contacto;
             $proveedor->email_contacto = $request->email_contacto;
             $proveedor->save();
@@ -111,15 +111,15 @@ class ProveedorController extends Controller
 
         try {
 
-            $proveedor->nombre_proveedor = strtoupper(trim($request->nombre_proveedor));
+            $proveedor->nombre_proveedor = mb_strtoupper(trim($request->nombre_proveedor), 'UTF-8');
             $proveedor->giro_id = $request->giro_id;
-            $proveedor->direccion = strtoupper(trim($request->direccion));
+            $proveedor->direccion = mb_strtoupper(trim($request->direccion), 'UTF-8');
             $proveedor->codigo_postal = $request->codigo_postal;
             $proveedor->telefono = $request->telefono;
             $proveedor->email = $request->email;
             $proveedor->estado_id = $request->estado_id;
-            $proveedor->ciudad = strtoupper(trim($request->ciudad));
-            $proveedor->nombre_contacto = strtoupper(trim($request->nombre_contacto));
+            $proveedor->ciudad = mb_strtoupper(trim($request->ciudad), 'UTF-8');
+            $proveedor->nombre_contacto = mb_strtoupper(trim($request->nombre_contacto), 'UTF-8');
             $proveedor->telefono_contacto = $request->telefono_contacto;
             $proveedor->email_contacto = $request->email_contacto;
 

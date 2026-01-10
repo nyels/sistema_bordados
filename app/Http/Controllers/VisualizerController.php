@@ -57,7 +57,7 @@ class VisualizerController extends Controller
 
                 return response()->json([
                     'success' => true,
-                    'data' => array_merge($result, ['svg_content' => $svg])
+                    'data' => $this->cleanUtf8(array_merge($result, ['svg_content' => $svg]))
                 ]);
             } else {
                 return response()->json([
@@ -77,5 +77,23 @@ class VisualizerController extends Controller
                 @unlink($tempPath);
             }
         }
+    }
+    /**
+     * Limpia recursivamente los datos para asegurar UTF-8 válido.
+     */
+    private function cleanUtf8($data)
+    {
+        if (is_string($data)) {
+            // mb_convert_encoding con 'UTF-8' como input y output reemplaza bytes inválidos
+            return mb_convert_encoding($data, 'UTF-8', 'UTF-8');
+        }
+        if (is_array($data)) {
+            $ret = [];
+            foreach ($data as $i => $d) {
+                $ret[$i] = $this->cleanUtf8($d);
+            }
+            return $ret;
+        }
+        return $data;
     }
 }

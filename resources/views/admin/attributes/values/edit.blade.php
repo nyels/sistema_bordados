@@ -176,9 +176,9 @@
             let isInitialLoad = true;
 
             /**
-             * Obtiene el nombre del color usando el algoritmo ntc
+             * Obtiene el nombre del color usando ntc.js
              */
-            function fetchColorName(hex) {
+            function getColorName(hex) {
                 if (!hex || hex.length < 4) return "";
                 const match = ntc.name(hex);
                 return match[1];
@@ -191,7 +191,7 @@
 
                     // Solo autocompletar el nombre si el usuario está interactuando (no en carga inicial)
                     if (!isInitialLoad) {
-                        const colorName = fetchColorName(hex);
+                        const colorName = getColorName(hex);
                         $valueInput.val(colorName);
                     }
                 }
@@ -213,7 +213,7 @@
                     $colorContainer.slideUp();
                     $hexInput.prop('required', false);
 
-                    // Solo resetear si el usuario está CAMBIANDO el select, 
+                    // Solo resetear si el usuario está CAMBIANDO el select,
                     // no cuando la página carga por primera vez.
                     if (!isInitialLoad) {
                         $hexInput.val('');
@@ -226,7 +226,7 @@
             // --- MANEJO DE EVENTOS ---
 
             $attributeSelect.on('change', function() {
-                isInitialLoad = false; // El usuario cambió manualmente, ya no es carga inicial
+                isInitialLoad = false;
                 toggleDisplay();
             });
 

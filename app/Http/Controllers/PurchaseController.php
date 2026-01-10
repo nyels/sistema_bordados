@@ -93,6 +93,13 @@ class PurchaseController extends Controller
 
             $statuses = PurchaseStatus::options();
 
+            if ($request->ajax()) {
+                return response()->json([
+                    'html' => view('admin.purchases.partials.table_rows', compact('purchases'))->render(),
+                    'pagination' => (string) $purchases->links()
+                ]);
+            }
+
             return view('admin.purchases.index', compact('purchases', 'proveedores', 'statuses'));
         } catch (ValidationException $e) {
             return redirect()->route('admin.purchases.index')
@@ -311,6 +318,7 @@ class PurchaseController extends Controller
                     'unit_price'         => (float) $item->unit_price,
                     'conversion_factor'  => (float) $item->conversion_factor,
                     'converted_quantity' => (float) $item->converted_quantity,
+                    'converted_unit_cost' => $item->converted_quantity > 0 ? ((float) $item->subtotal / (float) $item->converted_quantity) : 0,
                     'base_unit_symbol'   => $item->materialVariant->material->category->baseUnit->symbol ?? '',
                     'subtotal'           => (float) $item->subtotal,
                 ];

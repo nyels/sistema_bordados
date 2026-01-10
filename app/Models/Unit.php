@@ -70,7 +70,7 @@ class Unit extends Model
 
     public function purchaseUnits()
     {
-        return $this->hasMany(Unit::class, 'compatible_base_unit_id');
+        return $this->hasMany(Unit::class, 'compatible_base_unit_id')->where('activo', true);
     }
 
     /*

@@ -49,6 +49,12 @@ class MaterialController extends Controller
                 ->ordered()
                 ->get();
 
+            if ($request->ajax()) {
+                return response()->json([
+                    'html' => view('admin.materials.partials.table_rows', compact('materials'))->render(),
+                ]);
+            }
+
             return view('admin.materials.index', compact('materials', 'categories'));
         } catch (\Exception $e) {
             Log::error('Error al listar materiales: ' . $e->getMessage(), [
@@ -78,7 +84,7 @@ class MaterialController extends Controller
                 ->get();
 
             if ($categories->isEmpty()) {
-                return redirect()->route('materials.index')
+                return redirect()->route('admin.materials.index')
                     ->with('error', 'Debe crear al menos una categoría de material primero');
             }
 
@@ -88,7 +94,7 @@ class MaterialController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('materials.index')
+            return redirect()->route('admin.materials.index')
                 ->with('error', 'Error al cargar el formulario');
         }
     }
@@ -128,7 +134,7 @@ class MaterialController extends Controller
                 'ip' => $request->ip(),
             ]);
 
-            return redirect()->route('materials.index')
+            return redirect()->route('admin.materials.index')
                 ->with('success', 'Material creado exitosamente');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -139,7 +145,7 @@ class MaterialController extends Controller
                 'exception' => $e->getTraceAsString(),
             ]);
 
-            return redirect()->route('materials.create')
+            return redirect()->route('admin.materials.create')
                 ->withInput()
                 ->with('error', 'Error al crear el material');
         }
@@ -155,7 +161,7 @@ class MaterialController extends Controller
     {
         try {
             if (!is_numeric($id) || $id < 1 || $id > 999999999) {
-                return redirect()->route('materials.index')
+                return redirect()->route('admin.materials.index')
                     ->with('error', 'Material no válido');
             }
 
@@ -175,7 +181,7 @@ class MaterialController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('materials.index')
+            return redirect()->route('admin.materials.index')
                 ->with('error', 'Material no encontrado');
         }
     }
@@ -190,7 +196,7 @@ class MaterialController extends Controller
     {
         try {
             if (!is_numeric($id) || $id < 1 || $id > 999999999) {
-                return redirect()->route('materials.index')
+                return redirect()->route('admin.materials.index')
                     ->with('error', 'Material no válido');
             }
 
@@ -211,7 +217,7 @@ class MaterialController extends Controller
                 : null;
 
             if (!$material->isDirty()) {
-                return redirect()->route('materials.index')
+                return redirect()->route('admin.materials.index')
                     ->with('info', 'No se realizaron cambios');
             }
 
@@ -227,7 +233,7 @@ class MaterialController extends Controller
                 'ip' => $request->ip(),
             ]);
 
-            return redirect()->route('materials.index')
+            return redirect()->route('admin.materials.index')
                 ->with('success', 'Material actualizado exitosamente');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -238,7 +244,7 @@ class MaterialController extends Controller
                 'exception' => $e->getTraceAsString(),
             ]);
 
-            return redirect()->route('materials.edit', $id)
+            return redirect()->route('admin.materials.edit', $id)
                 ->withInput()
                 ->with('error', 'Error al actualizar el material');
         }
@@ -254,7 +260,7 @@ class MaterialController extends Controller
     {
         try {
             if (!is_numeric($id) || $id < 1 || $id > 999999999) {
-                return redirect()->route('materials.index')
+                return redirect()->route('admin.materials.index')
                     ->with('error', 'Material no válido');
             }
 
@@ -270,7 +276,7 @@ class MaterialController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('materials.index')
+            return redirect()->route('admin.materials.index')
                 ->with('error', 'Material no encontrado');
         }
     }
@@ -285,7 +291,7 @@ class MaterialController extends Controller
     {
         try {
             if (!is_numeric($id) || $id < 1 || $id > 999999999) {
-                return redirect()->route('materials.index')
+                return redirect()->route('admin.materials.index')
                     ->with('error', 'Material no válido');
             }
 
@@ -295,7 +301,7 @@ class MaterialController extends Controller
 
             $validation = $material->canDelete();
             if (!$validation['can_delete']) {
-                return redirect()->route('materials.index')
+                return redirect()->route('admin.materials.index')
                     ->with('error', $validation['message']);
             }
 
@@ -313,7 +319,7 @@ class MaterialController extends Controller
                 'ip' => request()->ip(),
             ]);
 
-            return redirect()->route('materials.index')
+            return redirect()->route('admin.materials.index')
                 ->with('success', 'Material eliminado exitosamente');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -324,7 +330,7 @@ class MaterialController extends Controller
                 'exception' => $e->getTraceAsString(),
             ]);
 
-            return redirect()->route('materials.index')
+            return redirect()->route('admin.materials.index')
                 ->with('error', 'Error al eliminar el material');
         }
     }

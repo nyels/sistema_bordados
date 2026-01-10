@@ -17,7 +17,9 @@
       "Bash(dir /b \"c:\\\\xampp\\\\htdocs\\\\laravel\\\\sistema_bordados\\\\storage\\\\app\\\\public\\\\designs\\\\images\\\\2025\\\\12\\\\*.webp\")",
       "Bash(curl:*)",
       "Bash(ls:*)",
-      "Bash(php -l:*)"
+      "Bash(php -l:*)",
+      "Bash(php check_units.php:*)",
+      "Bash(php fix_units.php:*)"
     ]
   }
 }

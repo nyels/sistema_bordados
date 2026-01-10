@@ -23,7 +23,7 @@ class MaterialVariantController extends Controller
     {
         try {
             if (!is_numeric($materialId) || $materialId < 1 || $materialId > 999999999) {
-                return redirect()->route('materials.index')
+                return redirect()->route('admin.materials.index')
                     ->with('error', 'Material no válido');
             }
 
@@ -43,7 +43,7 @@ class MaterialVariantController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('materials.index')
+            return redirect()->route('admin.materials.index')
                 ->with('error', 'Error al cargar las variantes');
         }
     }
@@ -58,7 +58,7 @@ class MaterialVariantController extends Controller
     {
         try {
             if (!is_numeric($materialId) || $materialId < 1 || $materialId > 999999999) {
-                return redirect()->route('materials.index')
+                return redirect()->route('admin.materials.index')
                     ->with('error', 'Material no válido');
             }
 
@@ -75,7 +75,7 @@ class MaterialVariantController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('materials.index')
+            return redirect()->route('admin.materials.index')
                 ->with('error', 'Error al cargar el formulario');
         }
     }
@@ -90,7 +90,7 @@ class MaterialVariantController extends Controller
     {
         try {
             if (!is_numeric($materialId) || $materialId < 1 || $materialId > 999999999) {
-                return redirect()->route('materials.index')
+                return redirect()->route('admin.materials.index')
                     ->with('error', 'Material no válido');
             }
 
@@ -122,7 +122,7 @@ class MaterialVariantController extends Controller
                 'ip' => $request->ip(),
             ]);
 
-            return redirect()->route('material-variants.index', $material->id)
+            return redirect()->route('admin.material-variants.index', $material->id)
                 ->with('success', 'Variante creada exitosamente');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -133,7 +133,7 @@ class MaterialVariantController extends Controller
                 'exception' => $e->getTraceAsString(),
             ]);
 
-            return redirect()->route('material-variants.create', $materialId)
+            return redirect()->route('admin.material-variants.create', $materialId)
                 ->withInput()
                 ->with('error', 'Error al crear la variante');
         }
@@ -149,7 +149,7 @@ class MaterialVariantController extends Controller
     {
         try {
             if (!is_numeric($materialId) || $materialId < 1 || !is_numeric($id) || $id < 1) {
-                return redirect()->route('materials.index')
+                return redirect()->route('admin.materials.index')
                     ->with('error', 'Parámetros no válidos');
             }
 
@@ -169,7 +169,7 @@ class MaterialVariantController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('materials.index')
+            return redirect()->route('admin.materials.index')
                 ->with('error', 'Variante no encontrada');
         }
     }
@@ -184,7 +184,7 @@ class MaterialVariantController extends Controller
     {
         try {
             if (!is_numeric($materialId) || $materialId < 1 || !is_numeric($id) || $id < 1) {
-                return redirect()->route('materials.index')
+                return redirect()->route('admin.materials.index')
                     ->with('error', 'Parámetros no válidos');
             }
 
@@ -203,7 +203,7 @@ class MaterialVariantController extends Controller
             $variant->min_stock_alert = (float) $request->min_stock_alert;
 
             if (!$variant->isDirty()) {
-                return redirect()->route('material-variants.index', $material->id)
+                return redirect()->route('admin.material-variants.index', $material->id)
                     ->with('info', 'No se realizaron cambios');
             }
 
@@ -220,7 +220,7 @@ class MaterialVariantController extends Controller
                 'ip' => $request->ip(),
             ]);
 
-            return redirect()->route('material-variants.index', $material->id)
+            return redirect()->route('admin.material-variants.index', $material->id)
                 ->with('success', 'Variante actualizada exitosamente');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -232,7 +232,7 @@ class MaterialVariantController extends Controller
                 'exception' => $e->getTraceAsString(),
             ]);
 
-            return redirect()->route('material-variants.edit', [$materialId, $id])
+            return redirect()->route('admin.material-variants.edit', [$materialId, $id])
                 ->withInput()
                 ->with('error', 'Error al actualizar la variante');
         }
@@ -248,7 +248,7 @@ class MaterialVariantController extends Controller
     {
         try {
             if (!is_numeric($materialId) || $materialId < 1 || !is_numeric($id) || $id < 1) {
-                return redirect()->route('materials.index')
+                return redirect()->route('admin.materials.index')
                     ->with('error', 'Parámetros no válidos');
             }
 
@@ -268,7 +268,7 @@ class MaterialVariantController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('materials.index')
+            return redirect()->route('admin.materials.index')
                 ->with('error', 'Variante no encontrada');
         }
     }
@@ -283,7 +283,7 @@ class MaterialVariantController extends Controller
     {
         try {
             if (!is_numeric($materialId) || $materialId < 1 || !is_numeric($id) || $id < 1) {
-                return redirect()->route('materials.index')
+                return redirect()->route('admin.materials.index')
                     ->with('error', 'Parámetros no válidos');
             }
 
@@ -297,7 +297,7 @@ class MaterialVariantController extends Controller
 
             // Validar que no tenga stock
             if ($variant->current_stock > 0) {
-                return redirect()->route('material-variants.index', $material->id)
+                return redirect()->route('admin.material-variants.index', $material->id)
                     ->with('error', 'No se puede eliminar: la variante tiene stock disponible (' . number_format($variant->current_stock, 2) . ')');
             }
 
@@ -316,7 +316,7 @@ class MaterialVariantController extends Controller
                 'ip' => request()->ip(),
             ]);
 
-            return redirect()->route('material-variants.index', $material->id)
+            return redirect()->route('admin.material-variants.index', $material->id)
                 ->with('success', 'Variante eliminada exitosamente');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -328,7 +328,7 @@ class MaterialVariantController extends Controller
                 'exception' => $e->getTraceAsString(),
             ]);
 
-            return redirect()->route('material-variants.index', $materialId)
+            return redirect()->route('admin.material-variants.index', $materialId)
                 ->with('error', 'Error al eliminar la variante');
         }
     }

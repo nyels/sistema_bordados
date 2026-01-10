@@ -371,12 +371,22 @@
                 $selectMaterial.prop('disabled', true).html('<option value="">Cargando...</option>');
 
                 $.ajax({
-                    url: `/purchases/ajax/materials/${categoryId}`,
+                    url: `/admin/purchases/ajax/materials/${categoryId}`,
                     method: 'GET',
                     headers: {
                         'X-CSRF-TOKEN': csrfToken
                     },
                     success: function(data) {
+                        if (data.length === 0) {
+                            $selectMaterial.html('<option value="">No hay materiales</option>');
+                            Swal.fire({
+                                icon: 'info',
+                                title: 'Sin materiales',
+                                text: 'No hay materiales registrados en esta categoría',
+                                confirmButtonColor: '#3085d6'
+                            });
+                            return;
+                        }
                         let options = '<option value="">Seleccionar material...</option>';
                         data.forEach(function(material) {
                             const composition = material.composition ?
@@ -386,12 +396,25 @@
                         });
                         $selectMaterial.html(options).prop('disabled', false);
                     },
-                    error: function() {
+                    error: function(xhr) {
                         $selectMaterial.html('<option value="">Error al cargar</option>');
+                        console.error('Error loading materials:', xhr);
+                        let msg = 'No se pudieron cargar los materiales.';
+                        if (xhr.status === 404) msg =
+                            'Ruta no encontrada (404). Contacte al administrador.';
+                        if (xhr.status === 500) msg = 'Error interno del servidor (500).';
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error al cargar materiales',
+                            text: xhr.responseJSON?.message || msg,
+                            confirmButtonColor: '#d33'
+                        });
                     }
                 });
             });
 
+            // Cambio de material
             $selectMaterial.on('change', function() {
                 const materialId = $(this).val();
                 currentItem.material_id = materialId;
@@ -399,31 +422,59 @@
 
                 resetFromVariant();
 
-                if (!materialId) return;
+                if (!materialId) {
+                    $selectVariant.prop('disabled', true).html(
+                        '<option value="">Primero seleccione material</option>');
+                    return;
+                }
 
                 $selectVariant.prop('disabled', true).html('<option value="">Cargando...</option>');
 
                 $.ajax({
-                    url: `/purchases/ajax/variants/${materialId}`,
+                    url: `/admin/purchases/ajax/variants/${materialId}`,
                     method: 'GET',
                     headers: {
                         'X-CSRF-TOKEN': csrfToken
                     },
                     success: function(data) {
+                        if (data.length === 0) {
+                            $selectVariant.html('<option value="">No hay variantes</option>');
+                            Swal.fire({
+                                icon: 'info',
+                                title: 'Sin variantes',
+                                text: 'Este material no tiene variantes (SKU/colores) registradas',
+                                confirmButtonColor: '#3085d6'
+                            });
+                            return;
+                        }
                         let options = '<option value="">Seleccionar variante...</option>';
                         data.forEach(function(variant) {
                             const color = variant.color ? ` - ${variant.color}` : '';
+                            const stock = variant.current_stock ?
+                                ` (Stock: ${parseFloat(variant.current_stock).toFixed(2)})` :
+                                '';
                             options +=
-                                `<option value="${variant.id}" data-sku="${variant.sku}" data-color="${variant.color || ''}">${variant.sku}${color}</option>`;
+                                `<option value="${variant.id}" data-sku="${variant.sku}" data-color="${variant.color || ''}">${variant.sku}${color}${stock}</option>`;
                         });
                         $selectVariant.html(options).prop('disabled', false);
                     },
-                    error: function() {
+                    error: function(xhr) {
                         $selectVariant.html('<option value="">Error al cargar</option>');
+                        console.error('Error loading variants:', xhr);
+                        let msg = 'No se pudieron cargar las variantes.';
+                        if (xhr.status === 404) msg = 'Ruta no encontrada (404).';
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error al cargar variantes',
+                            text: xhr.responseJSON?.message || msg,
+                            confirmButtonColor: '#d33'
+                        });
                     }
                 });
             });
 
+            // Cambio de variante
             $selectVariant.on('change', function() {
                 const variantId = $(this).val();
                 const $selected = $(this).find('option:selected');
@@ -433,26 +484,51 @@
 
                 resetFromUnit();
 
-                if (!variantId || !currentItem.material_id) return;
+                if (!variantId || !currentItem.material_id) {
+                    $selectUnit.prop('disabled', true).html(
+                        '<option value="">Primero seleccione variante</option>');
+                    return;
+                }
 
                 $selectUnit.prop('disabled', true).html('<option value="">Cargando...</option>');
 
                 $.ajax({
-                    url: `/purchases/ajax/units/${currentItem.material_id}`,
+                    url: `/admin/purchases/ajax/units/${currentItem.material_id}`,
                     method: 'GET',
                     headers: {
                         'X-CSRF-TOKEN': csrfToken
                     },
                     success: function(data) {
+                        if (!data.units || data.units.length === 0) {
+                            $selectUnit.html('<option value="">No hay unidades</option>');
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Sin unidades de compra',
+                                text: 'Este material no tiene unidades de compra configuradas. Configure las conversiones primero.',
+                                confirmButtonColor: '#f0ad4e'
+                            });
+                            return;
+                        }
                         let options = '<option value="">Seleccionar unidad...</option>';
                         data.units.forEach(function(unit) {
+                            const isBase = unit.is_base ? ' (Base)' : '';
                             options +=
-                                `<option value="${unit.id}" data-factor="${unit.conversion_factor}" data-symbol="${unit.symbol}">${unit.name} (${unit.symbol})</option>`;
+                                `<option value="${unit.id}" data-factor="${unit.conversion_factor}" data-symbol="${unit.symbol}" data-name="${unit.name}">${unit.name} (${unit.symbol})${isBase}</option>`;
                         });
                         $selectUnit.html(options).prop('disabled', false);
                     },
-                    error: function() {
+                    error: function(xhr) {
                         $selectUnit.html('<option value="">Error al cargar</option>');
+                        console.error('Error loading units:', xhr);
+                        let msg = 'No se pudieron cargar las unidades de compra.';
+                        if (xhr.status === 404) msg = 'Ruta no encontrada (404).';
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error al cargar unidades',
+                            text: xhr.responseJSON?.message || msg,
+                            confirmButtonColor: '#d33'
+                        });
                     }
                 });
             });
@@ -511,12 +587,19 @@
                 const exists = items.find(i => i.variant_id == currentItem.variant_id && i.unit_id ==
                     currentItem.unit_id);
                 if (exists) {
-                    alert('Este material con esta unidad ya está agregado');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Item duplicado',
+                        text: 'Este material con esta unidad ya está agregado a la orden',
+                        confirmButtonColor: '#f0ad4e'
+                    });
                     return;
                 }
 
                 const subtotal = currentItem.quantity * currentItem.unit_price;
                 const converted_quantity = currentItem.quantity * currentItem.conversion_factor;
+                // Calculate unit cost for display (avoid division by zero if quantity is somehow 0, though checked above)
+                const converted_unit_cost = converted_quantity > 0 ? (subtotal / converted_quantity) : 0;
 
                 items.push({
                     index: itemIndex++,
@@ -531,6 +614,7 @@
                     unit_price: currentItem.unit_price,
                     conversion_factor: currentItem.conversion_factor,
                     converted_quantity: converted_quantity,
+                    converted_unit_cost: converted_unit_cost,
                     base_unit_symbol: currentItem.base_unit_symbol,
                     subtotal: subtotal
                 });
@@ -542,24 +626,53 @@
 
             function renderItems() {
                 if (items.length === 0) {
-                    $itemsBody.html(
-                        '<tr><td colspan="8" class="text-center text-muted py-4">No hay items</td></tr>');
+                    $itemsBody.html(`
+                        <tr id="no_items_row">
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                No hay items agregados.
+                            </td>
+                        </tr>
+                    `);
+                    $itemsTotals.hide();
                     $btnSubmit.prop('disabled', true);
                     return;
                 }
 
+                $itemsTotals.show();
                 let html = '';
                 items.forEach((item, idx) => {
                     const colorBadge = item.variant_color ?
                         `<span class="badge badge-secondary">${item.variant_color}</span>` : '';
+
+                    const conversionInfo = item.conversion_factor != 1 ?
+                        `<br><small class="text-info">= ${item.converted_quantity.toFixed(2)} ${item.base_unit_symbol}</small>` :
+                        '';
+
+                    const unitCostInfo = item.conversion_factor != 1 ?
+                        `<br><small class="text-muted">$${(item.converted_unit_cost || 0).toFixed(2)}/${item.base_unit_symbol}</small>` :
+                        '';
+
                     html += `
                         <tr class="item-row" data-index="${item.index}">
                             <td>${idx + 1}</td>
-                            <td><strong>${item.material_name}</strong><br><small class="text-muted">${item.category_name}</small></td>
-                            <td><code>${item.variant_sku}</code>${colorBadge ? '<br>' + colorBadge : ''}</td>
-                            <td class="text-center">${item.quantity.toFixed(2)}</td>
+                            <td>
+                                <strong>${item.material_name}</strong>
+                                <br><small class="text-muted">${item.category_name}</small>
+                            </td>
+                            <td>
+                                <code>${item.variant_sku}</code>
+                                ${colorBadge ? '<br>' + colorBadge : ''}
+                            </td>
+                            <td class="text-center">
+                                ${item.quantity.toFixed(2)}
+                                ${conversionInfo}
+                            </td>
                             <td class="text-center">${item.unit_symbol}</td>
-                            <td class="text-right">$${item.unit_price.toFixed(2)}</td>
+                            <td class="text-right">
+                                $${item.unit_price.toFixed(2)}
+                                ${unitCostInfo}
+                            </td>
                             <td class="text-right font-weight-bold">$${item.subtotal.toFixed(2)}</td>
                             <td class="text-center">
                                 <button type="button" class="btn btn-danger btn-sm btn-remove-item" data-index="${item.index}">

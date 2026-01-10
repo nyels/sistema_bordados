@@ -166,7 +166,7 @@
     </style>
 @stop
 @section('js')
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.4.2/chroma.min.js"></script>
+    <script src="https://chir.ag/projects/ntc/ntc.js"></script>
 
     <script>
         $(document).ready(function() {
@@ -178,48 +178,22 @@
             const $valueInput = $('input[name="value"]');
 
             /**
-             * Lógica de Categorización por Tono (Hue)
-             * Esto es mucho más preciso que comparar nombres individuales.
+             * Obtiene el nombre del color usando ntc.js
              */
-            function getSpanishColorName(hex) {
-                try {
-                    const color = chroma(hex);
-                    const hsl = color.hsl(); // [Hue, Saturation, Lightness]
-
-                    const h = hsl[0]; // Tono (0-360)
-                    const s = hsl[1]; // Saturación (0-1)
-                    const l = hsl[2]; // Luminosidad (0-1)
-
-                    // 1. Casos de Acromáticos (Blanco, Negro, Gris)
-                    if (l < 0.15) return 'Negro';
-                    if (l > 0.92) return 'Blanco';
-                    if (s < 0.12) return 'Gris';
-
-                    // 2. Clasificación por Tono (Rueda de color)
-                    if (h >= 0 && h < 15) return 'Rojo';
-                    if (h >= 15 && h < 45) return 'Naranja / Café';
-                    if (h >= 45 && h < 65) return 'Amarillo';
-                    if (h >= 65 && h < 160) return 'Verde';
-                    if (h >= 160 && h < 190) return 'Cian / Turquesa';
-                    if (h >= 190 && h < 260) return 'Azul';
-                    if (h >= 260 && h < 290) return 'Morado';
-                    if (h >= 290 && h < 335) return 'Fucsia / Rosa'; // <--- Aquí caerá el #BB3590
-                    if (h >= 335 && h <= 360) return 'Rojo';
-
-                    return 'Color Personalizado';
-                } catch (e) {
-                    return '';
-                }
+            function getColorName(hex) {
+                if (!hex || hex.length < 4) return "";
+                const match = ntc.name(hex);
+                return match[1];
             }
 
             function updateUI(hex) {
-                if (chroma.valid(hex)) {
-                    const normalizedHex = chroma(hex).hex().toUpperCase();
+                if (/^#[0-9A-Fa-f]{3,6}$/.test(hex)) {
+                    const normalizedHex = hex.toUpperCase();
                     $colorPicker.val(normalizedHex);
                     $colorPreview.css('background-color', normalizedHex);
 
-                    // Aplicamos la lógica de nombre en español
-                    $valueInput.val(getSpanishColorName(normalizedHex));
+                    const colorName = getColorName(normalizedHex);
+                    $valueInput.val(colorName);
                 }
             }
 

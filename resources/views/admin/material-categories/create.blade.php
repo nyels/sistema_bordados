@@ -20,19 +20,18 @@
         </div>
     @endif
 
-    <div class="card card-primary">
-        <div class="card-header">
-            <h3 class="card-title" style="font-weight: bold;font-size: 20px;">
-                <i class="fas fa-plus-circle"></i> NUEVA CATEGORÍA DE MATERIAL
-            </h3>
-        </div>
+    <div class="row">
+        <div class="col-md-5">
+            <div class="card card-primary">
+                <div class="card-header">
+                    <h3 class="card-title" style="font-weight: bold;font-size: 20px;">
+                        <i class="fas fa-plus-circle"></i> NUEVA CATEGORÍA DE MATERIAL
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ route('admin.material-categories.store') }}">
+                        @csrf
 
-        <div class="card-body">
-            <form method="POST" action="{{ route('admin.material-categories.store') }}">
-                @csrf
-
-                <div class="row">
-                    <div class="col-md-6">
                         <div class="form-group">
                             <label>Nombre <span class="text-danger">*</span></label>
                             <input type="text" name="name" class="form-control @error('name') is-invalid @enderror"
@@ -41,9 +40,7 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
-                    </div>
 
-                    <div class="col-md-6">
                         <div class="form-group">
                             <label>Unidad Base <span class="text-danger">*</span></label>
                             <select name="base_unit_id" class="form-control @error('base_unit_id') is-invalid @enderror"
@@ -61,25 +58,19 @@
                             @enderror
                             <small class="form-text text-muted">Unidad para consumo e inventario</small>
                         </div>
-                    </div>
-                </div>
 
-                <div class="row">
-                    <div class="col-md-8">
                         <div class="form-group">
                             <label>Descripción</label>
-                            <textarea name="description" class="form-control @error('description') is-invalid @enderror" rows="2"
+                            <textarea name="description" class="form-control @error('description') is-invalid @enderror" rows="3"
                                 maxlength="500" placeholder="Descripción opcional...">{{ old('description') }}</textarea>
                             @error('description')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
-                    </div>
 
-                    <div class="col-md-4">
                         <div class="form-group">
                             <label>Opciones</label>
-                            <div class="custom-control custom-checkbox mt-2">
+                            <div class="custom-control custom-checkbox">
                                 <input type="checkbox" class="custom-control-input" id="has_color" name="has_color"
                                     value="1" {{ old('has_color', true) ? 'checked' : '' }}>
                                 <label class="custom-control-label" for="has_color">
@@ -88,20 +79,20 @@
                             </div>
                             <small class="form-text text-muted">Ej: Telas sí, Agujas no</small>
                         </div>
-                    </div>
-                </div>
 
-                <hr>
+                        <hr>
 
-                <div class="text-center">
-                    <a href="{{ route('admin.material-categories.index') }}" class="btn btn-secondary">
-                        <i class="fas fa-times-circle"></i> Regresar
-                    </a>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Guardar
-                    </button>
+                        <div class="text-center">
+                            <a href="{{ route('admin.material-categories.index') }}" class="btn btn-secondary">
+                                <i class="fas fa-times-circle"></i> Regresar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Guardar
+                            </button>
+                        </div>
+                    </form>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 @stop

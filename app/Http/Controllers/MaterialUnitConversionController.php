@@ -23,7 +23,7 @@ class MaterialUnitConversionController extends Controller
     {
         try {
             if (!is_numeric($materialId) || $materialId < 1 || $materialId > 999999999) {
-                return redirect()->route('materials.index')
+                return redirect()->route('admin.materials.index')
                     ->with('error', 'Material no válido');
             }
 
@@ -43,7 +43,7 @@ class MaterialUnitConversionController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('materials.index')
+            return redirect()->route('admin.materials.index')
                 ->with('error', 'Error al cargar las conversiones');
         }
     }
@@ -58,7 +58,7 @@ class MaterialUnitConversionController extends Controller
     {
         try {
             if (!is_numeric($materialId) || $materialId < 1 || $materialId > 999999999) {
-                return redirect()->route('materials.index')
+                return redirect()->route('admin.materials.index')
                     ->with('error', 'Material no válido');
             }
 
@@ -72,7 +72,7 @@ class MaterialUnitConversionController extends Controller
             $purchaseUnits = Unit::getPurchaseUnitsFor($baseUnitId);
 
             if ($purchaseUnits->isEmpty()) {
-                return redirect()->route('material-conversions.index', $material->id)
+                return redirect()->route('admin.material-conversions.index', $material->id)
                     ->with('error', 'No hay unidades de compra configuradas para ' . ($material->category->baseUnit->name ?? 'esta unidad base'));
             }
 
@@ -92,7 +92,7 @@ class MaterialUnitConversionController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('materials.index')
+            return redirect()->route('admin.materials.index')
                 ->with('error', 'Error al cargar el formulario');
         }
     }
@@ -107,7 +107,7 @@ class MaterialUnitConversionController extends Controller
     {
         try {
             if (!is_numeric($materialId) || $materialId < 1 || $materialId > 999999999) {
-                return redirect()->route('materials.index')
+                return redirect()->route('admin.materials.index')
                     ->with('error', 'Material no válido');
             }
 
@@ -135,7 +135,7 @@ class MaterialUnitConversionController extends Controller
                 'ip' => $request->ip(),
             ]);
 
-            return redirect()->route('material-conversions.index', $material->id)
+            return redirect()->route('admin.material-conversions.index', $material->id)
                 ->with('success', 'Conversión creada exitosamente');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -146,7 +146,7 @@ class MaterialUnitConversionController extends Controller
                 'exception' => $e->getTraceAsString(),
             ]);
 
-            return redirect()->route('material-conversions.create', $materialId)
+            return redirect()->route('admin.material-conversions.create', $materialId)
                 ->withInput()
                 ->with('error', 'Error al crear la conversión');
         }
@@ -162,7 +162,7 @@ class MaterialUnitConversionController extends Controller
     {
         try {
             if (!is_numeric($materialId) || $materialId < 1 || !is_numeric($id) || $id < 1) {
-                return redirect()->route('materials.index')
+                return redirect()->route('admin.materials.index')
                     ->with('error', 'Parámetros no válidos');
             }
 
@@ -198,7 +198,7 @@ class MaterialUnitConversionController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('materials.index')
+            return redirect()->route('admin.materials.index')
                 ->with('error', 'Conversión no encontrada');
         }
     }
@@ -213,7 +213,7 @@ class MaterialUnitConversionController extends Controller
     {
         try {
             if (!is_numeric($materialId) || $materialId < 1 || !is_numeric($id) || $id < 1) {
-                return redirect()->route('materials.index')
+                return redirect()->route('admin.materials.index')
                     ->with('error', 'Parámetros no válidos');
             }
 
@@ -231,7 +231,7 @@ class MaterialUnitConversionController extends Controller
             $conversion->conversion_factor = (float) $request->conversion_factor;
 
             if (!$conversion->isDirty()) {
-                return redirect()->route('material-conversions.index', $material->id)
+                return redirect()->route('admin.material-conversions.index', $material->id)
                     ->with('info', 'No se realizaron cambios');
             }
 
@@ -248,7 +248,7 @@ class MaterialUnitConversionController extends Controller
                 'ip' => $request->ip(),
             ]);
 
-            return redirect()->route('material-conversions.index', $material->id)
+            return redirect()->route('admin.material-conversions.index', $material->id)
                 ->with('success', 'Conversión actualizada exitosamente');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -260,7 +260,7 @@ class MaterialUnitConversionController extends Controller
                 'exception' => $e->getTraceAsString(),
             ]);
 
-            return redirect()->route('material-conversions.edit', [$materialId, $id])
+            return redirect()->route('admin.material-conversions.edit', [$materialId, $id])
                 ->withInput()
                 ->with('error', 'Error al actualizar la conversión');
         }
@@ -276,7 +276,7 @@ class MaterialUnitConversionController extends Controller
     {
         try {
             if (!is_numeric($materialId) || $materialId < 1 || !is_numeric($id) || $id < 1) {
-                return redirect()->route('materials.index')
+                return redirect()->route('admin.materials.index')
                     ->with('error', 'Parámetros no válidos');
             }
 
@@ -296,7 +296,7 @@ class MaterialUnitConversionController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('materials.index')
+            return redirect()->route('admin.materials.index')
                 ->with('error', 'Conversión no encontrada');
         }
     }
@@ -311,7 +311,7 @@ class MaterialUnitConversionController extends Controller
     {
         try {
             if (!is_numeric($materialId) || $materialId < 1 || !is_numeric($id) || $id < 1) {
-                return redirect()->route('materials.index')
+                return redirect()->route('admin.materials.index')
                     ->with('error', 'Parámetros no válidos');
             }
 
@@ -338,7 +338,7 @@ class MaterialUnitConversionController extends Controller
                 'ip' => request()->ip(),
             ]);
 
-            return redirect()->route('material-conversions.index', $material->id)
+            return redirect()->route('admin.material-conversions.index', $material->id)
                 ->with('success', 'Conversión eliminada exitosamente');
         } catch (\Exception $e) {
             DB::rollBack();

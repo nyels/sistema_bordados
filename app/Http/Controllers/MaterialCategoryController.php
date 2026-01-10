@@ -74,7 +74,7 @@ class MaterialCategoryController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('material-categories.index')
+            return redirect()->route('admin.material-categories.index')
                 ->with('success', 'Categoría creada exitosamente');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -84,7 +84,7 @@ class MaterialCategoryController extends Controller
                 'request' => $request->validated(),
             ]);
 
-            return redirect()->route('material-categories.index')
+            return redirect()->route('admin.material-categories.index')
                 ->with('error', 'Error al crear la categoría');
         }
     }
@@ -93,7 +93,7 @@ class MaterialCategoryController extends Controller
     {
         try {
             if (!is_numeric($id) || $id < 1) {
-                return redirect()->route('material-categories.index')
+                return redirect()->route('admin.material-categories.index')
                     ->with('error', 'Categoría no válida');
             }
 
@@ -107,7 +107,7 @@ class MaterialCategoryController extends Controller
             return view('admin.material-categories.edit', compact('category', 'units'));
         } catch (\Exception $e) {
             Log::error('Error al cargar categoría para editar: ' . $e->getMessage());
-            return redirect()->route('material-categories.index')
+            return redirect()->route('admin.material-categories.index')
                 ->with('error', 'Categoría no encontrada');
         }
     }
@@ -116,7 +116,7 @@ class MaterialCategoryController extends Controller
     {
         try {
             if (!is_numeric($id) || $id < 1) {
-                return redirect()->route('material-categories.index')
+                return redirect()->route('admin.material-categories.index')
                     ->with('error', 'Categoría no válida');
             }
 
@@ -133,7 +133,7 @@ class MaterialCategoryController extends Controller
             $category->has_color = $request->boolean('has_color');
 
             if (!$category->isDirty()) {
-                return redirect()->route('material-categories.index')
+                return redirect()->route('admin.material-categories.index')
                     ->with('info', 'No se realizaron cambios');
             }
 
@@ -147,7 +147,7 @@ class MaterialCategoryController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('material-categories.index')
+            return redirect()->route('admin.material-categories.index')
                 ->with('success', 'Categoría actualizada exitosamente');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -157,7 +157,7 @@ class MaterialCategoryController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('material-categories.index')
+            return redirect()->route('admin.material-categories.index')
                 ->with('error', 'Error al actualizar la categoría');
         }
     }
@@ -166,7 +166,7 @@ class MaterialCategoryController extends Controller
     {
         try {
             if (!is_numeric($id) || $id < 1) {
-                return redirect()->route('material-categories.index')
+                return redirect()->route('admin.material-categories.index')
                     ->with('error', 'Categoría no válida');
             }
 
@@ -177,7 +177,7 @@ class MaterialCategoryController extends Controller
             return view('admin.material-categories.delete', compact('category'));
         } catch (\Exception $e) {
             Log::error('Error al cargar categoría para eliminar: ' . $e->getMessage());
-            return redirect()->route('material-categories.index')
+            return redirect()->route('admin.material-categories.index')
                 ->with('error', 'Categoría no encontrada');
         }
     }
@@ -186,7 +186,7 @@ class MaterialCategoryController extends Controller
     {
         try {
             if (!is_numeric($id) || $id < 1) {
-                return redirect()->route('material-categories.index')
+                return redirect()->route('admin.material-categories.index')
                     ->with('error', 'Categoría no válida');
             }
 
@@ -196,7 +196,7 @@ class MaterialCategoryController extends Controller
 
             $validation = $category->canDelete();
             if (!$validation['can_delete']) {
-                return redirect()->route('material-categories.index')
+                return redirect()->route('admin.material-categories.index')
                     ->with('error', $validation['message']);
             }
 
@@ -211,7 +211,7 @@ class MaterialCategoryController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('material-categories.index')
+            return redirect()->route('admin.material-categories.index')
                 ->with('success', 'Categoría eliminada exitosamente');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -221,7 +221,7 @@ class MaterialCategoryController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('material-categories.index')
+            return redirect()->route('admin.material-categories.index')
                 ->with('error', 'Error al eliminar la categoría');
         }
     }

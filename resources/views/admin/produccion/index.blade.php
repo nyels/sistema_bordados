@@ -304,9 +304,8 @@
                         </div>
 
                         {{-- Controles Flotantes --}}
-                        <div id="prodToolbar"
-                            class="position-absolute d-flex align-items-center bg-white rounded shadow-sm px-3 py-2"
-                            style="bottom: 20px; z-index: 10; left: 50%; transform: translateX(-50%); border: 1px solid #e2e8f0; border-radius: 12px; gap: 8px;">
+                        <div id="prodToolbar" class="position-absolute d-flex gap-2 p-2 bg-white rounded shadow-sm"
+                            style="bottom: 20px; z-index: 10; left: 50%; transform: translateX(-50%); border: 1px solid #e2e8f0; border-radius: 8px;">
                             <button type="button" class="btn btn-sm btn-light border" id="btnZoomOut" title="Alejar"><i
                                     class="fas fa-minus text-secondary"></i></button>
                             <button type="button" class="btn btn-sm btn-light border" id="btnZoomReset"
@@ -314,13 +313,12 @@
                             <button type="button" class="btn btn-sm btn-light border" id="btnZoomIn" title="Acercar"><i
                                     class="fas fa-plus text-primary"></i></button>
 
-                            <div style="width: 1px; height: 20px; background: #e5e7eb; margin: 0 4px;"></div>
+                            <div class="vr mx-1 bg-secondary opacity-25"></div>
 
                             <button type="button" class="btn btn-sm btn-light border" id="btnFullscreen"
                                 title="Pantalla Completa"><i class="fas fa-expand text-dark"></i></button>
-                            <a href="#" id="btnProdDownload" download
-                                class="btn btn-sm btn-primary shadow-sm font-weight-bold" title="Descargar Imagen"><i
-                                    class="fas fa-download mr-1"></i> Descargar</a>
+                            <a href="#" id="btnProdDownload" download class="btn btn-sm btn-primary shadow-sm"
+                                title="Descargar Imagen"><i class="fas fa-download"></i></a>
                         </div>
                     </div>
                 </div>

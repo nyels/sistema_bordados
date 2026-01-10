@@ -1,5 +1,6 @@
 {{-- Nombre del diseño para trazabilidad --}}
 <div class="d-flex align-items-center mt-2 col-12 justify-content-center">
+    <br><br><br>
     <i class="fas fa-palette text-muted mr-1" style="font-size: 1rem;"></i>
     <span class="text-muted" style="font-size: 1.5rem; font-weight: 500;">
         Diseño: <strong style="color: #374151;">{{ $export->design->name ?? 'Sin diseño' }}</strong>

@@ -4,318 +4,263 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\UploadedFile;
+use Symfony\Component\Process\Process;
+use Symfony\Component\Process\Exception\ProcessFailedException;
 
-/**
- * EmbroideryAnalyzerService
- * 
- * Servicio para analizar archivos de bordado utilizando PyEmbroidery.
- * Extrae información técnica: puntadas, colores, dimensiones.
- * 
- * Formatos soportados: PES, DST, EXP, JEF, VP3, VIP, XXX, y 40+ más.
- * 
- * @author Sistema de Gestión de Diseños
- * @version 1.0.0
- */
 class EmbroideryAnalyzerService
 {
-    /**
-     * Ruta al script Python de análisis.
-     */
     protected string $scriptPath;
-
-    /**
-     * Comando Python a utilizar.
-     */
     protected string $pythonCommand;
+    protected int $processTimeout = 60; // Increased for heavy files
 
-    /**
-     * Formatos de archivo permitidos.
-     */
     protected array $allowedExtensions = [
         'pes',
+        'pec',
         'dst',
-        'exp',
+        'dsz',
         'jef',
+        'jef+',
+        'jmf',
+        'pcs',
+        'pcm',
         'vp3',
         'vip',
-        'xxx',
         'hus',
-        'pec',
-        'sew',
         'shv',
-        'tap',
+        'exp',
+        'art',
+        'art+',
+        'xxx',
+        'zhs',
+        '10o',
         'tbf',
-        'u01'
+        'u01',
+        'emd',
+        'csd',
+        'ksm',
+        'zsk',
+        'pmv',
+        'toy',
+        'sew',
+        'tap',
+        'stx',
+        'mit',
+        'stc',
+        'phb',
+        'phc',
+        'max',
+        'dat',
+        'txt'
     ];
 
-    /**
-     * Constructor del servicio.
-     */
-    public function __construct()
-    {
-        // Ruta al script Python (relativa a la raíz del proyecto)
-        $this->scriptPath = base_path('app/scripts/embroidery_analyzer.py');
+    protected array $config = [
+        'max_file_size' => 10485760, // 10MB
+        'svg_dpi' => 96,
+    ];
 
-        // Detectar comando Python disponible
+    protected static array $cache = [];
+
+    public function __construct(array $config = [])
+    {
+        $this->scriptPath = base_path('app/Scripts/embroidery_analyzer.py');
+        $this->config = array_merge($this->config, $config);
         $this->pythonCommand = $this->detectPythonCommand();
     }
 
-    /**
-     * Detecta el comando Python disponible en el sistema.
-     * 
-     * @return string Comando Python (python3, python, o ruta completa)
-     */
     protected function detectPythonCommand(): string
     {
-        // En Windows, intentar python primero
-        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-            // Verificar si python está disponible
-            exec('where python 2>&1', $output, $returnCode);
-            if ($returnCode === 0) {
-                return 'python';
+        // Simple detection strategy
+        $commands = ['python', 'python3', 'py'];
+        foreach ($commands as $cmd) {
+            $process = new Process([$cmd, '--version']);
+            $process->run();
+            if ($process->isSuccessful()) {
+                return $cmd;
             }
-
-            // Intentar con python3
-            exec('where python3 2>&1', $output, $returnCode);
-            if ($returnCode === 0) {
-                return 'python3';
-            }
-
-            // Ruta por defecto de Python en Windows
-            return 'python';
         }
-
-        // En Linux/Mac, preferir python3
-        exec('which python3 2>&1', $output, $returnCode);
-        if ($returnCode === 0) {
-            return 'python3';
-        }
-
-        return 'python';
+        return 'python'; // Fallback
     }
 
-    /**
-     * Analiza un archivo de bordado desde una ruta.
-     * 
-     * @param string $filePath Ruta completa al archivo
-     * @return array Datos del análisis
-     */
-    public function analyzeFromPath(string $filePath): array
+    public function analyzeFromPath(string $filePath, bool $forceRefresh = false): array
     {
-        // Verificar que el archivo existe
         if (!file_exists($filePath)) {
-            return $this->errorResponse("Archivo no encontrado: {$filePath}");
+            return $this->errorResponse("Archivo no encontrado");
         }
 
-        // Verificar extensión
-        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
-        if (!in_array($extension, $this->allowedExtensions)) {
-            return $this->errorResponse("Formato no soportado: .{$extension}");
+        $cacheKey = md5($filePath . filemtime($filePath));
+        if (!$forceRefresh && isset(self::$cache[$cacheKey])) {
+            return self::$cache[$cacheKey];
         }
 
-        // Verificar que el script existe
-        if (!file_exists($this->scriptPath)) {
-            Log::error("EmbroideryAnalyzer: Script no encontrado en {$this->scriptPath}");
-            return $this->errorResponse("Error de configuración del servidor. Script no encontrado.");
-        }
-
-        // Ejecutar el script Python
-        return $this->executeAnalysis($filePath);
+        $result = $this->executeAnalysis($filePath, ['--json']);
+        self::$cache[$cacheKey] = $result;
+        return $result;
     }
 
-    /**
-     * Analiza un archivo de bordado desde un UploadedFile.
-     * 
-     * @param UploadedFile $file Archivo subido
-     * @return array Datos del análisis
-     */
     public function analyzeFromUpload(UploadedFile $file): array
     {
-        // Verificar extensión
         $extension = strtolower($file->getClientOriginalExtension());
         if (!in_array($extension, $this->allowedExtensions)) {
-            return $this->errorResponse("Formato no soportado: .{$extension}");
+            return $this->errorResponse("Formato .{$extension} no soportado");
         }
 
-        // Guardar temporalmente el archivo para análisis
-        $tempPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'emb_' . uniqid() . '.' . $extension;
+        $tempPath = tempnam(sys_get_temp_dir(), 'emb_') . '.' . $extension;
 
         try {
-            // Mover archivo a ubicación temporal
-            file_put_contents($tempPath, file_get_contents($file->getRealPath()));
+            $file->move(dirname($tempPath), basename($tempPath));
 
-            // Analizar
-            $result = $this->executeAnalysis($tempPath);
+            // Analyze
+            $result = $this->analyzeFromPath($tempPath);
 
-            // Agregar información del archivo original
-            $result['original_name'] = $file->getClientOriginalName();
-            $result['mime_type'] = $file->getMimeType();
+            // Add metadata
+            $result['upload_metadata'] = [
+                'original_name' => $file->getClientOriginalName(),
+                'size' => $file->getSize(),
+            ];
 
             return $result;
         } finally {
-            // Limpiar archivo temporal
             if (file_exists($tempPath)) {
                 @unlink($tempPath);
             }
         }
     }
 
-    /**
-     * Genera un SVG del archivo de bordado.
-     * 
-     * @param string $filePath Ruta completa al archivo
-     * @return string|null Contenido del SVG o null si falla
-     */
-    public function generateSvg(string $filePath): ?string
+    public function generateSvg(string $filePath): string
     {
         if (!file_exists($filePath)) {
-            return null;
+            return "";
         }
 
-        $escapedPath = escapeshellarg($filePath);
-        $escapedScript = escapeshellarg($this->scriptPath);
+        $args = [
+            $this->pythonCommand,
+            $this->scriptPath,
+            $filePath,
+            '--svg',
+            '--dpi',
+            (string)$this->config['svg_dpi']
+        ];
 
-        // Ejecutar con el flag --svg
-        $command = "{$this->pythonCommand} {$escapedScript} {$escapedPath} --svg 2>&1";
+        $process = new Process($args);
+        $process->setTimeout($this->processTimeout);
 
-        $output = [];
-        $returnCode = 0;
-        exec($command, $output, $returnCode);
+        try {
+            $process->mustRun();
+            $output = $process->getOutput();
 
-        if ($returnCode !== 0) {
-            Log::error("EmbroideryAnalyzer: Error al generar SVG", [
-                'command' => $command,
-                'output' => implode("\n", $output)
-            ]);
-            return null;
+            // Try to parse JSON wrapper
+            $jsonStart = strpos($output, '{');
+            if ($jsonStart !== false) {
+                $jsonStr = substr($output, $jsonStart);
+                $data = json_decode($jsonStr, true);
+                if (json_last_error() === JSON_ERROR_NONE && isset($data['svg'])) {
+                    return $data['svg'];
+                }
+            }
+
+            // Fallback: return raw output if it looks like SVG
+            if (strpos($output, '<svg') !== false) {
+                return $output;
+            }
+
+            return "";
+        } catch (\Exception $e) {
+            Log::error("SVG generation failed: " . $e->getMessage());
+            return "";
         }
-
-        return implode("\n", $output);
     }
 
-    /**
-     * Ejecuta el script Python de análisis.
-     * 
-     * @param string $filePath Ruta al archivo a analizar
-     * @return array Resultado del análisis
-     */
-    protected function executeAnalysis(string $filePath): array
+    protected function executeAnalysis(string $filePath, array $flags = []): array
     {
-        // Escapar argumentos para seguridad
-        $escapedPath = escapeshellarg($filePath);
-        $escapedScript = escapeshellarg($this->scriptPath);
+        $args = array_merge(
+            [$this->pythonCommand, $this->scriptPath, $filePath],
+            $flags
+        );
 
-        // Construir comando
-        $command = "{$this->pythonCommand} {$escapedScript} {$escapedPath} 2>&1";
+        $process = new Process($args);
+        $process->setTimeout($this->processTimeout);
 
-        // Log del comando (solo en debug)
-        if (config('app.debug')) {
-            Log::debug("EmbroideryAnalyzer: Ejecutando comando", ['command' => $command]);
+        try {
+            $process->mustRun();
+            $output = $process->getOutput();
+            // Handle output that might contain non-JSON noise at start
+            $jsonStart = strpos($output, '{');
+            if ($jsonStart === false) {
+                throw new \Exception("Invalid output format from Python script");
+            }
+
+            $jsonStr = substr($output, $jsonStart);
+            $data = json_decode($jsonStr, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                // Try aggressive cleaning for UTF-8 issues
+                $jsonStr = mb_convert_encoding($jsonStr, 'UTF-8', 'UTF-8');
+                $data = json_decode($jsonStr, true);
+            }
+
+            if (!$data) {
+                throw new \Exception("JSON parse error: " . json_last_error_msg());
+            }
+
+            return $this->normalizeAnalysisResult($data);
+        } catch (ProcessFailedException $e) {
+            Log::error("Analysis process failed: " . $e->getMessage());
+            return $this->errorResponse("Error al procesar el archivo");
+        } catch (\Exception $e) {
+            Log::error("Analysis error: " . $e->getMessage());
+            return $this->errorResponse("Error interno: " . $e->getMessage());
         }
-
-        // Ejecutar comando
-        $output = [];
-        $returnCode = 0;
-        exec($command, $output, $returnCode);
-
-        // Unir salida
-        $jsonOutput = implode("\n", $output);
-
-        // Log de salida (solo en debug)
-        if (config('app.debug')) {
-            Log::debug("EmbroideryAnalyzer: Salida", [
-                'output' => $jsonOutput,
-                'return_code' => $returnCode
-            ]);
-        }
-
-        // Intentar decodificar JSON
-        $result = json_decode($jsonOutput, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            Log::error("EmbroideryAnalyzer: Error al decodificar JSON", [
-                'output' => $jsonOutput,
-                'json_error' => json_last_error_msg()
-            ]);
-            return $this->errorResponse("Error al procesar el archivo. Salida inválida del analizador.");
-        }
-
-        return $result;
     }
 
-    /**
-     * Genera una respuesta de error estandarizada.
-     * 
-     * @param string $message Mensaje de error
-     * @return array
-     */
-    protected function errorResponse(string $message): array
+    protected function normalizeAnalysisResult(array $data): array
     {
-        return [
+        // Ensures the result has the structure expected by BOTH new and old fontend logic
+
+        $result = $data; // Start with raw data (which now includes detailed stats)
+
+        // -----------------------------------------------------------
+        // LEGACY MAPPING (Backward Compatibility for Frontend)
+        // -----------------------------------------------------------
+        // The Python script (v2.1) returns flat keys like 'total_stitches', 
+        // 'width_mm', etc., so we just ensure they exist.
+
+        $defaults = [
             'success' => false,
-            'error' => $message,
-            'file_name' => null,
-            'file_format' => null,
-            'file_size' => 0,
             'total_stitches' => 0,
             'colors_count' => 0,
             'width_mm' => 0,
             'height_mm' => 0,
             'colors' => [],
+            'machine_compatibility' => 'Desconocida'
         ];
+
+        $result = array_merge($defaults, $result);
+
+        // Enhance with 'technical' structure if we want to migrate specifically
+        $result['technical'] = [
+            'stitches' => [
+                'total' => $result['total_stitches'],
+                'jump' => $result['jumps'] ?? 0,
+            ],
+            'dimensions' => [
+                'width_mm' => $result['width_mm'],
+                'height_mm' => $result['height_mm'],
+            ]
+        ];
+
+        return $result;
     }
 
-    /**
-     * Obtiene los formatos de archivo permitidos.
-     * 
-     * @return array
-     */
-    public function getAllowedExtensions(): array
+    protected function errorResponse(string $message): array
     {
-        return $this->allowedExtensions;
-    }
-
-    /**
-     * Obtiene las extensiones como string para validación de Laravel.
-     * 
-     * @return string Ejemplo: "pes,dst,exp,jef,vp3,vip,xxx"
-     */
-    public function getAllowedExtensionsString(): string
-    {
-        return implode(',', $this->allowedExtensions);
-    }
-
-    /**
-     * Verifica si una extensión es válida.
-     * 
-     * @param string $extension
-     * @return bool
-     */
-    public function isValidExtension(string $extension): bool
-    {
-        return in_array(strtolower($extension), $this->allowedExtensions);
-    }
-
-    /**
-     * Formatea las dimensiones para mostrar.
-     * 
-     * @param float $width
-     * @param float $height
-     * @return string Ejemplo: "73.8 x 98.8 mm"
-     */
-    public static function formatDimensions(float $width, float $height): string
-    {
-        return "{$width} x {$height} mm";
-    }
-
-    /**
-     * Formatea el conteo de puntadas con separador de miles.
-     * 
-     * @param int $stitches
-     * @return string Ejemplo: "12,462"
-     */
-    public static function formatStitchCount(int $stitches): string
-    {
-        return number_format($stitches, 0, '.', ',');
+        return [
+            'success' => false,
+            'error' => $message,
+            'total_stitches' => 0,
+            'colors_count' => 0,
+            'width_mm' => 0,
+            'height_mm' => 0,
+            'colors' => []
+        ];
     }
 }
