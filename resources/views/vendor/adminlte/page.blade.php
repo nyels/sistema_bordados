@@ -77,8 +77,8 @@
         }
 
         /* ============================================
-                           SIDEBAR SECTION HEADERS WITH DIVIDERS
-                           ============================================ */
+                                   SIDEBAR SECTION HEADERS WITH DIVIDERS
+                                   ============================================ */
         .nav-sidebar .nav-header {
             padding: 0.8rem 1rem 0.5rem 1rem;
             font-size: 0.75rem;
@@ -207,20 +207,24 @@
             $('form').on('submit', function() {
                 var $form = $(this);
 
+                // Obtener método de forma segura (default GET)
+                var method = $form.attr('method');
+                method = method ? method.toUpperCase() : 'GET';
+
                 // Excluir formularios GET (búsquedas) o con target blank (exportaciones)
-                if ($form.attr('method').toUpperCase() === 'GET' || $form.attr('target') === '_blank') {
+                if (method === 'GET' || $form.attr('target') === '_blank') {
                     return;
                 }
 
                 // Excluir si tiene clase especifica 'no-loader'
                 if ($form.hasClass('no-loader')) return;
 
-                // Validación HTML5
-                if (!this.checkValidity()) return;
+                // Validación HTML5 (si existe la función)
+                if (this.checkValidity && !this.checkValidity()) return;
 
                 var $submitBtn = $form.find('button[type="submit"]');
 
-                // Si no hay botón submit, buscar input submit o button en general
+                // Si no hay botón submit, buscar input submit
                 if ($submitBtn.length === 0) {
                     $submitBtn = $form.find('input[type="submit"]');
                 }
@@ -228,27 +232,36 @@
                 if ($submitBtn.length > 0) {
                     $submitBtn.each(function() {
                         var $btn = $(this);
-                        // Dimesiona para evitar que cambie el tamaño
-                        $btn.css('width', $btn.outerWidth());
 
+                        // Fix width to prevent layout shift
+                        var w = $btn.outerWidth();
+                        if (w > 0) $btn.css('width', w);
+
+                        // Disable button
                         $btn.prop('disabled', true);
+                        $btn.addClass('disabled');
 
-                        // Buscar icono y cambiar a spinner
-                        var $icon = $btn.find('i');
-                        if ($icon.length > 0) {
-                            $icon.data('original-class', $icon.attr(
-                            'class')); // Guardar clase original
-                            $icon.removeClass().addClass('fas fa-spinner fa-spin');
-                        } else {
-                            $btn.prepend('<i class="fas fa-spinner fa-spin mr-1"></i> ');
-                        }
+                        // Fix height 
+                        var h = $btn.outerHeight();
+                        if (h > 0) $btn.css('height', h);
+
+                        // Guardar HTML original
+                        $btn.data('original-html', $btn.html());
+
+                        // Reemplazar contenido SOLO por spinner
+                        $btn.html('<i class="fas fa-spinner fa-spin"></i>');
                     });
 
-                    // Desactivar botones de cancelar/regresar hermanos
+                    // Desactivar botones de cancelar/regresar hermanos directos
                     $submitBtn.siblings('a, button').addClass('disabled').css('pointer-events', 'none');
-                    // Tambien el padre si es un grupo
+
+                    // Tambien buscar en el contenedor padre inmediato (común en row de botones)
                     $submitBtn.parent().find('a, button').not($submitBtn).addClass('disabled').css(
                         'pointer-events', 'none');
+
+                    // Y un nivel más arriba por si acaso (div > div > buttons)
+                    $submitBtn.closest('.card-footer, .form-group, .text-center').find('a, button').not(
+                        $submitBtn).addClass('disabled').css('pointer-events', 'none');
                 }
             });
         });

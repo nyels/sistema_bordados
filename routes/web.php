@@ -432,6 +432,10 @@ Route::delete('/clientes/delete/{id}', [App\Http\Controllers\ClienteController::
     ->name('admin.clientes.destroy')
     ->middleware('auth');
 
+Route::get('/clientes/measures/{id}', [App\Http\Controllers\ClienteController::class, 'getMeasures'])
+    ->name('admin.clientes.measures')
+    ->middleware('auth');
+
 // Tipos de aplicacion
 Route::get('/tipos_aplicacion', [App\Http\Controllers\ApplicationTypesController::class, 'index'])
     ->name('admin.tipos_aplicacion.index')

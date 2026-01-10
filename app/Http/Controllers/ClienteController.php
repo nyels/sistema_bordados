@@ -113,6 +113,12 @@ class ClienteController extends Controller
         return view('admin.clientes.edit', compact('cliente', 'recomendaciones', 'estados'));
     }
 
+    public function getMeasures($id)
+    {
+        $cliente = Cliente::findOrFail($id);
+        return view('admin.clientes.partials.measures', compact('cliente'));
+    }
+
     /**
      * Update the specified resource in storage.
      */
