@@ -77,8 +77,8 @@
         }
 
         /* ============================================
-                       SIDEBAR SECTION HEADERS WITH DIVIDERS
-                       ============================================ */
+                           SIDEBAR SECTION HEADERS WITH DIVIDERS
+                           ============================================ */
         .nav-sidebar .nav-header {
             padding: 0.8rem 1rem 0.5rem 1rem;
             font-size: 0.75rem;
@@ -201,6 +201,55 @@
                         }
                     }
                 }, 100);
+            });
+
+            // GLOBAL: Prevenir doble envío en formularios (Store/Update)
+            $('form').on('submit', function() {
+                var $form = $(this);
+
+                // Excluir formularios GET (búsquedas) o con target blank (exportaciones)
+                if ($form.attr('method').toUpperCase() === 'GET' || $form.attr('target') === '_blank') {
+                    return;
+                }
+
+                // Excluir si tiene clase especifica 'no-loader'
+                if ($form.hasClass('no-loader')) return;
+
+                // Validación HTML5
+                if (!this.checkValidity()) return;
+
+                var $submitBtn = $form.find('button[type="submit"]');
+
+                // Si no hay botón submit, buscar input submit o button en general
+                if ($submitBtn.length === 0) {
+                    $submitBtn = $form.find('input[type="submit"]');
+                }
+
+                if ($submitBtn.length > 0) {
+                    $submitBtn.each(function() {
+                        var $btn = $(this);
+                        // Dimesiona para evitar que cambie el tamaño
+                        $btn.css('width', $btn.outerWidth());
+
+                        $btn.prop('disabled', true);
+
+                        // Buscar icono y cambiar a spinner
+                        var $icon = $btn.find('i');
+                        if ($icon.length > 0) {
+                            $icon.data('original-class', $icon.attr(
+                            'class')); // Guardar clase original
+                            $icon.removeClass().addClass('fas fa-spinner fa-spin');
+                        } else {
+                            $btn.prepend('<i class="fas fa-spinner fa-spin mr-1"></i> ');
+                        }
+                    });
+
+                    // Desactivar botones de cancelar/regresar hermanos
+                    $submitBtn.siblings('a, button').addClass('disabled').css('pointer-events', 'none');
+                    // Tambien el padre si es un grupo
+                    $submitBtn.parent().find('a, button').not($submitBtn).addClass('disabled').css(
+                        'pointer-events', 'none');
+                }
             });
         });
     </script>
