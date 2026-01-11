@@ -20,50 +20,53 @@
             </div>
             <hr>
             <div class="col-12">
-                <table id="example1" class="table table-bordered table-hover">
-                    <thead class="thead-dark">
-                        <tr>
-                            <th>#</th>
-                            <th>Nombre</th>
-                            <th>Descripción</th>
-                            <th style="text-align: center;">Productos</th>
-                            <th style="text-align: center;">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-
-                        @foreach ($categories as $category)
+                <div class="table-responsive">
+                    <table id="example1" class="table table-bordered table-hover">
+                        <thead class="thead-dark">
                             <tr>
-                                <td>{{ $loop->iteration }}</td>
-                                <td>
-                                    <strong>{{ $category->name }}</strong>
-                                    <br>
-                                    <small class="text-muted">{{ $category->slug }}</small>
-                                </td>
-                                <td>{{ Str::limit($category->description, 80) ?? '-' }}</td>
-                                <td class="text-center">
-                                    <span class="badge badge-{{ $category->products_count > 0 ? 'info' : 'secondary' }}">
-                                        {{ $category->products_count }}
-                                    </span>
-                                </td>
-                                <td class="text-center">
-                                    <div class="d-flex justify-content-center align-items-center gap-1">
-                                        <a href="{{ route('admin.product_categories.edit', $category->id) }}"
-                                            class="btn btn-warning btn-sm" title="Editar">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-
-                                        <a href="{{ route('admin.product_categories.confirm_delete', $category->id) }}"
-                                            class="btn btn-danger btn-sm" title="Eliminar">
-                                            <i class="fas fa-trash"></i>
-                                        </a>
-                                    </div>
-                                </td>
+                                <th>#</th>
+                                <th>Nombre</th>
+                                <th>Descripción</th>
+                                <th style="text-align: center;">Productos</th>
+                                <th style="text-align: center;">Acciones</th>
                             </tr>
-                        @endforeach
+                        </thead>
+                        <tbody>
 
-                    </tbody>
-                </table>
+                            @foreach ($categories as $category)
+                                <tr>
+                                    <td>{{ $loop->iteration }}</td>
+                                    <td>
+                                        <strong>{{ $category->name }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ $category->slug }}</small>
+                                    </td>
+                                    <td>{{ Str::limit($category->description, 80) ?? '-' }}</td>
+                                    <td class="text-center">
+                                        <span
+                                            class="badge badge-{{ $category->products_count > 0 ? 'info' : 'secondary' }}">
+                                            {{ $category->products_count }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-flex justify-content-center align-items-center gap-1">
+                                            <a href="{{ route('admin.product_categories.edit', $category->id) }}"
+                                                class="btn btn-warning btn-sm" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+
+                                            <a href="{{ route('admin.product_categories.confirm_delete', $category->id) }}"
+                                                class="btn btn-danger btn-sm" title="Eliminar">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -77,6 +80,7 @@
             border: none;
             display: flex;
             justify-content: center;
+            flex-wrap: wrap;
             gap: 10px;
             margin-bottom: 15px;
         }

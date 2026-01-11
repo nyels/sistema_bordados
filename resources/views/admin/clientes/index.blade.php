@@ -22,59 +22,61 @@
             </div>
             <hr>
             <div class="col-12">
-                <table id="example1" class="table table-bordered table-hover ">
-                    <thead class="thead-dark">
-                        <tr>
-                            <th>#</th>
-                            <th>Nombre</th>
-                            <th>Apellidos</th>
-                            <th>Telefono</th>
-                            <th>Email</th>
-                            <th>Direccion</th>
-                            <th>Estado</th>
-                            <th>Recomendacion</th>
-                            <th>Fecha de Alta</th>
-                            <th style="text-align: center;">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-
-                        @foreach ($clientes as $cliente)
+                <div class="table-responsive">
+                    <table id="example1" class="table table-bordered table-hover ">
+                        <thead class="thead-dark">
                             <tr>
-                                <td>{{ $loop->iteration }}</td>
-                                <td>{{ $cliente->nombre }}</td>
-                                <td>{{ $cliente->apellidos }}</td>
-                                <td>{{ $cliente->telefono }}</td>
-                                <td>{{ $cliente->email }}</td>
-                                <td>{{ $cliente->direccion }}</td>
-                                <td>{{ $cliente->estado->nombre_estado }}</td>
-                                <td>{{ $cliente->recomendacion->nombre_recomendacion }}</td>
-                                <td>{{ $cliente->created_at ? $cliente->created_at->format('d/m/Y H:i') : 'N/A' }}</td>
-                                <td class="text-center">
-                                    <div class="d-flex justify-content-center align-items-center gap-1">
-                                        <button type="button" class="btn btn-info btn-sm btn-view-measures"
-                                            title="Ver Medidas" data-id="{{ $cliente->id }}"
-                                            data-name="{{ $cliente->nombre }} {{ $cliente->apellidos }}">
-                                            <i class="fas fa-ruler-combined"></i>
-                                        </button>
-
-                                        <a href="{{ route('admin.clientes.edit', $cliente->id) }}"
-                                            class="btn btn-warning btn-sm" title="Editar">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-
-                                        <a href="{{ route('admin.clientes.confirm_delete', $cliente->id) }}"
-                                            class="btn btn-danger btn-sm" title="Eliminar">
-                                            <i class="fas fa-trash"></i>
-                                        </a>
-                                    </div>
-                                </td>
-
+                                <th>#</th>
+                                <th>Nombre</th>
+                                <th>Apellidos</th>
+                                <th>Telefono</th>
+                                <th>Email</th>
+                                <th>Direccion</th>
+                                <th>Estado</th>
+                                <th>Recomendacion</th>
+                                <th>Fecha de Alta</th>
+                                <th style="text-align: center;">Acciones</th>
                             </tr>
-                        @endforeach
+                        </thead>
+                        <tbody>
 
-                    </tbody>
-                </table>
+                            @foreach ($clientes as $cliente)
+                                <tr>
+                                    <td>{{ $loop->iteration }}</td>
+                                    <td>{{ $cliente->nombre }}</td>
+                                    <td>{{ $cliente->apellidos }}</td>
+                                    <td>{{ $cliente->telefono }}</td>
+                                    <td>{{ $cliente->email }}</td>
+                                    <td>{{ $cliente->direccion }}</td>
+                                    <td>{{ $cliente->estado->nombre_estado }}</td>
+                                    <td>{{ $cliente->recomendacion->nombre_recomendacion }}</td>
+                                    <td>{{ $cliente->created_at ? $cliente->created_at->format('d/m/Y H:i') : 'N/A' }}</td>
+                                    <td class="text-center">
+                                        <div class="d-flex justify-content-center align-items-center gap-1">
+                                            <button type="button" class="btn btn-info btn-sm btn-view-measures"
+                                                title="Ver Medidas" data-id="{{ $cliente->id }}"
+                                                data-name="{{ $cliente->nombre }} {{ $cliente->apellidos }}">
+                                                <i class="fas fa-ruler-combined"></i>
+                                            </button>
+
+                                            <a href="{{ route('admin.clientes.edit', $cliente->id) }}"
+                                                class="btn btn-warning btn-sm" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+
+                                            <a href="{{ route('admin.clientes.confirm_delete', $cliente->id) }}"
+                                                class="btn btn-danger btn-sm" title="Eliminar">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+
+                                </tr>
+                            @endforeach
+
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
         <!-- /.card-body -->
@@ -116,6 +118,7 @@
             display: flex;
             justify-content: center;
             /* Centrar los botones */
+            flex-wrap: wrap;
             gap: 10px;
             /* Espaciado entre botones */
             margin-bottom: 15px;

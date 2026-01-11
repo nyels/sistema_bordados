@@ -126,6 +126,7 @@
             border: none;
             display: flex;
             justify-content: center;
+            flex-wrap: wrap;
             /* Centrar los botones */
             gap: 10px;
             /* Espaciado entre botones */

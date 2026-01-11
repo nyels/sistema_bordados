@@ -35,61 +35,63 @@
             </div>
             <hr>
             <div class="col-12">
-                <table id="example1" class="table table-bordered table-hover">
-                    <thead class="thead-dark">
-                        <tr>
-                            <th>#</th>
-                            <th>Nombre</th>
-                            <th>Símbolo</th>
-                            <th>Tipo</th>
-                            <th>Compatible con</th>
-                            <th style="text-align: center;">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($units as $unit)
+                <div class="table-responsive">
+                    <table id="example1" class="table table-bordered table-hover">
+                        <thead class="thead-dark">
                             <tr>
-                                <td>{{ $loop->iteration }}</td>
-                                <td>{{ $unit->name }}</td>
-                                <td><code>{{ $unit->symbol }}</code></td>
-                                <td>
-                                    @if ($unit->is_base)
-                                        <span class="badge badge-info">Base (Consumo)</span>
-                                    @else
-                                        <span class="badge badge-secondary">Compra</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if ($unit->is_base)
-                                        <span class="text-muted">-</span>
-                                    @elseif ($unit->compatibleBaseUnit)
-                                        <span class="badge badge-success">
-                                            <i class="fas fa-link mr-1"></i>
-                                            {{ $unit->compatibleBaseUnit->name }}
-                                        </span>
-                                    @else
-                                        <span class="badge badge-warning">
-                                            <i class="fas fa-exclamation-triangle mr-1"></i>
-                                            Sin configurar
-                                        </span>
-                                    @endif
-                                </td>
-                                <td class="text-center">
-                                    <div class="d-flex justify-content-center align-items-center gap-1">
-                                        <a href="{{ route('admin.units.edit', $unit->id) }}" class="btn btn-warning btn-sm"
-                                            title="Editar">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <a href="{{ route('admin.units.confirm_delete', $unit->id) }}" class="btn btn-danger btn-sm"
-                                            title="Eliminar">
-                                            <i class="fas fa-trash"></i>
-                                        </a>
-                                    </div>
-                                </td>
+                                <th>#</th>
+                                <th>Nombre</th>
+                                <th>Símbolo</th>
+                                <th>Tipo</th>
+                                <th>Compatible con</th>
+                                <th style="text-align: center;">Acciones</th>
                             </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach ($units as $unit)
+                                <tr>
+                                    <td>{{ $loop->iteration }}</td>
+                                    <td>{{ $unit->name }}</td>
+                                    <td><code>{{ $unit->symbol }}</code></td>
+                                    <td>
+                                        @if ($unit->is_base)
+                                            <span class="badge badge-info">Base (Consumo)</span>
+                                        @else
+                                            <span class="badge badge-secondary">Compra</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if ($unit->is_base)
+                                            <span class="text-muted">-</span>
+                                        @elseif ($unit->compatibleBaseUnit)
+                                            <span class="badge badge-success">
+                                                <i class="fas fa-link mr-1"></i>
+                                                {{ $unit->compatibleBaseUnit->name }}
+                                            </span>
+                                        @else
+                                            <span class="badge badge-warning">
+                                                <i class="fas fa-exclamation-triangle mr-1"></i>
+                                                Sin configurar
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-flex justify-content-center align-items-center gap-1">
+                                            <a href="{{ route('admin.units.edit', $unit->id) }}"
+                                                class="btn btn-warning btn-sm" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{{ route('admin.units.confirm_delete', $unit->id) }}"
+                                                class="btn btn-danger btn-sm" title="Eliminar">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -103,6 +105,7 @@
             border: none;
             display: flex;
             justify-content: center;
+            flex-wrap: wrap;
             gap: 10px;
             margin-bottom: 15px;
         }

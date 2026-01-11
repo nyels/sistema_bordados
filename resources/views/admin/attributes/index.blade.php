@@ -37,52 +37,54 @@
                         </a>
                     </div>
 
-                    <table id="tableAtributos" class="table table-bordered table-hover text-center">
-                        <thead class="thead-dark">
-                            <tr>
-                                <th>#</th>
-                                <th>Nombre</th>
-                                <th>Slug</th>
-                                <th>Tipo</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($attributes as $attribute)
+                    <div class="table-responsive">
+                        <table id="tableAtributos" class="table table-bordered table-hover text-center">
+                            <thead class="thead-dark">
                                 <tr>
-                                    <td>{{ $loop->iteration }}</td>
-                                    <td>{{ $attribute->name }}</td>
-                                    <td><code>{{ $attribute->slug }}</code></td>
-                                    <td>
-                                        @switch($attribute->type)
-                                            @case('select')
-                                                <span class="badge badge-primary">Selector</span>
-                                            @break
-
-                                            @case('color')
-                                                <span class="badge badge-warning">Color</span>
-                                            @break
-
-                                            @case('text')
-                                                <span class="badge badge-secondary">Texto</span>
-                                            @break
-                                        @endswitch
-                                    </td>
-                                    <td>
-                                        <a href="{{ route('admin.attributes.edit', $attribute->id) }}"
-                                            class="btn btn-warning btn-sm">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-
-                                        <a href="{{ route('admin.attributes.confirm_delete', $attribute->id) }}"
-                                            class="btn btn-danger btn-sm">
-                                            <i class="fas fa-trash"></i>
-                                        </a>
-                                    </td>
+                                    <th>#</th>
+                                    <th>Nombre</th>
+                                    <th>Slug</th>
+                                    <th>Tipo</th>
+                                    <th>Acciones</th>
                                 </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                @foreach ($attributes as $attribute)
+                                    <tr>
+                                        <td>{{ $loop->iteration }}</td>
+                                        <td>{{ $attribute->name }}</td>
+                                        <td><code>{{ $attribute->slug }}</code></td>
+                                        <td>
+                                            @switch($attribute->type)
+                                                @case('select')
+                                                    <span class="badge badge-primary">Selector</span>
+                                                @break
+
+                                                @case('color')
+                                                    <span class="badge badge-warning">Color</span>
+                                                @break
+
+                                                @case('text')
+                                                    <span class="badge badge-secondary">Texto</span>
+                                                @break
+                                            @endswitch
+                                        </td>
+                                        <td>
+                                            <a href="{{ route('admin.attributes.edit', $attribute->id) }}"
+                                                class="btn btn-warning btn-sm">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+
+                                            <a href="{{ route('admin.attributes.confirm_delete', $attribute->id) }}"
+                                                class="btn btn-danger btn-sm">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
 
                 </div>
             </div>
@@ -103,59 +105,61 @@
                         </a>
                     </div>
 
-                    <table id="tableValores" class="table table-bordered table-hover text-center">
-                        <thead class="thead-dark">
-                            <tr>
-                                <th>#</th>
-                                <th>Atributo</th>
-                                <th>Valor</th>
-                                <th>Color</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($attributeValues as $value)
+                    <div class="table-responsive">
+                        <table id="tableValores" class="table table-bordered table-hover text-center">
+                            <thead class="thead-dark">
                                 <tr>
-                                    <td>{{ $loop->iteration }}</td>
-                                    <td>
-                                        <span class="badge badge-info">
-                                            {{ $value->attribute->name ?? 'N/A' }}
-                                        </span>
-                                    </td>
-                                    <td>{{ $value->value }}</td>
-                                    <td>
-                                        @if ($value->hex_color)
-                                            <div class="d-flex align-items-center justify-content-center">
-                                                <span
-                                                    style="
-                                                width: 22px;
-                                                height: 22px;
-                                                background-color: {{ $value->hex_color }};
-                                                border: 2px solid #333;
-                                                border-radius: 4px;
-                                                margin-right: 6px;">
-                                                </span>
-                                                <code>{{ $value->hex_color }}</code>
-                                            </div>
-                                        @else
-                                            <span class="text-muted">N/A</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        <a href="{{ route('admin.attribute-values.edit', $value->id) }}"
-                                            class="btn btn-warning btn-sm">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-
-                                        <a href="{{ route('admin.attribute-values.confirm_delete', $value->id) }}"
-                                            class="btn btn-danger btn-sm">
-                                            <i class="fas fa-trash"></i>
-                                        </a>
-                                    </td>
+                                    <th>#</th>
+                                    <th>Atributo</th>
+                                    <th>Valor</th>
+                                    <th>Color</th>
+                                    <th>Acciones</th>
                                 </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                @foreach ($attributeValues as $value)
+                                    <tr>
+                                        <td>{{ $loop->iteration }}</td>
+                                        <td>
+                                            <span class="badge badge-info">
+                                                {{ $value->attribute->name ?? 'N/A' }}
+                                            </span>
+                                        </td>
+                                        <td>{{ $value->value }}</td>
+                                        <td>
+                                            @if ($value->hex_color)
+                                                <div class="d-flex align-items-center justify-content-center">
+                                                    <span
+                                                        style="
+                                                    width: 22px;
+                                                    height: 22px;
+                                                    background-color: {{ $value->hex_color }};
+                                                    border: 2px solid #333;
+                                                    border-radius: 4px;
+                                                    margin-right: 6px;">
+                                                    </span>
+                                                    <code>{{ $value->hex_color }}</code>
+                                                </div>
+                                            @else
+                                                <span class="text-muted">N/A</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            <a href="{{ route('admin.attribute-values.edit', $value->id) }}"
+                                                class="btn btn-warning btn-sm">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+
+                                            <a href="{{ route('admin.attribute-values.confirm_delete', $value->id) }}"
+                                                class="btn btn-danger btn-sm">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
 
                 </div>
             </div>
@@ -173,6 +177,7 @@
             border: none;
             display: flex;
             justify-content: center;
+            flex-wrap: wrap;
             gap: 10px;
             margin-bottom: 15px;
         }

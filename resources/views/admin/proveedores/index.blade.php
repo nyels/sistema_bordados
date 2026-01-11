@@ -22,50 +22,52 @@
             </div>
             <hr>
             <div class="col-12">
-                <table id="example1" class="table table-bordered table-hover ">
-                    <thead class="thead-dark">
-                        <tr>
-                            <th>#</th>
-                            <th>Nombre proveedor</th>
-                            <th>Giro</th>
-                            <th>Telefono</th>
-                            <th>Correo</th>
-                            <th>Estado</th>
-                            <th style="text-align: center;">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-
-                        @foreach ($proveedores as $proveedor)
+                <div class="table-responsive">
+                    <table id="example1" class="table table-bordered table-hover ">
+                        <thead class="thead-dark">
                             <tr>
-                                <td>{{ $loop->iteration }}</td>
-                                <td>{{ $proveedor->nombre_proveedor }}</td>
-                                <td>{{ $proveedor->giro->nombre_giro }}</td>
-                                <td>{{ $proveedor->telefono }}</td>
-                                <td>{{ $proveedor->email }}</td>
-                                <td>{{ $proveedor->estado->nombre_estado }}</td>
-                                <td class="text-center">
-                                    <div class="d-flex justify-content-center align-items-center gap-1">
-                                        <a href="#" class="btn btn-info btn-sm" title="Ver">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-
-                                        <a href="{{ route('admin.proveedores.edit', $proveedor->id) }}"
-                                            class="btn btn-warning btn-sm" title="Editar">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-
-                                        <a href="{{ route('admin.proveedores.confirm_delete', $proveedor->id) }}"
-                                            class="btn btn-danger btn-sm" title="Eliminar">
-                                            <i class="fas fa-trash"></i>
-                                        </a>
-                                    </div>
-                                </td>
+                                <th>#</th>
+                                <th>Nombre proveedor</th>
+                                <th>Giro</th>
+                                <th>Telefono</th>
+                                <th>Correo</th>
+                                <th>Estado</th>
+                                <th style="text-align: center;">Acciones</th>
                             </tr>
-                        @endforeach
+                        </thead>
+                        <tbody>
 
-                    </tbody>
-                </table>
+                            @foreach ($proveedores as $proveedor)
+                                <tr>
+                                    <td>{{ $loop->iteration }}</td>
+                                    <td>{{ $proveedor->nombre_proveedor }}</td>
+                                    <td>{{ $proveedor->giro->nombre_giro }}</td>
+                                    <td>{{ $proveedor->telefono }}</td>
+                                    <td>{{ $proveedor->email }}</td>
+                                    <td>{{ $proveedor->estado->nombre_estado }}</td>
+                                    <td class="text-center">
+                                        <div class="d-flex justify-content-center align-items-center gap-1">
+                                            <a href="#" class="btn btn-info btn-sm" title="Ver">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+
+                                            <a href="{{ route('admin.proveedores.edit', $proveedor->id) }}"
+                                                class="btn btn-warning btn-sm" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+
+                                            <a href="{{ route('admin.proveedores.confirm_delete', $proveedor->id) }}"
+                                                class="btn btn-danger btn-sm" title="Eliminar">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
         <!-- /.card-body -->
@@ -82,6 +84,7 @@
             display: flex;
             justify-content: center;
             /* Centrar los botones */
+            flex-wrap: wrap;
             gap: 10px;
             /* Espaciado entre botones */
             margin-bottom: 15px;

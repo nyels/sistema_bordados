@@ -22,31 +22,34 @@
             </div>
             <hr>
             <div class="col-12">
-                <table id="example1" class="table table-bordered table-hover table-condensed">
-                    <thead class="thead-dark">
-                        <tr style="text-align: center;">
-                            <th>#</th>
-                            <th>Nombre del giro</th>
-                            <th style="text-align: center;">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-
-                        @foreach ($giros as $giro)
+                <div class="table-responsive">
+                    <table id="example1" class="table table-bordered table-hover table-condensed">
+                        <thead class="thead-dark">
                             <tr style="text-align: center;">
-                                <td>{{ $loop->iteration }}</td>
-                                <td>{{ $giro->nombre_giro }}</td>
-                                <td style="text-align: center;">
-                                    <a class="btn btn-warning" href="{{ route('admin.giros.edit', $giro->id) }}"><i
-                                            class="fas fa-edit"></i></a>
-                                    <a class="btn btn-danger" href="{{ route('admin.giros.confirm_delete', $giro->id) }}"><i
-                                            class="fas fa-trash"></i></a>
-                                </td>
+                                <th>#</th>
+                                <th>Nombre del giro</th>
+                                <th style="text-align: center;">Acciones</th>
                             </tr>
-                        @endforeach
+                        </thead>
+                        <tbody>
 
-                    </tbody>
-                </table>
+                            @foreach ($giros as $giro)
+                                <tr style="text-align: center;">
+                                    <td>{{ $loop->iteration }}</td>
+                                    <td>{{ $giro->nombre_giro }}</td>
+                                    <td style="text-align: center;">
+                                        <a class="btn btn-warning" href="{{ route('admin.giros.edit', $giro->id) }}"><i
+                                                class="fas fa-edit"></i></a>
+                                        <a class="btn btn-danger"
+                                            href="{{ route('admin.giros.confirm_delete', $giro->id) }}"><i
+                                                class="fas fa-trash"></i></a>
+                                    </td>
+                                </tr>
+                            @endforeach
+
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
         <!-- /.card-body -->
@@ -62,6 +65,7 @@
             border: none;
             display: flex;
             justify-content: center;
+            flex-wrap: wrap;
             /* Centrar los botones */
             gap: 10px;
             /* Espaciado entre botones */

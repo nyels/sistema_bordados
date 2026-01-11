@@ -22,33 +22,35 @@
             </div>
             <hr>
             <div class="col-12">
-                <table id="example1" class="table table-bordered table-hover table-condensed">
-                    <thead class="thead-dark">
-                        <tr style="text-align: center;">
-                            <th>#</th>
-                            <th>Nombre de la recomendacion</th>
-                            <th style="text-align: center;">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-
-                        @foreach ($recomendaciones as $recomendacion)
+                <div class="table-responsive">
+                    <table id="example1" class="table table-bordered table-hover table-condensed">
+                        <thead class="thead-dark">
                             <tr style="text-align: center;">
-                                <td>{{ $loop->iteration }}</td>
-                                <td>{{ $recomendacion->nombre_recomendacion }}</td>
-                                <td style="text-align: center;">
-                                    <a class="btn btn-warning"
-                                        href="{{ route('admin.recomendaciones.edit', $recomendacion->id) }}"><i
-                                            class="fas fa-edit"></i></a>
-                                    <a class="btn btn-danger"
-                                        href="{{ route('admin.recomendaciones.confirm_delete', $recomendacion->id) }}"><i
-                                            class="fas fa-trash"></i></a>
-                                </td>
+                                <th>#</th>
+                                <th>Nombre de la recomendacion</th>
+                                <th style="text-align: center;">Acciones</th>
                             </tr>
-                        @endforeach
+                        </thead>
+                        <tbody>
 
-                    </tbody>
-                </table>
+                            @foreach ($recomendaciones as $recomendacion)
+                                <tr style="text-align: center;">
+                                    <td>{{ $loop->iteration }}</td>
+                                    <td>{{ $recomendacion->nombre_recomendacion }}</td>
+                                    <td style="text-align: center;">
+                                        <a class="btn btn-warning"
+                                            href="{{ route('admin.recomendaciones.edit', $recomendacion->id) }}"><i
+                                                class="fas fa-edit"></i></a>
+                                        <a class="btn btn-danger"
+                                            href="{{ route('admin.recomendaciones.confirm_delete', $recomendacion->id) }}"><i
+                                                class="fas fa-trash"></i></a>
+                                    </td>
+                                </tr>
+                            @endforeach
+
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
         <!-- /.card-body -->
@@ -65,6 +67,7 @@
             display: flex;
             justify-content: center;
             /* Centrar los botones */
+            flex-wrap: wrap;
             gap: 10px;
             /* Espaciado entre botones */
             margin-bottom: 15px;

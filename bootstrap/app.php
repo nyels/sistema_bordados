@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('web', [
             \App\Http\Middleware\SecureFileUpload::class,
             \App\Http\Middleware\PreventBackHistory::class,
+            \App\Http\Middleware\AllowLivePreview::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
