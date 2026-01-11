@@ -7,7 +7,8 @@
 
 @section('content')
     <br>
-    <div class="col-md-4">
+    <br>
+    <div class="col-12 col-md-6 col-lg-4">
 
         {{-- MENSAJES FLASH --}}
         @foreach (['success', 'error', 'info'] as $msg)
@@ -71,15 +72,16 @@
                         </div>
 
                         <div class="row mt-4">
-                            <div class="col-12 text-right">
-                                <a href="{{ route('admin.recomendaciones.index') }}" class="btn btn-secondary"
-                                    style="margin-right: 10px;">
-                                    <i class="fas fa-times-circle"></i> Regresar
-                                </a>
-
-                                <button type="submit" class="btn btn-danger">
-                                    <i class="fas fa-save"></i> Eliminar
-                                </button>
+                            <div class="col-12">
+                                <div class="text-right">
+                                    <a href="{{ route('admin.recomendaciones.index') }}" class="btn btn-secondary"
+                                        style="margin-right: 10px; padding: 8px 20px;">
+                                        <i class="fas fa-times-circle"></i> Regresar
+                                    </a>
+                                    <button type="submit" class="btn btn-danger" style="padding: 8px 20px;">
+                                        <i class="fas fa-save"></i> Eliminar
+                                    </button>
+                                </div>
                             </div>
                         </div>
 

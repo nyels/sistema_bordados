@@ -8,7 +8,8 @@
 @section('content')
     <br>
 
-    <div class="col-md-4">
+    <br>
+    <div class="col-12 col-md-6 col-lg-4">
         <div class="card card-danger">
             <div class="card-header">
                 <h3 class="card-title" style="font-weight: bold;font-size: 20px;"> ELIMINAR ATRIBUTO</h3>
@@ -51,13 +52,17 @@
                             @csrf
                             @method('DELETE')
 
-                            <div class="text-center mt-4">
-                                <a href="{{ route('admin.attributes.index') }}" class="btn btn-secondary">
-                                    <i class="fas fa-times-circle"></i> Cancelar
-                                </a>
-                                <button type="submit" class="btn btn-danger">
-                                    <i class="fas fa-trash"></i> Confirmar Eliminación
-                                </button>
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <div class="text-right">
+                                        <a href="{{ route('admin.attributes.index') }}" class="btn btn-secondary">
+                                            <i class="fas fa-times-circle"></i> Cancelar
+                                        </a>
+                                        <button type="submit" class="btn btn-danger">
+                                            <i class="fas fa-trash"></i> Confirmar Eliminación
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </form>
                     </div>

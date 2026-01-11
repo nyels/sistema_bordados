@@ -34,7 +34,7 @@
             </button>
         </div>
     @endif
-    <div class="col-md-4">
+    <div class="col-12 col-md-6 col-lg-4">
         <div class="card card-primary">
             <div class="card-header">
                 <h3 class="card-title" style="font-weight: bold;font-size: 20px;"> NUEVO ATRIBUTO</h3>

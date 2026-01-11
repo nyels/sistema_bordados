@@ -7,7 +7,7 @@
 
 @section('content')
     <br>
-    <div class="col-md-4">
+    <div class="col-12 col-lg-4">
 
         {{-- MENSAJES FLASH --}}
         @foreach (['success', 'error', 'info'] as $msg)
@@ -69,17 +69,14 @@
                             @enderror
                         </div>
 
-                        <div class="row mt-4">
-                            <div class="col-12 text-right">
-                                <a href="{{ route('admin.giros.index') }}" class="btn btn-secondary"
-                                    style="margin-right: 10px;">
-                                    <i class="fas fa-times-circle"></i> Regresar
-                                </a>
+                        <div class="d-flex justify-content-end align-items-center mt-4">
+                            <a href="{{ route('admin.giros.index') }}" class="btn btn-secondary mr-2">
+                                <i class="fas fa-times-circle"></i> Regresar
+                            </a>
 
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save"></i> Actualizar
-                                </button>
-                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Actualizar
+                            </button>
                         </div>
 
                     </div>

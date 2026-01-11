@@ -28,7 +28,7 @@
             </div>
         @endif
 
-        <div class="card card-warning " bis_skin_checked="1">
+        <div class="card card-primary " bis_skin_checked="1">
 
             <div class="card-header" bis_skin_checked="1">
                 <h3 class="card-title" style="font-weight: bold;font-size: 20px;">

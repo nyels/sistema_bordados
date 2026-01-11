@@ -8,7 +8,7 @@
 @section('content')
     <br>
     <div class="row">
-        <div class="col-md-5">
+        <div class="col-12 col-md-6 col-lg-4">
 
             <div class="card card-danger">
                 <div class="card-header">
@@ -85,13 +85,17 @@
                             </div>
                         @endif
 
-                        <div class="d-flex justify-content-between">
-                            <a href="{{ route('admin.units.index') }}" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left mr-1"></i> Regresar
-                            </a>
-                            <button type="button" class="btn btn-danger btn-confirm-delete">
-                                <i class="fas fa-trash mr-1"></i> Eliminar
-                            </button>
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="text-right">
+                                    <a href="{{ route('admin.units.index') }}" class="btn btn-secondary">
+                                        <i class="fas fa-arrow-left mr-1"></i> Regresar
+                                    </a>
+                                    <button type="button" class="btn btn-danger btn-confirm-delete">
+                                        <i class="fas fa-trash mr-1"></i> Eliminar
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </form>
                 </div>

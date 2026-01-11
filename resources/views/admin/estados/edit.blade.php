@@ -7,8 +7,7 @@
 
 @section('content')
     <br>
-    <div class="col-md-4">
-
+    <div class="col-12 col-lg-4">
         {{-- MENSAJES FLASH --}}
         @foreach (['success', 'error', 'info'] as $msg)
             @if (session($msg))
@@ -28,21 +27,18 @@
             </div>
         @endif
 
-        <div class="card card-warning " bis_skin_checked="1">
-
+        <div class="card card-primary " bis_skin_checked="1">
             <div class="card-header" bis_skin_checked="1">
                 <h3 class="card-title" style="font-weight: bold;font-size: 20px;">
                     EDITAR ESTADO
                 </h3>
             </div>
-
             <div class="card-body" bis_skin_checked="1">
                 <form method="post" action="{{ route('admin.estados.update', $estado->id) }}">
                     @csrf
                     @method('PUT')
 
                     <div class="col-md-12">
-
                         <div style="border-bottom: 3px solid #007bff; padding-bottom: 8px; margin-bottom: 20px;">
                             <h5 style="color: #007bff; font-weight: 600; margin: 0; display: flex; align-items: center;">
                                 <i class="fas fa-building" style="margin-right: 10px;"></i>
@@ -51,35 +47,25 @@
                         </div>
 
                         <div class="form-group">
-                            <label>
-                                Nombre <span style="color: red;">*</span>
-                            </label>
-
+                            <label>Nombre <span style="color: red;">*</span></label>
                             <input type="text"
                                 class="form-control form-control-sm @error('nombre_estado') is-invalid @enderror"
                                 id="nombre_estado" name="nombre_estado" placeholder="Ej: MEXICO"
                                 pattern="[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+" title="Solo se permiten letras y espacios"
                                 value="{{ $estado->nombre_estado }}"
                                 oninput="this.value = this.value.replace(/[^a-zA-ZñÑáéíóúÁÉÍÓÚ\s]/g, '')" required>
-
                             @error('nombre_estado')
-                                <div class="invalid-feedback">
-                                    {{ $message }}
-                                </div>
+                                <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
 
-                        <div class="row mt-4">
-                            <div class="col-12 text-right">
-                                <a href="{{ route('admin.estados.index') }}" class="btn btn-secondary"
-                                    style="margin-right: 10px;">
-                                    <i class="fas fa-times-circle"></i> Regresar
-                                </a>
-
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save"></i> Actualizar
-                                </button>
-                            </div>
+                        <div class="d-flex justify-content-end align-items-center mt-4">
+                            <a href="{{ route('admin.estados.index') }}" class="btn btn-secondary mr-2">
+                                <i class="fas fa-times-circle"></i> Regresar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Actualizar
+                            </button>
                         </div>
 
                     </div>
@@ -88,7 +74,6 @@
         </div>
     </div>
 @stop
-
 
 @section('css')
     {{-- Add here extra stylesheets --}}

@@ -7,7 +7,7 @@
 
 @section('content')
     <br>
-    <div class="col-md-4">
+    <div class="col-12 col-lg-4">
         <div class="card card-primary " bis_skin_checked="1">
 
             <div class="card-header" bis_skin_checked="1">
@@ -36,18 +36,14 @@
                         </div>
 
                         <!-- Botones de acción -->
-                        <div class="row mt-4">
-                            <div class="col-12">
-                                <div class="text-right">
-                                    <a href="{{ route('admin.giros.index') }}" class="btn btn-secondary"
-                                        style="margin-right: 10px; padding: 8px 20px;">
-                                        <i class="fas fa-times-circle"></i> Regresar
-                                    </a>
-                                    <button type="submit" class="btn btn-primary" style="padding: 8px 20px;">
-                                        <i class="fas fa-save"></i> Guardar
-                                    </button>
-                                </div>
-                            </div>
+                        <div class="d-flex justify-content-end align-items-center mt-4">
+                            <a href="{{ route('admin.giros.index') }}" class="btn btn-secondary mr-2"
+                                style="padding: 8px 20px;">
+                                <i class="fas fa-times-circle"></i> Regresar
+                            </a>
+                            <button type="submit" class="btn btn-primary" style="padding: 8px 20px;">
+                                <i class="fas fa-save"></i> Guardar
+                            </button>
                         </div>
 
                     </div>
