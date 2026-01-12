@@ -54,8 +54,8 @@
 
                             <div class="row mt-4">
                                 <div class="col-12">
-                                    <div class="text-right">
-                                        <a href="{{ route('admin.attributes.index') }}" class="btn btn-secondary">
+                                    <div class="d-flex justify-content-end align-items-center mt-4">
+                                        <a href="{{ route('admin.attributes.index') }}" class="btn btn-secondary mr-2">
                                             <i class="fas fa-times-circle"></i> Cancelar
                                         </a>
                                         <button type="submit" class="btn btn-danger">

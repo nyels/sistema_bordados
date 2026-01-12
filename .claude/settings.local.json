@@ -19,7 +19,8 @@
       "Bash(ls:*)",
       "Bash(php -l:*)",
       "Bash(php check_units.php:*)",
-      "Bash(php fix_units.php:*)"
+      "Bash(php fix_units.php:*)",
+      "Bash(more:*)"
     ]
   }
 }

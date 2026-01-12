@@ -97,63 +97,166 @@
 
             <hr>
 
-            {{-- TABLA --}}
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover">
-                    <thead class="thead-dark">
-                        <tr>
-                            <th style="width: 150px;">Fecha</th>
-                            <th style="width: 120px;">Usuario</th>
-                            <th style="width: 100px;">Acción</th>
-                            <th>Descripción</th>
-                            <th style="width: 100px;">IP</th>
-                            <th style="width: 80px; text-align: center;">Detalle</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($logs as $log)
-                            <tr>
-                                <td>
-                                    <small>{{ $log->created_at->format('d/m/Y H:i:s') }}</small>
-                                </td>
-                                <td>{{ $log->user_name ?? 'Sistema' }}</td>
-                                <td>
-                                    <i class="{{ $log->action_icon }}"></i>
-                                    {{ $log->action_label }}
-                                </td>
-                                <td>
-                                    {{ $log->description }}
-                                    @if ($log->model_name)
-                                        <br><small class="text-muted">{{ $log->short_model_type }}:
-                                            {{ $log->model_name }}</small>
-                                    @endif
-                                </td>
-                                <td><small>{{ $log->ip_address }}</small></td>
-                                <td class="text-center">
-                                    <a href="{{ route('admin.activity-logs.show', $log->uuid) }}" class="btn btn-info btn-sm"
-                                        title="Ver detalle">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                </td>
+            <div class="col-12">
+                <div class="table-responsive">
+                    {{-- TABLA CON DATATABLE --}}
+                    <table id="example1" class="table table-bordered table-hover table-condensed">
+                        <thead class="thead-dark">
+                            <tr style="text-align: center;">
+                                <th style="width: 150px;">Fecha</th>
+                                <th style="width: 120px;">Usuario</th>
+                                <th style="width: 100px;">Acción</th>
+                                <th>Descripción</th>
+                                <th style="width: 100px;">IP</th>
+                                <th style="width: 80px; text-align: center;">Detalle</th>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="6" class="text-center text-muted py-4">
-                                    <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
-                                    No hay registros de actividad
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-
-            {{-- PAGINACIÓN --}}
-            @if ($logs instanceof \Illuminate\Pagination\LengthAwarePaginator && $logs->hasPages())
-                <div class="mt-3">
-                    {{ $logs->links() }}
+                        </thead>
+                        <tbody>
+                            @foreach ($logs as $log)
+                                <tr style="text-align: center;">
+                                    <td>
+                                        <small>{{ $log->created_at->format('d/m/Y H:i:s') }}</small>
+                                    </td>
+                                    <td>{{ $log->user_name ?? 'Sistema' }}</td>
+                                    <td>
+                                        <i class="{{ $log->action_icon }}"></i>
+                                        {{ $log->action_label }}
+                                    </td>
+                                    <td style="text-align: left;">
+                                        {{ $log->description }}
+                                        @if ($log->model_name)
+                                            <br><small class="text-muted">{{ $log->short_model_type }}:
+                                                {{ $log->model_name }}</small>
+                                        @endif
+                                    </td>
+                                    <td><small>{{ $log->ip_address }}</small></td>
+                                    <td class="text-center">
+                                        <a href="{{ route('admin.activity-logs.show', $log->uuid) }}"
+                                            class="btn btn-info btn-sm" title="Ver detalle">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
                 </div>
-            @endif
+            </div>
         </div>
     </div>
+@stop
+
+@section('css')
+    <style>
+        /* Fondo transparente y sin borde en el contenedor */
+        #example1_wrapper .dt-buttons {
+            background-color: transparent;
+            box-shadow: none;
+            border: none;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            /* Centrar los botones */
+            gap: 10px;
+            /* Espaciado entre botones */
+            margin-bottom: 15px;
+            /* Separar botones de la tabla */
+        }
+
+        /* Estilo personalizado para los botones */
+        #example1_wrapper .btn {
+            color: #fff;
+            /* Color del texto en blanco */
+            border-radius: 4px;
+            /* Bordes redondeados */
+            padding: 5px 15px;
+            /* Espaciado interno */
+            font-size: 14px;
+            /* TamaÃ±o de fuente */
+        }
+
+        /* Colores por tipo de botÃ³n */
+        .btn-danger {
+            background-color: #dc3545;
+            border: none;
+        }
+
+        .btn-success {
+            background-color: #28a745;
+            border: none;
+        }
+
+        .btn-info {
+            background-color: #17a2b8;
+            border: none;
+        }
+
+        .btn-warning {
+            background-color: #ffc107;
+            color: #212529;
+            border: none;
+        }
+
+        .btn-default {
+            background-color: #6e7176;
+            color: #212529;
+            border: none;
+        }
+    </style>
+@stop
+
+@section('js')
+    <script>
+        $(function() {
+            $("#example1").DataTable({
+                "pageLength": 10,
+                "language": {
+                    "emptyTable": "No hay informacion",
+                    "info": "Mostrando _START_ a _END_ de _TOTAL_ Registros",
+                    "infoEmpty": "Mostrando 0 a 0 de 0 Registros",
+                    "infoFiltered": "(Filtrado de _MAX_ total Registros)",
+                    "lengthMenu": "Mostrar _MENU_ Registros",
+                    "loadingRecords": "Cargando...",
+                    "processing": "Procesando...",
+                    "search": "Buscador:",
+                    "zeroRecords": "Sin resultados encontrados",
+                    "paginate": {
+                        "first": "Primero",
+                        "last": "Ultimo",
+                        "next": "Siguiente",
+                        "previous": "Anterior"
+                    }
+                },
+                "responsive": true,
+                "lengthChange": true,
+                "autoWidth": false,
+                buttons: [{
+                        text: '<i class="fas fa-copy"></i> COPIAR',
+                        extend: 'copy',
+                        className: 'btn btn-default'
+                    },
+                    {
+                        text: '<i class="fas fa-file-pdf"></i> PDF',
+                        extend: 'pdf',
+                        className: 'btn btn-danger'
+                    },
+                    {
+                        text: '<i class="fas fa-file-csv"></i> CSV',
+                        extend: 'csv',
+                        className: 'btn btn-info'
+                    },
+                    {
+                        text: '<i class="fas fa-file-excel"></i> EXCEL',
+                        extend: 'excel',
+                        className: 'btn btn-success'
+                    },
+                    {
+                        text: '<i class="fas fa-print"></i> IMPRIMIR',
+                        extend: 'print',
+                        className: 'btn btn-default'
+                    }
+                ]
+            }).buttons().container().appendTo('#example1_wrapper .row:eq(0)');
+        });
+    </script>
 @stop

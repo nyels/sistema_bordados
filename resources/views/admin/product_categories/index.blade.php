@@ -38,8 +38,6 @@
                                     <td>{{ $loop->iteration }}</td>
                                     <td>
                                         <strong>{{ $category->name }}</strong>
-                                        <br>
-                                        <small class="text-muted">{{ $category->slug }}</small>
                                     </td>
                                     <td>{{ Str::limit($category->description, 80) ?? '-' }}</td>
                                     <td class="text-center">

@@ -37,6 +37,7 @@ class DesignExport extends Model
         'approved_by',
         'approved_at',
         'auto_read_success',
+        'svg_content',
     ];
 
     /**

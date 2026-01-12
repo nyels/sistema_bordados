@@ -104,19 +104,46 @@ class EmbroideryAnalyzerService
             return $this->errorResponse("Formato .{$extension} no soportado");
         }
 
+        // Obtener metadata antes de mover el archivo
+        $originalName = $file->getClientOriginalName();
+        $originalPath = $file->getRealPath();
+
+        // Verificar que el archivo temporal existe
+        if (!$originalPath || !file_exists($originalPath)) {
+            Log::error('Archivo temporal no encontrado', [
+                'original_name' => $originalName,
+                'path' => $originalPath
+            ]);
+            return $this->errorResponse("El archivo temporal no está disponible. Intente subir nuevamente.");
+        }
+
+        // Obtener tamaño antes de mover
+        $fileSize = filesize($originalPath);
+
         $tempPath = tempnam(sys_get_temp_dir(), 'emb_') . '.' . $extension;
 
         try {
-            $file->move(dirname($tempPath), basename($tempPath));
+            // Copiar en lugar de mover para evitar problemas con archivos temporales
+            if (!copy($originalPath, $tempPath)) {
+                Log::error('No se pudo copiar el archivo temporal', [
+                    'from' => $originalPath,
+                    'to' => $tempPath
+                ]);
+                return $this->errorResponse("Error al procesar el archivo.");
+            }
 
             // Analyze
             $result = $this->analyzeFromPath($tempPath);
 
             // Add metadata
             $result['upload_metadata'] = [
-                'original_name' => $file->getClientOriginalName(),
-                'size' => $file->getSize(),
+                'original_name' => $originalName,
+                'size' => $fileSize,
             ];
+
+            // Agregar nombre original al resultado principal también
+            $result['original_name'] = $originalName;
+            $result['file_size'] = $fileSize;
 
             return $result;
         } finally {
@@ -262,5 +289,29 @@ class EmbroideryAnalyzerService
             'height_mm' => 0,
             'colors' => []
         ];
+    }
+
+    /**
+     * Verifica si una extensión de archivo es válida para archivos de bordado
+     */
+    public function isValidExtension(string $extension): bool
+    {
+        return in_array(strtolower($extension), $this->allowedExtensions);
+    }
+
+    /**
+     * Devuelve las extensiones permitidas como cadena formateada
+     */
+    public function getAllowedExtensionsString(): string
+    {
+        return implode(', ', array_map(fn($ext) => ".{$ext}", $this->allowedExtensions));
+    }
+
+    /**
+     * Devuelve el array de extensiones permitidas
+     */
+    public function getAllowedExtensions(): array
+    {
+        return $this->allowedExtensions;
     }
 }

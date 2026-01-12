@@ -157,6 +157,24 @@
                     </div>
                 </div>
 
+                {{-- Vista Previa SVG - Thumbnail Compacto --}}
+                <div class="svg-preview-section text-center" id="svgPreviewSection" style="display: none;">
+                    <div class="svg-thumbnail-row">
+                        <div class="svg-thumbnail-card" id="svgThumbnailCard" title="Clic para ampliar">
+                            <div class="svg-thumbnail-inner" id="svgThumbnailContainer">
+                                {{-- SVG thumbnail se inyecta aquí --}}
+                            </div>
+                            <div class="svg-thumbnail-hover">
+                                <i class="fas fa-search-plus"></i>
+                            </div>
+                        </div>
+                        <div class="svg-thumbnail-info">
+                            <span class="svg-thumbnail-label">Vista Previa</span>
+                            <span class="svg-thumbnail-hint">Clic para ampliar</span>
+                        </div>
+                    </div>
+                </div>
+
                 {{-- Alerta de entrada manual --}}
                 <div class="alert-manual-entry" id="manualEntryAlert" style="display: none;">
                     <i class="fas fa-keyboard"></i>
@@ -264,6 +282,47 @@
     </div>
 </div>
 
+{{-- Modal de Vista Previa SVG --}}
+<div class="svg-modal-overlay" id="svgModalOverlay" style="display: none;">
+    <div class="svg-modal-container">
+        <div class="svg-modal-header">
+            <h5 class="svg-modal-title">
+                <i class="fas fa-eye"></i>
+                Vista Previa del Bordado
+            </h5>
+            <button type="button" class="svg-modal-close" id="btnCloseSvgModal">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="svg-modal-body">
+            <div class="svg-modal-canvas" id="svgModalCanvas">
+                {{-- SVG completo se inyecta aquí --}}
+            </div>
+        </div>
+        <div class="svg-modal-toolbar">
+            <div class="svg-modal-tools-left">
+                <button type="button" class="svg-modal-btn" id="btnModalZoomOut" title="Alejar">
+                    <i class="fas fa-minus"></i>
+                </button>
+                <span class="svg-zoom-level" id="svgZoomLabel">100%</span>
+                <button type="button" class="svg-modal-btn" id="btnModalZoomIn" title="Acercar">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <button type="button" class="svg-modal-btn" id="btnModalZoomReset" title="Centrar">
+                    <i class="fas fa-compress-arrows-alt"></i>
+                </button>
+            </div>
+            <div class="svg-modal-tools-right">
+                <button type="button" class="svg-modal-btn svg-modal-btn-primary" id="btnModalDownload"
+                    title="Descargar SVG">
+                    <i class="fas fa-download"></i>
+                    <span>Descargar SVG</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {{-- Modal de Detalles (Overlay centrado) --}}
 <div class="detail-overlay" id="exportDetailOverlay" style="display: none;">
     <div class="detail-modal-centered">
@@ -274,7 +333,7 @@
         <div class="detail-modal-body">
             {{-- Header del archivo --}}
             <div class="detail-file-header">
-                <div class="detail-file-icon">
+                <div class="detail-file-icon" id="detailFileIcon">
                     <i class="fas fa-file-code"></i>
                 </div>
                 <div class="detail-file-info">
@@ -447,9 +506,7 @@
     <div class="export-item" data-id="{id}" data-export='{export_json}'>
         <div class="export-status-indicator status-{status}"></div>
         <div class="export-item-content" role="button">
-            <div class="export-item-icon">
-                <i class="fas fa-file-code"></i>
-            </div>
+            {preview_html}
             <div class="export-item-info">
                 <div class="export-item-name">{application_label}</div>
                 <div class="export-item-meta">
@@ -1713,6 +1770,302 @@
         color: #fff;
     }
 
+    /* ============================================= */
+    /* SVG THUMBNAIL COMPACTO */
+    /* ============================================= */
+    .svg-preview-section {
+        margin-bottom: 16px;
+    }
+
+    .svg-thumbnail-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        background: var(--gray-50);
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius-md);
+    }
+
+    .svg-thumbnail-card {
+        position: relative;
+        width: 250px;
+        height: 250px;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius-sm);
+        background: #fff;
+        overflow: hidden;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+    }
+
+    .svg-thumbnail-card:hover {
+        border-color: var(--primary);
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
+    }
+
+    .svg-thumbnail-inner {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px;
+        background-image: radial-gradient(var(--gray-200) 1px, transparent 1px);
+        background-size: 8px 8px;
+    }
+
+    .svg-thumbnail-inner svg {
+        max-width: 100%;
+        max-height: 100%;
+        width: auto;
+        height: auto;
+    }
+
+    .svg-thumbnail-hover {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(37, 99, 235, 0.85);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        color: #fff;
+        font-size: 18px;
+    }
+
+    .svg-thumbnail-card:hover .svg-thumbnail-hover {
+        opacity: 1;
+    }
+
+    .svg-thumbnail-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        flex: 1;
+    }
+
+    .svg-thumbnail-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--gray-700);
+    }
+
+    .svg-thumbnail-hint {
+        font-size: 11px;
+        color: var(--gray-400);
+    }
+
+    .svg-thumbnail-badge {
+        font-size: 8px;
+        font-weight: 700;
+        color: #fff;
+        background: linear-gradient(135deg, var(--primary) 0%, #7c3aed 100%);
+        padding: 2px 6px;
+        border-radius: 8px;
+        letter-spacing: 0.5px;
+    }
+
+    /* ============================================= */
+    /* SVG MODAL OVERLAY */
+    /* ============================================= */
+    .svg-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 100000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        animation: svgModalFadeIn 0.2s ease;
+    }
+
+    @keyframes svgModalFadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    .svg-modal-container {
+        background: #fff;
+        border-radius: 150px;
+        width: 100%;
+        max-width: 900px;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        animation: svgModalSlideIn 0.25s ease;
+    }
+
+    @keyframes svgModalSlideIn {
+        from {
+            opacity: 0;
+            transform: scale(0.95) translateY(-10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+    }
+
+    .svg-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .svg-modal-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--gray-800);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .svg-modal-title i {
+        color: var(--primary);
+    }
+
+    .svg-modal-close {
+        width: 36px;
+        height: 36px;
+        border: none;
+        background: var(--gray-100);
+        border-radius: 8px;
+        color: var(--gray-500);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s ease;
+    }
+
+    .svg-modal-close:hover {
+        background: var(--gray-200);
+        color: var(--gray-700);
+    }
+
+    .svg-modal-body {
+        flex: 1;
+        padding: 20px;
+        overflow: hidden;
+        background: #f8fafc;
+        background-image: radial-gradient(var(--gray-300) 1px, transparent 1px);
+        background-size: 16px 16px;
+        min-height: 400px;
+        max-height: 60vh;
+    }
+
+    .svg-modal-canvas {
+        width: 100%;
+        height: 100%;
+        min-height: 350px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: grab;
+        overflow: hidden;
+    }
+
+    .svg-modal-canvas:active {
+        cursor: grabbing;
+    }
+
+    .svg-modal-canvas svg {
+        max-width: 100%;
+        max-height: 100%;
+        transition: transform 0.1s ease;
+    }
+
+    .svg-modal-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        /* Centrado de herramientas */
+        gap: 20px;
+        /* Espacio entre grupos */
+        padding: 8px 20px;
+        /* Reducido espacio vertical */
+        border-top: 1px solid var(--gray-200);
+        background: #fff;
+        border-radius: 0 0 12px 12px;
+    }
+
+    .svg-modal-tools-left,
+    .svg-modal-tools-right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .svg-modal-btn {
+        height: 36px;
+        padding: 0 12px;
+        border: 1px solid var(--gray-200);
+        background: #fff;
+        border-radius: 8px;
+        color: var(--gray-600);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        transition: all 0.15s ease;
+    }
+
+    .svg-modal-btn:hover {
+        background: var(--gray-100);
+        border-color: var(--gray-300);
+    }
+
+    .svg-modal-btn:active {
+        transform: scale(0.97);
+    }
+
+    .svg-modal-btn i {
+        font-size: 14px;
+    }
+
+    .svg-modal-btn-primary {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: #fff;
+    }
+
+    .svg-modal-btn-primary:hover {
+        background: var(--primary-hover);
+        border-color: var(--primary-hover);
+    }
+
+    .svg-zoom-level {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--gray-500);
+        min-width: 45px;
+        text-align: center;
+    }
+
     /* Alert manual entry */
     .alert-manual-entry {
         display: flex;
@@ -2563,6 +2916,198 @@
         /* Standard height */
         min-height: 52px;
     }
+
+    /* ============================================= */
+    /* VISTA PREVIA SVG (REDEFINED) */
+    /* ============================================= */
+    .svg-preview-section {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px dashed var(--gray-300);
+        width: 100%;
+    }
+
+    .svg-thumbnail-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        /* Centrado solicitado */
+        gap: 15px;
+        position: relative;
+    }
+
+    .svg-thumbnail-card {
+        width: 180px;
+        height: 180px;
+        border: 1px solid var(--gray-300);
+        border-radius: var(--radius-sm);
+        background: #fff;
+        padding: 4px;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .svg-thumbnail-card:hover {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 2px var(--primary-light);
+    }
+
+    .svg-thumbnail-inner {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .svg-thumbnail-hover {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(37, 99, 235, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+
+    .svg-thumbnail-card:hover .svg-thumbnail-hover {
+        opacity: 1;
+    }
+
+    .svg-thumbnail-hover i {
+        color: var(--primary);
+        font-size: 20px;
+    }
+
+    .svg-thumbnail-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .svg-thumbnail-label {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--gray-800);
+    }
+
+    .svg-thumbnail-hint {
+        font-size: 12px;
+        color: var(--gray-500);
+    }
+
+    /* Modal SVG */
+    .svg-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.85);
+        z-index: 100000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(4px);
+    }
+
+    .svg-modal-container {
+        width: 95vw;
+        height: 70vh;
+        background: #fff;
+        border-radius: 20px;
+        /* Esquinas redondeadas solicitadas */
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+
+    .svg-modal-header {
+        height: 60px;
+        padding: 0 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        /* Centrado del título */
+        border-bottom: 1px solid var(--gray-200);
+        background: #fff;
+        z-index: 10;
+        flex-shrink: 0;
+        position: relative;
+        /* Para botón de cierre absoluto */
+    }
+
+    .svg-modal-close {
+        position: absolute;
+        right: 20px;
+        width: 36px;
+        height: 36px;
+        border: none;
+        background: transparent;
+        border-radius: 50%;
+        color: var(--gray-500);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+    }
+
+    .svg-modal-body {
+        flex: 1;
+        background-color: #f8fafc;
+        background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+        background-size: 20px 20px;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+    }
+
+    .svg-modal-canvas {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        cursor: grab;
+    }
+
+    .export-item-icon svg {
+        width: 100%;
+        height: 100%;
+    }
+
+    .export-preview-box {
+        width: 40px;
+        height: 40px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        background: transparent !important;
+        padding: 0 !important;
+        border-radius: var(--radius-sm);
+    }
+
+    .export-preview-box svg {
+        width: 100%;
+        height: 100%;
+    }
 </style>
 
 <script>
@@ -2791,7 +3336,7 @@
                                 // Ignorar errores de abort (son intencionales)
                                 if (textStatus === 'abort') {
                                     console.log(
-                                    '[ProductionTab] Variant request aborted intentionally');
+                                        '[ProductionTab] Variant request aborted intentionally');
                                     return;
                                 }
                                 if (myVersion !== loadRequestVersion) return;
@@ -2972,8 +3517,12 @@
                     html += '<div class="export-status-indicator status-' + status + '"></div>';
                     html += '<div class="export-item-content" role="button">';
 
-                    // Miniatura de imagen (vinculada, de variante o del diseño)
-                    if (exp.image_url) {
+                    // Miniatura: Prioridad SVG -> Imagen -> Icono
+                    if (exp.svg_content) {
+                        html += '<div class="export-item-thumbnail export-preview-box">';
+                        html += exp.svg_content;
+                        html += '</div>';
+                    } else if (exp.image_url) {
                         html += '<div class="export-item-thumbnail">';
                         html += '<img src="' + exp.image_url +
                             '" alt="Ref" onerror="this.parentElement.innerHTML=\'<i class=\\\'fas fa-image\\\'></i>\';this.parentElement.classList.add(\'no-image\');">';
@@ -3259,8 +3808,17 @@
                             dimensions = item.width_mm + '×' + item.height_mm + ' mm';
                         }
 
+                        var previewHtml =
+                            '<div class="export-item-icon"><i class="fas fa-file-code"></i></div>';
+                        if (item.svg_content && item.svg_content.trim() !== '') {
+                            previewHtml =
+                                '<div class="export-preview-box">' +
+                                item.svg_content + '</div>';
+                        }
+
                         var html = template
                             .replace(/{id}/g, item.id)
+                            .replace(/{preview_html}/g, previewHtml)
                             .replace(/{application_label}/g, escapeHtml(item.application_label ||
                                 'Sin nombre'))
                             .replace(/{file_format}/g, item.file_format || 'N/A')
@@ -3357,6 +3915,9 @@
                     // Limpiar imagen vinculada
                     $('#exportImageId').val('');
                     $('#linkedImageIndicator').hide().html('');
+
+                    // Reset SVG preview
+                    hideSvgPreview();
                 }
 
                 // Análisis de archivo
@@ -3418,6 +3979,13 @@
                         $('#colorsPreview').show();
                     }
 
+                    // Display SVG preview if available
+                    if (data.svg_content && data.svg_content.trim()) {
+                        showSvgPreview(data.svg_content);
+                    } else {
+                        hideSvgPreview();
+                    }
+
                     $('#technicalData, #formFields').show();
                     $('#formActions').css('display', 'flex');
                     $('#btnSaveExport').prop('disabled', false);
@@ -3431,6 +3999,9 @@
                     $('#hiddenAutoRead').val('0');
 
                     $('#inputStitches, #inputColors, #inputWidth, #inputHeight').val('');
+
+                    // Hide SVG preview on error
+                    hideSvgPreview();
 
                     $('.tech-card').addClass('has-error');
                     $('#technicalData, #formFields').show();
@@ -3453,6 +4024,216 @@
                         container.append(swatch);
                     });
                 }
+
+                // ============================================
+                // SVG PREVIEW & MODAL FUNCTIONS
+                // ============================================
+                var currentSvgContent = null;
+                var svgZoomLevel = 1;
+                var svgPanX = 0;
+                var svgPanY = 0;
+                var isDraggingSvg = false;
+                var lastSvgMouseX = 0;
+                var lastSvgMouseY = 0;
+
+                // Mostrar thumbnail de vista previa
+                function showSvgPreview(svgContent) {
+                    if (!svgContent || !svgContent.trim()) {
+                        hideSvgPreview();
+                        return;
+                    }
+
+                    currentSvgContent = svgContent;
+
+                    // Insertar en thumbnail
+                    var $thumbnail = $('#svgThumbnailContainer');
+                    $thumbnail.html(svgContent);
+
+                    // Ajustar SVG en thumbnail
+                    var $svg = $thumbnail.find('svg');
+                    if ($svg.length) {
+                        $svg.css({
+                            'max-width': '95%',
+                            'max-height': '95%',
+                            'width': 'auto',
+                            'height': 'auto'
+                        });
+                    }
+
+                    // Mostrar sección
+                    $('#svgPreviewSection').show();
+                }
+
+                // Ocultar preview
+                function hideSvgPreview() {
+                    currentSvgContent = null;
+                    $('#svgPreviewSection').hide();
+                    $('#svgThumbnailContainer').html('');
+                    closeSvgModal();
+                }
+
+                // Abrir modal con SVG
+                function openSvgModal() {
+                    if (!currentSvgContent) return;
+
+                    // Mover modal al body si no está
+                    var $modal = $('#svgModalOverlay');
+                    if (!$modal.data('moved-to-body')) {
+                        $modal.appendTo('body');
+                        $modal.data('moved-to-body', true);
+                    }
+
+                    // Insertar SVG en modal
+                    var $canvas = $('#svgModalCanvas');
+                    $canvas.html(currentSvgContent);
+
+                    // Ajustar SVG
+                    var $svg = $canvas.find('svg');
+                    if ($svg.length) {
+                        $svg.css({
+                            'max-width': '100%',
+                            'max-height': '100%',
+                            'width': '100%',
+                            'height': '100%'
+                        });
+                        // Asegurar centrado inicial con transform limpio
+                        $svg.css('transform', 'translate(0, 0) scale(1)');
+                    }
+
+                    // Reset zoom y pan
+                    svgZoomLevel = 1;
+                    svgPanX = 0;
+                    svgPanY = 0;
+                    updateModalSvgTransform();
+
+                    // Mostrar modal
+                    $modal.fadeIn(200);
+                    $('body').css('overflow', 'hidden');
+
+                    // Setup eventos de pan
+                    setupModalPanEvents();
+                }
+
+                // Cerrar modal
+                function closeSvgModal() {
+                    $('#svgModalOverlay').fadeOut(200);
+                    $('body').css('overflow', '');
+                    $('#svgModalCanvas').html('');
+                    svgZoomLevel = 1;
+                    svgPanX = 0;
+                    svgPanY = 0;
+                }
+
+                // Actualizar transform del SVG en modal
+                function updateModalSvgTransform() {
+                    var $svg = $('#svgModalCanvas svg');
+                    if ($svg.length) {
+                        $svg.css('transform', 'translate(' + svgPanX + 'px, ' + svgPanY + 'px) scale(' +
+                            svgZoomLevel + ')');
+                    }
+                    $('#svgZoomLabel').text(Math.round(svgZoomLevel * 100) + '%');
+                }
+
+                // Zoom functions
+                function modalZoomIn() {
+                    svgZoomLevel = Math.min(svgZoomLevel + 0.25, 5);
+                    updateModalSvgTransform();
+                }
+
+                function modalZoomOut() {
+                    svgZoomLevel = Math.max(svgZoomLevel - 0.25, 0.25);
+                    updateModalSvgTransform();
+                }
+
+                function modalZoomReset() {
+                    svgZoomLevel = 1;
+                    svgPanX = 0;
+                    svgPanY = 0;
+                    updateModalSvgTransform();
+                }
+
+                // Descargar SVG
+                function downloadSvg() {
+                    if (!currentSvgContent) return;
+
+                    var blob = new Blob([currentSvgContent], {
+                        type: 'image/svg+xml'
+                    });
+                    var url = URL.createObjectURL(blob);
+                    var fileName = (analyzedData && analyzedData.file_name) ?
+                        analyzedData.file_name.replace(/\.[^/.]+$/, '') + '.svg' :
+                        'embroidery-preview.svg';
+
+                    var link = document.createElement('a');
+                    link.href = url;
+                    link.download = fileName;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                }
+
+                // Setup eventos de pan en modal
+                function setupModalPanEvents() {
+                    var canvas = document.getElementById('svgModalCanvas');
+                    if (!canvas) return;
+
+                    canvas.onmousedown = function(e) {
+                        if (e.button === 0) {
+                            isDraggingSvg = true;
+                            lastSvgMouseX = e.clientX;
+                            lastSvgMouseY = e.clientY;
+                            canvas.style.cursor = 'grabbing';
+                        }
+                    };
+
+                    canvas.onmousemove = function(e) {
+                        if (isDraggingSvg) {
+                            svgPanX += e.clientX - lastSvgMouseX;
+                            svgPanY += e.clientY - lastSvgMouseY;
+                            lastSvgMouseX = e.clientX;
+                            lastSvgMouseY = e.clientY;
+                            updateModalSvgTransform();
+                        }
+                    };
+
+                    canvas.onmouseup = function() {
+                        isDraggingSvg = false;
+                        canvas.style.cursor = 'grab';
+                    };
+
+                    canvas.onmouseleave = function() {
+                        isDraggingSvg = false;
+                        canvas.style.cursor = 'grab';
+                    };
+
+                    canvas.onwheel = function(e) {
+                        e.preventDefault();
+                        if (e.deltaY < 0) {
+                            modalZoomIn();
+                        } else {
+                            modalZoomOut();
+                        }
+                    };
+                }
+
+                // Event Bindings para SVG
+                $(document).on('click', '#svgThumbnailCard', openSvgModal);
+                $(document).on('click', '#btnCloseSvgModal', closeSvgModal);
+                $(document).on('click', '#svgModalOverlay', function(e) {
+                    if (e.target === this) closeSvgModal();
+                });
+                $(document).on('click', '#btnModalZoomIn', modalZoomIn);
+                $(document).on('click', '#btnModalZoomOut', modalZoomOut);
+                $(document).on('click', '#btnModalZoomReset', modalZoomReset);
+                $(document).on('click', '#btnModalDownload', downloadSvg);
+
+                // ESC para cerrar modal
+                $(document).on('keydown', function(e) {
+                    if (e.key === 'Escape' && $('#svgModalOverlay').is(':visible')) {
+                        closeSvgModal();
+                    }
+                });
 
                 // Validación
                 function validateForm() {
@@ -3527,6 +4308,10 @@
                     formData.append('width_mm', $('#inputWidth').val() || 0);
                     formData.append('height_mm', $('#inputHeight').val() || 0);
                     formData.append('colors_detected', $('#hiddenColorsDetected').val() || '[]');
+                    // ⭐ GUARDAR CONTENIDO SVG PARA PREVISUALIZACIÓN --
+                    if (currentSvgContent) {
+                        formData.append('svg_content', currentSvgContent);
+                    }
                     formData.append('auto_read_success', autoReadSuccess ? '1' : '0');
 
                     var url = isEditMode ? urls.updateAjax(currentExportId) : urls.storeAjax;
@@ -3638,6 +4423,29 @@
                     $('#detailFileName').text(exportData.file_name);
                     $('#detailFileFormat').text(exportData.file_format);
                     $('#detailFileSize').text(exportData.file_size_formatted || '');
+
+                    // Preview Icon Logic
+                    var $iconContainer = $('#detailFileIcon');
+                    if (exportData.svg_content && exportData.svg_content.trim() !== '') {
+                        $iconContainer.html(exportData.svg_content);
+                        $iconContainer.find('svg').css({
+                            'width': '100%',
+                            'height': '100%'
+                        });
+                        $iconContainer.css({
+                            'padding': '0',
+                            'overflow': 'hidden',
+                            'background-color': 'transparent'
+                        });
+                        // Force override with style attribute in case CSS specificity fights back
+                        $iconContainer.attr('style', $iconContainer.attr('style') +
+                            '; background-color: transparent !important;');
+                    } else {
+                        // Restore default icon
+                        $iconContainer.html('<i class="fas fa-file-code"></i>');
+                        $iconContainer.removeAttr('style'); // Remove inline styles
+                    }
+
 
                     // Status - SIN duplicar emoji
                     var statusBadge = $('#detailStatusBadge');

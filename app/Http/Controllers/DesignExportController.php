@@ -328,31 +328,57 @@ class DesignExportController extends Controller
                 ], 400);
             }
 
-            $result = $this->analyzer->analyzeFromUpload($file);
+            // Copiar archivo a temporal para análisis y SVG
+            $originalPath = $file->getRealPath();
+            $tempPath = tempnam(sys_get_temp_dir(), 'emb_') . '.' . $extension;
 
-            if ($result['success']) {
-                return response()->json([
-                    'success' => true,
-                    'data' => [
-                        'file_name' => $result['original_name'] ?? $result['file_name'],
-                        'file_format' => $result['file_format'],
-                        'file_size' => $result['file_size'],
-                        'total_stitches' => $result['total_stitches'],
-                        'stitches_count' => $result['total_stitches'],
-                        'colors_count' => $result['colors_count'],
-                        'width_mm' => $result['width_mm'],
-                        'height_mm' => $result['height_mm'],
-                        'colors' => $result['colors'],
-                        'dimensions_formatted' => "{$result['width_mm']} x {$result['height_mm']} mm",
-                        'stitches_formatted' => number_format($result['total_stitches'], 0, '.', ','),
-                    ]
-                ]);
-            } else {
+            if (!copy($originalPath, $tempPath)) {
                 return response()->json([
                     'success' => false,
-                    'error' => $result['error'] ?? 'Error al analizar el archivo.',
+                    'error' => 'Error al procesar el archivo.',
                     'allow_manual' => true
-                ], 400);
+                ], 500);
+            }
+
+            try {
+                $result = $this->analyzer->analyzeFromPath($tempPath);
+
+                // Generar SVG para vista previa
+                $svgContent = '';
+                if ($result['success']) {
+                    $svgContent = $this->analyzer->generateSvg($tempPath);
+                }
+
+                if ($result['success']) {
+                    return response()->json([
+                        'success' => true,
+                        'data' => [
+                            'file_name' => $file->getClientOriginalName(),
+                            'file_format' => $result['file_format'] ?? strtoupper($extension),
+                            'file_size' => filesize($tempPath),
+                            'total_stitches' => $result['total_stitches'],
+                            'stitches_count' => $result['total_stitches'],
+                            'colors_count' => $result['colors_count'],
+                            'width_mm' => $result['width_mm'],
+                            'height_mm' => $result['height_mm'],
+                            'colors' => $result['colors'],
+                            'dimensions_formatted' => "{$result['width_mm']} x {$result['height_mm']} mm",
+                            'stitches_formatted' => number_format($result['total_stitches'], 0, '.', ','),
+                            'svg_content' => $svgContent,
+                        ]
+                    ]);
+                } else {
+                    return response()->json([
+                        'success' => false,
+                        'error' => $result['error'] ?? 'Error al analizar el archivo.',
+                        'allow_manual' => true
+                    ], 400);
+                }
+            } finally {
+                // Cleanup temp file
+                if (file_exists($tempPath)) {
+                    @unlink($tempPath);
+                }
             }
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
@@ -387,6 +413,7 @@ class DesignExportController extends Controller
                 'colors_detected' => 'nullable',
                 'notes' => ['nullable', 'string', 'max:1000', 'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s\-_.,;:()\/\n\r#@!?]*$/'],
                 'auto_read_success' => 'nullable|boolean',
+                'svg_content' => 'nullable|string', // Validar SVG content
             ], [
                 'application_type.regex' => 'El tipo de aplicación contiene caracteres no permitidos.',
                 'application_label.regex' => 'La etiqueta contiene caracteres no permitidos (evita: ´¨{}|<>\\`)',
@@ -429,6 +456,7 @@ class DesignExportController extends Controller
                 'status' => 'borrador',
                 'created_by' => Auth::id(),
                 'auto_read_success' => $request->boolean('auto_read_success', false),
+                'svg_content' => $validated['svg_content'] ?? null, // Guardar SVG
             ];
 
             $export = DesignExport::create($exportData);
@@ -466,6 +494,7 @@ class DesignExportController extends Controller
                 'width_mm' => 'nullable|numeric|min:0',
                 'height_mm' => 'nullable|numeric|min:0',
                 'colors_count' => 'nullable|integer|min:0',
+                'svg_content' => 'nullable|string', // Validar SVG content
             ], [
                 'application_type.regex' => 'El tipo de aplicación contiene caracteres no permitidos.',
                 'application_label.regex' => 'La etiqueta contiene caracteres no permitidos. Evita usar: ´ ¨ { } | < > \\ `',
@@ -482,6 +511,7 @@ class DesignExportController extends Controller
                 'width_mm' => $validated['width_mm'] ?? $export->width_mm,
                 'height_mm' => $validated['height_mm'] ?? $export->height_mm,
                 'colors_count' => $validated['colors_count'] ?? $export->colors_count,
+                'svg_content' => $validated['svg_content'] ?? $export->svg_content, // Actualizar SVG
             ]);
 
             $export->load(['creator:id,name', 'approver:id,name']);
@@ -971,6 +1001,7 @@ class DesignExportController extends Controller
             'status_label' => $this->getStatusLabel($export->status),
             'status_color' => $this->getStatusColor($export->status),
             'auto_read_success' => (bool) $export->auto_read_success,
+            'svg_content' => $export->svg_content, // Retornar SVG content
             'notes' => $export->notes,
             'created_at' => $export->created_at->format('d/m/Y H:i'),
             'updated_at' => $export->updated_at->format('d/m/Y H:i'),

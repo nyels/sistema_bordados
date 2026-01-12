@@ -35,7 +35,7 @@
         </div>
     @endif
 
-    <div class="col-md-4">
+    <div class="col-12 col-md-6 col-lg-4">
         <div class="card card-success">
             <div class="card-header">
                 <h3 class="card-title" style="font-weight: bold;font-size: 20px;"> NUEVO VALOR DE ATRIBUTO</h3>
@@ -137,8 +137,8 @@
                             </div> --}}
 
                             {{-- Botones --}}
-                            <div class="text-center mt-4">
-                                <a href="{{ route('admin.attributes.index') }}" class="btn btn-secondary">
+                            <div class="d-flex justify-content-end align-items-center mt-4">
+                                <a href="{{ route('admin.attributes.index') }}" class="btn btn-secondary mr-2">
                                     <i class="fas fa-times-circle"></i> Regresar
                                 </a>
                                 <button type="submit" class="btn btn-success">

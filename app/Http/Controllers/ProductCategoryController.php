@@ -84,7 +84,7 @@ class ProductCategoryController extends Controller
 
         try {
             $category = new ProductCategory();
-            $category->name = trim($validated['name']);
+            $category->name = mb_strtoupper(trim($validated['name']), 'UTF-8');
             $category->description = isset($validated['description']) ? trim($validated['description']) : null;
             $category->is_active = $request->has('is_active') ? true : false;
             $category->save();
@@ -186,7 +186,7 @@ class ProductCategoryController extends Controller
         ]);
 
         try {
-            $category->name = trim($validated['name']);
+            $category->name = mb_strtoupper(trim($validated['name']), 'UTF-8');
             $category->description = isset($validated['description']) ? trim($validated['description']) : null;
             $category->is_active = $request->has('is_active') ? true : false;
 

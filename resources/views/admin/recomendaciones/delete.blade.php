@@ -29,7 +29,7 @@
             </div>
         @endif
 
-        <div class="card card-warning " bis_skin_checked="1">
+        <div class="card card-danger " bis_skin_checked="1">
 
             <div class="card-header" bis_skin_checked="1">
                 <h3 class="card-title" style="font-weight: bold;font-size: 20px;">
@@ -45,8 +45,8 @@
 
                     <div class="col-md-12">
 
-                        <div style="border-bottom: 3px solid #007bff; padding-bottom: 8px; margin-bottom: 20px;">
-                            <h5 style="color: #007bff; font-weight: 600; margin: 0; display: flex; align-items: center;">
+                        <div style="border-bottom: 3px solid #dc3545; padding-bottom: 8px; margin-bottom: 20px;">
+                            <h5 style="color: #dc3545; font-weight: 600; margin: 0; display: flex; align-items: center;">
                                 <i class="fas fa-building" style="margin-right: 10px;"></i>
                                 Datos de la Recomendación
                             </h5>
@@ -71,18 +71,14 @@
                             @enderror
                         </div>
 
-                        <div class="row mt-4">
-                            <div class="col-12">
-                                <div class="text-right">
-                                    <a href="{{ route('admin.recomendaciones.index') }}" class="btn btn-secondary"
-                                        style="margin-right: 10px; padding: 8px 20px;">
-                                        <i class="fas fa-times-circle"></i> Regresar
-                                    </a>
-                                    <button type="submit" class="btn btn-danger" style="padding: 8px 20px;">
-                                        <i class="fas fa-save"></i> Eliminar
-                                    </button>
-                                </div>
-                            </div>
+                        <div class="d-flex justify-content-end align-items-center mt-4">
+                            <a href="{{ route('admin.recomendaciones.index') }}" class="btn btn-secondary mr-2"
+                                style="padding: 8px 20px;">
+                                <i class="fas fa-times-circle"></i> Regresar
+                            </a>
+                            <button type="submit" class="btn btn-danger" style="padding: 8px 20px;">
+                                <i class="fas fa-save"></i> Eliminar
+                            </button>
                         </div>
 
                     </div>

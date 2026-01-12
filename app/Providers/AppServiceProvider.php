@@ -38,8 +38,8 @@ class AppServiceProvider extends ServiceProvider
             if (Schema::hasTable('system_settings')) {
                 $companyName = SystemSetting::getValue('company_name');
                 if ($companyName) {
-                    Config::set('adminlte.title', $companyName);
-                    Config::set('adminlte.logo', "<b>" . substr($companyName, 0, 3) . "</b> " . substr($companyName, 3));
+                    // Logo completo en negrita según solicitud
+                    Config::set('adminlte.logo', "<b>" . $companyName . "</b>");
                 }
 
                 $companyLogo = SystemSetting::getValue('company_logo');

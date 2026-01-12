@@ -8,7 +8,7 @@
 @section('content')
     <br>
     <br>
-    <div class="col-12 col-lg-4">
+    <div class="col-12 col-md-6 col-lg-4">
 
         {{-- MENSAJES FLASH --}}
         @foreach (['success', 'error', 'info'] as $msg)

@@ -414,7 +414,7 @@ return [
                     'active' => ['admin/product-categories*'],
                 ],
                 [
-                    'text' => 'Catálogo',
+                    'text' => 'Productos',
                     'url' => 'admin/products',
                     'icon' => 'fas fa-fw fa-th-list',
                     'active' => ['admin/products*'],

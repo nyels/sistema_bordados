@@ -8,7 +8,7 @@
 @section('content')
     <br>
     <br>
-    <div class="col-12 col-lg-4">
+    <div class="col-12 col-md-6 col-lg-4">
         <div class="card card-danger " bis_skin_checked="1">
 
             <div class="card-header" bis_skin_checked="1">
