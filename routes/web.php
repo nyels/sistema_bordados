@@ -766,6 +766,12 @@ Route::post('admin/purchases/{id}/confirm', [App\Http\Controllers\PurchaseContro
     ->name('admin.purchases.confirm')
     ->where('id', '[0-9]+');
 
+// Confirmar y Recibir en un solo paso (Borrador → Recibido)
+Route::post('admin/purchases/{id}/confirm-and-receive', [App\Http\Controllers\PurchaseController::class, 'confirmAndReceive'])
+    ->middleware('auth')
+    ->name('admin.purchases.confirm_and_receive')
+    ->where('id', '[0-9]+');
+
 // Recibir mercancía
 Route::get('admin/purchases/{id}/receive', [App\Http\Controllers\PurchaseController::class, 'showReceive'])
     ->middleware('auth')

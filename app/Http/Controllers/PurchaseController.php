@@ -447,6 +447,95 @@ class PurchaseController extends Controller
 
     /*
     |--------------------------------------------------------------------------
+    | CONFIRM AND RECEIVE (Borrador → Recibido en un solo paso)
+    |--------------------------------------------------------------------------
+    */
+
+    public function confirmAndReceive($id)
+    {
+        try {
+            if (!is_numeric($id) || $id < 1 || $id > 999999999) {
+                return redirect()->route('admin.purchases.index')
+                    ->with('error', 'Compra no válida');
+            }
+
+            $purchase = Purchase::with('items')->where('activo', true)->findOrFail((int) $id);
+
+            // Verificar que está en borrador
+            if ($purchase->status !== PurchaseStatus::DRAFT) {
+                return redirect()->route('admin.purchases.show', $id)
+                    ->with('error', 'Solo se pueden confirmar órdenes en estado borrador');
+            }
+
+            // Verificar que tiene items
+            if ($purchase->items->isEmpty()) {
+                return redirect()->route('admin.purchases.show', $id)
+                    ->with('error', 'La orden debe tener al menos un item');
+            }
+
+            DB::beginTransaction();
+
+            // 1. Confirmar la orden (borrador → pendiente)
+            $purchase = $this->purchaseService->confirm($purchase);
+
+            // 2. Crear recepción completa usando ReceptionService
+            $receptionService = app(ReceptionService::class);
+
+            $itemsData = [];
+            foreach ($purchase->items as $item) {
+                if ($item->pending_quantity > 0) {
+                    $itemsData[] = [
+                        'item_id' => $item->id,
+                        'quantity' => $item->pending_quantity,
+                    ];
+                }
+            }
+
+            if (!empty($itemsData)) {
+                $reception = $receptionService->createReception(
+                    purchase: $purchase,
+                    itemsData: $itemsData,
+                    deliveryNote: null,
+                    notes: 'Recepción automática - Orden confirmada y recibida en un paso'
+                );
+            }
+
+            DB::commit();
+
+            return redirect()->route('admin.purchases.show', $purchase->id)
+                ->with('success', "Compra {$purchase->purchase_number} confirmada y recibida completamente");
+
+        } catch (PurchaseException $e) {
+            DB::rollBack();
+            return redirect()->route('admin.purchases.show', $id)
+                ->with('error', $e->getMessage());
+        } catch (InventoryException $e) {
+            DB::rollBack();
+            Log::error('Error de inventario al confirmar y recibir compra: ' . $e->getMessage(), [
+                'purchase_id' => $id,
+                'user_id' => Auth::id(),
+            ]);
+            return redirect()->route('admin.purchases.show', $id)
+                ->with('error', 'Error de inventario: ' . $e->getMessage());
+        } catch (ModelNotFoundException $e) {
+            DB::rollBack();
+            return redirect()->route('admin.purchases.index')
+                ->with('error', 'Compra no encontrada');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error al confirmar y recibir compra: ' . $e->getMessage(), [
+                'purchase_id' => $id,
+                'user_id' => Auth::id(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return redirect()->route('admin.purchases.show', $id)
+                ->with('error', 'Error al confirmar y recibir la compra');
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | RECEIVE
     |--------------------------------------------------------------------------
     */

@@ -150,7 +150,7 @@
                                         </select>
                                     </div>
                                     <div class="material-field">
-                                        <label class="field-label-sm">Variante / SKU</label>
+                                        <label class="field-label-sm">Variante</label>
                                         <select id="select_variant" class="field-control" disabled>
                                             <option value="">Seleccionar...</option>
                                         </select>
@@ -207,7 +207,7 @@
                                         <tr>
                                             <th class="th-num">#</th>
                                             <th class="th-material">Material</th>
-                                            <th class="th-sku">SKU</th>
+                                            <th class="th-variant">Variante</th>
                                             <th class="th-qty">Cant.</th>
                                             <th class="th-unit">Unidad</th>
                                             <th class="th-price">Precio</th>
@@ -220,7 +220,8 @@
                                             <td colspan="8" class="empty-state">
                                                 <div class="empty-icon"><i class="fas fa-box-open"></i></div>
                                                 <div class="empty-text">La orden está vacía</div>
-                                                <div class="empty-hint">Agregue materiales usando el formulario superior</div>
+                                                <div class="empty-hint">Agregue materiales usando el formulario superior
+                                                </div>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -260,8 +261,8 @@
 @section('css')
     <style>
         /* ============================================
-           SISTEMA DE DISEÑO PROFESIONAL - SaaS Style
-           ============================================ */
+                       SISTEMA DE DISEÑO PROFESIONAL - SaaS Style
+                       ============================================ */
 
         /* Variables CSS */
         :root {
@@ -297,8 +298,8 @@
         }
 
         /* ============================================
-           HEADER
-           ============================================ */
+                       HEADER
+                       ============================================ */
         .purchase-header {
             background: #fff;
             border-bottom: 1px solid var(--gray-200);
@@ -371,8 +372,8 @@
         }
 
         /* ============================================
-           CONTENIDO PRINCIPAL
-           ============================================ */
+                       CONTENIDO PRINCIPAL
+                       ============================================ */
         .purchase-content {
             padding: 24px 32px 32px;
         }
@@ -432,8 +433,8 @@
         }
 
         /* ============================================
-           CAMPOS DE FORMULARIO
-           ============================================ */
+                       CAMPOS DE FORMULARIO
+                       ============================================ */
         .field-group {
             margin-bottom: 16px;
         }
@@ -494,8 +495,13 @@
 
         .field-control:disabled {
             background: var(--gray-50);
-            color: var(--gray-400);
+            color: var(--gray-600);
+            border-color: var(--gray-200);
             cursor: not-allowed;
+        }
+
+        .field-control:disabled::placeholder {
+            color: var(--gray-500);
         }
 
         .field-control::placeholder {
@@ -503,12 +509,16 @@
         }
 
         select.field-control {
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-            background-position: right 8px center;
-            background-repeat: no-repeat;
-            background-size: 20px;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            appearance: none !important;
+            background: #fff url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") right 8px center / 20px no-repeat !important;
             padding-right: 36px;
+        }
+
+        select.field-control:disabled {
+            background: var(--gray-50) url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") right 8px center / 20px no-repeat !important;
+            color: var(--gray-600);
         }
 
         .field-textarea {
@@ -551,8 +561,8 @@
         }
 
         /* ============================================
-           SECCIÓN AGREGAR MATERIAL
-           ============================================ */
+                       SECCIÓN AGREGAR MATERIAL
+                       ============================================ */
         .add-material-section {
             border-bottom: 1px solid var(--gray-100);
         }
@@ -644,8 +654,8 @@
         }
 
         /* ============================================
-           TABLA DE ITEMS
-           ============================================ */
+                       TABLA DE ITEMS
+                       ============================================ */
         .items-section {
             display: flex;
             flex-direction: column;
@@ -748,23 +758,61 @@
             margin-top: 2px;
         }
 
-        .item-sku {
-            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
-            font-size: 13px;
-            color: var(--gray-600);
-            background: var(--gray-100);
-            padding: 2px 6px;
-            border-radius: 4px;
+        .item-variant-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--gray-700);
         }
 
-        .item-color-badge {
-            display: inline-block;
-            font-size: 11px;
-            color: var(--gray-600);
-            background: var(--gray-200);
-            padding: 2px 8px;
-            border-radius: 10px;
-            margin-top: 4px;
+        /* Inputs editables en tabla */
+        .input-editable {
+            width: 80px;
+            height: 32px;
+            padding: 4px 8px;
+            font-family: var(--font-sans);
+            font-size: 13px;
+            color: var(--gray-900);
+            background: #fff;
+            border: 1px solid var(--gray-300);
+            border-radius: 4px;
+            text-align: right;
+            transition: all 0.15s ease;
+        }
+
+        .input-editable:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+        }
+
+        .input-editable:hover {
+            border-color: var(--gray-400);
+        }
+
+        .input-editable-qty {
+            width: 70px;
+            text-align: center;
+        }
+
+        .input-editable-price {
+            width: 100px;
+            padding-left: 20px !important;
+        }
+
+        .input-price-wrapper {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .input-price-symbol {
+            position: absolute;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 13px;
+            color: var(--gray-500);
+            pointer-events: none;
         }
 
         .item-conversion {
@@ -837,8 +885,8 @@
         }
 
         /* ============================================
-           TOTALES
-           ============================================ */
+                       TOTALES
+                       ============================================ */
         .totals-section {
             background: var(--gray-50);
             border-top: 1px solid var(--gray-200);
@@ -884,8 +932,8 @@
         }
 
         /* ============================================
-           SCROLLBAR PERSONALIZADA
-           ============================================ */
+                       SCROLLBAR PERSONALIZADA
+                       ============================================ */
         .items-table-wrapper::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -905,15 +953,15 @@
         }
 
         /* ============================================
-           RESPONSIVE
-           ============================================ */
+                       RESPONSIVE
+                       ============================================ */
         @media (max-width: 768px) {
             .purchase-header {
                 padding: 16px 20px;
                 flex-wrap: wrap;
             }
 
-            .purchase-header > div {
+            .purchase-header>div {
                 flex-wrap: wrap;
                 gap: 16px;
             }
@@ -1084,12 +1132,12 @@
                         }
                         let options = '<option value="">Seleccionar...</option>';
                         data.forEach(function(variant) {
-                            const color = variant.color ? ` - ${variant.color}` : '';
+                            const displayName = variant.color || 'Sin color';
                             const stock = variant.current_stock ?
                                 ` (Stock: ${parseFloat(variant.current_stock).toFixed(2)})` :
                                 '';
                             options +=
-                                `<option value="${variant.id}" data-sku="${variant.sku}" data-color="${variant.color || ''}">${variant.sku}${color}${stock}</option>`;
+                                `<option value="${variant.id}" data-sku="${variant.sku}" data-color="${variant.color || ''}">${displayName}${stock}</option>`;
                         });
                         $selectVariant.html(options).prop('disabled', false);
                     },
@@ -1244,18 +1292,39 @@
 
             // Agregar item
             $btnAddItem.on('click', function() {
-                // Verificar duplicados
-                const exists = items.find(i =>
+                // Verificar duplicados - si existe, sumar cantidad
+                const existingIndex = items.findIndex(i =>
                     i.variant_id == currentItem.variant_id &&
                     i.unit_id == currentItem.unit_id
                 );
 
-                if (exists) {
+                if (existingIndex !== -1) {
+                    // Sumar cantidad al item existente
+                    const existingItem = items[existingIndex];
+                    const cantidadAnterior = existingItem.quantity;
+                    existingItem.quantity += currentItem.quantity;
+                    existingItem.subtotal = existingItem.quantity * existingItem.unit_price;
+                    existingItem.converted_quantity = existingItem.quantity * existingItem
+                        .conversion_factor;
+                    existingItem.converted_unit_cost = existingItem.subtotal / existingItem
+                        .converted_quantity;
+
+                    renderItems();
+                    resetForm();
+                    updateTotals();
+
+                    const variantInfo = existingItem.variant_color ? ` (${existingItem.variant_color})` :
+                        '';
                     Swal.fire({
-                        icon: 'warning',
-                        title: 'Item duplicado',
-                        text: 'Este material con esta unidad ya está agregado a la orden',
-                        confirmButtonColor: '#f59e0b'
+                        icon: 'success',
+                        title: 'Cantidad actualizada',
+                        html: `<strong>${existingItem.material_name}${variantInfo}</strong><br><br>` +
+                            `Cantidad anterior: <strong>${cantidadAnterior.toFixed(2)} ${existingItem.unit_symbol}</strong><br>` +
+                            `Se agregó: <strong>+${currentItem.quantity.toFixed(2)} ${currentItem.unit_symbol}</strong><br>` +
+                            `Nueva cantidad: <strong>${existingItem.quantity.toFixed(2)} ${existingItem.unit_symbol}</strong>`,
+                        confirmButtonColor: '#059669',
+                        timer: 3000,
+                        timerProgressBar: true
                     });
                     return;
                 }
@@ -1310,13 +1379,12 @@
 
                 let html = '';
                 items.forEach((item, idx) => {
-                    const colorBadge = item.variant_color ?
-                        `<span class="item-color-badge">${item.variant_color}</span>` : '';
+                    const variantDisplay = item.variant_color || 'Sin color';
                     const conversionInfo = item.conversion_factor != 1 ?
-                        `<div class="item-conversion">= ${item.converted_quantity.toFixed(2)} ${item.base_unit_symbol}</div>` :
+                        `<div class="item-conversion" id="conv_${item.index}">= ${item.converted_quantity.toFixed(2)} ${item.base_unit_symbol}</div>` :
                         '';
                     const unitCostInfo = item.conversion_factor != 1 ?
-                        `<div class="item-unit-cost">$${item.converted_unit_cost.toFixed(4)}/${item.base_unit_symbol}</div>` :
+                        `<div class="item-unit-cost" id="ucost_${item.index}">$${item.converted_unit_cost.toFixed(4)}/${item.base_unit_symbol}</div>` :
                         '';
 
                     html += `
@@ -1327,19 +1395,27 @@
                                 <div class="item-category">${item.category_name}</div>
                             </td>
                             <td>
-                                <span class="item-sku">${item.variant_sku}</span>
-                                ${colorBadge ? '<br>' + colorBadge : ''}
+                                <span class="item-variant-name">${variantDisplay}</span>
                             </td>
                             <td class="td-center">
-                                ${item.quantity.toFixed(2)}
+                                <input type="number" class="input-editable input-editable-qty input-qty"
+                                    data-index="${item.index}"
+                                    value="${item.quantity}"
+                                    min="0.01" step="0.01">
                                 ${conversionInfo}
                             </td>
                             <td class="td-center">${item.unit_symbol}</td>
                             <td class="td-right">
-                                $${item.unit_price.toFixed(2)}
+                                <div class="input-price-wrapper">
+                                    <span class="input-price-symbol">$</span>
+                                    <input type="number" class="input-editable input-editable-price input-price"
+                                        data-index="${item.index}"
+                                        value="${item.unit_price}"
+                                        min="0.01" step="0.01">
+                                </div>
                                 ${unitCostInfo}
                             </td>
-                            <td class="td-right td-total">$${item.subtotal.toFixed(2)}</td>
+                            <td class="td-right td-total" id="total_${item.index}">$${item.subtotal.toFixed(2)}</td>
                             <td class="td-center">
                                 <button type="button" class="btn-remove btn-remove-item" data-index="${item.index}">
                                     <i class="fas fa-trash"></i>
@@ -1378,6 +1454,59 @@
                 items = items.filter(i => i.index !== index);
                 renderItems();
                 updateTotals();
+            });
+
+            // Editar cantidad inline
+            $(document).on('input', '.input-qty', function() {
+                const index = $(this).data('index');
+                const newQty = parseFloat($(this).val()) || 0;
+
+                const item = items.find(i => i.index === index);
+                if (item && newQty > 0) {
+                    item.quantity = newQty;
+                    item.subtotal = item.quantity * item.unit_price;
+                    item.converted_quantity = item.quantity * item.conversion_factor;
+                    item.converted_unit_cost = item.subtotal / item.converted_quantity;
+
+                    // Actualizar celda de total
+                    $(`#total_${index}`).text('$' + item.subtotal.toFixed(2));
+
+                    // Actualizar conversión si existe
+                    if (item.conversion_factor != 1) {
+                        $(`#conv_${index}`).text(
+                            `= ${item.converted_quantity.toFixed(2)} ${item.base_unit_symbol}`);
+                        $(`#ucost_${index}`).text(
+                            `$${item.converted_unit_cost.toFixed(4)}/${item.base_unit_symbol}`);
+                    }
+
+                    generateHiddenInputs();
+                    updateTotals();
+                }
+            });
+
+            // Editar precio inline
+            $(document).on('input', '.input-price', function() {
+                const index = $(this).data('index');
+                const newPrice = parseFloat($(this).val()) || 0;
+
+                const item = items.find(i => i.index === index);
+                if (item && newPrice > 0) {
+                    item.unit_price = newPrice;
+                    item.subtotal = item.quantity * item.unit_price;
+                    item.converted_unit_cost = item.subtotal / item.converted_quantity;
+
+                    // Actualizar celda de total
+                    $(`#total_${index}`).text('$' + item.subtotal.toFixed(2));
+
+                    // Actualizar costo por unidad base si existe
+                    if (item.conversion_factor != 1) {
+                        $(`#ucost_${index}`).text(
+                            `$${item.converted_unit_cost.toFixed(4)}/${item.base_unit_symbol}`);
+                    }
+
+                    generateHiddenInputs();
+                    updateTotals();
+                }
             });
 
             // Actualizar totales

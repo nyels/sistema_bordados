@@ -339,8 +339,10 @@
                 <div class="detail-file-info">
                     <h5 class="detail-file-name" id="detailFileName">archivo.pes</h5>
                     <div class="detail-file-meta">
-                        <span class="file-format-tag" id="detailFileFormat">PES</span>
-                        <span class="file-size" id="detailFileSize">125 KB</span>
+                        <span class="file-size" id="detailFileSize"
+                            style="font-size: 16px; color: #6b7280; font-weight: 500;">125
+                            KB</span>
+                        <span class="file-format-tag" id="detailFileFormat" style="display:none;">PES</span>
                     </div>
                 </div>
             </div>
@@ -389,7 +391,7 @@
             </div>
 
             {{-- Colores --}}
-            <div class="detail-colors-section" id="detailColorsSection" style="display: none;">
+            <div class="detail-colors-section" id="detailColorsSection" style="display: none; margin-top: 24px;">
                 <h6 class="section-title-sm">Colores Detectados</h6>
                 <div id="detailColorSwatches" class="color-grid-lg"></div>
             </div>
@@ -2124,28 +2126,30 @@
     }
 
     .tech-card i {
-        font-size: 18px;
+        font-size: 24px;
         color: var(--primary);
-        margin-bottom: 6px;
+        margin-bottom: 8px;
     }
 
     .tech-card-label {
-        font-size: 11px;
+        font-size: 14px;
         color: var(--gray-500);
-        margin-bottom: 6px;
+        margin-bottom: 8px;
+        font-weight: 600;
     }
 
     .tech-card-input {
         width: 100%;
-        max-width: 100px;
+        max-width: 120px;
         border: 1px solid var(--gray-200);
         border-radius: var(--radius-sm);
-        padding: 6px;
-        font-size: 16px;
-        font-weight: 600;
+        padding: 8px;
+        font-size: 20px;
+        font-weight: 700;
         color: var(--gray-800);
         text-align: center;
         background: #fff;
+        height: 48px;
     }
 
     .tech-card-input:focus {
@@ -2157,28 +2161,28 @@
     .color-swatches {
         display: flex;
         flex-wrap: wrap;
-        gap: 8px;
+        gap: 12px;
     }
 
     .color-swatch {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 4px;
+        gap: 6px;
     }
 
     .color-swatch-box {
-        width: 32px;
-        height: 32px;
+        width: 48px;
+        height: 48px;
         border-radius: var(--radius-sm);
-        border: 2px solid #fff;
-        box-shadow: var(--shadow-sm);
+        border: 3px solid #fff;
+        box-shadow: var(--shadow-md);
     }
 
     .color-swatch-label {
-        font-size: 9px;
-        font-weight: 600;
-        color: var(--gray-600);
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--gray-700);
         text-align: center;
         font-family: 'SF Mono', 'Consolas', monospace;
     }
@@ -2347,11 +2351,12 @@
     }
 
     .detail-file-name {
-        font-size: 16px;
-        font-weight: 600;
+        font-size: 20px;
+        font-weight: 700;
         color: var(--gray-800);
         margin: 0 0 4px;
         word-break: break-all;
+        text-transform: uppercase;
     }
 
     .detail-file-meta {
@@ -2370,8 +2375,9 @@
     }
 
     .file-size {
-        font-size: 13px;
+        font-size: 16px;
         color: var(--gray-500);
+        font-weight: 500;
     }
 
     /* Status Badge Detail */
@@ -2416,6 +2422,7 @@
     /* Tech Grid Detail */
     .detail-tech-section {
         margin-bottom: 16px;
+        margin-top: 24px;
     }
 
     .section-title-sm {
@@ -2443,32 +2450,34 @@
     }
 
     .tech-item-detail i {
-        font-size: 16px;
+        font-size: 24px;
         color: var(--primary);
     }
 
     .tech-value-lg {
         display: block;
-        font-size: 18px;
+        font-size: 20px;
         font-weight: 700;
         color: var(--gray-800);
     }
 
     .tech-label-sm {
-        font-size: 11px;
+        font-size: 14px;
         color: var(--gray-500);
+        font-weight: 600;
     }
 
     /* Colors Grid */
     .color-grid-lg {
         display: flex;
         flex-wrap: wrap;
-        gap: 8px;
+        gap: 12px;
     }
 
     /* Info Grid */
     .detail-app-section {
         margin-bottom: 16px;
+        margin-top: 24px;
     }
 
     .info-grid {
@@ -4524,6 +4533,24 @@
                     }
 
                     // Meta
+                    // Swap: Label as title, filename as meta
+                    $('#detailFileName').text(exportData.application_label || '-');
+                    $('#detailFileFormat').text(exportData.file_format || '');
+
+                    // Show filename in meta: Filename • Size • Format
+                    var metaParts = [];
+                    if (exportData.file_name) metaParts.push(exportData.file_name);
+                    if (exportData.file_size_formatted) metaParts.push(exportData.file_size_formatted);
+
+                    if (exportData.file_format) {
+                        // User requested to remove distinct format: just Filename and Size
+                        // metaParts.push(exportData.file_format); 
+                    }
+
+                    $('#detailFileSize').text(metaParts.join(' • '));
+                    // Hide duplicate format tag since it's in text now, or keep it. User wants "Title"
+                    $('#detailFileFormat').hide();
+
                     $('#detailCreator').text(exportData.creator_name || 'Sistema');
                     $('#detailDate').text(exportData.created_at || '-');
 

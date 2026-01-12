@@ -374,6 +374,12 @@ return [
             'active' => ['admin/material-categories*', 'admin/materials*'],
             'submenu' => [
                 [
+                    'text' => 'Unidades de Medida',
+                    'url' => 'admin/units',
+                    'icon' => 'fas fa-fw fa-ruler-combined',
+                    'active' => ['admin/units*'],
+                ],
+                [
                     'text' => 'Categorías',
                     'url' => 'admin/material-categories',
                     'icon' => 'fas fa-fw fa-layer-group',
@@ -413,17 +419,18 @@ return [
                     'icon' => 'fas fa-fw fa-tags',
                     'active' => ['admin/product-categories*'],
                 ],
-                [
-                    'text' => 'Productos',
-                    'url' => 'admin/products',
-                    'icon' => 'fas fa-fw fa-th-list',
-                    'active' => ['admin/products*'],
-                ],
+
                 [
                     'text' => 'Servicios Extras',
                     'url' => 'product_extras',
                     'icon' => 'fas fa-fw fa-plus-circle',
                     'active' => ['product_extras*'],
+                ],
+                [
+                    'text' => 'Productos',
+                    'url' => 'admin/products',
+                    'icon' => 'fas fa-fw fa-th-list',
+                    'active' => ['admin/products*'],
                 ],
             ],
         ],
@@ -440,12 +447,7 @@ return [
             'icon' => 'fas fa-fw fa-database',
             'active' => ['attributes*', 'attribute-values*', 'estados*', 'giros*', 'recomendaciones*', 'tipos_aplicacion*', 'admin/units*'],
             'submenu' => [
-                [
-                    'text' => 'Unidades de Medida',
-                    'url' => 'admin/units',
-                    'icon' => 'fas fa-fw fa-ruler-combined',
-                    'active' => ['admin/units*'],
-                ],
+
                 [
                     'text' => 'Atributos',
                     'url' => 'attributes',

@@ -218,12 +218,32 @@
                         </a>
 
                         @if ($purchase->status->value === 'borrador')
-                            <form action="{{ route('admin.purchases.confirm', $purchase->id) }}" method="POST"
-                                class="d-inline" id="formConfirmOrder">
-                                @csrf
-                                <button type="button" class="btn btn-primary" id="btnConfirmOrder">
+                            {{-- Dropdown Confirmar Orden (hover) --}}
+                            <div class="btn-group dropdown-hover">
+                                <button type="button" class="btn btn-primary dropdown-toggle">
                                     <i class="fas fa-check"></i> Confirmar Orden
                                 </button>
+                                <div class="dropdown-menu">
+                                    <button type="button" class="dropdown-item" id="btnConfirmAndReceive">
+                                        <i class="fas fa-truck-loading text-success mr-2"></i> Completa/Recibido
+                                        <small class="d-block text-muted">Confirmar y recibir en un paso</small>
+                                    </button>
+                                    <div class="dropdown-divider"></div>
+                                    <button type="button" class="dropdown-item" id="btnConfirmOrder">
+                                        <i class="fas fa-clipboard-check text-primary mr-2"></i> Confirmado
+                                        <small class="d-block text-muted">Solo confirmar (pendiente de recibir)</small>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {{-- Forms ocultos para las acciones --}}
+                            <form action="{{ route('admin.purchases.confirm', $purchase->id) }}" method="POST"
+                                class="d-none" id="formConfirmOrder">
+                                @csrf
+                            </form>
+                            <form action="{{ route('admin.purchases.confirm_and_receive', $purchase->id) }}" method="POST"
+                                class="d-none" id="formConfirmAndReceive">
+                                @csrf
                             </form>
 
                             <a href="{{ route('admin.purchases.confirm_delete', $purchase->id) }}" class="btn btn-danger">
@@ -274,7 +294,7 @@
                                 <tr>
                                     <th style="width: 50px;">#</th>
                                     <th>Material</th>
-                                    <th>SKU / Color</th>
+                                    <th>Color / SKU</th>
                                     <th class="text-center">Cantidad</th>
                                     <th class="text-center">Unidad</th>
                                     <th class="text-right">P. Unitario</th>
@@ -296,11 +316,11 @@
                                             </small>
                                         </td>
                                         <td>
-                                            <code>{{ $item->materialVariant->sku ?? 'N/A' }}</code>
                                             @if ($item->materialVariant->color)
-                                                <br><span
-                                                    class="badge badge-secondary">{{ $item->materialVariant->color }}</span>
+                                                <span
+                                                    class="badge badge-secondary">{{ $item->materialVariant->color }}</span><br>
                                             @endif
+                                            <code>{{ $item->materialVariant->sku ?? 'N/A' }}</code>
                                         </td>
                                         <td class="text-center">
                                             {{ number_format($item->quantity, 2) }}
@@ -571,7 +591,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         $(function() {
-            // Confirmar Orden de Compra
+            // Confirmar Orden de Compra (Solo confirmar - pendiente de recibir)
             $('#btnConfirmOrder').on('click', function() {
                 Swal.fire({
                     title: '¿Confirmar orden de compra?',
@@ -599,6 +619,46 @@
                 }).then((result) => {
                     if (result.isConfirmed) {
                         $('#formConfirmOrder').submit();
+                    }
+                });
+            });
+
+            // Confirmar y Recibir en un solo paso
+            $('#btnConfirmAndReceive').on('click', function() {
+                Swal.fire({
+                    title: '¿Confirmar y recibir orden completa?',
+                    html: `
+                        <div class="text-center">
+                            <p>Esta acción realizará <strong>dos operaciones</strong>:</p>
+                            <ol class="text-left pl-4">
+                                <li>Confirmar la orden de compra</li>
+                                <li>Recibir toda la mercancía automáticamente</li>
+                            </ol>
+                            <div class="alert alert-info py-2 mt-2">
+                                <i class="fas fa-info-circle"></i>
+                                El inventario se actualizará inmediatamente.
+                            </div>
+                            <p class="mb-0 text-muted"><small>Esta acción no se puede deshacer.</small></p>
+                        </div>
+                    `,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#28a745',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: '<i class="fas fa-truck-loading"></i> Sí, confirmar y recibir',
+                    cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
+                    reverseButtons: true,
+                    focusCancel: true,
+                    customClass: {
+                        popup: 'swal2-popup-custom',
+                        title: 'swal2-title-custom',
+                        confirmButton: 'btn btn-success',
+                        cancelButton: 'btn btn-secondary'
+                    },
+                    buttonsStyling: false
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $('#formConfirmAndReceive').submit();
                     }
                 });
             });
@@ -759,6 +819,55 @@
             display: inline-block;
             border-radius: 4px;
             color: #fff;
+        }
+
+        /* Dropdown Confirmar Orden - Hover */
+        .dropdown-hover {
+            position: relative;
+        }
+
+        .dropdown-hover .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            min-width: 240px;
+            padding: 8px 0;
+            margin-top: 2px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+            border-radius: 8px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            background: #fff;
+            z-index: 1050;
+        }
+
+        .dropdown-hover:hover .dropdown-menu {
+            display: block;
+        }
+
+        .dropdown-hover .dropdown-item {
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .dropdown-hover .dropdown-item:hover {
+            background-color: #f0f9ff;
+        }
+
+        .dropdown-hover .dropdown-item:active {
+            background-color: #e0f2fe;
+            color: inherit;
+        }
+
+        .dropdown-hover .dropdown-item small {
+            font-size: 11px;
+            margin-top: 2px;
+        }
+
+        .dropdown-hover .dropdown-divider {
+            margin: 4px 0;
         }
     </style>
 @stop

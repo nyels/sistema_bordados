@@ -6,11 +6,9 @@
 @stop
 
 @section('content')
-    <br>
-
     {{-- ERRORES DE VALIDACIÓN --}}
     @if ($errors->any())
-        <div class="alert alert-danger alert-dismissible fade show">
+        <div class="alert alert-danger alert-dismissible fade show mx-3 mt-3 mb-0" style="border-radius: 8px;">
             <strong>Se encontraron errores:</strong>
             <ul class="mb-0 mt-2">
                 @foreach ($errors->all() as $error)
@@ -25,271 +23,976 @@
         @csrf
         @method('PUT')
 
-        <div class="card card-warning">
-            <div class="card-header">
-                <h3 class="card-title" style="font-weight: bold; font-size: 20px;">
-                    <i class="fas fa-edit"></i> EDITAR ORDEN DE COMPRA: {{ $purchase->purchase_number }}
-                </h3>
+        {{-- HEADER PROFESIONAL --}}
+        <div class="purchase-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="purchase-title">Editar Orden de Compra</h1>
+                    <p class="purchase-subtitle">{{ $purchase->purchase_number }} - Modifique los datos y materiales</p>
+                </div>
+                <div class="header-actions">
+                    <a href="{{ route('admin.purchases.show', $purchase->id) }}" class="btn-action btn-cancel">
+                        Cancelar
+                    </a>
+                    <button type="submit" class="btn-action btn-save" id="btn_submit">
+                        <i class="fas fa-save"></i> Actualizar Orden
+                    </button>
+                </div>
             </div>
+        </div>
 
-            <div class="card-body">
-                {{-- DATOS GENERALES --}}
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label>Proveedor <span class="text-danger">*</span></label>
-                            <select name="proveedor_id" id="proveedor_id"
-                                class="form-control @error('proveedor_id') is-invalid @enderror" required>
-                                <option value="">Seleccionar proveedor...</option>
-                                @foreach ($proveedores as $proveedor)
-                                    <option value="{{ $proveedor->id }}"
-                                        {{ old('proveedor_id', $purchase->proveedor_id) == $proveedor->id ? 'selected' : '' }}>
-                                        {{ $proveedor->nombre_proveedor }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('proveedor_id')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+        {{-- CONTENIDO PRINCIPAL --}}
+        <div class="purchase-content">
+            <div class="row no-gutters">
+                {{-- PANEL IZQUIERDO: DATOS DE LA ORDEN --}}
+                <div class="col-12 col-xl-4">
+                    <div class="panel-section">
+                        <div class="section-header">
+                            <span class="section-icon"><i class="fas fa-file-alt"></i></span>
+                            <span class="section-title">Datos de la Orden</span>
                         </div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="form-group">
-                            <label>Fecha Orden</label>
-                            <input type="date" name="ordered_at"
-                                class="form-control @error('ordered_at') is-invalid @enderror"
-                                value="{{ old('ordered_at', $purchase->ordered_at?->format('Y-m-d')) }}">
-                            @error('ordered_at')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="form-group">
-                            <label>Fecha Esperada</label>
-                            <input type="date" name="expected_at"
-                                class="form-control @error('expected_at') is-invalid @enderror"
-                                value="{{ old('expected_at', $purchase->expected_at?->format('Y-m-d')) }}">
-                            @error('expected_at')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="form-group">
-                            <label>IVA (%)</label>
-                            <input type="number" name="tax_rate" id="tax_rate"
-                                class="form-control @error('tax_rate') is-invalid @enderror"
-                                value="{{ old('tax_rate', $purchase->tax_rate) }}" min="0" max="100"
-                                step="0.01">
-                            @error('tax_rate')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="form-group">
-                            <label>Referencia</label>
-                            <input type="text" name="reference"
-                                class="form-control @error('reference') is-invalid @enderror"
-                                value="{{ old('reference', $purchase->reference) }}" maxlength="100">
-                            @error('reference')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+
+                        <div class="section-body">
+                            {{-- Proveedor --}}
+                            <div class="field-group">
+                                <label class="field-label">Proveedor <span class="required">*</span></label>
+                                <select name="proveedor_id" id="proveedor_id"
+                                    class="field-control @error('proveedor_id') is-invalid @enderror" required>
+                                    <option value="">Seleccionar proveedor...</option>
+                                    @foreach ($proveedores as $proveedor)
+                                        <option value="{{ $proveedor->id }}"
+                                            {{ old('proveedor_id', $purchase->proveedor_id) == $proveedor->id ? 'selected' : '' }}>
+                                            {{ $proveedor->nombre_proveedor }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            {{-- Fechas en grid --}}
+                            <div class="field-row">
+                                <div class="field-group">
+                                    <label class="field-label">Fecha Orden</label>
+                                    <input type="date" name="ordered_at" class="field-control"
+                                        value="{{ old('ordered_at', $purchase->ordered_at?->format('Y-m-d')) }}">
+                                </div>
+                                <div class="field-group">
+                                    <label class="field-label">Fecha Esperada</label>
+                                    <input type="date" name="expected_at" class="field-control"
+                                        value="{{ old('expected_at', $purchase->expected_at?->format('Y-m-d')) }}">
+                                </div>
+                            </div>
+
+                            {{-- IVA y Referencia --}}
+                            <div class="field-row">
+                                <div class="field-group">
+                                    <label class="field-label">IVA</label>
+                                    <div class="field-with-suffix">
+                                        <input type="number" name="tax_rate" id="tax_rate" class="field-control"
+                                            value="{{ old('tax_rate', $purchase->tax_rate) }}" min="0" max="100"
+                                            step="0.01">
+                                        <span class="field-suffix">%</span>
+                                    </div>
+                                </div>
+                                <div class="field-group">
+                                    <label class="field-label">Referencia</label>
+                                    <input type="text" name="reference" class="field-control"
+                                        value="{{ old('reference', $purchase->reference) }}" maxlength="100"
+                                        placeholder="Factura, pedido...">
+                                </div>
+                            </div>
+
+                            {{-- Descuento --}}
+                            <div class="field-group">
+                                <label class="field-label">Descuento Global</label>
+                                <div class="field-with-prefix">
+                                    <span class="field-prefix">$</span>
+                                    <input type="number" name="discount_amount" id="discount_amount" class="field-control"
+                                        value="{{ old('discount_amount', $purchase->discount_amount) }}" min="0"
+                                        step="0.01">
+                                </div>
+                            </div>
+
+                            {{-- Notas --}}
+                            <div class="field-group">
+                                <label class="field-label">Notas</label>
+                                <textarea name="notes" class="field-control field-textarea" rows="3" maxlength="1000"
+                                    placeholder="Notas internas de la orden...">{{ old('notes', $purchase->notes) }}</textarea>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="row">
-                    <div class="col-md-8">
-                        <div class="form-group">
-                            <label>Notas</label>
-                            <textarea name="notes" class="form-control @error('notes') is-invalid @enderror" rows="2" maxlength="1000">{{ old('notes', $purchase->notes) }}</textarea>
-                            @error('notes')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label>Descuento ($)</label>
-                            <input type="number" name="discount_amount" id="discount_amount"
-                                class="form-control @error('discount_amount') is-invalid @enderror"
-                                value="{{ old('discount_amount', $purchase->discount_amount) }}" min="0"
-                                step="0.01">
-                            @error('discount_amount')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-                </div>
+                {{-- PANEL DERECHO: MATERIALES --}}
+                <div class="col-12 col-xl-8">
+                    <div class="panel-section panel-main">
+                        {{-- SECCIÓN AGREGAR MATERIAL --}}
+                        <div class="add-material-section">
+                            <div class="section-header">
+                                <span class="section-icon text-success"><i class="fas fa-plus-circle"></i></span>
+                                <span class="section-title">Agregar Material</span>
+                            </div>
 
-                <hr>
+                            <div class="add-material-grid">
+                                {{-- Fila 1: Selección de producto --}}
+                                <div class="material-row">
+                                    <div class="material-field">
+                                        <label class="field-label-sm">Categoría</label>
+                                        <select id="select_category" class="field-control">
+                                            <option value="">Seleccionar...</option>
+                                            @foreach ($categories as $category)
+                                                <option value="{{ $category->id }}"
+                                                    data-base-unit="{{ $category->baseUnit->symbol ?? '' }}">
+                                                    {{ $category->name }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="material-field">
+                                        <label class="field-label-sm">Material</label>
+                                        <select id="select_material" class="field-control" disabled>
+                                            <option value="">Seleccionar...</option>
+                                        </select>
+                                    </div>
+                                    <div class="material-field">
+                                        <label class="field-label-sm">Variante</label>
+                                        <select id="select_variant" class="field-control" disabled>
+                                            <option value="">Seleccionar...</option>
+                                        </select>
+                                    </div>
+                                    <div class="material-field">
+                                        <label class="field-label-sm">Unidad</label>
+                                        <select id="select_unit" class="field-control" disabled>
+                                            <option value="">Seleccionar...</option>
+                                        </select>
+                                    </div>
+                                </div>
 
-                {{-- AGREGAR ITEMS --}}
-                <div class="card bg-light">
-                    <div class="card-header">
-                        <h5 class="mb-0"><i class="fas fa-plus"></i> Agregar Material</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label>Categoría</label>
-                                    <select id="select_category" class="form-control form-control-sm">
-                                        <option value="">Seleccionar...</option>
-                                        @foreach ($categories as $category)
-                                            <option value="{{ $category->id }}"
-                                                data-base-unit="{{ $category->baseUnit->symbol ?? '' }}">
-                                                {{ $category->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label>Material</label>
-                                    <select id="select_material" class="form-control form-control-sm" disabled>
-                                        <option value="">Primero seleccione categoría</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label>Variante (SKU)</label>
-                                    <select id="select_variant" class="form-control form-control-sm" disabled>
-                                        <option value="">Primero seleccione material</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label>Unidad de Compra</label>
-                                    <select id="select_unit" class="form-control form-control-sm" disabled>
-                                        <option value="">Primero seleccione variante</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-2">
-                                <div class="form-group">
-                                    <label>Cantidad</label>
-                                    <input type="number" id="input_quantity" class="form-control form-control-sm"
-                                        min="0.0001" step="0.01" placeholder="0.00" disabled>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="form-group">
-                                    <label>Precio Unitario</label>
-                                    <div class="input-group input-group-sm">
-                                        <div class="input-group-prepend">
-                                            <span class="input-group-text">$</span>
-                                        </div>
-                                        <input type="number" id="input_price" class="form-control" min="0.0001"
+                                {{-- Fila 2: Cantidad, precio y agregar --}}
+                                <div class="material-row material-row-values">
+                                    <div class="material-field field-qty">
+                                        <label class="field-label-sm">Cantidad</label>
+                                        <input type="number" id="input_quantity" class="field-control" min="0.0001"
                                             step="0.01" placeholder="0.00" disabled>
+                                        <div id="info_conversion_text" class="conversion-hint"></div>
+                                        <input type="hidden" id="info_conversion">
+                                    </div>
+                                    <div class="material-field field-price">
+                                        <label class="field-label-sm">Precio Unit.</label>
+                                        <div class="field-with-prefix">
+                                            <span class="field-prefix">$</span>
+                                            <input type="number" id="input_price" class="field-control" min="0.0001"
+                                                step="0.01" placeholder="0.00" disabled>
+                                        </div>
+                                    </div>
+                                    <div class="material-field field-subtotal">
+                                        <label class="field-label-sm">Subtotal</label>
+                                        <div class="subtotal-display" id="info_subtotal_display">$0.00</div>
+                                        <input type="hidden" id="info_subtotal">
+                                    </div>
+                                    <div class="material-field field-action">
+                                        <button type="button" id="btn_add_item" class="btn-add" disabled>
+                                            <i class="fas fa-plus"></i> Agregar
+                                        </button>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label>Conversión</label>
-                                    <input type="text" id="info_conversion"
-                                        class="form-control form-control-sm bg-light" readonly>
-                                </div>
+                        </div>
+
+                        {{-- TABLA DE ITEMS --}}
+                        <div class="items-section">
+                            <div class="items-header">
+                                <span class="items-title">Items de la Orden</span>
+                                <span class="items-count" id="items_count">0 items</span>
                             </div>
-                            <div class="col-md-2">
-                                <div class="form-group">
-                                    <label>Subtotal</label>
-                                    <input type="text" id="info_subtotal"
-                                        class="form-control form-control-sm bg-light font-weight-bold" readonly>
-                                </div>
+
+                            <div class="items-table-wrapper">
+                                <table class="items-table" id="items_table">
+                                    <thead>
+                                        <tr>
+                                            <th class="th-num">#</th>
+                                            <th class="th-material">Material</th>
+                                            <th class="th-variant">Variante</th>
+                                            <th class="th-qty">Cant.</th>
+                                            <th class="th-unit">Unidad</th>
+                                            <th class="th-price">Precio</th>
+                                            <th class="th-total">Total</th>
+                                            <th class="th-action"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="items_body">
+                                        <tr id="no_items_row">
+                                            <td colspan="8" class="empty-state">
+                                                <div class="empty-icon"><i class="fas fa-box-open"></i></div>
+                                                <div class="empty-text">La orden está vacía</div>
+                                                <div class="empty-hint">Agregue materiales usando el formulario superior
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
-                            <div class="col-md-3 d-flex align-items-end">
-                                <div class="form-group mb-0 w-100">
-                                    <button type="button" id="btn_add_item" class="btn btn-success btn-block" disabled>
-                                        <i class="fas fa-plus"></i> Agregar Item
-                                    </button>
+
+                            {{-- TOTALES --}}
+                            <div class="totals-section" id="items_totals" style="display: none;">
+                                <div class="totals-row">
+                                    <span class="totals-label">Subtotal</span>
+                                    <span class="totals-value" id="total_subtotal">$0.00</span>
+                                </div>
+                                <div class="totals-row">
+                                    <span class="totals-label">IVA (<span id="tax_rate_display">16</span>%)</span>
+                                    <span class="totals-value" id="total_tax">$0.00</span>
+                                </div>
+                                <div class="totals-row totals-discount" id="discount_row" style="display: none;">
+                                    <span class="totals-label">Descuento</span>
+                                    <span class="totals-value text-danger" id="total_discount">-$0.00</span>
+                                </div>
+                                <div class="totals-row totals-final">
+                                    <span class="totals-label">Total</span>
+                                    <span class="totals-value" id="total_final">$0.00</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
-                <hr>
-
-                {{-- TABLA DE ITEMS --}}
-                <h5 class="mb-3"><i class="fas fa-list"></i> Items de la Orden</h5>
-
-                <div class="table-responsive">
-                    <table class="table table-bordered table-sm" id="items_table">
-                        <thead class="thead-dark">
-                            <tr>
-                                <th style="width: 50px;">#</th>
-                                <th>Material</th>
-                                <th>SKU / Color</th>
-                                <th class="text-center">Cantidad</th>
-                                <th class="text-center">Unidad</th>
-                                <th class="text-right">P. Unitario</th>
-                                <th class="text-right">Subtotal</th>
-                                <th style="width: 60px;"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="items_body">
-                        </tbody>
-                        <tfoot class="bg-light" id="items_totals">
-                            <tr>
-                                <td colspan="6" class="text-right"><strong>Subtotal:</strong></td>
-                                <td class="text-right" id="total_subtotal">$0.00</td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td colspan="6" class="text-right"><strong>IVA (<span
-                                            id="tax_rate_display">16</span>%):</strong></td>
-                                <td class="text-right" id="total_tax">$0.00</td>
-                                <td></td>
-                            </tr>
-                            <tr id="discount_row" style="display: none;">
-                                <td colspan="6" class="text-right"><strong>Descuento:</strong></td>
-                                <td class="text-right text-danger" id="total_discount">-$0.00</td>
-                                <td></td>
-                            </tr>
-                            <tr class="table-primary">
-                                <td colspan="6" class="text-right"><strong style="font-size: 16px;">TOTAL:</strong>
-                                </td>
-                                <td class="text-right"><strong style="font-size: 16px;" id="total_final">$0.00</strong>
-                                </td>
-                                <td></td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-
-                {{-- CONTAINER DE INPUTS HIDDEN --}}
-                <div id="hidden_items_container"></div>
-            </div>
-
-            <div class="card-footer text-center">
-                <a href="{{ route('admin.purchases.show', $purchase->id) }}" class="btn btn-secondary">
-                    <i class="fas fa-times"></i> Cancelar
-                </a>
-                <button type="submit" class="btn btn-warning" id="btn_submit">
-                    <i class="fas fa-save"></i> Actualizar Orden
-                </button>
             </div>
         </div>
+
+        {{-- CONTAINER DE INPUTS HIDDEN --}}
+        <div id="hidden_items_container"></div>
     </form>
 @stop
 
 @section('css')
     <style>
-        .item-row:hover {
-            background-color: #f8f9fa;
+        /* ============================================
+                   SISTEMA DE DISEÑO PROFESIONAL - SaaS Style
+                   ============================================ */
+
+        /* Variables CSS */
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --success: #059669;
+            --success-hover: #047857;
+            --warning: #d97706;
+            --warning-hover: #b45309;
+            --danger: #dc2626;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --border-radius: 8px;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+            --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
         }
 
-        #items_table tbody tr td {
+        /* Reset del content wrapper de AdminLTE */
+        .content-wrapper {
+            background-color: var(--gray-50) !important;
+            min-height: calc(100vh - 57px) !important;
+        }
+
+        .content {
+            padding: 0 !important;
+        }
+
+        /* ============================================
+                   HEADER
+                   ============================================ */
+        .purchase-header {
+            background: #fff;
+            border-bottom: 1px solid var(--gray-200);
+            padding: 20px 32px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .purchase-title {
+            font-family: var(--font-sans);
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin: 0;
+            letter-spacing: -0.025em;
+        }
+
+        .purchase-subtitle {
+            font-family: var(--font-sans);
+            font-size: 14px;
+            color: var(--gray-500);
+            margin: 4px 0 0 0;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-action {
+            font-family: var(--font-sans);
+            font-size: 14px;
+            font-weight: 500;
+            padding: 10px 20px;
+            border-radius: var(--border-radius);
+            border: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-cancel {
+            background: #fff;
+            color: var(--gray-700);
+            border: 1px solid var(--gray-300);
+        }
+
+        .btn-cancel:hover {
+            background: var(--gray-50);
+            color: var(--gray-900);
+            text-decoration: none;
+        }
+
+        .btn-save {
+            background: var(--warning);
+            color: #fff;
+        }
+
+        .btn-save:hover:not(:disabled) {
+            background: var(--warning-hover);
+        }
+
+        .btn-save:disabled {
+            background: var(--gray-300);
+            cursor: not-allowed;
+        }
+
+        /* ============================================
+                   CONTENIDO PRINCIPAL
+                   ============================================ */
+        .purchase-content {
+            padding: 24px 32px 32px;
+        }
+
+        .panel-section {
+            background: #fff;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--gray-200);
+            margin-bottom: 0;
+        }
+
+        .panel-main {
+            margin-left: 24px;
+        }
+
+        @media (max-width: 1199px) {
+            .panel-main {
+                margin-left: 0;
+                margin-top: 24px;
+            }
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        .section-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--gray-100);
+            border-radius: 8px;
+            color: var(--gray-600);
+            font-size: 14px;
+        }
+
+        .section-icon.text-success {
+            background: #d1fae5;
+            color: var(--success);
+        }
+
+        .section-title {
+            font-family: var(--font-sans);
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+
+        .section-body {
+            padding: 20px;
+        }
+
+        /* ============================================
+                   CAMPOS DE FORMULARIO
+                   ============================================ */
+        .field-group {
+            margin-bottom: 16px;
+        }
+
+        .field-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .field-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .field-label {
+            display: block;
+            font-family: var(--font-sans);
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--gray-700);
+            margin-bottom: 6px;
+        }
+
+        .field-label-sm {
+            display: block;
+            font-family: var(--font-sans);
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--gray-500);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        .required {
+            color: var(--danger);
+        }
+
+        .field-control {
+            width: 100%;
+            height: 40px;
+            padding: 0 12px;
+            font-family: var(--font-sans);
+            font-size: 14px;
+            color: var(--gray-900);
+            background: #fff;
+            border: 1px solid var(--gray-300);
+            border-radius: 6px;
+            transition: all 0.15s ease;
+        }
+
+        .field-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .field-control:disabled {
+            background: var(--gray-50);
+            color: var(--gray-600);
+            border-color: var(--gray-200);
+            cursor: not-allowed;
+        }
+
+        .field-control:disabled::placeholder {
+            color: var(--gray-500);
+        }
+
+        .field-control::placeholder {
+            color: var(--gray-400);
+        }
+
+        select.field-control {
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            appearance: none !important;
+            background: #fff url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") right 8px center / 20px no-repeat !important;
+            padding-right: 36px;
+        }
+
+        select.field-control:disabled {
+            background: var(--gray-50) url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") right 8px center / 20px no-repeat !important;
+            color: var(--gray-600);
+        }
+
+        .field-textarea {
+            height: auto;
+            min-height: 80px;
+            padding: 10px 12px;
+            resize: vertical;
+        }
+
+        .field-with-prefix,
+        .field-with-suffix {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .field-prefix,
+        .field-suffix {
+            position: absolute;
+            font-family: var(--font-sans);
+            font-size: 14px;
+            color: var(--gray-500);
+            pointer-events: none;
+        }
+
+        .field-prefix {
+            left: 12px;
+        }
+
+        .field-suffix {
+            right: 12px;
+        }
+
+        .field-with-prefix .field-control {
+            padding-left: 28px;
+        }
+
+        .field-with-suffix .field-control {
+            padding-right: 32px;
+        }
+
+        /* ============================================
+                   SECCIÓN AGREGAR MATERIAL
+                   ============================================ */
+        .add-material-section {
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        .add-material-grid {
+            padding: 20px;
+        }
+
+        .material-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .material-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .material-row-values {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 16px;
+            align-items: flex-end;
+        }
+
+        @media (max-width: 991px) {
+            .material-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .material-row-values {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .field-action {
+                grid-column: span 2;
+            }
+        }
+
+        .material-field {
+            min-width: 0;
+        }
+
+        .conversion-hint {
+            font-family: var(--font-sans);
+            font-size: 12px;
+            color: var(--primary);
+            margin-top: 4px;
+            font-weight: 500;
+            display: none;
+        }
+
+        .subtotal-display {
+            font-family: var(--font-sans);
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--gray-900);
+            height: 40px;
+            display: flex;
+            align-items: center;
+        }
+
+        .btn-add {
+            height: 40px;
+            padding: 0 24px;
+            font-family: var(--font-sans);
+            font-size: 14px;
+            font-weight: 500;
+            color: #fff;
+            background: var(--success);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .btn-add:hover:not(:disabled) {
+            background: var(--success-hover);
+        }
+
+        .btn-add:disabled {
+            background: var(--gray-300);
+            cursor: not-allowed;
+        }
+
+        /* ============================================
+                   TABLA DE ITEMS
+                   ============================================ */
+        .items-section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .items-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        .items-title {
+            font-family: var(--font-sans);
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+
+        .items-count {
+            font-family: var(--font-sans);
+            font-size: 13px;
+            color: var(--gray-500);
+            background: var(--gray-100);
+            padding: 4px 10px;
+            border-radius: 12px;
+        }
+
+        .items-table-wrapper {
+            overflow-x: auto;
+            max-height: 320px;
+            overflow-y: auto;
+        }
+
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .items-table thead {
+            position: sticky;
+            top: 0;
+            background: var(--gray-50);
+            z-index: 10;
+        }
+
+        .items-table th {
+            font-family: var(--font-sans);
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .items-table th.th-num {
+            width: 50px;
+            text-align: center;
+        }
+
+        .items-table th.th-qty,
+        .items-table th.th-unit {
+            text-align: center;
+        }
+
+        .items-table th.th-price,
+        .items-table th.th-total {
+            text-align: right;
+        }
+
+        .items-table th.th-action {
+            width: 50px;
+        }
+
+        .items-table td {
+            font-family: var(--font-sans);
+            font-size: 14px;
+            color: var(--gray-700);
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--gray-100);
             vertical-align: middle;
+        }
+
+        .items-table tbody tr:hover {
+            background: var(--gray-50);
+        }
+
+        .item-material-name {
+            font-weight: 500;
+            color: var(--gray-900);
+        }
+
+        .item-category {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-top: 2px;
+        }
+
+        .item-variant-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--gray-700);
+        }
+
+        /* Inputs editables en tabla */
+        .input-editable {
+            width: 80px;
+            height: 32px;
+            padding: 4px 8px;
+            font-family: var(--font-sans);
+            font-size: 13px;
+            color: var(--gray-900);
+            background: #fff;
+            border: 1px solid var(--gray-300);
+            border-radius: 4px;
+            text-align: right;
+            transition: all 0.15s ease;
+        }
+
+        .input-editable:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+        }
+
+        .input-editable:hover {
+            border-color: var(--gray-400);
+        }
+
+        .input-editable-qty {
+            width: 70px;
+            text-align: center;
+        }
+
+        .input-editable-price {
+            width: 100px;
+            padding-left: 20px !important;
+        }
+
+        .input-price-wrapper {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .input-price-symbol {
+            position: absolute;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 13px;
+            color: var(--gray-500);
+            pointer-events: none;
+        }
+
+        .item-conversion {
+            font-size: 12px;
+            color: var(--primary);
+            margin-top: 2px;
+        }
+
+        .item-unit-cost {
+            font-size: 11px;
+            color: var(--gray-500);
+        }
+
+        .td-center {
+            text-align: center;
+        }
+
+        .td-right {
+            text-align: right;
+        }
+
+        .td-total {
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .btn-remove {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            color: var(--gray-400);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn-remove:hover {
+            background: #fef2f2;
+            color: var(--danger);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 48px 20px !important;
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            color: var(--gray-300);
+            margin-bottom: 16px;
+        }
+
+        .empty-text {
+            font-family: var(--font-sans);
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--gray-600);
+            margin-bottom: 4px;
+        }
+
+        .empty-hint {
+            font-family: var(--font-sans);
+            font-size: 13px;
+            color: var(--gray-400);
+        }
+
+        /* ============================================
+                   TOTALES
+                   ============================================ */
+        .totals-section {
+            background: var(--gray-50);
+            border-top: 1px solid var(--gray-200);
+            padding: 16px 20px;
+        }
+
+        .totals-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+        }
+
+        .totals-label {
+            font-family: var(--font-sans);
+            font-size: 14px;
+            color: var(--gray-600);
+        }
+
+        .totals-value {
+            font-family: var(--font-sans);
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--gray-800);
+        }
+
+        .totals-final {
+            border-top: 1px solid var(--gray-300);
+            margin-top: 8px;
+            padding-top: 16px;
+        }
+
+        .totals-final .totals-label {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .totals-final .totals-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        /* ============================================
+                   SCROLLBAR PERSONALIZADA
+                   ============================================ */
+        .items-table-wrapper::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .items-table-wrapper::-webkit-scrollbar-track {
+            background: var(--gray-100);
+        }
+
+        .items-table-wrapper::-webkit-scrollbar-thumb {
+            background: var(--gray-300);
+            border-radius: 3px;
+        }
+
+        .items-table-wrapper::-webkit-scrollbar-thumb:hover {
+            background: var(--gray-400);
+        }
+
+        /* ============================================
+                   RESPONSIVE
+                   ============================================ */
+        @media (max-width: 768px) {
+            .purchase-header {
+                padding: 16px 20px;
+                flex-wrap: wrap;
+            }
+
+            .purchase-header>div {
+                flex-wrap: wrap;
+                gap: 16px;
+            }
+
+            .header-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+
+            .purchase-content {
+                padding: 16px;
+            }
+
+            .purchase-title {
+                font-size: 20px;
+            }
+
+            .panel-main {
+                margin-left: 0;
+                margin-top: 16px;
+            }
+
+            .field-row {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 @stop
@@ -299,8 +1002,7 @@
         $(function() {
             // Items existentes (cargados desde el servidor)
             let items = @json($itemsForJs);
-
-            let itemIndex = items.length;
+            let itemIndex = items.length > 0 ? Math.max(...items.map(i => i.index || 0)) + 1 : 0;
 
             const csrfToken = '{{ csrf_token() }}';
 
@@ -312,11 +1014,14 @@
             const $inputQuantity = $('#input_quantity');
             const $inputPrice = $('#input_price');
             const $infoConversion = $('#info_conversion');
+            const $infoConversionText = $('#info_conversion_text');
             const $infoSubtotal = $('#info_subtotal');
+            const $infoSubtotalDisplay = $('#info_subtotal_display');
             const $btnAddItem = $('#btn_add_item');
             const $btnSubmit = $('#btn_submit');
             const $itemsBody = $('#items_body');
             const $itemsTotals = $('#items_totals');
+            const $itemsCount = $('#items_count');
             const $hiddenContainer = $('#hidden_items_container');
             const $taxRate = $('#tax_rate');
             const $discountAmount = $('#discount_amount');
@@ -339,19 +1044,15 @@
                 unit_price: 0
             };
 
-            // Agregar index a items existentes
+            // Agregar index a items existentes si no lo tienen
             items = items.map((item, idx) => ({
                 ...item,
-                index: idx
+                index: item.index !== undefined ? item.index : idx
             }));
 
             // Renderizar items existentes
             renderItems();
             updateTotals();
-
-            // ========== MISMA LÓGICA QUE CREATE ==========
-            // (Copiar toda la lógica de eventos de create.blade.php aquí)
-            // Por brevedad, se omite pero debe incluirse completa
 
             // Cambio de categoría
             $selectCategory.on('change', function() {
@@ -363,8 +1064,7 @@
                 resetFromMaterial();
 
                 if (!categoryId) {
-                    $selectMaterial.prop('disabled', true).html(
-                        '<option value="">Primero seleccione categoría</option>');
+                    $selectMaterial.prop('disabled', true).html('<option value="">Seleccionar...</option>');
                     return;
                 }
 
@@ -378,16 +1078,16 @@
                     },
                     success: function(data) {
                         if (data.length === 0) {
-                            $selectMaterial.html('<option value="">No hay materiales</option>');
+                            $selectMaterial.html('<option value="">Sin materiales</option>');
                             Swal.fire({
                                 icon: 'info',
                                 title: 'Sin materiales',
                                 text: 'No hay materiales registrados en esta categoría',
-                                confirmButtonColor: '#3085d6'
+                                confirmButtonColor: '#2563eb'
                             });
                             return;
                         }
-                        let options = '<option value="">Seleccionar material...</option>';
+                        let options = '<option value="">Seleccionar...</option>';
                         data.forEach(function(material) {
                             const composition = material.composition ?
                                 ` (${material.composition})` : '';
@@ -397,18 +1097,13 @@
                         $selectMaterial.html(options).prop('disabled', false);
                     },
                     error: function(xhr) {
-                        $selectMaterial.html('<option value="">Error al cargar</option>');
-                        console.error('Error loading materials:', xhr);
-                        let msg = 'No se pudieron cargar los materiales.';
-                        if (xhr.status === 404) msg =
-                            'Ruta no encontrada (404). Contacte al administrador.';
-                        if (xhr.status === 500) msg = 'Error interno del servidor (500).';
-
+                        $selectMaterial.html('<option value="">Error</option>');
                         Swal.fire({
                             icon: 'error',
                             title: 'Error al cargar materiales',
-                            text: xhr.responseJSON?.message || msg,
-                            confirmButtonColor: '#d33'
+                            text: xhr.responseJSON?.message ||
+                                'No se pudieron cargar los materiales.',
+                            confirmButtonColor: '#dc2626'
                         });
                     }
                 });
@@ -423,8 +1118,7 @@
                 resetFromVariant();
 
                 if (!materialId) {
-                    $selectVariant.prop('disabled', true).html(
-                        '<option value="">Primero seleccione material</option>');
+                    $selectVariant.prop('disabled', true).html('<option value="">Seleccionar...</option>');
                     return;
                 }
 
@@ -438,37 +1132,34 @@
                     },
                     success: function(data) {
                         if (data.length === 0) {
-                            $selectVariant.html('<option value="">No hay variantes</option>');
+                            $selectVariant.html('<option value="">Sin variantes</option>');
                             Swal.fire({
                                 icon: 'info',
                                 title: 'Sin variantes',
                                 text: 'Este material no tiene variantes (SKU/colores) registradas',
-                                confirmButtonColor: '#3085d6'
+                                confirmButtonColor: '#2563eb'
                             });
                             return;
                         }
-                        let options = '<option value="">Seleccionar variante...</option>';
+                        let options = '<option value="">Seleccionar...</option>';
                         data.forEach(function(variant) {
-                            const color = variant.color ? ` - ${variant.color}` : '';
+                            const displayName = variant.color || 'Sin color';
                             const stock = variant.current_stock ?
                                 ` (Stock: ${parseFloat(variant.current_stock).toFixed(2)})` :
                                 '';
                             options +=
-                                `<option value="${variant.id}" data-sku="${variant.sku}" data-color="${variant.color || ''}">${variant.sku}${color}${stock}</option>`;
+                                `<option value="${variant.id}" data-sku="${variant.sku}" data-color="${variant.color || ''}">${displayName}${stock}</option>`;
                         });
                         $selectVariant.html(options).prop('disabled', false);
                     },
                     error: function(xhr) {
-                        $selectVariant.html('<option value="">Error al cargar</option>');
-                        console.error('Error loading variants:', xhr);
-                        let msg = 'No se pudieron cargar las variantes.';
-                        if (xhr.status === 404) msg = 'Ruta no encontrada (404).';
-
+                        $selectVariant.html('<option value="">Error</option>');
                         Swal.fire({
                             icon: 'error',
                             title: 'Error al cargar variantes',
-                            text: xhr.responseJSON?.message || msg,
-                            confirmButtonColor: '#d33'
+                            text: xhr.responseJSON?.message ||
+                                'No se pudieron cargar las variantes.',
+                            confirmButtonColor: '#dc2626'
                         });
                     }
                 });
@@ -485,8 +1176,7 @@
                 resetFromUnit();
 
                 if (!variantId || !currentItem.material_id) {
-                    $selectUnit.prop('disabled', true).html(
-                        '<option value="">Primero seleccione variante</option>');
+                    $selectUnit.prop('disabled', true).html('<option value="">Seleccionar...</option>');
                     return;
                 }
 
@@ -500,16 +1190,16 @@
                     },
                     success: function(data) {
                         if (!data.units || data.units.length === 0) {
-                            $selectUnit.html('<option value="">No hay unidades</option>');
+                            $selectUnit.html('<option value="">Sin unidades</option>');
                             Swal.fire({
                                 icon: 'warning',
                                 title: 'Sin unidades de compra',
-                                text: 'Este material no tiene unidades de compra configuradas. Configure las conversiones primero.',
-                                confirmButtonColor: '#f0ad4e'
+                                text: 'Este material no tiene unidades de compra configuradas.',
+                                confirmButtonColor: '#f59e0b'
                             });
                             return;
                         }
-                        let options = '<option value="">Seleccionar unidad...</option>';
+                        let options = '<option value="">Seleccionar...</option>';
                         data.units.forEach(function(unit) {
                             const isBase = unit.is_base ? ' (Base)' : '';
                             options +=
@@ -518,41 +1208,48 @@
                         $selectUnit.html(options).prop('disabled', false);
                     },
                     error: function(xhr) {
-                        $selectUnit.html('<option value="">Error al cargar</option>');
-                        console.error('Error loading units:', xhr);
-                        let msg = 'No se pudieron cargar las unidades de compra.';
-                        if (xhr.status === 404) msg = 'Ruta no encontrada (404).';
-
+                        $selectUnit.html('<option value="">Error</option>');
                         Swal.fire({
                             icon: 'error',
                             title: 'Error al cargar unidades',
-                            text: xhr.responseJSON?.message || msg,
-                            confirmButtonColor: '#d33'
+                            text: xhr.responseJSON?.message ||
+                                'No se pudieron cargar las unidades.',
+                            confirmButtonColor: '#dc2626'
                         });
                     }
                 });
             });
 
+            // Cambio de unidad
             $selectUnit.on('change', function() {
                 const unitId = $(this).val();
                 const $selected = $(this).find('option:selected');
 
                 currentItem.unit_id = unitId;
+                currentItem.unit_name = $selected.data('name') || '';
                 currentItem.unit_symbol = $selected.data('symbol') || '';
                 currentItem.conversion_factor = parseFloat($selected.data('factor')) || 1;
 
                 if (unitId) {
                     $inputQuantity.prop('disabled', false);
                     $inputPrice.prop('disabled', false);
+                    updateConversionInfo();
                 } else {
                     $inputQuantity.prop('disabled', true).val('');
                     $inputPrice.prop('disabled', true).val('');
+                    $infoConversion.val('');
+                    $infoConversionText.hide();
+                    $infoSubtotal.val('');
+                    $infoSubtotalDisplay.text('$0.00');
                 }
+
                 validateAddButton();
             });
 
+            // Cambio de cantidad o precio
             $inputQuantity.on('input', function() {
                 currentItem.quantity = parseFloat($(this).val()) || 0;
+                updateConversionInfo();
                 calculateItemSubtotal();
                 validateAddButton();
             });
@@ -563,46 +1260,85 @@
                 validateAddButton();
             });
 
-            function calculateItemSubtotal() {
-                const subtotal = currentItem.quantity * currentItem.unit_price;
-                $infoSubtotal.val(subtotal > 0 ? '$' + subtotal.toFixed(2) : '');
-
-                if (currentItem.conversion_factor != 1 && currentItem.quantity > 0) {
+            // Actualizar info de conversión
+            function updateConversionInfo() {
+                if (currentItem.conversion_factor && currentItem.conversion_factor != 1 && currentItem.quantity >
+                    0) {
                     const converted = currentItem.quantity * currentItem.conversion_factor;
-                    $infoConversion.val(`= ${converted.toFixed(2)} ${currentItem.base_unit_symbol}`);
+                    const text = `= ${converted.toFixed(2)} ${currentItem.base_unit_symbol}`;
+                    $infoConversion.val(text);
+                    $infoConversionText.text(text).show();
                 } else {
                     $infoConversion.val('');
+                    $infoConversionText.hide();
                 }
             }
 
+            // Calcular subtotal del item actual
+            function calculateItemSubtotal() {
+                const subtotal = currentItem.quantity * currentItem.unit_price;
+                const formatted = '$' + subtotal.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+                $infoSubtotal.val(subtotal);
+                $infoSubtotalDisplay.text(formatted);
+            }
+
+            // Validar botón agregar
             function validateAddButton() {
                 const canAdd = currentItem.variant_id &&
                     currentItem.unit_id &&
                     currentItem.quantity > 0 &&
                     currentItem.unit_price > 0;
+
                 $btnAddItem.prop('disabled', !canAdd);
             }
 
+            // Agregar item
             $btnAddItem.on('click', function() {
-                const exists = items.find(i => i.variant_id == currentItem.variant_id && i.unit_id ==
-                    currentItem.unit_id);
-                if (exists) {
+                // Verificar duplicados - si existe, sumar cantidad
+                const existingIndex = items.findIndex(i =>
+                    i.variant_id == currentItem.variant_id &&
+                    i.unit_id == currentItem.unit_id
+                );
+
+                if (existingIndex !== -1) {
+                    const existingItem = items[existingIndex];
+                    const cantidadAnterior = existingItem.quantity;
+                    existingItem.quantity += currentItem.quantity;
+                    existingItem.subtotal = existingItem.quantity * existingItem.unit_price;
+                    existingItem.converted_quantity = existingItem.quantity * existingItem
+                        .conversion_factor;
+                    existingItem.converted_unit_cost = existingItem.subtotal / existingItem
+                        .converted_quantity;
+
+                    renderItems();
+                    resetForm();
+                    updateTotals();
+
+                    const variantInfo = existingItem.variant_color ? ` (${existingItem.variant_color})` :
+                        '';
                     Swal.fire({
-                        icon: 'warning',
-                        title: 'Item duplicado',
-                        text: 'Este material con esta unidad ya está agregado a la orden',
-                        confirmButtonColor: '#f0ad4e'
+                        icon: 'success',
+                        title: 'Cantidad actualizada',
+                        html: `<strong>${existingItem.material_name}${variantInfo}</strong><br><br>` +
+                            `Cantidad anterior: <strong>${cantidadAnterior.toFixed(2)} ${existingItem.unit_symbol}</strong><br>` +
+                            `Se agregó: <strong>+${currentItem.quantity.toFixed(2)} ${currentItem.unit_symbol}</strong><br>` +
+                            `Nueva cantidad: <strong>${existingItem.quantity.toFixed(2)} ${existingItem.unit_symbol}</strong>`,
+                        confirmButtonColor: '#059669',
+                        timer: 3000,
+                        timerProgressBar: true
                     });
                     return;
                 }
 
                 const subtotal = currentItem.quantity * currentItem.unit_price;
                 const converted_quantity = currentItem.quantity * currentItem.conversion_factor;
-                // Calculate unit cost for display (avoid division by zero if quantity is somehow 0, though checked above)
-                const converted_unit_cost = converted_quantity > 0 ? (subtotal / converted_quantity) : 0;
+                const converted_unit_cost = subtotal / converted_quantity;
 
-                items.push({
-                    index: itemIndex++,
+                const newItem = {
+                    index: itemIndex,
                     category_name: currentItem.category_name,
                     material_name: currentItem.material_name,
                     variant_id: currentItem.variant_id,
@@ -617,65 +1353,75 @@
                     converted_unit_cost: converted_unit_cost,
                     base_unit_symbol: currentItem.base_unit_symbol,
                     subtotal: subtotal
-                });
+                };
+
+                items.push(newItem);
+                itemIndex++;
 
                 renderItems();
                 resetForm();
                 updateTotals();
             });
 
+            // Renderizar tabla de items
             function renderItems() {
                 if (items.length === 0) {
                     $itemsBody.html(`
                         <tr id="no_items_row">
-                            <td colspan="8" class="text-center text-muted py-4">
-                                <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
-                                No hay items agregados.
+                            <td colspan="8" class="empty-state">
+                                <div class="empty-icon"><i class="fas fa-box-open"></i></div>
+                                <div class="empty-text">La orden está vacía</div>
+                                <div class="empty-hint">Agregue materiales usando el formulario superior</div>
                             </td>
                         </tr>
                     `);
                     $itemsTotals.hide();
                     $btnSubmit.prop('disabled', true);
+                    $itemsCount.text('0 items');
                     return;
                 }
 
-                $itemsTotals.show();
                 let html = '';
                 items.forEach((item, idx) => {
-                    const colorBadge = item.variant_color ?
-                        `<span class="badge badge-secondary">${item.variant_color}</span>` : '';
-
+                    const variantDisplay = item.variant_color || 'Sin color';
                     const conversionInfo = item.conversion_factor != 1 ?
-                        `<br><small class="text-info">= ${item.converted_quantity.toFixed(2)} ${item.base_unit_symbol}</small>` :
+                        `<div class="item-conversion" id="conv_${item.index}">= ${item.converted_quantity.toFixed(2)} ${item.base_unit_symbol}</div>` :
                         '';
-
                     const unitCostInfo = item.conversion_factor != 1 ?
-                        `<br><small class="text-muted">$${(item.converted_unit_cost || 0).toFixed(2)}/${item.base_unit_symbol}</small>` :
+                        `<div class="item-unit-cost" id="ucost_${item.index}">$${item.converted_unit_cost.toFixed(4)}/${item.base_unit_symbol}</div>` :
                         '';
 
                     html += `
                         <tr class="item-row" data-index="${item.index}">
-                            <td>${idx + 1}</td>
+                            <td class="td-center">${idx + 1}</td>
                             <td>
-                                <strong>${item.material_name}</strong>
-                                <br><small class="text-muted">${item.category_name}</small>
+                                <div class="item-material-name">${item.material_name}</div>
+                                <div class="item-category">${item.category_name}</div>
                             </td>
                             <td>
-                                <code>${item.variant_sku}</code>
-                                ${colorBadge ? '<br>' + colorBadge : ''}
+                                <span class="item-variant-name">${variantDisplay}</span>
                             </td>
-                            <td class="text-center">
-                                ${item.quantity.toFixed(2)}
+                            <td class="td-center">
+                                <input type="number" class="input-editable input-editable-qty input-qty"
+                                    data-index="${item.index}"
+                                    value="${item.quantity}"
+                                    min="0.01" step="0.01">
                                 ${conversionInfo}
                             </td>
-                            <td class="text-center">${item.unit_symbol}</td>
-                            <td class="text-right">
-                                $${item.unit_price.toFixed(2)}
+                            <td class="td-center">${item.unit_symbol}</td>
+                            <td class="td-right">
+                                <div class="input-price-wrapper">
+                                    <span class="input-price-symbol">$</span>
+                                    <input type="number" class="input-editable input-editable-price input-price"
+                                        data-index="${item.index}"
+                                        value="${item.unit_price}"
+                                        min="0.01" step="0.01">
+                                </div>
                                 ${unitCostInfo}
                             </td>
-                            <td class="text-right font-weight-bold">$${item.subtotal.toFixed(2)}</td>
-                            <td class="text-center">
-                                <button type="button" class="btn btn-danger btn-sm btn-remove-item" data-index="${item.index}">
+                            <td class="td-right td-total" id="total_${item.index}">$${item.subtotal.toFixed(2)}</td>
+                            <td class="td-center">
+                                <button type="button" class="btn-remove btn-remove-item" data-index="${item.index}">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </td>
@@ -684,10 +1430,14 @@
                 });
 
                 $itemsBody.html(html);
+                $itemsTotals.show();
                 $btnSubmit.prop('disabled', false);
+                $itemsCount.text(items.length + (items.length === 1 ? ' item' : ' items'));
+
                 generateHiddenInputs();
             }
 
+            // Generar inputs hidden para envío
             function generateHiddenInputs() {
                 let html = '';
                 items.forEach((item, idx) => {
@@ -701,12 +1451,64 @@
                 $hiddenContainer.html(html);
             }
 
+            // Eliminar item
             $(document).on('click', '.btn-remove-item', function() {
-                items = items.filter(i => i.index !== $(this).data('index'));
+                const index = $(this).data('index');
+                items = items.filter(i => i.index !== index);
                 renderItems();
                 updateTotals();
             });
 
+            // Editar cantidad inline
+            $(document).on('input', '.input-qty', function() {
+                const index = $(this).data('index');
+                const newQty = parseFloat($(this).val()) || 0;
+
+                const item = items.find(i => i.index === index);
+                if (item && newQty > 0) {
+                    item.quantity = newQty;
+                    item.subtotal = item.quantity * item.unit_price;
+                    item.converted_quantity = item.quantity * item.conversion_factor;
+                    item.converted_unit_cost = item.subtotal / item.converted_quantity;
+
+                    $(`#total_${index}`).text('$' + item.subtotal.toFixed(2));
+
+                    if (item.conversion_factor != 1) {
+                        $(`#conv_${index}`).text(
+                            `= ${item.converted_quantity.toFixed(2)} ${item.base_unit_symbol}`);
+                        $(`#ucost_${index}`).text(
+                            `$${item.converted_unit_cost.toFixed(4)}/${item.base_unit_symbol}`);
+                    }
+
+                    generateHiddenInputs();
+                    updateTotals();
+                }
+            });
+
+            // Editar precio inline
+            $(document).on('input', '.input-price', function() {
+                const index = $(this).data('index');
+                const newPrice = parseFloat($(this).val()) || 0;
+
+                const item = items.find(i => i.index === index);
+                if (item && newPrice > 0) {
+                    item.unit_price = newPrice;
+                    item.subtotal = item.quantity * item.unit_price;
+                    item.converted_unit_cost = item.subtotal / item.converted_quantity;
+
+                    $(`#total_${index}`).text('$' + item.subtotal.toFixed(2));
+
+                    if (item.conversion_factor != 1) {
+                        $(`#ucost_${index}`).text(
+                            `$${item.converted_unit_cost.toFixed(4)}/${item.base_unit_symbol}`);
+                    }
+
+                    generateHiddenInputs();
+                    updateTotals();
+                }
+            });
+
+            // Actualizar totales
             function updateTotals() {
                 const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
                 const taxRate = parseFloat($taxRate.val()) || 0;
@@ -728,27 +1530,38 @@
                 $('#total_final').text('$' + Math.max(0, total).toFixed(2));
             }
 
+            // Cambio en tasa de impuesto o descuento
             $taxRate.on('input', updateTotals);
             $discountAmount.on('input', updateTotals);
 
+            // Reset funciones
             function resetFromMaterial() {
+                currentItem.material_id = null;
+                currentItem.material_name = '';
                 $selectMaterial.val('').prop('disabled', true);
                 resetFromVariant();
             }
 
             function resetFromVariant() {
-                $selectVariant.val('').prop('disabled', true).html(
-                    '<option value="">Primero seleccione material</option>');
+                currentItem.variant_id = null;
+                currentItem.variant_sku = '';
+                currentItem.variant_color = '';
+                $selectVariant.val('').prop('disabled', true).html('<option value="">Seleccionar...</option>');
                 resetFromUnit();
             }
 
             function resetFromUnit() {
-                $selectUnit.val('').prop('disabled', true).html(
-                    '<option value="">Primero seleccione variante</option>');
+                currentItem.unit_id = null;
+                currentItem.unit_name = '';
+                currentItem.unit_symbol = '';
+                currentItem.conversion_factor = 1;
+                $selectUnit.val('').prop('disabled', true).html('<option value="">Seleccionar...</option>');
                 $inputQuantity.val('').prop('disabled', true);
                 $inputPrice.val('').prop('disabled', true);
                 $infoConversion.val('');
+                $infoConversionText.hide();
                 $infoSubtotal.val('');
+                $infoSubtotalDisplay.text('$0.00');
                 $btnAddItem.prop('disabled', true);
             }
 
@@ -769,16 +1582,44 @@
                     quantity: 0,
                     unit_price: 0
                 };
+
                 $selectCategory.val('');
-                resetFromMaterial();
+                $selectMaterial.val('').prop('disabled', true).html('<option value="">Seleccionar...</option>');
+                $selectVariant.val('').prop('disabled', true).html('<option value="">Seleccionar...</option>');
+                $selectUnit.val('').prop('disabled', true).html('<option value="">Seleccionar...</option>');
+                $inputQuantity.val('').prop('disabled', true);
+                $inputPrice.val('').prop('disabled', true);
+                $infoConversion.val('');
+                $infoConversionText.hide();
+                $infoSubtotal.val('');
+                $infoSubtotalDisplay.text('$0.00');
+                $btnAddItem.prop('disabled', true);
             }
 
+            // Validación antes de enviar
             $('#purchaseForm').on('submit', function(e) {
                 if (items.length === 0) {
                     e.preventDefault();
-                    alert('Debe agregar al menos un item');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Sin items',
+                        text: 'Debe agregar al menos un item a la orden de compra',
+                        confirmButtonColor: '#f59e0b'
+                    });
                     return false;
                 }
+
+                if (!$('#proveedor_id').val()) {
+                    e.preventDefault();
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Proveedor requerido',
+                        text: 'Debe seleccionar un proveedor para la orden',
+                        confirmButtonColor: '#f59e0b'
+                    });
+                    return false;
+                }
+
                 return true;
             });
         });
