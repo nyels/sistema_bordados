@@ -22,11 +22,20 @@ class Product extends Model
         'description',
         'specifications',
         'status',
+        // Pricing Fields
+        'base_price',
+        'production_cost',
+        'profit_margin',
+        'production_lead_time',
     ];
 
     protected $casts = [
         'specifications' => 'array',
         'tenant_id' => 'integer',
+        'base_price' => 'decimal:4',
+        'production_cost' => 'decimal:4',
+        'profit_margin' => 'decimal:2',
+        'production_lead_time' => 'integer',
     ];
 
     /*

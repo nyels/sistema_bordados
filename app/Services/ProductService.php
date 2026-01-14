@@ -31,6 +31,11 @@ class ProductService
                 'description' => $data['description'] ?? null,
                 'specifications' => $specifications,
                 'status' => $data['status'] ?? 'draft',
+                // Pricing Fields
+                'base_price' => $data['base_price'] ?? null,
+                'production_cost' => $data['production_cost'] ?? null,
+                'profit_margin' => $data['profit_margin'] ?? null,
+                'production_lead_time' => $data['production_lead_time'] ?? null,
             ]);
 
             // Asignar diseños

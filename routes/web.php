@@ -643,6 +643,10 @@ Route::get('admin/materials/category/{categoryId}', [App\Http\Controllers\Materi
     ->name('admin.materials.by-category')
     ->middleware('auth');
 
+Route::post('admin/products/validate-prices', [App\Http\Controllers\ProductController::class, 'validateMaterialPrices'])
+    ->name('admin.products.validate-prices')
+    ->middleware('auth');
+
 /*
 |--------------------------------------------------------------------------
 | RUTAS DE VARIANTES DE MATERIALES

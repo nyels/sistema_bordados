@@ -344,6 +344,12 @@ return [
                     'icon' => 'fas fa-fw fa-images',
                     'active' => ['admin/designs*'],
                 ],
+                [
+                    'text' => 'Para bordar',
+                    'url' => 'admin/production',
+                    'icon' => 'fas fa-fw fa-industry',
+                    'active' => ['admin/production*'],
+                ],
 
             ],
         ],
@@ -353,12 +359,7 @@ return [
             'icon' => 'fas fa-fw fa-eye',
             'active' => ['admin/visualizer*'],
         ],
-        [
-            'text' => 'Producción',
-            'url' => 'admin/production',
-            'icon' => 'fas fa-fw fa-industry',
-            'active' => ['admin/production*'],
-        ],
+
 
         /*
         |--------------------------------------------------------------------------

@@ -106,8 +106,78 @@ class ProductController extends Controller
 
             // 2. Carga de Insumos y Configuración
             $extras = ProductExtra::ordered()->get();
-            $designs = Design::with(['categories', 'generalExports'])->orderBy('name')->get();
+
+            // STRICT FILTERING: Only load designs/variants with APPROVED production files
+            $designs = Design::where(function ($q) {
+                // Design has direct approved exports (Global)
+                $q->whereHas('generalExports', fn($q2) => $q2->where('status', 'aprobado'))
+                    // OR Design has variants with approved exports (Specific)
+                    ->orWhereHas('variants.exports', fn($q2) => $q2->where('status', 'aprobado'));
+            })
+                ->with([
+                    'categories',
+                    'primaryImage',
+                    'generalExports' => fn($q) => $q->where('status', 'aprobado'),
+                    // Only load variants that have approved exports
+                    'variants' => fn($q) => $q->whereHas('exports', fn($q2) => $q2->where('status', 'aprobado'))
+                        ->with(['primaryImage', 'exports' => fn($q2) => $q2->where('status', 'aprobado')])
+                ])
+                ->orderBy('name')
+                ->get();
             $applicationTypes = Application_types::where('activo', true)->orderBy('nombre_aplicacion')->get();
+
+            // NEW: Flatten all approved DesignExports for the new UI
+            // This creates a single-level collection of all production files
+            $designExports = DesignExport::where('status', 'aprobado')
+                ->with(['design.primaryImage', 'variant.primaryImage', 'image'])
+                ->orderBy('design_id')
+                ->orderBy('design_variant_id')
+                ->orderBy('width_mm')
+                ->get()
+                ->map(function ($export) {
+                    // Determine the display name and image
+                    $displayName = $export->design->name;
+                    $variantName = null;
+                    $imageUrl = null;
+
+                    // Check for variant
+                    if ($export->variant) {
+                        $variantName = $export->variant->name;
+                        $displayName .= ' - ' . $variantName;
+                        // Variant image priority
+                        $imageUrl = $export->variant->primaryImage?->url;
+                    }
+
+                    // Fallback to design image
+                    if (!$imageUrl) {
+                        $imageUrl = $export->design->primaryImage?->url;
+                    }
+
+                    // Export-specific image (highest priority)
+                    if ($export->image) {
+                        $imageUrl = $export->image->url;
+                    }
+
+                    return [
+                        'id' => $export->id,
+                        'design_id' => $export->design_id,
+                        'design_name' => $export->design->name,
+                        'variant_id' => $export->design_variant_id,
+                        'variant_name' => $variantName,
+                        'display_name' => $displayName,
+                        'dimensions' => $export->width_mm . 'x' . $export->height_mm,
+                        'dimensions_label' => $export->width_mm . 'x' . $export->height_mm . ' mm',
+                        'width_mm' => $export->width_mm,
+                        'height_mm' => $export->height_mm,
+                        'stitches' => $export->stitches_count ?? 0,
+                        'stitches_formatted' => number_format($export->stitches_count ?? 0),
+                        'colors' => $export->colors_count ?? 0,
+                        'application_type' => $export->application_type ?? 'general',
+                        'application_label' => $export->application_label ?? ucfirst($export->application_type ?? 'General'),
+                        'image_url' => $imageUrl,
+                        'svg_content' => $export->svg_content, // SVG fallback for preview
+                    ];
+                });
 
             // 3. Atributos
             $sizeAttribute = Attribute::with('values')->where('slug', 'talla')->first();
@@ -130,9 +200,10 @@ class ProductController extends Controller
                 });*/
 
             // 4. Materiales (Familias) - Esto alimenta el primer Select
-            $materials = Material::where('activo', true)
+            $materials = Material::with('category.baseUnit')
+                ->where('activo', true)
                 ->orderBy('name')
-                ->get(['id', 'name']); // Solo necesitamos el ID y Nombre de la familia
+                ->get();
 
 
 
@@ -140,6 +211,7 @@ class ProductController extends Controller
                 'categories',
                 'extras',
                 'designs',
+                'designExports', // NEW: Flattened exports for new UI
                 'applicationTypes',
                 'sizeAttribute',
                 'colorAttribute',
@@ -670,5 +742,45 @@ class ProductController extends Controller
         });
 
         return response()->json(['results' => $results]);
+    }
+
+    /**
+     * Valida si los precios de los materiales han cambiado
+     */
+    public function validateMaterialPrices(Request $request)
+    {
+        try {
+            $clientMaterials = $request->input('materials', []);
+            $changes = [];
+            $hasChanges = false;
+
+            foreach ($clientMaterials as $m) {
+                $variant = MaterialVariant::find($m['id']);
+                if (!$variant) continue;
+
+                // Determine current system cost
+                $currentCost = $variant->average_cost > 0 ? $variant->average_cost : $variant->last_purchase_cost;
+                $clientCost = (float) $m['price'];
+
+                // Check for significant difference (avoid floating point issues)
+                if (abs($currentCost - $clientCost) > 0.001) {
+                    $changes[] = [
+                        'id' => $variant->id,
+                        'name' => $variant->display_name,
+                        'old_price' => $clientCost,
+                        'new_price' => $currentCost,
+                        'diff' => $currentCost - $clientCost
+                    ];
+                    $hasChanges = true;
+                }
+            }
+
+            return response()->json([
+                'has_changes' => $hasChanges,
+                'changes' => $changes
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error al validar precios'], 500);
+        }
     }
 }
