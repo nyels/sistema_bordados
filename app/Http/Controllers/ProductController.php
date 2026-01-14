@@ -144,18 +144,18 @@ class ProductController extends Controller
                     if ($export->variant) {
                         $variantName = $export->variant->name;
                         $displayName .= ' - ' . $variantName;
-                        // Variant image priority
-                        $imageUrl = $export->variant->primaryImage?->url;
+                        // Variant image priority - use display_url accessor (returns full URL)
+                        $imageUrl = $export->variant->primaryImage?->display_url;
                     }
 
                     // Fallback to design image
                     if (!$imageUrl) {
-                        $imageUrl = $export->design->primaryImage?->url;
+                        $imageUrl = $export->design->primaryImage?->display_url;
                     }
 
                     // Export-specific image (highest priority)
                     if ($export->image) {
-                        $imageUrl = $export->image->url;
+                        $imageUrl = $export->image->display_url;
                     }
 
                     return [

@@ -253,24 +253,29 @@
                         <i class="fas fa-check mr-1"></i> <span id="justAddedText"></span>
                     </div>
                     <div class="d-flex justify-content-between align-items-center w-100">
-                        <div class="text-dark">
-                            <i class="fas fa-check-circle text-success mr-1"></i>
-                            <strong id="designsAddedCount">0</strong> agregado(s)
-                        </div>
-                        <div>
-                            <button type="button" class="btn btn-light px-4 mr-2" data-dismiss="modal"
-                                style="border-radius: 8px;">
-                                Cerrar
+                        {{-- LEFT: Add Button + Count --}}
+                        <div class="d-flex align-items-center">
+                            <button type="button" class="btn btn-info px-4 mr-3 font-weight-bold shadow-sm"
+                                onclick="confirmAddDesignDirect()" style="border-radius: 8px;">
+                                <i class="fas fa-plus mr-1"></i> AGREGAR
                             </button>
-                            <button type="button" class="btn btn-info px-4" onclick="confirmAddDesignDirect()"
-                                style="border-radius: 8px;">
-                                <i class="fas fa-plus mr-1"></i>Agregar
-                            </button>
+                            <div class="text-dark small">
+                                <i class="fas fa-check-circle text-success mr-1"></i>
+                                <strong id="designsAddedCount">0</strong> agregado(s)
+                            </div>
                         </div>
+
+                        {{-- RIGHT: Close Button (Darker) --}}
+                        <button type="button" class="btn btn-dark px-4 font-weight-bold shadow-sm" data-dismiss="modal"
+                            style="border-radius: 8px;">
+                            CERRAR
+                        </button>
                     </div>
                 </div>
+
             </div>
         </div>
+    </div>
     </div>
 
     {{-- ================= TEMPLATES (DATA FROM DB) ================= --}}
@@ -312,7 +317,7 @@
                     </div>
                     {{-- ROW 2: CATEGORY + STATUS --}}
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-12">
                             <div class="form-group">
                                 <label class="font-weight-bold">Categoría</label>
                                 <select class="form-control" name="category_id" id="inpCategory">
@@ -323,10 +328,10 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-6 d-none">
                             <div class="form-group">
                                 <label class="font-weight-bold">Estado</label>
-                                <select class="form-control" name="status" id="inpStatus">
+                                <select class="form-control" name="status" id="inpStatus" >
                                     <option value="">-- Selecciona un estado --</option>
                                     <option value="draft">Borrador</option>
                                     <option value="active" selected>Activo</option>
@@ -672,15 +677,11 @@
                                 </div>
                             @endif
 
-                            {{-- Image / SVG Preview --}}
+                            {{-- Image / SVG Preview - Use same route as production index --}}
                             <div class="card-img-top design-thumb d-flex align-items-center justify-content-center bg-white" style="height: 90px; overflow: hidden;">
-                                @if($export['image_url'])
-                                    <img src="{{ asset('storage/' . $export['image_url']) }}" class="img-fluid" style="max-height: 80px; max-width: 100%; object-fit: contain;">
-                                @elseif(!empty($export['svg_content']))
-                                    <div class="svg-preview" style="max-height: 80px; max-width: 100%; overflow: hidden;">{!! $export['svg_content'] !!}</div>
-                                @else
-                                    <i class="fas fa-image fa-2x text-muted"></i>
-                                @endif
+                                <img src="{{ route('admin.production.preview', $export['id']) }}" 
+                                     class="img-fluid" 
+                                     style="max-height: 80px; max-width: 100%; object-fit: contain;">
                             </div>
 
                             {{-- Body --}}
@@ -986,111 +987,118 @@
             
             <div class="row">
                 {{-- LEFT COLUMN: CALCULADORA COMPLETA (Classic Style) --}}
-                <div class="col-lg-7 pr-lg-4">
+                <div class="col-lg-9 pr-lg-4">
                     <div class="card calc-premium-card shadow-sm h-100">
                         <div class="card-header calc-premium-header text-center">
                             <h5 class="mb-0"><i class="fas fa-receipt mr-2"></i> Desglose de Costos</h5>
                         </div>
                         <div class="card-body p-3">
                             
-                            {{-- DESGLOSE DE MATERIALES --}}
-                            <div class="calc-section">
-                                <div class="calc-section-header">
-                                    <span class="calc-section-title"><i class="fas fa-boxes mr-2"></i>Materiales (Receta)</span>
-                                    <span class="calc-section-value text-primary" id="finMatCost">$0.00</span>
-                                </div>
-                                <div id="finMaterialsList" class="calc-scroll-list" style="max-height: 120px; overflow-y: auto;">
-                                    <span class="text-muted small">Sin materiales...</span>
-                                </div>
-                            </div>
-                            
-                            {{-- BORDADOS --}}
-                            <div class="calc-section">
-                                <div class="calc-section-header">
-                                    <span class="calc-section-title"><i class="fas fa-tshirt mr-2"></i>Bordados</span>
-                                    <span class="calc-section-value text-primary" id="finEmbCost">$0.00</span>
-                                </div>
-                                {{-- Preview de diseños seleccionados --}}
-                                <div id="finDesignPreviews" class="d-flex flex-wrap gap-2 mb-2" style="gap: 8px;">
-                                    <span class="text-muted small">Sin diseños seleccionados...</span>
-                                </div>
-                                <div class="calc-stitch-grid">
-                                    <div class="calc-stitch-box">
-                                        <div class="stitch-label">Total Puntadas</div>
-                                        <div class="stitch-value" id="finTotalStitches">0</div>
-                                    </div>
-                                    <div class="calc-arrow"><i class="fas fa-arrow-right"></i></div>
-                                    <div class="calc-stitch-box">
-                                        <div class="stitch-label">Millares</div>
-                                        <div class="stitch-value text-info" id="finMillares">0.000</div>
-                                    </div>
-                                    <div class="calc-arrow"><i class="fas fa-times"></i></div>
-                                    <div class="calc-stitch-box calc-input-box">
-                                        <div class="stitch-label">Precio / Millar</div>
-                                        <div class="input-group input-group-sm">
-                                            <div class="input-group-prepend"><span class="input-group-text">$</span></div>
-                                            <input type="number" class="form-control text-center font-weight-bold" id="finStitchRate" value="1.00" step="0.01" min="0" onchange="recalcFinance()" oninput="recalcFinance()">
+                            <div class="row">
+                                {{-- LEFT COLUMN: Materiales --}}
+                                <div class="col-md-6">
+                                    {{-- DESGLOSE DE MATERIALES --}}
+                                    <div class="calc-section h-100">
+                                        <div class="calc-section-header">
+                                            <span class="calc-section-title"><i class="fas fa-boxes mr-2"></i>Materiales (Receta)</span>
+                                            <span class="calc-section-value text-primary" id="finMatCost">$0.00</span>
+                                        </div>
+                                        <div id="finMaterialsList" class="calc-scroll-list" style="max-height: 380px; overflow-y: auto;">
+                                            <span class="text-muted small">Sin materiales...</span>
                                         </div>
                                     </div>
                                 </div>
-                                {{-- TIEMPO DE BORDADO --}}
-                                <div class="row mt-3 align-items-center">
-                                    <div class="col-6">
-                                        <div class="d-flex align-items-center">
-                                            <small class="text-muted mr-2">Velocidad:</small>
-                                            <div class="input-group input-group-sm" style="width: 120px;">
-                                                <input type="number" class="form-control text-center" id="finMachineSpeed" value="800" min="100" max="2000" step="50" onchange="recalcFinance()" oninput="recalcFinance()">
-                                                <div class="input-group-append"><span class="input-group-text small">p/min</span></div>
+
+                                {{-- RIGHT COLUMN: Bordados, Mano de Obra, Servicios --}}
+                                <div class="col-md-6">
+                                    {{-- BORDADOS --}}
+                                    <div class="calc-section">
+                                        <div class="calc-section-header">
+                                            <span class="calc-section-title"><i class="fas fa-tshirt mr-2"></i>Bordados</span>
+                                            <span class="calc-section-value text-primary" id="finEmbCost">$0.00</span>
+                                        </div>
+                                        {{-- Preview de diseños seleccionados --}}
+                                        <div id="finDesignPreviews" class="d-flex flex-wrap gap-2 mb-2" style="gap: 8px;">
+                                            <span class="text-muted small">Sin diseños seleccionados...</span>
+                                        </div>
+                                        <div class="calc-stitch-grid">
+                                            <div class="calc-stitch-box">
+                                                <div class="stitch-label">Total Puntadas</div>
+                                                <div class="stitch-value" id="finTotalStitches">0</div>
+                                            </div>
+                                            <div class="calc-arrow"><i class="fas fa-arrow-right"></i></div>
+                                            <div class="calc-stitch-box">
+                                                <div class="stitch-label">Millares</div>
+                                                <div class="stitch-value text-info" id="finMillares">0.000</div>
+                                            </div>
+                                            <div class="calc-arrow"><i class="fas fa-times"></i></div>
+                                            <div class="calc-stitch-box calc-input-box">
+                                                <div class="stitch-label">Precio / Millar</div>
+                                                <div class="input-group input-group-sm">
+                                                    <div class="input-group-prepend"><span class="input-group-text">$</span></div>
+                                                    <input type="number" class="form-control text-center font-weight-bold" id="finStitchRate" value="1.00" step="0.01" min="0" onchange="recalcFinance()" oninput="recalcFinance()">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {{-- TIEMPO DE BORDADO --}}
+                                        <div class="row mt-3">
+                                            <div class="col-12 mb-2">
+                                                <div class="d-flex align-items-center justify-content-between">
+                                                    <span class="text-muted small mr-2 font-weight-bold" style="min-width: 80px; color: #1a252f;">Velocidad:</span>
+                                                    <div class="input-group input-group-sm w-100">
+                                                        <input type="number" class="form-control text-center font-weight-bold" id="finMachineSpeed" value="800" min="100" max="2000" step="50" onchange="recalcFinance()" oninput="recalcFinance()" style="font-size: 0.95rem;">
+                                                        <div class="input-group-append"><span class="input-group-text small">p/min</span></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-12 text-right">
+                                                <span class="text-muted small font-weight-bold" style="color: #1a252f;">Tiempo Estimado:</span>
+                                                <span class="font-weight-bold text-success ml-2" id="finEmbroideryTime" style="font-size: 1.1rem;">0 min</span>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-6 text-right">
-                                        <span class="text-muted small">Tiempo Estimado:</span>
-                                        <span class="font-weight-bold text-success" id="finEmbroideryTime">0 min</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            {{-- MANO DE OBRA --}}
-                            <div class="calc-section">
-                                <div class="calc-section-header">
-                                    <span class="calc-section-title"><i class="fas fa-hand-holding-usd mr-2"></i>Mano de Obra</span>
-                                    <span class="calc-section-value text-primary" id="finLaborCostDisplay">$0.00</span>
-                                </div>
-                                <div class="row align-items-center">
-                                    <div class="col-8">
-                                        <div class="input-group input-group-sm">
-                                            <div class="input-group-prepend"><span class="input-group-text">$</span></div>
-                                            <input type="number" class="form-control font-weight-bold" id="finLaborInput" value="" placeholder="0.00" step="0.01" min="0" onchange="recalcFinance()" oninput="recalcFinance()">
+                                    
+                                    {{-- MANO DE OBRA --}}
+                                    <div class="calc-section">
+                                        <div class="calc-section-header">
+                                            <span class="calc-section-title"><i class="fas fa-hand-holding-usd mr-2"></i>Mano de Obra</span>
+                                            <span class="calc-section-value text-primary" id="finLaborCostDisplay">$0.00</span>
+                                        </div>
+                                        <div class="row align-items-center">
+                                            <div class="col-8">
+                                                <div class="input-group input-group-sm">
+                                                    <div class="input-group-prepend"><span class="input-group-text">$</span></div>
+                                                    <input type="number" class="form-control font-weight-bold" id="finLaborInput" value="" placeholder="0.00" step="0.01" min="0" onchange="recalcFinance()" oninput="recalcFinance()">
+                                                </div>
+                                            </div>
+                                            <div class="col-4">
+                                                <small class="text-muted">Corte, confección, etc.</small>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="col-4">
-                                        <small class="text-muted">Corte, confección, etc.</small>
+                                    
+                                    {{-- SERVICIOS EXTRAS --}}
+                                    <div class="calc-section">
+                                        <div class="calc-section-header">
+                                            <span class="calc-section-title"><i class="fas fa-concierge-bell mr-2"></i>Servicios Extras</span>
+                                            <span class="calc-section-value text-primary" id="finExtrasTotal">$0.00</span>
+                                        </div>
+                                        <div id="finExtrasList" class="calc-scroll-list" style="max-height: 150px; overflow-y: auto;">
+                                            <span class="text-muted small">Sin servicios agregados...</span>
+                                        </div>
+                                        <div class="d-flex justify-content-end mt-2 pt-2 border-top">
+                                            <span class="text-muted mr-2">Tiempo Estimado:</span>
+                                            <span class="font-weight-bold text-info" id="finExtrasTime">0 min</span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            
-                            {{-- SERVICIOS EXTRAS --}}
-                            <div class="calc-section">
-                                <div class="calc-section-header">
-                                    <span class="calc-section-title"><i class="fas fa-concierge-bell mr-2"></i>Servicios Extras</span>
-                                    <span class="calc-section-value text-primary" id="finExtrasTotal">$0.00</span>
-                                </div>
-                                <div id="finExtrasList" class="calc-scroll-list" style="max-height: 150px; overflow-y: auto;">
-                                    <span class="text-muted small">Sin servicios agregados...</span>
-                                </div>
-                                <div class="d-flex justify-content-end mt-2 pt-2 border-top">
-                                    <span class="text-muted mr-2">Tiempo Estimado:</span>
-                                    <span class="font-weight-bold text-info" id="finExtrasTime">0 min</span>
-                                </div>
-                            </div>
-                            
+                            </div>                            
                         </div>
                     </div>
                 </div>
                 
                 {{-- RIGHT COLUMN: Financial Summary + Editable Controls --}}
-                <div class="col-lg-5">
+                <div class="col-lg-3">
                     <div class="review-finance-card">
                         <div class="review-finance-header">
                             <i class="fas fa-calculator mr-2"></i> Resumen Financiero
@@ -1139,9 +1147,9 @@
                                 <span class="font-weight-bold">Total Proceso:</span>
                                 <span class="font-weight-bold text-success" id="revTotalTime">0 min</span>
                             </div>
-                            <div class="form-group mb-0">
-                                <label class="small text-uppercase mb-1">Tiempo Producción (días)</label>
-                                <input type="number" class="form-control form-control-sm" id="revLeadTime" name="production_lead_time" value="1" min="1" max="365" placeholder="Días">
+                            <div class="form-group mb-0 text-center">
+                                <label class="small text-uppercase mb-1 font-weight-bold text-dark">Tiempo Producción (días)</label>
+                                <input type="number" class="form-control form-control-sm text-center" id="revLeadTime" name="production_lead_time" value="1" min="1" max="365" placeholder="Días">
                             </div>
                         </div>
                         
@@ -1150,15 +1158,15 @@
                             <span class="mb-0 font-weight-bold"><i class="fas fa-hand-holding-usd mr-2"></i>Rentabilidad y Precio</span>
                         </div>
                         <div class="review-pricing-controls px-3 py-3 border border-top-0 rounded-bottom" style="background: white;">
-                             <div class="row align-items-end mb-3">
-                                <div class="col-sm-5 mb-2 mb-sm-0">
+                             <div class="row mb-3">
+                                <div class="col-12 mb-2">
                                     <label class="small text-uppercase font-weight-bold mb-1">Margen de Ganancia</label>
                                     <div class="input-group">
                                         <input type="number" class="form-control font-weight-bold text-center" id="revMarginInput" value="35" min="0" max="90" step="1" onchange="recalcReviewPrice()" oninput="recalcReviewPrice()" style="height: 48px; font-size: 1.1rem;">
                                         <div class="input-group-append"><span class="input-group-text font-weight-bold">%</span></div>
                                     </div>
                                 </div>
-                                <div class="col-sm-7 pl-sm-0">
+                                <div class="col-12">
                                     <div class="bg-success text-white rounded p-1 d-flex align-items-center justify-content-between shadow-sm" style="height: 48px;">
                                         <span class="small font-weight-bold px-3 text-uppercase">Precio Sugerido:</span>
                                         <span class="h3 mb-0 font-weight-bold px-3" id="revSuggestedPrice">$0.00</span>
@@ -1252,11 +1260,11 @@
         }
 
         .calc-section-title {
-            font-size: 0.8rem;
-            font-weight: 600;
+            font-size: 1rem;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            color: #6c757d;
+            color: #1a252f;
         }
 
         .calc-section-title i {
@@ -1307,9 +1315,9 @@
         }
 
         .calc-mat-name {
-            font-weight: 600;
-            font-size: 0.9rem;
-            color: #2c3e50;
+            font-weight: 700;
+            font-size: 1rem;
+            color: #1a252f;
             margin-bottom: 4px;
         }
 
@@ -1320,20 +1328,20 @@
         }
 
         .calc-mat-qty {
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: #34495e;
-        }
-
-        .calc-mat-price {
             font-size: 1rem;
-            font-weight: 700;
+            font-weight: 600;
             color: #2c3e50;
         }
 
+        .calc-mat-price {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #1a252f;
+        }
+
         .calc-mat-scope {
-            font-size: 0.7rem;
-            color: #7f8c8d;
+            font-size: 0.85rem;
+            color: #34495e;
             margin-top: 2px;
         }
 
@@ -1342,7 +1350,10 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 8px;
+            flex-wrap: wrap;
+            /* Allow wrapping on small screens/long text */
+            gap: 12px;
+            /* Increased gap */
             background: #fff;
             border-radius: 8px;
             padding: 12px;
@@ -1350,9 +1361,10 @@
         }
 
         .calc-stitch-box {
-            flex: 1;
+            flex: 1 1 120px;
+            /* Base width */
             text-align: center;
-            padding: 8px 6px;
+            padding: 10px 8px;
             background: #f8f9fa;
             border-radius: 6px;
             min-width: 0;
@@ -1363,18 +1375,19 @@
         }
 
         .stitch-label {
-            font-size: 0.65rem;
+            font-size: 0.9rem;
             text-transform: uppercase;
             letter-spacing: 0.4px;
-            color: #6c757d;
+            color: #1a252f;
+            font-weight: 600;
             margin-bottom: 4px;
             white-space: nowrap;
         }
 
         .stitch-value {
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             font-weight: 700;
-            color: #2c3e50;
+            color: #1a252f;
             line-height: 1.2;
         }
 
@@ -1385,12 +1398,13 @@
         }
 
         .calc-formula-hint {
-            font-size: 0.72rem;
-            color: #6c757d;
-            background: rgba(52, 152, 219, 0.08);
-            padding: 6px 10px;
+            font-size: 0.9rem;
+            color: #2c3e50;
+            background: rgba(52, 152, 219, 0.12);
+            padding: 8px 12px;
             border-radius: 6px;
             border-left: 3px solid #3498db;
+            font-weight: 500;
         }
 
         /* Total Box */
@@ -1406,11 +1420,10 @@
         }
 
         .calc-total-label {
-            font-size: 0.75rem;
+            font-size: 0.95rem;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            opacity: 0.9;
         }
 
         .calc-total-value {
@@ -1434,10 +1447,10 @@
         }
 
         .calc-margin-label {
-            font-size: 0.7rem;
-            font-weight: 600;
+            font-size: 0.95rem;
+            font-weight: 700;
             text-transform: uppercase;
-            color: #6c757d;
+            color: #1a252f;
             margin-bottom: 6px;
             display: block;
         }
@@ -1454,11 +1467,10 @@
         }
 
         .calc-suggested-label {
-            font-size: 0.7rem;
+            font-size: 0.95rem;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            opacity: 0.9;
         }
 
         .calc-suggested-value {
@@ -1475,9 +1487,9 @@
         }
 
         .calc-final-label {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: #6c757d;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1a252f;
             margin-bottom: 8px;
             display: block;
             text-align: center;
@@ -1678,11 +1690,11 @@
             justify-content: space-between;
             padding: 8px 0;
             border-bottom: 1px solid #f1f1f1;
-            font-size: 0.85rem;
+            font-size: 0.95rem;
         }
 
         .review-cost-row span:first-child {
-            color: #6c757d;
+            color: #495057;
         }
 
         .review-cost-row span:last-child {
@@ -1714,8 +1726,8 @@
             display: flex;
             justify-content: space-between;
             padding: 8px 0;
-            font-size: 0.85rem;
-            color: #6c757d;
+            font-size: 0.95rem;
+            color: #495057;
         }
 
         .review-margin-row span:last-child {
@@ -2680,6 +2692,9 @@
 
 @section('js')
     <script>
+        // Global flag to control when to re-render design previews (avoids flickering)
+        let shouldRenderDesigns = false;
+
         // --- STATE MANAGEMENT ---
         const State = {
             step: 1,
@@ -2857,8 +2872,8 @@
                     // Designs can be optional
                     return true;
                 case 5:
-                    // Recalculate finances before going to review
-                    recalcFinance();
+                case 5:
+                    // Validation for step 5 if needed (currently none)
                     return true;
                 default:
                     return true;
@@ -2872,6 +2887,8 @@
                     recalcFinance();
                     break;
                 case 6:
+                    shouldRenderDesigns = true; // Ensure designs render on direct entry
+                    recalcFinance();
                     renderReview();
                     validateMaterialPrices();
                     break;
@@ -3472,6 +3489,32 @@
             }
         };
 
+        // --- DESIGN ZOOM MODAL ---
+        window.showDesignZoom = function(imageUrl, title) {
+            if (!imageUrl || imageUrl === 'undefined' || imageUrl === '') {
+                Swal.fire({
+                    title: title || 'Diseño',
+                    text: 'No hay imagen disponible para este diseño.',
+                    icon: 'info',
+                    confirmButtonColor: '#3085d6'
+                });
+                return;
+            }
+
+            Swal.fire({
+                title: title || 'Vista Ampliada',
+                imageUrl: imageUrl,
+                imageAlt: title || 'Diseño',
+                width: 'auto',
+                padding: '1rem',
+                showCloseButton: true,
+                showConfirmButton: false,
+                customClass: {
+                    image: 'swal2-design-zoom-image'
+                }
+            });
+        };
+
         function loadTemplates() {
             try {
                 $('#step1-content').html($('#tpl_step1').html());
@@ -3591,15 +3634,15 @@
         function validateStep(step) {
             if (step === 1) {
                 const name = $('#inpName').val();
-                const sku = $('#inpSku').val();
-                if (!name || !sku) {
-                    Swal.fire('Falta información', 'Nombre y SKU son obligatorios', 'warning');
+                const categoryId = $('#inpCategory').val();
+                if (!name || !categoryId) {
+                    Swal.fire('Falta información', 'Nombre y Categoría son obligatorios', 'warning');
                     return false;
                 }
                 State.definition = {
                     name,
-                    sku,
-                    category_id: $('#inpCategory').val(),
+                    sku: $('#inpSku').val() || '', // SKU is now optional
+                    category_id: categoryId,
                     category: $('#inpCategory option:selected').text(),
                     desc: $('#inpDesc').val()
                 };
@@ -3693,17 +3736,25 @@
         window.toggleNoDesignMode = function() {
             const isChecked = $('#toggleNoDesign').is(':checked');
             if (isChecked) {
+                // CLEAR existing designs when switching to Liso mode
+                if (State.designs.length > 0) {
+                    State.designs = [];
+                    // Deselect all cards visually
+                    $('#designGrid .design-card, #designGrid .design-export-card').removeClass('selected');
+                    recalcFinance();
+                }
+
                 $('#searchDesign').prop('disabled', true);
                 $('#filterDesignBase').prop('disabled', true);
                 $('#filterAppType').prop('disabled', true);
                 $('#designGrid, #designExportsContainer').addClass('opacity-50');
-                $('#designGrid .design-card').css('pointer-events', 'none');
+                $('#designGrid .design-card, #designGrid .design-export-card').css('pointer-events', 'none');
             } else {
                 $('#searchDesign').prop('disabled', false);
                 $('#filterDesignBase').prop('disabled', false);
                 $('#filterAppType').prop('disabled', false);
                 $('#designGrid, #designExportsContainer').removeClass('opacity-50');
-                $('#designGrid .design-card').css('pointer-events', 'auto');
+                $('#designGrid .design-card, #designGrid .design-export-card').css('pointer-events', 'auto');
             }
         };
 
@@ -4183,6 +4234,17 @@
 
         // NEW: Select Design Export (flat structure) - Opens config modal
         window.selectDesignExport = function(el, exportData) {
+            // LISO MODE CHECK: Block selection if product is marked as "Liso"
+            if ($('#toggleNoDesign').is(':checked')) {
+                Swal.fire({
+                    title: 'Modo Liso Activo',
+                    text: 'Este producto está marcado como LISO (sin bordado). Desactiva el toggle para agregar diseños.',
+                    icon: 'warning',
+                    confirmButtonColor: '#3085d6'
+                });
+                return;
+            }
+
             const card = $(el);
             const appType = exportData.application_type || 'general';
             const appLabel = exportData.application_label || 'Sin etiqueta';
@@ -4193,13 +4255,28 @@
                 originText += ' / ' + exportData.variant_name;
             }
 
+            // DEFINITIVE IMAGE CAPTURE V5: Get from DOM (now uses production.preview route)
+            let capturedImageUrl = '';
+
+            // Get the img src from the clicked card (production.preview route)
+            const anyImg = card.find('img').first();
+            if (anyImg.length > 0 && anyImg.attr('src')) {
+                capturedImageUrl = anyImg.attr('src');
+            }
+
+            // Fallback: Construct preview URL from export ID
+            if (!capturedImageUrl && exportData.id) {
+                capturedImageUrl = "{{ route('admin.production.preview', ['export' => '__ID__']) }}".replace('__ID__',
+                    exportData.id);
+            }
+
             // Store for modal use
             tempDesign = {
                 id: exportData.design_id,
                 export_id: exportData.id,
                 name: appLabel, // Use label as the name
                 stitches: exportData.stitches || 0,
-                imageUrl: exportData.image_url ? "{{ asset('storage') }}/" + exportData.image_url : '',
+                imageUrl: capturedImageUrl,
                 element: el,
                 variant_id: exportData.variant_id,
                 variant_name: exportData.variant_name,
@@ -4748,6 +4825,68 @@
             $('#extrasCountBadge').text(State.extras.length);
         }
 
+        // Global flag moved to top of script
+
+
+        // Function to render design previews in Step 6 (called only when entering the step)
+        window.renderStep6Designs = function() {
+            const designPreviews = $('#finDesignPreviews');
+            designPreviews.empty();
+
+            State.designs.forEach(d => {
+                // Get image URL from State (already captured from DOM or preview route)
+                let displayImg = d.image_url || '';
+
+                // Fallback: Construct preview URL from export_id
+                if (!displayImg && d.export_id) {
+                    displayImg = "{{ route('admin.production.preview', ['export' => '__ID__']) }}".replace(
+                        '__ID__', d.export_id);
+                }
+
+                // Get label from position_name
+                let appLabel = d.position_name || 'N/A';
+
+                // If no image in state, try DOM fallback
+                if (!displayImg) {
+                    // Find card by export_id (unique) on the inner card element
+                    const step4Card = $(`.design-export-card[data-export-id="${d.export_id}"]`);
+                    if (step4Card.length > 0) {
+                        const imgTag = step4Card.find('.design-thumb img');
+                        if (imgTag.length > 0 && imgTag.attr('src')) {
+                            displayImg = imgTag.attr('src');
+                        }
+                    }
+                }
+
+                // Render Thumbnail - CLEAN & ROBUST (No ghost icons)
+                let thumbContent;
+                if (displayImg) {
+                    thumbContent = `
+                        <img src="${displayImg}" style="width:100%; height:100%; object-fit:contain;" 
+                            onerror="this.parentNode.innerHTML='<div class=\'d-flex align-items-center justify-content-center h-100 text-muted\'><i class=\'fas fa-image fa-lg py-3\'></i></div>'">
+                    `;
+                } else {
+                    thumbContent = `
+                        <div class="d-flex align-items-center justify-content-center h-100 text-muted bg-light">
+                            <i class="fas fa-image fa-lg"></i>
+                        </div>
+                    `;
+                }
+
+                designPreviews.append(`
+                    <div class="d-flex flex-column align-items-center text-center mr-2 mb-2" style="width: 120px;" title="${d.name}">
+                        <div style="width:75px; height:75px; border-radius:10px; overflow:hidden; border:2px solid #dee2e6; cursor:pointer; background:#fff; display:flex; align-items:center; justify-content:center;" 
+                             onclick="showDesignZoom('${displayImg.replace(/'/g, "\\'")}', '${d.name.replace(/'/g, "\\'")}')">
+                            ${thumbContent}
+                        </div>
+                        <div class="mt-2 w-100">
+                            <div style="font-size:0.95rem; color:#1a252f; font-weight:700; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${d.name}</div>
+                            <div class="badge w-100 text-truncate mt-1 text-white border-0" style="font-size:0.85rem; background:#117a8b; font-weight:600;">${appLabel}</div>
+                        </div>
+                    </div>
+                `);
+            });
+        };
         window.removeExtra = function(idx) {
             State.extras.splice(idx, 1);
             renderExtrasTable();
@@ -4817,52 +4956,29 @@
                 });
                 matList.html(html);
             } else {
-                matList.html('<div class="text-muted small text-center py-4">No hay materiales seleccionados.</div>');
+                matList.html(
+                    '<div class="text-muted small text-center py-4">No hay materiales seleccionados.</div>');
             }
             $('#finMatCost').text('$' + matCost.toFixed(2));
             $('#revMatCost').text('$' + matCost.toFixed(2));
 
 
-            // 2. EMBROIDERY COST
+            // Calculate total stitches for finance
             let totalStitches = 0;
-            const designPreviews = $('#finDesignPreviews');
-            designPreviews.empty();
-
             State.designs.forEach(d => {
                 totalStitches += parseInt(d.stitches);
-
-                // --- DIRECT DOM IMAGE LOOKUP (THE FIX) ---
-                let realImgSrc = d.image_url;
-
-                const step4Card = $(`.design-card[data-design-id="${d.id}"]`);
-                if (step4Card.length > 0) {
-                    const imgTag = step4Card.find('img');
-                    if (imgTag.length > 0 && imgTag.attr('src') && imgTag.attr('src') !== 'undefined') {
-                        realImgSrc = imgTag.attr('src');
-                    } else {
-                        const bgDiv = step4Card.find('.design-thumb');
-                        if (bgDiv.length > 0) {
-                            const bgStyle = bgDiv.css('background-image');
-                            if (bgStyle && bgStyle !== 'none') {
-                                const match = bgStyle.match(/url\(["']?([^"']*)["']?\)/);
-                                if (match && match[1]) realImgSrc = match[1];
-                            }
-                        }
-                    }
-                }
-
-                const displayImg = realImgSrc || '/storage/designs/placeholder.png';
-
-                // Render Thumbnail
-                designPreviews.append(`
-                    <div style="text-align:center; width:60px;" title="${d.name}">
-                        <div style="width:60px; height:60px; border-radius:6px; overflow:hidden; border:1px solid #ddd; cursor:zoom-in;" onclick="showDesignZoom('${displayImg.replace(/'/g, "\\'")}', '${d.name.replace(/'/g, "\\'")}')">
-                            <img src="${displayImg}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='/storage/designs/placeholder.png'">
-                        </div>
-                        <div style="font-size:0.7rem; color:#666; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${d.name}</div>
-                    </div>
-                `);
             });
+
+            // Update design previews:
+            // 1. If flag is set (explicit update request)
+            // 2. OR if we have designs but no images are shown (safety fallback)
+            const previewsContainer = $('#finDesignPreviews');
+            const hasImages = previewsContainer.find('img').length > 0;
+
+            if (shouldRenderDesigns || (State.designs.length > 0 && !hasImages)) {
+                renderStep6Designs();
+                shouldRenderDesigns = false; // Reset flag
+            }
 
             $('#finTotalStitches').text(totalStitches.toLocaleString());
             const millares = totalStitches / 1000;
@@ -4896,11 +5012,11 @@
                     extrasTime += parseInt(ex.time || 0);
 
                     exHtml += `
-                        <div class="d-flex justify-content-between border-bottom pb-1 mb-1" style="font-size:0.85rem;">
-                            <span>${ex.name}</span>
-                            <div>
-                                <span class="badge badge-light mr-1">${ex.time || 0}m</span>
-                                <span class="font-weight-bold text-dark">$${thisCost.toFixed(2)}</span>
+                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2" style="font-size:0.95rem;">
+                            <span class="font-weight-bold text-dark">${ex.name}</span>
+                            <div class="d-flex align-items-center">
+                                <span class="badge badge-dark mr-2 p-2" style="min-width:50px;">${ex.time || 0}m</span>
+                                <span class="font-weight-bold text-dark" style="font-size:1rem;">$${thisCost.toFixed(2)}</span>
                             </div>
                         </div>
                     `;
@@ -5146,7 +5262,8 @@
                 $('#designGrid .design-export-item, #designGrid .col-md-3').each(function() {
                     const card = $(this).find('.design-card');
                     const name = ($(this).data('name') || card.find('h5, h6').text()).toLowerCase();
-                    const appType = ($(this).data('app-type') || card.data('app-type') || '').toLowerCase();
+                    const appType = ($(this).data('app-type') || card.data('app-type') || '')
+                        .toLowerCase();
 
                     if (name.includes(term) || appType.includes(term) || term === '') {
                         $(this).show();
@@ -5233,40 +5350,47 @@
                 }
             });
 
-            // Intercept navigation links
-            $(document).on('click', 'a[href]:not([href^="#"]):not([href^="javascript"])', function(e) {
-                if (hasUnsavedData() && !formSubmitting) {
-                    e.preventDefault();
-                    const targetUrl = $(this).attr('href');
+            // Intercept navigation links - EXCLUDE sidebar toggles, treeview, and menu headers
+            $(document).on('click',
+                'a[href]:not([href^="#"]):not([href^="javascript"]):not([data-widget]):not(.nav-link[data-toggle]):not(.has-treeview > a)',
+                function(e) {
+                    // Also skip if inside the stepper or form controls
+                    if ($(this).closest('.stepper-nav, .step-content, .modal').length > 0) {
+                        return; // Allow normal navigation within the form
+                    }
 
-                    Swal.fire({
-                        title: '¿Salir sin guardar?',
-                        text: 'Tienes cambios sin guardar. ¿Qué deseas hacer?',
-                        icon: 'warning',
-                        showDenyButton: true,
-                        showCancelButton: true,
-                        confirmButtonText: 'Guardar Borrador',
-                        denyButtonText: 'Descartar y Salir',
-                        cancelButtonText: 'Continuar Editando',
-                        confirmButtonColor: '#28a745',
-                        denyButtonColor: '#dc3545'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            // TODO: Implement save as draft via AJAX
-                            formSubmitting = true;
-                            // For now, just warn and stay
-                            Swal.fire('Guardado', 'Producto guardado como borrador', 'success')
-                                .then(() => {
-                                    window.location.href = targetUrl;
-                                });
-                        } else if (result.isDenied) {
-                            formSubmitting = true;
-                            window.location.href = targetUrl;
-                        }
-                        // Dismiss = stay on page
-                    });
-                }
-            });
+                    if (hasUnsavedData() && !formSubmitting) {
+                        e.preventDefault();
+                        const targetUrl = $(this).attr('href');
+
+                        Swal.fire({
+                            title: '¿Salir sin guardar?',
+                            text: 'Tienes cambios sin guardar. ¿Qué deseas hacer?',
+                            icon: 'warning',
+                            showDenyButton: true,
+                            showCancelButton: true,
+                            confirmButtonText: 'Guardar Borrador',
+                            denyButtonText: 'Descartar y Salir',
+                            cancelButtonText: 'Continuar Editando',
+                            confirmButtonColor: '#28a745',
+                            denyButtonColor: '#dc3545'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                // TODO: Implement save as draft via AJAX
+                                formSubmitting = true;
+                                // For now, just warn and stay
+                                Swal.fire('Guardado', 'Producto guardado como borrador', 'success')
+                                    .then(() => {
+                                        window.location.href = targetUrl;
+                                    });
+                            } else if (result.isDenied) {
+                                formSubmitting = true;
+                                window.location.href = targetUrl;
+                            }
+                            // Dismiss = stay on page
+                        });
+                    }
+                });
 
             // Set flag when form is submitting
             $('form').on('submit', function() {
