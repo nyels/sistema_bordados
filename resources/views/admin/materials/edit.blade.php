@@ -84,30 +84,60 @@
                     <div class="col-md-6" style="padding-left: 30px;">
                         <div style="border-bottom: 3px solid #28a745; padding-bottom: 8px; margin-bottom: 20px;">
                             <h5 style="color: #28a745; font-weight: 600;">
-                                <i class="fas fa-info-circle"></i> Información Adicional
+                                <i class="fas fa-balance-scale"></i> Unidades y Presentación
                             </h5>
                         </div>
 
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <label>Unidad de Compra (Base) <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <select name="base_unit_id" id="base_unit_id"
+                                            class="form-control @error('base_unit_id') is-invalid @enderror" required>
+                                            <option value="">...</option>
+                                            @foreach ($baseUnits as $unit)
+                                                <option value="{{ $unit->id }}" data-symbol="{{ $unit->symbol }}"
+                                                    data-id="{{ $unit->id }}"
+                                                    {{ old('base_unit_id', $material->base_unit_id) == $unit->id ? 'selected' : '' }}>
+                                                    {{ $unit->name }} ({{ $unit->symbol }})
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        <div class="input-group-append">
+                                            <button type="button" class="btn bg-purple" data-toggle="modal"
+                                                data-target="#unitModal" title="Crear nueva unidad">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="form-group">
-                            <label>Descripción</label>
-                            <textarea name="description" class="form-control @error('description') is-invalid @enderror" rows="4"
+                            <label>Opciones</label>
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" id="has_color" name="has_color"
+                                    value="1" {{ old('has_color', $material->has_color) ? 'checked' : '' }}>
+                                <label class="custom-control-label" for="has_color">
+                                    Este material tiene variantes de color
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group mt-3">
+                            <label>Notas / Descripción</label>
+                            <textarea name="description" class="form-control @error('description') is-invalid @enderror" rows="2"
                                 maxlength="500">{{ old('description', $material->description) }}</textarea>
-                            @error('description')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
                         </div>
 
                         {{-- INFO --}}
-                        <div class="card bg-light">
+                        <div class="card bg-light mt-3">
                             <div class="card-body py-2">
                                 <small>
                                     <strong>UUID:</strong>
                                     <code>{{ $material->uuid }}</code>
-                                </small>
-                                <br>
-                                <small>
-                                    <strong>Creado:</strong>
-                                    {{ $material->created_at->format('d/m/Y H:i') }}
                                 </small>
                             </div>
                         </div>
@@ -127,4 +157,70 @@
             </form>
         </div>
     </div>
+@stop
+
+@section('js')
+    <script>
+        $(function() {
+            var categorySelect = $('#material_category_id');
+            var unitSelect = $('#base_unit_id');
+            var initialCategoryId = "{{ $material->material_category_id }}";
+            var initialUnitId = "{{ $material->base_unit_id }}";
+
+            // Función para cargar unidades según categoría
+            function loadUnits(categoryId, selectedUnitId = null) {
+                if (!categoryId) {
+                    unitSelect.html('<option value="">Seleccionar categoría primero...</option>');
+                    unitSelect.prop('disabled', true);
+                    return;
+                }
+
+                unitSelect.html('<option value="">Cargando unidades permitidas...</option>');
+                unitSelect.prop('disabled', true);
+
+                $.ajax({
+                    url: '/admin/material-categories/' + categoryId + '/get-units',
+                    type: 'GET',
+                    success: function(units) {
+                        unitSelect.empty();
+
+                        if (units.length === 0) {
+                            unitSelect.html(
+                                '<option value="">Esta categoría no tiene unidades de compra asignadas</option>'
+                            );
+                        } else {
+                            unitSelect.append('<option value="">Seleccionar Unidad Base...</option>');
+                            $.each(units, function(index, unit) {
+                                var symbolText = unit.symbol ? ' (' + unit.symbol + ')' : '';
+                                var isSelected = (selectedUnitId == unit.id) ? 'selected' : '';
+                                unitSelect.append('<option value="' + unit.id + '" ' +
+                                    isSelected + '>' + unit.name + symbolText + '</option>');
+                            });
+                            unitSelect.prop('disabled', false);
+                        }
+                    },
+                    error: function() {
+                        unitSelect.html('<option value="">Error al cargar unidades</option>');
+                    }
+                });
+            }
+
+            // Evento cambio de categoría - LIMPIAR unidad previa
+            categorySelect.on('change', function() {
+                var categoryId = $(this).val();
+                // Al cambiar categoría, NO pasamos selectedUnitId para forzar nueva selección
+                loadUnits(categoryId, null);
+            });
+
+            // Si hay un old() por error de validación, usarlo
+            var oldCategory = "{{ old('material_category_id', '') }}";
+            var oldUnit = "{{ old('base_unit_id', '') }}";
+
+            if (oldCategory && oldCategory !== initialCategoryId) {
+                // Hubo error de validación con categoría cambiada
+                loadUnits(oldCategory, oldUnit);
+            }
+            // Si no hay cambios, el select ya tiene las unidades correctas del servidor
+        });
+    </script>
 @stop

@@ -31,8 +31,11 @@
             {{-- ACCIONES --}}
             <div class="row mb-3">
                 <div class="col-12">
-                    <a href="{{ route('admin.purchases.create') }}" class="btn btn-primary">
+                    <a href="{{ route('admin.purchases.create') }}" class="btn btn-primary mr-2">
                         <i class="fas fa-plus"></i> Nueva Orden de Compra
+                    </a>
+                    <a href="{{ route('admin.proveedores.create') }}" class="btn btn-secondary">
+                        <i class="fas fa-truck"></i> Crear Proveedor
                     </a>
                 </div>
             </div>

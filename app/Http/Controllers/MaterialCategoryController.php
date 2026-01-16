@@ -17,7 +17,6 @@ class MaterialCategoryController extends Controller
     {
         try {
             $categories = MaterialCategory::where('activo', true)
-                ->with('baseUnit')
                 ->withCount(['materials' => fn($q) => $q->where('activo', true)])
                 ->ordered()
                 ->get();
@@ -37,12 +36,7 @@ class MaterialCategoryController extends Controller
     public function create()
     {
         try {
-            $units = Unit::where('activo', true)
-                ->where('is_base', true)
-                ->ordered()
-                ->get();
-
-            return view('admin.material-categories.create', compact('units'));
+            return view('admin.material-categories.create');
         } catch (\Exception $e) {
             Log::error('Error al cargar formulario de categoría: ' . $e->getMessage());
             return redirect()->route('material-categories.index')
@@ -61,8 +55,6 @@ class MaterialCategoryController extends Controller
             $category->description = $request->filled('description')
                 ? trim($request->description)
                 : null;
-            $category->base_unit_id = (int) $request->base_unit_id;
-            $category->has_color = $request->boolean('has_color');
             $category->activo = true;
             $category->save();
 
@@ -99,12 +91,7 @@ class MaterialCategoryController extends Controller
 
             $category = MaterialCategory::where('activo', true)->findOrFail((int) $id);
 
-            $units = Unit::where('activo', true)
-                ->where('is_base', true)
-                ->ordered()
-                ->get();
-
-            return view('admin.material-categories.edit', compact('category', 'units'));
+            return view('admin.material-categories.edit', compact('category'));
         } catch (\Exception $e) {
             Log::error('Error al cargar categoría para editar: ' . $e->getMessage());
             return redirect()->route('admin.material-categories.index')
@@ -129,8 +116,6 @@ class MaterialCategoryController extends Controller
             $category->description = $request->filled('description')
                 ? trim($request->description)
                 : null;
-            $category->base_unit_id = (int) $request->base_unit_id;
-            $category->has_color = $request->boolean('has_color');
 
             if (!$category->isDirty()) {
                 return redirect()->route('admin.material-categories.index')
@@ -171,7 +156,6 @@ class MaterialCategoryController extends Controller
             }
 
             $category = MaterialCategory::where('activo', true)
-                ->with('baseUnit')
                 ->findOrFail((int) $id);
 
             return view('admin.material-categories.delete', compact('category'));
@@ -223,6 +207,56 @@ class MaterialCategoryController extends Controller
 
             return redirect()->route('admin.material-categories.index')
                 ->with('error', 'Error al eliminar la categoría');
+        }
+    }
+    public function getMaterials($id)
+    {
+        try {
+            if (!is_numeric($id) || $id < 1) {
+                return response()->json(['error' => 'Categoría no válida'], 400);
+            }
+
+            $category = MaterialCategory::where('activo', true)->findOrFail((int) $id);
+
+            $materials = $category->materials()
+                ->where('activo', true)
+                ->select('id', 'name')
+                ->orderBy('name')
+                ->get();
+
+            return response()->json($materials);
+        } catch (\Exception $e) {
+            Log::error('Error al obtener materiales de la categoría: ' . $e->getMessage(), [
+                'category_id' => $id,
+                'user_id' => Auth::id(),
+            ]);
+            return response()->json(['error' => 'Error al cargar materiales'], 500);
+        }
+    }
+    public function getUnits($id)
+    {
+        try {
+            if (!is_numeric($id) || $id < 1) {
+                return response()->json(['error' => 'Categoría no válida'], 400);
+            }
+
+            $category = MaterialCategory::where('activo', true)
+                ->with(['allowedUnits' => function ($q) {
+                    // Filtrar SOLO unidades logísticas puras (unit_type = 'logistic')
+                    $q->logistic()->ordered();
+                }])
+                ->findOrFail((int) $id);
+
+            // Si no tiene unidades asignadas, devolver vacío.
+            // El frontend mostrará "Sin unidades".
+
+            return response()->json($category->allowedUnits);
+        } catch (\Exception $e) {
+            Log::error('Error al obtener unidades de la categoría: ' . $e->getMessage(), [
+                'category_id' => $id,
+                'user_id' => Auth::id(),
+            ]);
+            return response()->json(['error' => 'Error al cargar unidades'], 500);
         }
     }
 }

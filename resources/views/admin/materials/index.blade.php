@@ -34,8 +34,11 @@
                     <a href="{{ route('admin.materials.create') }}" class="btn btn-primary mr-2 mb-2">
                         Nuevo <i class="fas fa-plus"></i>
                     </a>
-                    <a href="{{ route('admin.material-categories.index') }}" class="btn btn-secondary mr-3 mb-2">
+                    <a href="{{ route('admin.material-categories.index') }}" class="btn btn-secondary mr-2 mb-2">
                         <i class="fas fa-layer-group"></i> Categorías
+                    </a>
+                    <a href="{{ route('admin.units.index') }}" class="btn btn-secondary mr-3 mb-2">
+                        <i class="fas fa-ruler"></i> Unidades
                     </a>
 
                     <form id="filterForm" method="GET" action="{{ route('admin.materials.index') }}"

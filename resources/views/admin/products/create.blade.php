@@ -2687,6 +2687,59 @@
         .clear-btn-internal:hover {
             color: #e74c3c;
         }
+
+        /* --- RESPONSIVE STEPPER FOR MOBILE --- */
+        @media (max-width: 768px) {
+            .stepper-wrapper {
+                padding: 15px 5px !important;
+                border-radius: 12px !important;
+            }
+
+            #stepperContainer {
+                display: flex !important;
+                flex-wrap: nowrap !important;
+                /* Fit everything on screen, no scroll needed if possible */
+                overflow-x: hidden !important;
+                justify-content: space-between !important;
+                padding-bottom: 0px;
+                width: 100% !important;
+            }
+
+            .stepper-item {
+                flex: 0 0 auto !important;
+                margin: 0 2px !important;
+                /* Minimal margin to fit 6 items */
+                width: auto !important;
+                transform: scale(0.9);
+                /* Slightly smaller circles if needed */
+            }
+
+            .step-name {
+                display: none !important;
+            }
+
+            .stepper-arrow {
+                display: none !important;
+            }
+
+            /* Hide the connector line to avoid visual clutter */
+            .stepper-item::after {
+                display: none !important;
+            }
+        }
+
+        /* --- FIX BOTTOM SPACING --- */
+        .content-wrapper {
+            padding-bottom: 0 !important;
+            margin-bottom: 0 !important;
+        }
+
+        .main-footer {
+            display: none !important;
+            height: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
     </style>
 @stop
 

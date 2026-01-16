@@ -504,7 +504,6 @@ class PurchaseController extends Controller
 
             return redirect()->route('admin.purchases.show', $purchase->id)
                 ->with('success', "Compra {$purchase->purchase_number} confirmada y recibida completamente");
-
         } catch (PurchaseException $e) {
             DB::rollBack();
             return redirect()->route('admin.purchases.show', $id)
@@ -722,7 +721,7 @@ class PurchaseController extends Controller
                 reason: strip_tags(trim($validated['cancellation_reason']))
             );
 
-            return redirect()->route('admin.purchases.show', $purchase->id)
+            return redirect()->route('admin.purchases.index')
                 ->with('success', "Compra {$purchase->purchase_number} cancelada");
         } catch (PurchaseException $e) {
             return redirect()->route('admin.purchases.show', $id)

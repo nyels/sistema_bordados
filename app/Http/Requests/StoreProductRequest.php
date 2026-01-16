@@ -26,7 +26,7 @@ class StoreProductRequest extends FormRequest
                 'string',
                 'min:3',
                 'max:200',
-                'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-\_\.]+$/u',
+                'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-\_\.\/]+$/u',
             ],
             'sku' => [
                 'required',
@@ -134,7 +134,7 @@ class StoreProductRequest extends FormRequest
             'name.required' => 'El nombre del producto es obligatorio.',
             'name.min' => 'El nombre debe tener al menos 3 caracteres.',
             'name.max' => 'El nombre no puede exceder 200 caracteres.',
-            'name.regex' => 'El nombre contiene caracteres no permitidos.',
+            'name.regex' => 'El nombre contiene caracteres no permitidos. No se aceptan caracteres especiales.',
             'sku.required' => 'El SKU es obligatorio.',
             'sku.regex' => 'El SKU solo puede contener letras mayúsculas, números, guiones y guiones bajos.',
             'sku.unique' => 'Este SKU ya está registrado.',

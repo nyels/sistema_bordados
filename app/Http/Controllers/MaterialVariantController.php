@@ -28,7 +28,7 @@ class MaterialVariantController extends Controller
             }
 
             $material = Material::where('activo', true)
-                ->with(['category', 'category.baseUnit'])
+                ->with(['category', 'baseUnit'])
                 ->findOrFail((int) $materialId);
 
             $variants = MaterialVariant::where('material_id', $material->id)
@@ -63,7 +63,7 @@ class MaterialVariantController extends Controller
             }
 
             $material = Material::where('activo', true)
-                ->with(['category', 'category.baseUnit'])
+                ->with(['category', 'baseUnit'])
                 ->findOrFail((int) $materialId);
 
             $suggestedSku = $this->generateSku($material);
@@ -154,7 +154,7 @@ class MaterialVariantController extends Controller
             }
 
             $material = Material::where('activo', true)
-                ->with(['category', 'category.baseUnit'])
+                ->with(['category', 'baseUnit'])
                 ->findOrFail((int) $materialId);
 
             $variant = MaterialVariant::where('material_id', $material->id)
@@ -253,7 +253,7 @@ class MaterialVariantController extends Controller
             }
 
             $material = Material::where('activo', true)
-                ->with(['category', 'category.baseUnit'])
+                ->with(['category', 'baseUnit'])
                 ->findOrFail((int) $materialId);
 
             $variant = MaterialVariant::where('material_id', $material->id)
@@ -364,46 +364,52 @@ class MaterialVariantController extends Controller
             $variants = MaterialVariant::where('material_id', (int) $materialId)
                 ->where('activo', true)
                 ->with([
-                    'material.category.baseUnit',
-                    'material.conversions' // Ahora sí funcionará porque agregaste la relación
+                    'material.baseUnit',
+                    'material.consumptionUnit'
                 ])
                 ->ordered()
                 ->get();
 
             $results = $variants->map(function ($v) {
-                // 1. Obtener la unidad base (ej: ID de "Metros")
-                $baseUnitId = $v->material->category->base_unit_id;
+                // El material ahora tiene la info de unidades directo
+                $material = $v->material;
+                $baseUnit = $material->baseUnit;
+                $consumoUnit = $material->consumptionUnit;
 
-                // 2. Buscar la conversión hacia esa unidad base
-                $conversion = $v->material->conversions
-                    ->where('to_unit_id', $baseUnitId)
-                    ->first();
+                // Factor de conversión (ej: 1 Cono = 5000 Metros)
+                // Si base y consumo son diferentes, usar el factor del material
+                // conversión: base_qty * factor = consumption_qty
+                $factor = (float) $material->conversion_factor ?: 1.0;
 
-                // 3. El factor: si existe es el valor (ej: 50.00), si no, es 1
-                $factor = $conversion ? (float) $conversion->conversion_factor : 1.0;
+                // Datos crudos
+                $stockBase = (float) $v->current_stock; // Stock en unidad base (ej: Conos)
+                $costBase = (float) $v->average_cost;   // Costo por unidad base
 
-                // 4. Cálculos: Stock total en metros y Costo prorrateado por metro
-                $stockReal = (float) $v->current_stock;
-                $costoBase = (float) $v->average_cost;
-                $simbolo = $v->material->category->baseUnit->symbol ?? 'unid';
+                // Calcular equivalentes en unidad de consumo si es necesario
+                // OJO: La lógica de negocio depende de cómo quieran VER el stock
+                // Por ahora devolvemos el stock base, y el símbolo base
+
+                $simbolo = $baseUnit->symbol ?? 'unid';
 
                 return [
                     'id' => $v->id,
-                    'text' => "{$v->material->name} - {$v->color} ({$v->sku})", // More descriptive text for Select2
-                    'family_name' => $v->material->name,
+                    'text' => "{$material->name} - {$v->color} ({$v->sku})",
+                    'family_name' => $material->name,
                     'variant_name' => $v->color,
                     'sku' => $v->sku,
-                    'stock_real' => number_format($stockReal, 4, '.', ''),
-                    'cost_base' => number_format($costoBase, 4, '.', ''),
+                    'stock_real' => number_format($stockBase, 4, '.', ''),
+                    'cost_base' => number_format($costBase, 4, '.', ''),
                     'symbol' => $simbolo,
-                    'stock_display' => "Stock: " . number_format($stockReal, 2) . " {$simbolo}"
+                    'factor' => $factor,
+                    'consumption_symbol' => $consumoUnit->symbol ?? $simbolo,
+                    'stock_display' => "Stock: " . number_format($stockBase, 2) . " {$simbolo}"
                 ];
             });
 
             return response()->json($results);
         } catch (\Exception $e) {
             Log::error('Error en getByMaterial: ' . $e->getMessage());
-            return response()->json(['error' => 'Error al procesar conversiones'], 500);
+            return response()->json(['error' => 'Error al procesar datos'], 500);
         }
     }
 

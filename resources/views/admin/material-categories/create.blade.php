@@ -42,24 +42,6 @@
                         </div>
 
                         <div class="form-group">
-                            <label>Unidad Base <span class="text-danger">*</span></label>
-                            <select name="base_unit_id" class="form-control @error('base_unit_id') is-invalid @enderror"
-                                required>
-                                <option value="">Seleccionar unidad...</option>
-                                @foreach ($units as $unit)
-                                    <option value="{{ $unit->id }}"
-                                        {{ old('base_unit_id') == $unit->id ? 'selected' : '' }}>
-                                        {{ $unit->name }} ({{ $unit->symbol }})
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('base_unit_id')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <small class="form-text text-muted">Unidad para consumo e inventario</small>
-                        </div>
-
-                        <div class="form-group">
                             <label>Descripción</label>
                             <textarea name="description" class="form-control @error('description') is-invalid @enderror" rows="3"
                                 maxlength="500" placeholder="Descripción opcional...">{{ old('description') }}</textarea>
@@ -68,17 +50,7 @@
                             @enderror
                         </div>
 
-                        <div class="form-group">
-                            <label>Opciones</label>
-                            <div class="custom-control custom-checkbox">
-                                <input type="checkbox" class="custom-control-input" id="has_color" name="has_color"
-                                    value="1" {{ old('has_color', true) ? 'checked' : '' }}>
-                                <label class="custom-control-label" for="has_color">
-                                    Materiales tienen variantes de color
-                                </label>
-                            </div>
-                            <small class="form-text text-muted">Ej: Telas sí, Agujas no</small>
-                        </div>
+
 
                         <hr>
 
@@ -95,4 +67,10 @@
             </div>
         </div>
     </div>
+@stop
+
+
+
+@section('js')
+    <script></script>
 @stop

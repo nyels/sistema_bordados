@@ -28,7 +28,7 @@ class MaterialController extends Controller
             ]);
 
             $query = Material::where('activo', true)
-                ->with(['category', 'category.baseUnit'])
+                ->with(['category', 'baseUnit'])
                 ->withCount(['activeVariants']);
 
             if ($request->filled('category')) {
@@ -79,7 +79,6 @@ class MaterialController extends Controller
     {
         try {
             $categories = MaterialCategory::where('activo', true)
-                ->with('baseUnit')
                 ->ordered()
                 ->get();
 
@@ -113,6 +112,10 @@ class MaterialController extends Controller
             $material = new Material();
             $material->uuid = (string) Str::uuid();
             $material->material_category_id = (int) $request->material_category_id;
+            $material->base_unit_id = (int) $request->base_unit_id;
+            $material->consumption_unit_id = null;
+            $material->conversion_factor = 1.0;
+            $material->has_color = $request->boolean('has_color');
             $material->name = mb_strtoupper(trim($request->name));
             $material->slug = Str::slug($request->name);
             $material->composition = $request->filled('composition')
@@ -126,12 +129,9 @@ class MaterialController extends Controller
 
             DB::commit();
 
-            Log::info('Material creado', [
+            Log::info('Material creado with properties', [
                 'material_id' => $material->id,
-                'name' => $material->name,
-                'category_id' => $material->material_category_id,
                 'user_id' => Auth::id(),
-                'ip' => $request->ip(),
             ]);
 
             return redirect()->route('admin.materials.index')
@@ -166,15 +166,16 @@ class MaterialController extends Controller
             }
 
             $material = Material::where('activo', true)
-                ->with('category')
+                ->with(['category', 'baseUnit', 'consumptionUnit'])
                 ->findOrFail((int) $id);
 
             $categories = MaterialCategory::where('activo', true)
-                ->with('baseUnit')
                 ->ordered()
                 ->get();
 
-            return view('admin.materials.edit', compact('material', 'categories'));
+            $baseUnits = $material->category->allowedUnits()->ordered()->get();
+
+            return view('admin.materials.edit', compact('material', 'categories', 'baseUnits'));
         } catch (\Exception $e) {
             Log::error('Error al cargar material para editar: ' . $e->getMessage(), [
                 'material_id' => $id,
@@ -207,6 +208,11 @@ class MaterialController extends Controller
             $oldName = $material->name;
 
             $material->material_category_id = (int) $request->material_category_id;
+            $material->base_unit_id = (int) $request->base_unit_id;
+            // $material->consumption_unit_id = null; // Mantener valor anterior o resetear? Resetear si eliminamos el campo UI.
+            $material->consumption_unit_id = null;
+            $material->conversion_factor = 1.0;
+            $material->has_color = $request->boolean('has_color');
             $material->name = mb_strtoupper(trim($request->name));
             $material->slug = Str::slug($request->name);
             $material->composition = $request->filled('composition')
@@ -265,7 +271,7 @@ class MaterialController extends Controller
             }
 
             $material = Material::where('activo', true)
-                ->with(['category', 'category.baseUnit'])
+                ->with(['category', 'baseUnit'])
                 ->withCount('activeVariants')
                 ->findOrFail((int) $id);
 

@@ -31,16 +31,6 @@ class MaterialCategoryRequest extends FormRequest
                 'max:500',
                 'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\.\,\-\_\(\)]+$/u',
             ],
-            'base_unit_id' => [
-                'required',
-                'integer',
-                'min:1',
-                'exists:units,id',
-            ],
-            'has_color' => [
-                'sometimes',
-                'boolean',
-            ],
         ];
     }
 
@@ -52,15 +42,6 @@ class MaterialCategoryRequest extends FormRequest
             'name.unique' => 'Ya existe una categoría con este nombre.',
             'name.max' => 'El nombre no puede exceder 50 caracteres.',
             'description.regex' => 'La descripción contiene caracteres no permitidos.',
-            'base_unit_id.required' => 'La unidad base es obligatoria.',
-            'base_unit_id.exists' => 'La unidad seleccionada no es válida.',
         ];
-    }
-
-    protected function prepareForValidation(): void
-    {
-        $this->merge([
-            'has_color' => $this->boolean('has_color'),
-        ]);
     }
 }

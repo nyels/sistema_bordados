@@ -14,7 +14,7 @@
         <td>{{ $material->composition ?? '-' }}</td>
         <td>
             <span class="badge badge-secondary" style="font-size: 14px; padding: 6px 10px;">
-                {{ $material->category->baseUnit->symbol ?? 'N/A' }}
+                {{ $material->baseUnit->symbol ?? 'N/A' }}
             </span>
         </td>
         <td class="text-center">

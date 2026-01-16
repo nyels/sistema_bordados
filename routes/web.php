@@ -605,6 +605,47 @@ Route::delete('admin/material-categories/{id}', [App\Http\Controllers\MaterialCa
     ->name('admin.material-categories.destroy')
     ->middleware('auth');
 
+Route::get('admin/material-categories/{id}/get-materials', [App\Http\Controllers\MaterialCategoryController::class, 'getMaterials'])
+    ->name('admin.material-categories.get-materials')
+    ->middleware('auth');
+
+Route::get('admin/material-categories/{id}/get-units', [App\Http\Controllers\MaterialCategoryController::class, 'getUnits'])
+    ->name('admin.material-categories.get-units')
+    ->middleware('auth');
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE GESTIÓN: CATEGORÍA ↔ UNIDADES PERMITIDAS
+|--------------------------------------------------------------------------
+| Módulo administrativo para configurar qué unidades de compra están
+| permitidas para cada categoría de material.
+|--------------------------------------------------------------------------
+*/
+
+Route::get('admin/material-categories/units', [App\Http\Controllers\MaterialCategoryUnitController::class, 'index'])
+    ->name('admin.material-category-units.index')
+    ->middleware('auth');
+
+Route::post('admin/material-categories/{categoryId}/units', [App\Http\Controllers\MaterialCategoryUnitController::class, 'store'])
+    ->name('admin.material-category-units.store')
+    ->middleware('auth');
+
+Route::delete('admin/material-categories/{categoryId}/units/{unitId}', [App\Http\Controllers\MaterialCategoryUnitController::class, 'destroy'])
+    ->name('admin.material-category-units.destroy')
+    ->middleware('auth');
+
+Route::get('admin/material-categories/{categoryId}/assigned-units', [App\Http\Controllers\MaterialCategoryUnitController::class, 'getAssignedUnits'])
+    ->name('admin.material-category-units.assigned')
+    ->middleware('auth');
+
+Route::get('admin/material-categories/{categoryId}/available-units', [App\Http\Controllers\MaterialCategoryUnitController::class, 'getAvailableUnits'])
+    ->name('admin.material-category-units.available')
+    ->middleware('auth');
+
+Route::get('admin/material-categories/{categoryId}/check-integrity', [App\Http\Controllers\MaterialCategoryUnitController::class, 'checkIntegrity'])
+    ->name('admin.material-category-units.check-integrity')
+    ->middleware('auth');
+
 /*
 |--------------------------------------------------------------------------
 | RUTAS DE MATERIALES

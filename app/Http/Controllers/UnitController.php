@@ -54,10 +54,10 @@ class UnitController extends Controller
 
             // Verificar si existe una unidad con el mismo nombre, símbolo o slug
             $existingUnit = Unit::where(function ($query) use ($name, $symbol, $slug) {
-                    $query->where('name', $name)
-                          ->orWhere('symbol', $symbol)
-                          ->orWhere('slug', $slug);
-                })
+                $query->where('name', $name)
+                    ->orWhere('symbol', $symbol)
+                    ->orWhere('slug', $slug);
+            })
                 ->first();
 
             if ($existingUnit) {
@@ -91,9 +91,22 @@ class UnitController extends Controller
             $unit->activo = true;
             $unit->save();
 
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Unidad creada exitosamente',
+                    'id' => $unit->id,
+                    'name' => $unit->name,
+                    'symbol' => $unit->symbol
+                ]);
+            }
+
             return redirect()->route('admin.units.index')->with('success', 'Unidad creada exitosamente');
         } catch (\Exception $e) {
             Log::error('Error al crear unidad: ' . $e->getMessage());
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'Error al crear la unidad'], 500);
+            }
             return redirect()->route('admin.units.index')->with('error', 'Error al crear la unidad');
         }
     }

@@ -44,6 +44,20 @@ class MaterialUnitConversionRequest extends FormRequest
                 Rule::unique('material_unit_conversions', 'from_unit_id')
                     ->where('material_id', $materialId)
                     ->ignore($conversionId),
+                // REGLA DE ORO: from_unit_id DEBE ser igual a material.base_unit_id
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    $material = \App\Models\Material::find($this->input('material_id'));
+                    if ($material && $material->base_unit_id != $value) {
+                        $fail('La unidad origen debe ser la unidad base (compra) del material.');
+                    }
+                },
+                // Validación semántica: from_unit debe ser logística
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    $unit = \App\Models\Unit::find($value);
+                    if ($unit && !$unit->isLogistic()) {
+                        $fail('La unidad origen debe ser de tipo logístico (compra).');
+                    }
+                },
             ],
             'to_unit_id' => [
                 'required',
@@ -51,6 +65,14 @@ class MaterialUnitConversionRequest extends FormRequest
                 'min:1',
                 'exists:units,id',
                 'different:from_unit_id',
+                // REGLA DE ORO: to_unit_id DEBE ser una unidad canónica de consumo
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    $unit = \App\Models\Unit::find($value);
+                    if ($unit && !$unit->isCanonical()) {
+                        $typeLabel = $unit->unit_type?->label() ?? 'desconocido';
+                        $fail("La unidad destino debe ser canónica de consumo (metro, pieza, etc.). Tipo actual: {$typeLabel}.");
+                    }
+                },
             ],
             'conversion_factor' => [
                 'required',

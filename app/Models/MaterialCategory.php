@@ -19,13 +19,10 @@ class MaterialCategory extends Model
         'name',
         'slug',
         'description',
-        'base_unit_id',
-        'has_color',
         'activo',
     ];
 
     protected $casts = [
-        'has_color' => 'boolean',
         'activo' => 'boolean',
     ];
 
@@ -58,14 +55,17 @@ class MaterialCategory extends Model
     |--------------------------------------------------------------------------
     */
 
-    public function baseUnit()
-    {
-        return $this->belongsTo(Unit::class, 'base_unit_id');
-    }
+
 
     public function materials()
     {
         return $this->hasMany(Material::class, 'material_category_id');
+    }
+
+    public function allowedUnits()
+    {
+        return $this->belongsToMany(Unit::class, 'category_unit', 'material_category_id', 'unit_id')
+            ->withTimestamps();
     }
 
     /*

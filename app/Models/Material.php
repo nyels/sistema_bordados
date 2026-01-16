@@ -22,15 +22,21 @@ class Material extends Model
     protected $fillable = [
         'uuid',
         'material_category_id',
+        'base_unit_id',
+        'consumption_unit_id',
         'name',
         'slug',
         'composition',
         'description',
+        'has_color',
+        'conversion_factor',
         'activo',
     ];
 
     protected $casts = [
         'activo' => 'boolean',
+        'has_color' => 'boolean',
+        'conversion_factor' => 'decimal:4',
     ];
 
     /*
@@ -68,6 +74,16 @@ class Material extends Model
     public function category()
     {
         return $this->belongsTo(MaterialCategory::class, 'material_category_id');
+    }
+
+    public function baseUnit()
+    {
+        return $this->belongsTo(Unit::class, 'base_unit_id');
+    }
+
+    public function consumptionUnit()
+    {
+        return $this->belongsTo(Unit::class, 'consumption_unit_id');
     }
 
     public function variants()
@@ -151,16 +167,11 @@ class Material extends Model
 
     public function hasColor(): bool
     {
-        return $this->category?->has_color ?? false;
+        return $this->has_color;
     }
 
     public function getBaseUnit(): ?Unit
     {
-        return $this->category?->baseUnit;
-    }
-
-    public function conversions()
-    {
-        return $this->hasMany(MaterialUnitConversion::class, 'material_id');
+        return $this->baseUnit;
     }
 }

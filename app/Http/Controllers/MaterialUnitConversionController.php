@@ -28,7 +28,7 @@ class MaterialUnitConversionController extends Controller
             }
 
             $material = Material::where('activo', true)
-                ->with(['category', 'category.baseUnit'])
+                ->with(['category', 'baseUnit'])
                 ->findOrFail((int) $materialId);
 
             $conversions = MaterialUnitConversion::where('material_id', $material->id)
@@ -63,17 +63,17 @@ class MaterialUnitConversionController extends Controller
             }
 
             $material = Material::where('activo', true)
-                ->with(['category', 'category.baseUnit'])
+                ->with(['category', 'baseUnit'])
                 ->findOrFail((int) $materialId);
 
-            $baseUnitId = $material->category->base_unit_id;
+            $baseUnitId = $material->base_unit_id;
 
             // Solo unidades de compra compatibles con la unidad base
             $purchaseUnits = Unit::getPurchaseUnitsFor($baseUnitId);
 
             if ($purchaseUnits->isEmpty()) {
                 return redirect()->route('admin.material-conversions.index', $material->id)
-                    ->with('error', 'No hay unidades de compra configuradas para ' . ($material->category->baseUnit->name ?? 'esta unidad base'));
+                    ->with('error', 'No hay unidades de compra configuradas para ' . ($material->baseUnit->name ?? 'esta unidad base'));
             }
 
             // Unidades ya usadas
@@ -167,14 +167,14 @@ class MaterialUnitConversionController extends Controller
             }
 
             $material = Material::where('activo', true)
-                ->with(['category', 'category.baseUnit'])
+                ->with(['category', 'baseUnit'])
                 ->findOrFail((int) $materialId);
 
             $conversion = MaterialUnitConversion::where('material_id', $material->id)
                 ->with(['fromUnit', 'toUnit'])
                 ->findOrFail((int) $id);
 
-            $baseUnitId = $material->category->base_unit_id;
+            $baseUnitId = $material->base_unit_id;
 
             // Solo unidades de compra compatibles
             $purchaseUnits = Unit::getPurchaseUnitsFor($baseUnitId);
@@ -281,7 +281,7 @@ class MaterialUnitConversionController extends Controller
             }
 
             $material = Material::where('activo', true)
-                ->with(['category', 'category.baseUnit'])
+                ->with(['category', 'baseUnit'])
                 ->findOrFail((int) $materialId);
 
             $conversion = MaterialUnitConversion::where('material_id', $material->id)
