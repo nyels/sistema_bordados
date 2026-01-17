@@ -63,25 +63,38 @@ enum UnitType: string
 
     /**
      * Obtener etiqueta legible para UI.
+     * Textos simplificados para usuarios del sector textil.
      */
     public function label(): string
     {
         return match ($this) {
-            self::CANONICAL => 'Canónica (Consumo)',
-            self::METRIC_PACK => 'Presentación Métrica',
-            self::LOGISTIC => 'Logística (Compra)',
+            self::CANONICAL => 'Consumo',
+            self::METRIC_PACK => 'Presentación',
+            self::LOGISTIC => 'Compra',
         };
     }
 
     /**
-     * Obtener descripción detallada.
+     * Obtener descripción detallada para tooltips y ayuda contextual.
      */
     public function description(): string
     {
         return match ($this) {
-            self::CANONICAL => 'Unidad base de consumo como metro, litro o pieza',
-            self::METRIC_PACK => 'Presentación con cantidad fija como Rollo 25m o Caja 100pz',
-            self::LOGISTIC => 'Empaque de compra como cono, saco o paquete',
+            self::CANONICAL => 'Unidad en la que el material se gasta durante producción (metro, litro, pieza, minuto)',
+            self::METRIC_PACK => 'Empaque con cantidad fija (Rollo 25m, Caja 100pz)',
+            self::LOGISTIC => 'Unidad en la que se compra el material (cono, saco, paquete)',
+        };
+    }
+
+    /**
+     * Obtener texto de ayuda contextual para formularios.
+     */
+    public function helpText(): string
+    {
+        return match ($this) {
+            self::CANONICAL => 'Unidad física real que se consume al producir una pieza',
+            self::METRIC_PACK => 'Presentación comercial con cantidad predefinida',
+            self::LOGISTIC => 'Empaque físico en el que llega el material del proveedor',
         };
     }
 

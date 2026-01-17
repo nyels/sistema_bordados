@@ -138,7 +138,6 @@ class PurchaseController extends Controller
             }
 
             $categories = MaterialCategory::where('activo', true)
-                ->with('baseUnit')
                 ->ordered()
                 ->get();
 
@@ -146,7 +145,7 @@ class PurchaseController extends Controller
             $oldItemsForJs = [];
             if (old('items')) {
                 foreach (old('items') as $idx => $item) {
-                    $variant = MaterialVariant::with(['material.category.baseUnit'])
+                    $variant = MaterialVariant::with(['material.baseUnit', 'material.category'])
                         ->find($item['material_variant_id']);
 
                     if ($variant) {
@@ -173,7 +172,7 @@ class PurchaseController extends Controller
                             'unit_price' => $unitPrice,
                             'conversion_factor' => $conversionFactor,
                             'converted_quantity' => $convertedQuantity,
-                            'base_unit_symbol' => $variant->material->category->baseUnit->symbol ?? '',
+                            'base_unit_symbol' => $variant->material->baseUnit->symbol ?? '',
                             'subtotal' => $subtotal,
                         ];
                     }
@@ -254,7 +253,8 @@ class PurchaseController extends Controller
 
             $purchase = Purchase::with([
                 'proveedor',
-                'items.materialVariant.material.category.baseUnit',
+                'items.materialVariant.material.baseUnit',
+                'items.materialVariant.material.category',
                 'items.unit',
                 'creator',
                 'receiver',
@@ -295,7 +295,8 @@ class PurchaseController extends Controller
 
             $purchase = Purchase::with([
                 'proveedor',
-                'items.materialVariant.material.category.baseUnit',
+                'items.materialVariant.material.baseUnit',
+                'items.materialVariant.material.category',
                 'items.unit',
             ])->where('activo', true)->findOrFail((int) $id);
 
@@ -319,7 +320,7 @@ class PurchaseController extends Controller
                     'conversion_factor'  => (float) $item->conversion_factor,
                     'converted_quantity' => (float) $item->converted_quantity,
                     'converted_unit_cost' => $item->converted_quantity > 0 ? ((float) $item->subtotal / (float) $item->converted_quantity) : 0,
-                    'base_unit_symbol'   => $item->materialVariant->material->category->baseUnit->symbol ?? '',
+                    'base_unit_symbol'   => $item->materialVariant->material->baseUnit->symbol ?? '',
                     'subtotal'           => (float) $item->subtotal,
                 ];
             })->values();
@@ -330,7 +331,6 @@ class PurchaseController extends Controller
                 ->get(['id', 'nombre_proveedor']);
 
             $categories = MaterialCategory::where('activo', true)
-                ->with('baseUnit')
                 ->ordered()
                 ->get();
 

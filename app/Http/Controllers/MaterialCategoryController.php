@@ -17,6 +17,7 @@ class MaterialCategoryController extends Controller
     {
         try {
             $categories = MaterialCategory::where('activo', true)
+                ->with(['allowedUnits'])
                 ->withCount(['materials' => fn($q) => $q->where('activo', true)])
                 ->ordered()
                 ->get();
@@ -242,8 +243,8 @@ class MaterialCategoryController extends Controller
 
             $category = MaterialCategory::where('activo', true)
                 ->with(['allowedUnits' => function ($q) {
-                    // Filtrar SOLO unidades logísticas puras (unit_type = 'logistic')
-                    $q->logistic()->ordered();
+                    // Permitir todas las unidades asignadas (Logísticas, Canónicas, Packs)
+                    $q->ordered();
                 }])
                 ->findOrFail((int) $id);
 

@@ -15,13 +15,13 @@ class MaterialCategoriesSeeder extends Seeder
         $hasUuid = Schema::hasColumn('material_categories', 'uuid');
 
         $categories = [
-            ['name' => 'HILOS BORDADO', 'slug' => 'hilos', 'unit' => 'u-cono', 'color' => true],
-            ['name' => 'TELAS / TEXTILES', 'slug' => 'telas', 'unit' => 'u-metro', 'color' => true],
-            ['name' => 'ESTABILIZADORES (PELÓN)', 'slug' => 'pelones', 'unit' => 'u-metro', 'color' => false],
-            ['name' => 'AGUJAS E INSTRUMENTAL', 'slug' => 'agujas', 'unit' => 'u-pieza', 'color' => true],
-            ['name' => 'QUÍMICOS / LIMPIEZA', 'slug' => 'quimicos', 'unit' => 'u-ml', 'color' => false],
-            ['name' => 'REFACCIONES MÁQUINA', 'slug' => 'refacciones', 'unit' => 'u-pieza', 'color' => false],
-            ['name' => 'AVÍOS (BOTONES/CIERRES)', 'slug' => 'avios', 'unit' => 'u-pieza', 'color' => true],
+            ['name' => 'HILOS BORDADO', 'slug' => 'hilos', 'unit' => 'cono', 'color' => true],
+            ['name' => 'TELAS / TEXTILES', 'slug' => 'telas', 'unit' => 'metro', 'color' => true],
+            ['name' => 'ESTABILIZADORES (PELÓN)', 'slug' => 'pelones', 'unit' => 'metro', 'color' => false],
+            ['name' => 'AGUJAS E INSTRUMENTAL', 'slug' => 'agujas', 'unit' => 'pieza', 'color' => true],
+            ['name' => 'QUÍMICOS / LIMPIEZA', 'slug' => 'quimicos', 'unit' => 'mililitro', 'color' => false],
+            ['name' => 'REFACCIONES MÁQUINA', 'slug' => 'refacciones', 'unit' => 'pieza', 'color' => false],
+            ['name' => 'AVÍOS (BOTONES/CIERRES)', 'slug' => 'avios', 'unit' => 'pieza', 'color' => true],
         ];
 
         foreach ($categories as $data) {

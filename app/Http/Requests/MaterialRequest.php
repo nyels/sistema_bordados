@@ -28,7 +28,7 @@ class MaterialRequest extends FormRequest
                 'string',
                 'min:2',
                 'max:100',
-                'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-\_\:%\:\(\)\/]+$/u',
+                'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-\_\:%\:\(\)\/\.\,]+$/u',
                 Rule::unique('materials', 'name')
                     ->where('material_category_id', $this->input('material_category_id'))
                     ->ignore($materialId),
@@ -57,10 +57,10 @@ class MaterialRequest extends FormRequest
                     if (!$unit) {
                         return;
                     }
-                    // Solo se permiten unidades logísticas de compra
-                    if (!$unit->isLogistic()) {
-                        $typeLabel = $unit->unit_type?->label() ?? 'desconocido';
-                        $fail("Solo se permiten unidades logísticas de compra. Tipo actual: {$typeLabel}.");
+                    // VALIDACIÓN: Se eliminó la restricción estricta de solo logísticas.
+                    // Ahora se permite asignar Metros (Canónica), Rollos (MetricPack), etc.
+                    if (!$unit->activo) {
+                        $fail("La unidad seleccionada no está activa.");
                     }
                 },
             ],
@@ -76,7 +76,7 @@ class MaterialRequest extends FormRequest
             'material_category_id.required' => 'La categoría es obligatoria.',
             'material_category_id.exists' => 'La categoría seleccionada no es válida.',
             'name.required' => 'El nombre es obligatorio.',
-            'name.regex' => 'El nombre contiene caracteres no permitidos. Por seguridad no se aceptan comillas dobles (").',
+            'name.regex' => 'El nombre contiene caracteres no permitidos.',
             'name.unique' => 'Ya existe un material con este nombre en la categoría.',
             'name.max' => 'El nombre no puede exceder 100 caracteres.',
             'composition.regex' => 'La composición contiene caracteres no permitidos.',

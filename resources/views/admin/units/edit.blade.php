@@ -6,130 +6,93 @@
 @stop
 
 @section('content')
-    <br>
-    <!-- Centered Card -->
-    <!-- Centered Card -->
-    <div class="row">
-        <div class="col-12 col-md-6 col-lg-4">
+    <div class="container-fluid pt-3 pb-5">
+        <div class="row justify-content-center">
+            <div class="col-md-10 col-lg-8">
 
-            {{-- MENSAJES FLASH --}}
-            @foreach (['success', 'error', 'info'] as $msg)
-                @if (session($msg))
-                    <div class="alert alert-{{ $msg == 'error' ? 'danger' : $msg }} alert-dismissible fade show"
-                        role="alert">
-                        {{ session($msg) }}
+                {{-- MENSAJES FLASH --}}
+                @foreach (['success', 'error', 'info'] as $msg)
+                    @if (session($msg))
+                        <div class="alert alert-{{ $msg == 'error' ? 'danger' : $msg }} alert-dismissible fade show shadow-sm mb-4"
+                            role="alert">
+                            <i class="{{ $msg == 'success' ? 'fas fa-check-circle' : 'fas fa-info-circle' }} mr-2"></i>
+                            {{ session($msg) }}
+                            <button type="button" class="close" data-dismiss="alert">
+                                <span>&times;</span>
+                            </button>
+                        </div>
+                    @endif
+                @endforeach
+
+                {{-- ERRORES DE VALIDACIÓN --}}
+                @if ($errors->any())
+                    <div class="alert alert-danger alert-dismissible fade show shadow-sm mb-4">
+                        <strong><i class="fas fa-exclamation-triangle mr-2"></i>Por favor corrige los siguientes
+                            errores:</strong>
+                        <ul class="mb-0 mt-2 pl-4">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
                         <button type="button" class="close" data-dismiss="alert">
                             <span>&times;</span>
                         </button>
                     </div>
                 @endif
-            @endforeach
 
-            {{-- ERRORES DE VALIDACIÓN --}}
-            @if ($errors->any())
-                <div class="alert alert-danger alert-dismissible fade show">
-                    <strong>Se encontraron errores:</strong>
-                    <ul class="mb-0 mt-2">
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                    <button type="button" class="close" data-dismiss="alert">
-                        <span>&times;</span>
-                    </button>
-                </div>
-            @endif
+                @php
+                    // Lógica de Bloqueo Centralizada en el Modelo
+                    $isLocked = $unit->isSystemUnit();
+                @endphp
 
-            <div class="card card-warning">
-                <div class="card-header">
-                    <h3 class="card-title">
-                        <i class="fas fa-edit mr-2"></i>Editar Unidad de Medida
-                    </h3>
-                </div>
+                <form method="post" action="{{ route('admin.units.update', $unit->id) }}">
+                    @csrf
+                    @method('PUT')
 
-                <div class="card-body">
-                    <form method="post" action="{{ route('admin.units.update', $unit->id) }}">
-                        @csrf
-                        @method('PUT')
-
-                        <div class="form-group">
-                            <label>Nombre <span class="text-danger">*</span></label>
-                            <input type="text" name="name" class="form-control @error('name') is-invalid @enderror"
-                                value="{{ old('name', $unit->name) }}" placeholder="Ej: Metro, Rollo, Cono" required>
-                            @error('name')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                    <div class="card shadow-lg border-0 rounded-lg overflow-hidden">
+                        {{-- Encabezado Amarillo Estilo Premium --}}
+                        <div class="card-header bg-warning text-dark py-3">
+                            <h3 class="card-title font-weight-bold m-0" style="font-size: 1.2rem;">
+                                <i class="fas fa-edit mr-2"></i> Editar Unidad de Medida
+                            </h3>
                         </div>
 
-                        <div class="form-group">
-                            <label>Símbolo <span class="text-danger">*</span></label>
-                            <input type="text" name="symbol" class="form-control @error('symbol') is-invalid @enderror"
-                                value="{{ old('symbol', $unit->symbol) }}" placeholder="Ej: m, pz, cono" required>
-                            @error('symbol')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <small class="form-text text-muted">Abreviación corta de la unidad</small>
+                        <div class="card-body p-4 bg-light">
+                            @include('admin.units._form')
                         </div>
 
-                        <div class="form-group">
-                            <div class="custom-control custom-checkbox">
-                                <input type="checkbox" class="custom-control-input" id="is_base" name="is_base"
-                                    value="1" {{ old('is_base', $unit->is_base) ? 'checked' : '' }}>
-                                <label class="custom-control-label" for="is_base">
-                                    <strong>Es unidad base</strong>
-                                </label>
-                            </div>
-                            <small class="form-text text-muted">Marcar si es unidad de consumo (metro, pieza, cono)</small>
-                        </div>
-
-                        <div class="form-group" id="compatible_unit_section"
-                            style="{{ old('is_base', $unit->is_base) ? 'display: none;' : '' }}">
-                            <label>Compatible con <i class="fas fa-link text-info"></i></label>
-                            <select name="compatible_base_unit_id" id="compatible_base_unit_id"
-                                class="form-control @error('compatible_base_unit_id') is-invalid @enderror">
-                                <option value="">-- Seleccionar unidad base --</option>
-                                @foreach ($baseUnits ?? [] as $baseUnit)
-                                    <option value="{{ $baseUnit->id }}"
-                                        {{ old('compatible_base_unit_id', $unit->compatible_base_unit_id) == $baseUnit->id ? 'selected' : '' }}>
-                                        {{ $baseUnit->name }} ({{ $baseUnit->symbol }})
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('compatible_base_unit_id')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <small class="form-text text-muted">Ej: ROLLO es compatible con METRO</small>
-                        </div>
-
-                        <hr>
-
-                        <div class="d-flex justify-content-between">
-                            <a href="{{ route('admin.units.index') }}" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left mr-1"></i> Regresar
+                        <div class="card-footer bg-white py-3 px-4 d-flex justify-content-between align-items-center">
+                            <a href="{{ route('admin.units.index') }}" class="btn btn-secondary shadow-sm">
+                                <i class="fas fa-arrow-left mr-2"></i> Regresar
                             </a>
-                            <button type="submit" class="btn btn-warning">
-                                <i class="fas fa-save mr-1"></i> Actualizar
-                            </button>
+                            @if ($isLocked)
+                                <button type="button" class="btn btn-warning shadow-sm px-4 font-weight-bold" disabled
+                                    title="Esta unidad está protegida por el sistema">
+                                    <i class="fas fa-lock mr-2"></i> Protegido
+                                </button>
+                            @else
+                                <button type="submit" class="btn btn-warning shadow-sm px-4 font-weight-bold">
+                                    <i class="fas fa-save mr-2"></i> Guardar
+                                </button>
+                            @endif
                         </div>
-                    </form>
-                </div>
-            </div>
+                    </div>
 
+                </form>
+            </div>
         </div>
     </div>
 @stop
 
-@section('js')
-    <script>
-        $(function() {
-            $('#is_base').on('change', function() {
-                if ($(this).is(':checked')) {
-                    $('#compatible_unit_section').slideUp();
-                    $('#compatible_base_unit_id').val('');
-                } else {
-                    $('#compatible_unit_section').slideDown();
-                }
-            });
-        });
-    </script>
+@section('css')
+    <style>
+        .card {
+            border-radius: 0.5rem;
+        }
+
+        .form-control:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+    </style>
 @stop

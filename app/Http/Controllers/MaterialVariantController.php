@@ -28,7 +28,7 @@ class MaterialVariantController extends Controller
             }
 
             $material = Material::where('activo', true)
-                ->with(['category', 'baseUnit'])
+                ->with(['category', 'baseUnit', 'unitConversions.fromUnit'])
                 ->findOrFail((int) $materialId);
 
             $variants = MaterialVariant::where('material_id', $material->id)
@@ -422,20 +422,53 @@ class MaterialVariantController extends Controller
     private function generateSku(Material $material): string
     {
         $categoryPrefix = mb_strtoupper(mb_substr($material->category->slug ?? 'MAT', 0, 3));
-        $materialPrefix = mb_strtoupper(mb_substr(Str::slug($material->name), 0, 4));
 
-        $lastVariant = MaterialVariant::where('material_id', $material->id)
-            ->orderBy('id', 'desc')
+        // Generar prefijo del material basado en siglas para mayor unicidad
+        // Ej: "HILO BOBINA PRE-BOBINADO" -> "HBPI" (en lugar de "HILO")
+        // Ej: "HILO POLIESTER" -> "HIPO" (en lugar de "HILO")
+        $cleanName = Str::slug($material->name, ' '); // normaliza a caracteres latinos y separa por espacios
+        $words = explode(' ', $cleanName);
+        $materialCode = '';
+
+        if (count($words) >= 2) {
+            // Estrategia de Acrónimo: Tomar la inicial de cada palabra (hasta 4)
+            foreach ($words as $word) {
+                $materialCode .= substr($word, 0, 1);
+            }
+            // Si el acrónimo es muy corto (menos de 3), rellenar con la segunda letra de la primera palabra
+            if (strlen($materialCode) < 3 && isset($words[0][1])) {
+                $materialCode .= substr($words[0], 1, 1);
+            }
+        } else {
+            // Fallback: Si es una sola palabra, usar las primeras 4 letras
+            $materialCode = substr($cleanName, 0, 4);
+        }
+
+        $materialPrefix = mb_strtoupper(substr($materialCode, 0, 4));
+        $prefix = "{$categoryPrefix}-{$materialPrefix}-";
+
+        // Buscar último SKU con este prefijo ESPECÍFICO
+        $lastVariant = MaterialVariant::where('sku', 'like', "{$prefix}%")
+            ->orderByRaw('LENGTH(sku) DESC') // Asegurar orden correcto por longitud
+            ->orderBy('sku', 'desc')
             ->first();
 
         $sequence = 1;
         if ($lastVariant) {
-            preg_match('/(\d+)$/', $lastVariant->sku, $matches);
-            if (!empty($matches[1])) {
+            if (preg_match('/-(\d+)$/', $lastVariant->sku, $matches)) {
                 $sequence = (int) $matches[1] + 1;
             }
         }
 
-        return strtoupper("{$categoryPrefix}-{$materialPrefix}-" . str_pad($sequence, 3, '0', STR_PAD_LEFT));
+        // Bucle de seguridad para garantizar unicidad final
+        do {
+            $sku = $prefix . str_pad($sequence, 3, '0', STR_PAD_LEFT);
+            $exists = MaterialVariant::where('sku', $sku)->exists();
+            if ($exists) {
+                $sequence++;
+            }
+        } while ($exists);
+
+        return $sku;
     }
 }

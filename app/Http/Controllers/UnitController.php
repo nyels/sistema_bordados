@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UnitType;
 use App\Models\Unit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -14,7 +15,8 @@ class UnitController extends Controller
         try {
             $units = Unit::with('compatibleBaseUnit')
                 ->where('activo', true)
-                ->ordered()
+                ->orderBy('sort_order')
+                ->orderBy('name')
                 ->get();
             return view('admin.units.index', compact('units'));
         } catch (\Exception $e) {
@@ -26,25 +28,38 @@ class UnitController extends Controller
 
     public function create()
     {
-        $baseUnits = Unit::getBaseUnits();
-        return view('admin.units.create', compact('baseUnits'));
+        $canonicalUnits = Unit::getCanonicalUnits();
+        return view('admin.units.create', compact('canonicalUnits'));
     }
 
     public function store(Request $request)
     {
-        $request->validate([
+        // Validación condicional: si NO es base, compatible_base_unit_id es opcional (para genéricos)
+        $rules = [
             'name' => ['required', 'string', 'min:2', 'max:50', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s]+$/'],
             'symbol' => ['required', 'string', 'min:1', 'max:10', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s]+$/'],
             'is_base' => ['sometimes', 'boolean'],
-            'compatible_base_unit_id' => ['nullable', 'integer', 'exists:units,id'],
-        ], [
+            'sort_order' => ['nullable', 'integer', 'min:0', 'max:999'],
+            'default_conversion_factor' => ['nullable', 'numeric', 'min:0', 'max:999999.9999'],
+        ];
+
+        // Si NO es unidad de consumo, compatible_base_unit_id es opcional (Generic Container)
+        if (!$request->boolean('is_base')) {
+            $rules['compatible_base_unit_id'] = ['nullable', 'integer', 'exists:units,id'];
+        } else {
+            $rules['compatible_base_unit_id'] = ['nullable', 'integer', 'exists:units,id'];
+        }
+
+        $request->validate($rules, [
             'name.required' => 'El nombre es obligatorio.',
             'name.regex' => 'El nombre solo puede contener letras, números y espacios.',
             'name.max' => 'El nombre no puede exceder 50 caracteres.',
             'symbol.required' => 'El símbolo es obligatorio.',
             'symbol.regex' => 'El símbolo solo puede contener letras, números y espacios.',
             'symbol.max' => 'El símbolo no puede exceder 10 caracteres.',
-            'compatible_base_unit_id.exists' => 'La unidad base seleccionada no es válida.',
+            'compatible_base_unit_id.exists' => 'La unidad de consumo seleccionada no es válida.',
+            'default_conversion_factor.numeric' => 'La cantidad por unidad debe ser un número.',
+            'default_conversion_factor.max' => 'La cantidad por unidad no puede exceder 999999.9999.',
         ]);
 
         try {
@@ -57,37 +72,28 @@ class UnitController extends Controller
                 $query->where('name', $name)
                     ->orWhere('symbol', $symbol)
                     ->orWhere('slug', $slug);
-            })
-                ->first();
+            })->first();
 
             if ($existingUnit) {
                 if ($existingUnit->activo) {
-                    // Ya existe una unidad activa
                     return redirect()->back()
                         ->withInput()
                         ->with('error', 'Ya existe una unidad con ese nombre o símbolo');
                 }
 
-                // Reactivar la unidad inactiva
-                $existingUnit->name = $name;
-                $existingUnit->slug = $slug;
-                $existingUnit->symbol = $symbol;
-                $existingUnit->is_base = $request->boolean('is_base');
-                $existingUnit->compatible_base_unit_id = $request->boolean('is_base') ? null : $request->compatible_base_unit_id;
+                // Reactivar la unidad inactiva con los nuevos valores
+                $this->fillUnitFromRequest($existingUnit, $request, $name, $slug, $symbol);
                 $existingUnit->activo = true;
                 $existingUnit->save();
 
-                return redirect()->route('admin.units.index')->with('success', 'Unidad reactivada exitosamente');
+                return redirect()->route('admin.units.index')
+                    ->with('success', 'Unidad reactivada exitosamente');
             }
 
             // Crear nueva unidad
             $unit = new Unit();
             $unit->uuid = (string) Str::uuid();
-            $unit->name = $name;
-            $unit->slug = $slug;
-            $unit->symbol = $symbol;
-            $unit->is_base = $request->boolean('is_base');
-            $unit->compatible_base_unit_id = $request->boolean('is_base') ? null : $request->compatible_base_unit_id;
+            $this->fillUnitFromRequest($unit, $request, $name, $slug, $symbol);
             $unit->activo = true;
             $unit->save();
 
@@ -97,17 +103,24 @@ class UnitController extends Controller
                     'message' => 'Unidad creada exitosamente',
                     'id' => $unit->id,
                     'name' => $unit->name,
-                    'symbol' => $unit->symbol
+                    'symbol' => $unit->symbol,
+                    'unit_type' => $unit->unit_type->value,
                 ]);
             }
 
-            return redirect()->route('admin.units.index')->with('success', 'Unidad creada exitosamente');
+            return redirect()->route('admin.units.index')
+                ->with('success', 'Unidad creada exitosamente');
         } catch (\Exception $e) {
-            Log::error('Error al crear unidad: ' . $e->getMessage());
+            Log::error('Error al crear unidad: ' . $e->getMessage(), [
+                'request' => $request->except(['_token']),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             if ($request->wantsJson()) {
                 return response()->json(['message' => 'Error al crear la unidad'], 500);
             }
-            return redirect()->route('admin.units.index')->with('error', 'Error al crear la unidad');
+            return redirect()->route('admin.units.index')
+                ->with('error', 'Error al crear la unidad');
         }
     }
 
@@ -115,49 +128,106 @@ class UnitController extends Controller
     {
         try {
             $unit = Unit::where('activo', true)->findOrFail($id);
-            $baseUnits = Unit::getBaseUnits()->where('id', '!=', $id);
-            return view('admin.units.edit', compact('unit', 'baseUnits'));
+            // Excluir la unidad actual para evitar auto-referencia
+            $canonicalUnits = Unit::getCanonicalUnits()->where('id', '!=', $id);
+            return view('admin.units.edit', compact('unit', 'canonicalUnits'));
         } catch (\Exception $e) {
             Log::error('Error al cargar unidad para editar: ' . $e->getMessage());
-            return redirect()->route('admin.units.index')->with('error', 'Unidad no encontrada');
+            return redirect()->route('admin.units.index')
+                ->with('error', 'Unidad no encontrada');
         }
     }
 
     public function update(Request $request, $id)
     {
-        $request->validate([
+        // Validación condicional: si NO es base, compatible_base_unit_id es opcional (para genéricos)
+        $rules = [
             'name' => ['required', 'string', 'min:2', 'max:50', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s0-9]+$/'],
             'symbol' => ['required', 'string', 'min:1', 'max:10', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s0-9]+$/'],
             'is_base' => ['sometimes', 'boolean'],
-            'compatible_base_unit_id' => ['nullable', 'integer', 'exists:units,id'],
-        ], [
+            'sort_order' => ['nullable', 'integer', 'min:0', 'max:999'],
+            'default_conversion_factor' => ['nullable', 'numeric', 'min:0', 'max:999999.9999'],
+        ];
+
+        if (!$request->boolean('is_base')) {
+            $rules['compatible_base_unit_id'] = ['nullable', 'integer', 'exists:units,id'];
+        } else {
+            $rules['compatible_base_unit_id'] = ['nullable', 'integer', 'exists:units,id'];
+        }
+
+        $request->validate($rules, [
             'name.required' => 'El nombre es obligatorio.',
             'name.regex' => 'El nombre solo puede contener letras, números y espacios.',
             'name.max' => 'El nombre no puede exceder 50 caracteres.',
             'symbol.required' => 'El símbolo es obligatorio.',
             'symbol.regex' => 'El símbolo solo puede contener letras, números y espacios.',
             'symbol.max' => 'El símbolo no puede exceder 10 caracteres.',
-            'compatible_base_unit_id.exists' => 'La unidad base seleccionada no es válida.',
+            'compatible_base_unit_id.exists' => 'La unidad de consumo seleccionada no es válida.',
+            'default_conversion_factor.numeric' => 'La cantidad por unidad debe ser un número.',
         ]);
 
         try {
             $unit = Unit::where('activo', true)->findOrFail($id);
 
-            $unit->name = mb_strtoupper(trim($request->name));
-            $unit->slug = Str::slug($request->name);
-            $unit->symbol = mb_strtolower(trim($request->symbol));
-            $unit->is_base = $request->boolean('is_base');
-            $unit->compatible_base_unit_id = $request->boolean('is_base') ? null : $request->compatible_base_unit_id;
+            $name = mb_strtoupper(trim($request->name));
+            $slug = Str::slug($request->name);
+            $symbol = mb_strtolower(trim($request->symbol));
+
+            $this->fillUnitFromRequest($unit, $request, $name, $slug, $symbol);
 
             if (!$unit->isDirty()) {
-                return redirect()->route('admin.units.index')->with('info', 'No se realizaron cambios');
+                return redirect()->route('admin.units.index')
+                    ->with('info', 'No se realizaron cambios');
             }
 
             $unit->save();
-            return redirect()->route('admin.units.index')->with('success', 'Unidad actualizada exitosamente');
+
+            return redirect()->route('admin.units.index')
+                ->with('success', 'Unidad actualizada exitosamente');
         } catch (\Exception $e) {
-            Log::error('Error al actualizar unidad: ' . $e->getMessage());
-            return redirect()->route('admin.units.index')->with('error', 'Error al actualizar la unidad');
+            Log::error('Error al actualizar unidad: ' . $e->getMessage(), [
+                'unit_id' => $id,
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return redirect()->route('admin.units.index')
+                ->with('error', 'Error al actualizar la unidad');
+        }
+    }
+
+    /**
+     * Rellena los campos de la unidad desde el request.
+     * Determina automáticamente el unit_type basado en:
+     * - is_base = true → CANONICAL
+     * - is_base = false + default_conversion_factor → METRIC_PACK
+     * - is_base = false + sin factor → LOGISTIC
+     */
+    private function fillUnitFromRequest(Unit $unit, Request $request, string $name, string $slug, string $symbol): void
+    {
+        $unit->name = $name;
+        $unit->slug = $slug;
+        $unit->symbol = $symbol;
+        $unit->is_base = $request->boolean('is_base');
+        $unit->sort_order = $request->input('sort_order', 0);
+
+        if ($unit->is_base) {
+            // CANONICAL: unidad de consumo
+            $unit->unit_type = UnitType::CANONICAL;
+            $unit->compatible_base_unit_id = null;
+            $unit->default_conversion_factor = null;
+        } else {
+            // Compra o Presentación
+            $unit->compatible_base_unit_id = $request->input('compatible_base_unit_id');
+
+            $factor = $request->input('default_conversion_factor');
+            if ($factor !== null && $factor !== '' && floatval($factor) > 0) {
+                // METRIC_PACK: presentación con cantidad fija
+                $unit->unit_type = UnitType::METRIC_PACK;
+                $unit->default_conversion_factor = floatval($factor);
+            } else {
+                // LOGISTIC: unidad de compra genérica
+                $unit->unit_type = UnitType::LOGISTIC;
+                $unit->default_conversion_factor = null;
+            }
         }
     }
 

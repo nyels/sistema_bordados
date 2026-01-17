@@ -25,7 +25,7 @@ use App\Models\MaterialCategory;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
+    // use WithoutModelEvents; // Se desactivó para permitir que los eventos de modelo (UUID, UnitType) funcionen en seeders
 
     /**
      * Seed the application's database.
@@ -52,7 +52,7 @@ class DatabaseSeeder extends Seeder
 
             SystemSettingsSeeder::class,
             UnitsSeeder::class,
-            MaterialCategoriesSeeder::class,
+            //   MaterialCategoriesSeeder::class,
             ProductSystemSeeder::class, // Added for correct Extras/Categories
         ]);
 
@@ -224,8 +224,6 @@ class DatabaseSeeder extends Seeder
                 'alto_cintura' => 45.0,
                 'cintura' => 95.2,
                 'cadera' => 110.0,
-                'largo' => 75.0,
-            ]
                 'largo' => 75.0,
             ]
         );

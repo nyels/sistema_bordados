@@ -35,7 +35,8 @@
                     Define qué <strong>unidades de compra/empaque</strong> están permitidas para cada categoría de material.
                     <br>
                     <small class="text-muted">
-                        Solo las unidades asignadas aquí aparecerán disponibles al crear/editar materiales de cada categoría.
+                        Solo las unidades asignadas aquí aparecerán disponibles al crear/editar materiales de cada
+                        categoría.
                     </small>
                 </p>
                 <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
@@ -57,9 +58,10 @@
                         <tr>
                             <th style="width: 5%;">#</th>
                             <th style="width: 20%;">Categoría</th>
-                            <th style="width: 45%;">Unidades de Compra Permitidas</th>
-                            <th style="width: 15%;">Materiales</th>
-                            <th style="width: 15%;">Acciones</th>
+                            <th style="width: 25%;">Descripción</th>
+                            <th style="width: 30%;">Unidades de Compra Permitidas</th>
+                            <th style="width: 10%;">Materiales</th>
+                            <th style="width: 10%;">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -67,9 +69,13 @@
                             <tr data-category-id="{{ $category->id }}">
                                 <td class="text-center align-middle">{{ $loop->iteration }}</td>
                                 <td class="align-middle">
-                                    <strong>{{ $category->name }}</strong>
+                                    <strong style="font-size: 1.1rem;">{{ $category->name }}</strong>
+                                </td>
+                                <td class="align-middle">
                                     @if ($category->description)
-                                        <br><small class="text-muted">{{ Str::limit($category->description, 50) }}</small>
+                                        <span style="font-size: 1rem;">{{ $category->description }}</span>
+                                    @else
+                                        <span class="text-muted font-italic">Sin descripción</span>
                                     @endif
                                 </td>
                                 <td class="units-cell" data-category-id="{{ $category->id }}">
@@ -81,7 +87,10 @@
                                         <div class="d-flex flex-wrap gap-1" id="units-container-{{ $category->id }}">
                                             @foreach ($category->allowedUnits as $unit)
                                                 @php
-                                                    $materialsUsing = \App\Models\Material::where('material_category_id', $category->id)
+                                                    $materialsUsing = \App\Models\Material::where(
+                                                        'material_category_id',
+                                                        $category->id,
+                                                    )
                                                         ->where('base_unit_id', $unit->id)
                                                         ->where('activo', true)
                                                         ->count();
@@ -94,7 +103,8 @@
                                                     {{ $unit->name }}
                                                     <small>({{ $unit->symbol }})</small>
                                                     @if ($materialsUsing > 0)
-                                                        <span class="badge badge-light ml-1" title="{{ $materialsUsing }} material(es) usando esta unidad">
+                                                        <span class="badge badge-light ml-1"
+                                                            title="{{ $materialsUsing }} material(es) usando esta unidad">
                                                             {{ $materialsUsing }}
                                                         </span>
                                                     @endif
@@ -102,8 +112,7 @@
                                                         <button type="button" class="btn btn-xs btn-remove-unit ml-1"
                                                             data-category-id="{{ $category->id }}"
                                                             data-unit-id="{{ $unit->id }}"
-                                                            data-unit-name="{{ $unit->name }}"
-                                                            title="Quitar unidad"
+                                                            data-unit-name="{{ $unit->name }}" title="Quitar unidad"
                                                             style="background: none; border: none; color: #fff; padding: 0 4px;">
                                                             <i class="fas fa-times"></i>
                                                         </button>
@@ -120,8 +129,7 @@
                                 </td>
                                 <td class="text-center align-middle">
                                     <button type="button" class="btn btn-success btn-sm btn-add-unit"
-                                        data-category-id="{{ $category->id }}"
-                                        data-category-name="{{ $category->name }}"
+                                        data-category-id="{{ $category->id }}" data-category-name="{{ $category->name }}"
                                         title="Agregar unidad">
                                         <i class="fas fa-plus"></i> Agregar
                                     </button>
@@ -129,7 +137,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="text-center text-muted">
+                                <td colspan="6" class="text-center text-muted">
                                     No hay categorías de materiales registradas.
                                 </td>
                             </tr>
@@ -147,7 +155,8 @@
                                 <strong>Leyenda:</strong>
                                 <span class="badge badge-primary mr-2">Unidad asignada</span>
                                 <span class="badge badge-light border mr-2">N</span> = Materiales usando esta unidad
-                                <span class="text-danger ml-3"><i class="fas fa-lock"></i></span> = No se puede eliminar (tiene materiales asociados)
+                                <span class="text-danger ml-3"><i class="fas fa-lock"></i></span> = No se puede eliminar
+                                (tiene materiales asociados)
                             </small>
                         </div>
                     </div>
@@ -157,7 +166,8 @@
     </div>
 
     {{-- MODAL PARA AGREGAR UNIDAD --}}
-    <div class="modal fade" id="addUnitModal" tabindex="-1" role="dialog" aria-labelledby="addUnitModalLabel" aria-hidden="true">
+    <div class="modal fade" id="addUnitModal" tabindex="-1" role="dialog" aria-labelledby="addUnitModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content shadow-lg" style="border-radius: 15px; border: none;">
                 <div class="modal-header bg-success text-white">
@@ -291,7 +301,8 @@
                             });
                             $select.prop('disabled', false);
                         } else {
-                            $select.html('<option value="">No hay unidades disponibles</option>');
+                            $select.html(
+                                '<option value="">No hay unidades disponibles</option>');
                         }
                     },
                     error: function() {
@@ -328,13 +339,15 @@
                             location.reload();
                         } else {
                             alert(response.message || 'Error al agregar la unidad.');
-                            $btn.prop('disabled', false).html('<i class="fas fa-check"></i> Agregar Unidad');
+                            $btn.prop('disabled', false).html(
+                                '<i class="fas fa-check"></i> Agregar Unidad');
                         }
                     },
                     error: function(xhr) {
                         var msg = xhr.responseJSON?.message || 'Error al agregar la unidad.';
                         alert(msg);
-                        $btn.prop('disabled', false).html('<i class="fas fa-check"></i> Agregar Unidad');
+                        $btn.prop('disabled', false).html(
+                            '<i class="fas fa-check"></i> Agregar Unidad');
                     }
                 });
             });
@@ -374,14 +387,16 @@
                             location.reload();
                         } else {
                             alert(response.message || 'Error al eliminar la unidad.');
-                            $btn.prop('disabled', false).html('<i class="fas fa-trash"></i> Sí, Quitar');
+                            $btn.prop('disabled', false).html(
+                                '<i class="fas fa-trash"></i> Sí, Quitar');
                             $('#removeUnitModal').modal('hide');
                         }
                     },
                     error: function(xhr) {
                         var msg = xhr.responseJSON?.message || 'Error al eliminar la unidad.';
                         alert(msg);
-                        $btn.prop('disabled', false).html('<i class="fas fa-trash"></i> Sí, Quitar');
+                        $btn.prop('disabled', false).html(
+                            '<i class="fas fa-trash"></i> Sí, Quitar');
                         $('#removeUnitModal').modal('hide');
                     }
                 });

@@ -47,7 +47,7 @@
                                 class="form-control @error('material_category_id') is-invalid @enderror" required>
                                 <option value="">Seleccionar categoría...</option>
                                 @foreach ($categories as $category)
-                                    <option value="{{ $category->id }}" data-unit="{{ $category->baseUnit->symbol ?? '' }}"
+                                    <option value="{{ $category->id }}"
                                         data-has-color="{{ $category->has_color ? '1' : '0' }}"
                                         {{ old('material_category_id') == $category->id ? 'selected' : '' }}>
                                         {{ $category->name }}
@@ -93,7 +93,7 @@
                         <div class="row">
                             <div class="col-12">
                                 <div class="form-group">
-                                    <label>Unidad de Compra (Base) <span class="text-danger">*</span></label>
+                                    <label>Unidad Base (Inventario/Consumo) <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <select name="base_unit_id" id="base_unit_id"
                                             class="form-control @error('base_unit_id') is-invalid @enderror" required
@@ -172,9 +172,10 @@
                         if (units.length === 0) {
                             unitSelect.html(
                                 '<option value="">Esta categoría no tiene unidades de compra asignadas</option>'
-                                );
+                            );
                         } else {
-                            unitSelect.append('<option value="">Seleccionar Unidad Base...</option>');
+                            unitSelect.append(
+                                '<option value="">Seleccionar Unidad de Compra...</option>');
                             $.each(units, function(index, unit) {
                                 var symbolText = unit.symbol ? ' (' + unit.symbol + ')' : '';
                                 var isSelected = (selectedUnitId == unit.id) ? 'selected' : '';

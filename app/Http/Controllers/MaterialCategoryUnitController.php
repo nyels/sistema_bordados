@@ -42,9 +42,12 @@ class MaterialCategoryUnitController extends Controller
                 ->ordered()
                 ->get();
 
-            // Unidades disponibles para asignar (solo logísticas puras)
+            // Unidades disponibles para asignar (todas)
             $availableUnits = Unit::active()
-                ->logistic() // unit_type = 'logistic'
+                ->where(function ($q) {
+                    $q->whereIn('unit_type', ['logistic', 'canonical', 'metric_pack'])
+                        ->orWhereNull('unit_type');
+                })
                 ->ordered()
                 ->get();
 
@@ -80,12 +83,12 @@ class MaterialCategoryUnitController extends Controller
             $category = MaterialCategory::where('activo', true)->findOrFail($categoryId);
             $unit = Unit::where('activo', true)->findOrFail($request->unit_id);
 
-            // VALIDACIÓN CRÍTICA: Solo unidades logísticas puras
-            if (!$unit->isLogistic()) {
-                $typeLabel = $unit->unit_type?->label() ?? 'desconocido';
+            // VALIDACIÓN: Se eliminó la restricción estricta de solo logísticas.
+            // Ahora se permite asignar Metros (Canónica), Rollos (MetricPack), etc.
+            if (!$unit->activo) {
                 return response()->json([
                     'success' => false,
-                    'message' => "Solo se permiten unidades logísticas de compra. La unidad seleccionada es de tipo: {$typeLabel}."
+                    'message' => "La unidad seleccionada no está activa."
                 ], 422);
             }
 
@@ -271,9 +274,12 @@ class MaterialCategoryUnitController extends Controller
             // IDs de unidades ya asignadas
             $assignedUnitIds = $category->allowedUnits()->pluck('units.id')->toArray();
 
-            // Unidades logísticas puras disponibles (no asignadas)
+            // Unidades disponibles (cualquier tipo: logísticas, canónicas, packs)
             $availableUnits = Unit::active()
-                ->logistic() // unit_type = 'logistic'
+                ->where(function ($q) {
+                    $q->whereIn('unit_type', ['logistic', 'canonical', 'metric_pack'])
+                        ->orWhereNull('unit_type'); // Por seguridad
+                })
                 ->whereNotIn('id', $assignedUnitIds)
                 ->ordered()
                 ->get(['id', 'name', 'symbol']);
@@ -298,7 +304,7 @@ class MaterialCategoryUnitController extends Controller
     {
         try {
             $category = MaterialCategory::where('activo', true)
-                ->with('allowedUnits')
+                ->with(['allowedUnits', 'materials.baseUnit'])
                 ->findOrFail($categoryId);
 
             $issues = [];
@@ -312,9 +318,11 @@ class MaterialCategoryUnitController extends Controller
             }
 
             // Verificar materiales con unidades inválidas
+            $allowedUnitIds = $category->allowedUnits->pluck('id')->toArray();
+
             $materialsWithInvalidUnit = Material::where('material_category_id', $categoryId)
                 ->where('activo', true)
-                ->whereNotIn('base_unit_id', $category->allowedUnits->pluck('id'))
+                ->whereNotIn('base_unit_id', $allowedUnitIds)
                 ->get(['id', 'name', 'base_unit_id']);
 
             if ($materialsWithInvalidUnit->isNotEmpty()) {

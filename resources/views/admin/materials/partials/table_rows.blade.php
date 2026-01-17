@@ -18,9 +18,13 @@
             </span>
         </td>
         <td class="text-center">
-            <span class="badge badge-info" style="font-size: 14px; padding: 6px 10px;">
-                {{ $material->active_variants_count }}
-            </span>
+            @if ($material->has_color)
+                <span class="badge badge-info" style="font-size: 14px; padding: 6px 10px;">
+                    {{ $material->active_variants_count }}
+                </span>
+            @else
+                <span class="text-muted">-</span>
+            @endif
         </td>
 
         <td class="text-center align-middle">

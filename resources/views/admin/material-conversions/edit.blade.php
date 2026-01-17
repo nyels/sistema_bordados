@@ -70,7 +70,7 @@
                                 <h6 class="mb-2"><i class="fas fa-box text-primary"></i> Material</h6>
                                 <table class="table table-sm table-borderless mb-0">
                                     <tr>
-                                        <td style="width: 120px;"><strong>Nombre:</strong></td>
+                                        <td style="width: 140px;"><strong>Nombre:</strong></td>
                                         <td>{{ $material->name }}</td>
                                     </tr>
                                     <tr>
@@ -78,11 +78,22 @@
                                         <td>{{ $material->category->name ?? 'N/A' }}</td>
                                     </tr>
                                     <tr>
-                                        <td><strong>Unidad Base:</strong></td>
+                                        <td><strong>Unidad de Compra:</strong></td>
                                         <td>
-                                            <span class="badge badge-info">
-                                                {{ $material->category->baseUnit->name ?? 'N/A' }}
-                                                ({{ $material->category->baseUnit->symbol ?? '' }})
+                                            <span class="badge badge-primary">
+                                                <i class="fas fa-dolly mr-1"></i>
+                                                {{ $material->baseUnit->name ?? 'N/A' }}
+                                                ({{ $material->baseUnit->symbol ?? '' }})
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Unidad de Consumo:</strong></td>
+                                        <td>
+                                            <span class="badge badge-success">
+                                                <i class="fas fa-ruler mr-1"></i>
+                                                {{ $consumptionUnit->name ?? 'N/A' }}
+                                                ({{ $consumptionUnit->symbol ?? '' }})
                                             </span>
                                         </td>
                                     </tr>
@@ -118,15 +129,20 @@
                         </div>
 
                         <div class="form-group">
-                            <label>Unidad de Compra <span class="text-danger">*</span></label>
+                            <label>Unidad Alternativa de Compra <span class="text-danger">*</span></label>
                             <select name="from_unit_id" id="from_unit_id"
                                 class="form-control @error('from_unit_id') is-invalid @enderror" required>
                                 <option value="">Seleccionar unidad...</option>
                                 @foreach ($purchaseUnits as $unit)
                                     @if (!in_array($unit->id, $usedUnitIds) || $unit->id == $conversion->from_unit_id)
-                                        <option value="{{ $unit->id }}" data-symbol="{{ $unit->symbol }}"
+                                        <option value="{{ $unit->id }}"
+                                            data-symbol="{{ $unit->symbol }}"
+                                            data-factor="{{ $unit->default_conversion_factor }}"
                                             {{ old('from_unit_id', $conversion->from_unit_id) == $unit->id ? 'selected' : '' }}>
                                             {{ $unit->name }} ({{ $unit->symbol }})
+                                            @if($unit->isMetricPack() && $unit->default_conversion_factor)
+                                                = {{ number_format($unit->default_conversion_factor, 0) }} {{ $consumptionUnit->symbol ?? '' }}
+                                            @endif
                                         </option>
                                     @endif
                                 @endforeach
@@ -136,22 +152,23 @@
                             @enderror
                             <small class="form-text text-muted">
                                 Unidades compatibles con
-                                <strong>{{ $material->category->baseUnit->name ?? 'N/A' }}</strong>
+                                <strong>{{ $consumptionUnit->name ?? 'N/A' }}</strong>
                             </small>
                         </div>
 
                         <div class="form-group">
-                            <label>Unidad de Inventario (Destino)</label>
-                            <input type="hidden" name="to_unit_id" value="{{ $material->category->base_unit_id }}">
+                            <label>Unidad de Consumo (Destino)</label>
+                            <input type="hidden" name="to_unit_id" value="{{ $consumptionUnit->id ?? '' }}">
                             <div class="form-control bg-light" style="cursor: not-allowed;">
-                                <span class="badge badge-info">
-                                    {{ $material->category->baseUnit->name ?? 'N/A' }}
-                                    ({{ $material->category->baseUnit->symbol ?? '' }})
+                                <span class="badge badge-success">
+                                    <i class="fas fa-ruler mr-1"></i>
+                                    {{ $consumptionUnit->name ?? 'N/A' }}
+                                    ({{ $consumptionUnit->symbol ?? '' }})
                                 </span>
                                 <i class="fas fa-lock text-muted float-right mt-1"></i>
                             </div>
                             <small class="form-text text-muted">
-                                Definida por la categoría del material. No editable.
+                                Unidad de consumo del material. No editable.
                             </small>
                         </div>
 
@@ -165,7 +182,7 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                             <small class="form-text text-muted">
-                                ¿Cuántas <strong>{{ $material->category->baseUnit->symbol ?? 'unidades' }}</strong> hay en
+                                ¿Cuántas <strong>{{ $consumptionUnit->symbol ?? 'unidades' }}</strong> hay en
                                 1 unidad de compra?
                             </small>
                         </div>
@@ -209,9 +226,9 @@
 @section('js')
     <script>
         $(function() {
-            // Datos de la unidad base (destino) desde el servidor
-            var toUnitName = '{{ $material->category->baseUnit->name ?? 'N/A' }}';
-            var toUnitSymbol = '{{ $material->category->baseUnit->symbol ?? '' }}';
+            // Datos de la unidad de consumo (destino) desde el servidor
+            var toUnitName = '{{ $consumptionUnit->name ?? 'N/A' }}';
+            var toUnitSymbol = '{{ $consumptionUnit->symbol ?? '' }}';
 
             function updatePreview() {
                 var fromUnit = $('#from_unit_id option:selected');

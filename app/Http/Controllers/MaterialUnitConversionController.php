@@ -63,28 +63,64 @@ class MaterialUnitConversionController extends Controller
             }
 
             $material = Material::where('activo', true)
-                ->with(['category', 'baseUnit'])
+                ->with(['category', 'baseUnit', 'consumptionUnit'])
                 ->findOrFail((int) $materialId);
 
-            $baseUnitId = $material->base_unit_id;
+            // =============================================
+            // ARQUITECTURA EMPRESARIAL:
+            // Determinar la unidad de consumo (canonical)
+            // =============================================
+            $consumptionUnit = $material->consumptionUnit
+                ?? $material->baseUnit; // Fallback directo a la unidad base (ej: Metro)
 
-            // Solo unidades de compra compatibles con la unidad base
-            $purchaseUnits = Unit::getPurchaseUnitsFor($baseUnitId);
-
-            if ($purchaseUnits->isEmpty()) {
+            if (!$consumptionUnit) {
                 return redirect()->route('admin.material-conversions.index', $material->id)
-                    ->with('error', 'No hay unidades de compra configuradas para ' . ($material->baseUnit->name ?? 'esta unidad base'));
+                    ->with('error', 'Este material no tiene configurada una unidad base válida.');
             }
 
-            // Unidades ya usadas
-            $usedUnitIds = MaterialUnitConversion::where('material_id', $material->id)
-                ->pluck('from_unit_id')
-                ->toArray();
+            // =============================================
+            // Filtrar unidades de compra compatibles:
+            // - Tipo LOGISTIC o METRIC_PACK
+            // - Que sean compatibles con la unidad de consumo
+            // - Excluir la unidad base del material (ya es la principal)
+            // =============================================
+            // =============================================
+            // Filtrar unidades de compra compatibles:
+            // - Tipo LOGISTIC o METRIC_PACK
+            // - Que sean compatibles con la unidad de consumo O sean genéricas (null)
+            // - Excluir la unidad base del material (ya es la principal)
+            // =============================================
+            $purchaseUnits = Unit::where('activo', true)
+                ->where(function ($query) use ($consumptionUnit) {
+                    $query->where('compatible_base_unit_id', $consumptionUnit->id)
+                        ->orWhereNull('compatible_base_unit_id');
+                })
+                ->where('id', '!=', $material->base_unit_id) // Excluir la unidad principal
+                ->whereIn('unit_type', ['logistic', 'metric_pack'])
+                ->orderBy('unit_type') // Primero logistic, luego metric_pack
+                ->orderBy('name')
+                ->get();
+
+            // if ($purchaseUnits->isEmpty()) {
+            //     return redirect()->route('admin.material-conversions.index', $material->id)
+            //         ->with('error', "No hay unidades de compra disponibles. Cree unidades de compra o presentaciones.");
+            // }
+
+            // Conversiones existentes (para usarlas como intermediarias)
+            // Ej: Si ya existe Cono -> Metro, podemos usar Cono para definir Caja
+            $existingConversions = MaterialUnitConversion::where('material_id', $material->id)
+                ->with('fromUnit')
+                ->get();
+
+            // IDs ya usados (para no repetir origen)
+            $usedUnitIds = $existingConversions->pluck('from_unit_id')->toArray();
 
             return view('admin.material-conversions.create', compact(
                 'material',
                 'purchaseUnits',
-                'usedUnitIds'
+                'usedUnitIds',
+                'consumptionUnit',
+                'existingConversions'
             ));
         } catch (\Exception $e) {
             Log::error('Error al cargar formulario de conversión: ' . $e->getMessage(), [
@@ -135,8 +171,8 @@ class MaterialUnitConversionController extends Controller
                 'ip' => $request->ip(),
             ]);
 
-            return redirect()->route('admin.material-conversions.index', $material->id)
-                ->with('success', 'Conversión creada exitosamente');
+            return redirect()->route('admin.material-conversions.create', $material->id)
+                ->with('success', 'Conversión guardada. Ahora puede agregar otra referencia (ej. Caja).');
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -167,17 +203,28 @@ class MaterialUnitConversionController extends Controller
             }
 
             $material = Material::where('activo', true)
-                ->with(['category', 'baseUnit'])
+                ->with(['category', 'baseUnit', 'consumptionUnit'])
                 ->findOrFail((int) $materialId);
 
             $conversion = MaterialUnitConversion::where('material_id', $material->id)
                 ->with(['fromUnit', 'toUnit'])
                 ->findOrFail((int) $id);
 
-            $baseUnitId = $material->base_unit_id;
+            // Determinar unidad de consumo
+            $consumptionUnit = $material->consumptionUnit
+                ?? $material->baseUnit; // Fallback a la unidad base
 
-            // Solo unidades de compra compatibles
-            $purchaseUnits = Unit::getPurchaseUnitsFor($baseUnitId);
+            // Unidades de compra compatibles
+            $purchaseUnits = Unit::where('activo', true)
+                ->where(function ($query) use ($consumptionUnit) {
+                    $query->where('compatible_base_unit_id', $consumptionUnit?->id)
+                        ->orWhereNull('compatible_base_unit_id');
+                })
+                ->where('id', '!=', $material->base_unit_id)
+                ->whereIn('unit_type', ['logistic', 'metric_pack'])
+                ->orderBy('unit_type')
+                ->orderBy('name')
+                ->get();
 
             // Unidades ya usadas (excepto la actual)
             $usedUnitIds = MaterialUnitConversion::where('material_id', $material->id)
@@ -189,7 +236,8 @@ class MaterialUnitConversionController extends Controller
                 'material',
                 'conversion',
                 'purchaseUnits',
-                'usedUnitIds'
+                'usedUnitIds',
+                'consumptionUnit'
             ));
         } catch (\Exception $e) {
             Log::error('Error al cargar conversión para editar: ' . $e->getMessage(), [

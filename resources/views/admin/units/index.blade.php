@@ -54,10 +54,14 @@
                                     <td>{{ $unit->name }}</td>
                                     <td><code>{{ $unit->symbol }}</code></td>
                                     <td>
-                                        @if ($unit->is_base)
-                                            <span class="badge badge-info">Base (Consumo)</span>
+                                        @if ($unit->unit_type)
+                                            <span class="badge badge-{{ $unit->unit_type->badgeColor() }}"
+                                                title="{{ $unit->unit_type->description() }}">
+                                                <i class="fas {{ $unit->unit_type->icon() }} mr-1"></i>
+                                                {{ $unit->unit_type->label() }}
+                                            </span>
                                         @else
-                                            <span class="badge badge-secondary">Compra</span>
+                                            <span class="badge badge-secondary">Sin tipo</span>
                                         @endif
                                     </td>
                                     <td>

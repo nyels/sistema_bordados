@@ -40,10 +40,10 @@
                     </nav>
                 </div>
                 <div class="col-md-4 text-right">
-                    <span class="badge badge-info">
+                    <span class="badge badge-success">
                         <i class="fas fa-ruler"></i>
-                        Unidad Base: <strong>{{ $material->category->baseUnit->name ?? 'N/A' }}</strong>
-                        ({{ $material->category->baseUnit->symbol ?? '' }})
+                        Unidad de Compra: <strong>{{ $material->baseUnit->name ?? 'N/A' }}</strong>
+                        ({{ $material->baseUnit->symbol ?? '' }})
                     </span>
                 </div>
             </div>
@@ -74,10 +74,11 @@
             <div class="alert alert-info">
                 <i class="fas fa-info-circle"></i>
                 <strong>¿Qué son las conversiones?</strong><br>
-                Permiten registrar compras en unidades diferentes a la unidad base de inventario.
+                Permiten calcular cuántas unidades de <strong>consumo</strong> se obtienen por cada unidad de
+                <strong>compra</strong>.
                 <br>
                 <small>
-                    Ejemplo: Compras <strong>1 Rollo</strong> → Se registran <strong>50 Metros</strong> en inventario.
+                    Ejemplo: <strong>1 Cono</strong> (compra) → <strong>5000 Metros</strong> (consumo) en inventario.
                 </small>
             </div>
 

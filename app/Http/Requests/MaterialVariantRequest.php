@@ -39,7 +39,7 @@ class MaterialVariantRequest extends FormRequest
                 'nullable',
                 'string',
                 'max:50',
-                'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-\_\#\/]+$/u',
+                'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-\_\#\/\(\)]+$/u',
             ],
             'sku' => [
                 'required',

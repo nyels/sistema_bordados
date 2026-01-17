@@ -67,16 +67,16 @@
                             <label>SKU <span class="text-danger">*</span></label>
                             <input type="text" name="sku" class="form-control @error('sku') is-invalid @enderror"
                                 value="{{ old('sku', $suggestedSku) }}" placeholder="Ej: TEL-MANT-001" maxlength="30"
-                                style="text-transform: uppercase;" required>
+                                style="text-transform: uppercase; background-color: #e9ecef;" readonly required>
                             @error('sku')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                             <small class="form-text text-muted">
-                                Código único. Solo mayúsculas, números y guiones.
+                                <i class="fas fa-magic"></i> Generado automáticamente
                             </small>
                         </div>
 
-                        @if ($material->category->has_color ?? false)
+                        @if ($material->has_color)
                             <div class="form-group">
                                 <label>Color</label>
                                 <input type="text" name="color"
@@ -93,7 +93,7 @@
                             <input type="hidden" name="color" value="">
                             <div class="alert alert-info">
                                 <i class="fas fa-info-circle"></i>
-                                Esta categoría no maneja variantes de color.
+                                Este material no maneja variantes de color.
                             </div>
                         @endif
                     </div>
@@ -115,7 +115,7 @@
                                     required>
                                 <div class="input-group-append">
                                     <span class="input-group-text">
-                                        {{ $material->category->baseUnit->symbol ?? 'unidad' }}
+                                        {{ $material->baseUnit->symbol ?? 'unidad' }}
                                     </span>
                                 </div>
                                 @error('min_stock_alert')
@@ -134,8 +134,8 @@
                                 <small>
                                     <strong>Material:</strong> {{ $material->name }}<br>
                                     <strong>Categoría:</strong> {{ $material->category->name ?? 'N/A' }}<br>
-                                    <strong>Unidad:</strong> {{ $material->category->baseUnit->name ?? 'N/A' }}
-                                    ({{ $material->category->baseUnit->symbol ?? '' }})<br>
+                                    <strong>Unidad:</strong> {{ $material->baseUnit->name ?? 'N/A' }}
+                                    ({{ $material->baseUnit->symbol ?? '' }})<br>
                                     @if ($material->composition)
                                         <strong>Composición:</strong> {{ $material->composition }}
                                     @endif

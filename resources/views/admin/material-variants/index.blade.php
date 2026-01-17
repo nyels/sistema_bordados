@@ -40,9 +40,9 @@
                     </nav>
                 </div>
                 <div class="col-md-4 text-right">
-                    <span class="badge badge-secondary">
+                    <span class="badge badge-secondary" style="font-size: 1rem; padding: 5px 10px;">
                         <i class="fas fa-ruler"></i>
-                        Unidad: {{ $material->category->baseUnit->symbol ?? 'N/A' }}
+                        {{ $material->baseUnit->name ?? 'N/A' }} ({{ $material->baseUnit->symbol ?? 'N/A' }})
                     </span>
                     @if ($material->composition)
                         <span class="badge badge-info">
@@ -114,11 +114,22 @@
                                 </td>
                                 <td class="text-right">
                                     <strong>{{ number_format($variant->current_stock, 2) }}</strong>
-                                    <small class="text-muted">{{ $material->category->baseUnit->symbol ?? '' }}</small>
+                                    <small class="text-muted">{{ $material->baseUnit->symbol ?? '' }}</small>
+
+                                    {{-- Mostrar equivalencias si existen conversiones --}}
+                                    @foreach ($material->unitConversions as $conversion)
+                                        @if ($variant->current_stock >= $conversion->conversion_factor / 10)
+                                            <div class="small text-info mt-1" style="font-size: 0.75rem; line-height: 1.1;">
+                                                <i class="fas fa-equals" style="font-size: 0.6rem;"></i>
+                                                {{ number_format($variant->current_stock / $conversion->conversion_factor, 1) }}
+                                                {{ $conversion->fromUnit->name ?? 'Unid' }}
+                                            </div>
+                                        @endif
+                                    @endforeach
                                 </td>
                                 <td class="text-right">
                                     {{ number_format($variant->min_stock_alert, 2) }}
-                                    <small class="text-muted">{{ $material->category->baseUnit->symbol ?? '' }}</small>
+                                    <small class="text-muted">{{ $material->baseUnit->symbol ?? '' }}</small>
                                 </td>
                                 <td class="text-right">
                                     ${{ number_format($variant->average_cost, 2) }}
@@ -170,7 +181,7 @@
                                 <th colspan="3" class="text-right">TOTALES:</th>
                                 <th class="text-right">
                                     {{ number_format($variants->sum('current_stock'), 2) }}
-                                    <small>{{ $material->category->baseUnit->symbol ?? '' }}</small>
+                                    <small>{{ $material->baseUnit->symbol ?? '' }}</small>
                                 </th>
                                 <th></th>
                                 <th></th>

@@ -29,7 +29,7 @@ class MaterialCategoryRequest extends FormRequest
                 'nullable',
                 'string',
                 'max:500',
-                'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\.\,\-\_\(\)]+$/u',
+                'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\.\,\-\_\(\)\:]+$/u',
             ],
         ];
     }

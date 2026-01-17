@@ -37,17 +37,33 @@ class Unit extends Model
         'name',
         'slug',
         'symbol',
-        'is_base',              // @deprecated - mantener por compatibilidad
-        'unit_type',            // Nuevo: fuente de verdad semántica
-        'compatible_base_unit_id',
+        'is_base',                      // @deprecated - mantener por compatibilidad
+        'unit_type',                    // Fuente de verdad semántica
+        'compatible_base_unit_id',      // FK → unidad canonical compatible
+        'default_conversion_factor',    // Factor predeterminado para metric_pack
+        'sort_order',
         'activo',
     ];
 
     protected $casts = [
-        'is_base' => 'boolean', // @deprecated
+        'is_base' => 'boolean',                     // @deprecated
         'unit_type' => UnitType::class,
+        'default_conversion_factor' => 'decimal:4',
         'activo' => 'boolean',
     ];
+
+    /*
+    |--------------------------------------------------------------------------
+    | BOOT
+    |--------------------------------------------------------------------------
+    */
+
+    /*
+    |--------------------------------------------------------------------------
+    | CONSTANTES DE SISTEMA
+    |--------------------------------------------------------------------------
+    */
+    public const SYSTEM_UNITS = ['metro', 'pieza', 'litro', 'mililitro', 'gramo', 'kilogramo', 'minuto'];
 
     /*
     |--------------------------------------------------------------------------
@@ -71,6 +87,42 @@ class Unit extends Model
         static::updating(function (self $model): void {
             if ($model->isDirty('name')) {
                 $model->slug = Str::slug($model->name);
+            }
+
+            // PROTECCIÓN DE SISTEMA: Impedir modificación de unidades base
+            if ($model->isSystemUnit()) {
+                // Permitir solo cambiar el estado 'activo' si fuera absolutamente necesario (opcional),
+                // pero el requerimiento dice "no puedan ser cambiadas". Bloqueamos todo cambio estructural.
+                // Si se intenta cambiar nombre, simbolo, tipo, o factores clave:
+                if ($model->isDirty(['name', 'symbol', 'is_base', 'unit_type', 'compatible_base_unit_id', 'default_conversion_factor'])) {
+                    throw new \Exception("ACCIÓN BLOQUEADA: La unidad '{$model->name}' es fundamental para el sistema y no puede ser modificada.");
+                }
+            }
+        });
+
+        static::deleting(function (self $model): void {
+            // PROTECCIÓN DE SISTEMA: Impedir eliminación de unidades base
+            if ($model->isSystemUnit()) {
+                throw new \Exception("ACCIÓN BLOQUEADA: La unidad '{$model->name}' es fundamental para el sistema y no puede ser eliminada.");
+            }
+        });
+
+        static::saving(function (self $model): void {
+            // Regla de negocio para determinar el tipo semántico
+            if ($model->is_base) {
+                // Si es base (marcada como consumo en la UI) -> Canonical
+                $model->unit_type = UnitType::CANONICAL;
+                $model->compatible_base_unit_id = null;
+            } else {
+                // Si no es base, solo aplicamos la lógica automática si el unit_type es nulo
+                // Esto permite forzar 'logistic' vía controlador o tinker aunque tenga compatibilidad
+                if (empty($model->unit_type)) {
+                    if (!empty($model->compatible_base_unit_id)) {
+                        $model->unit_type = UnitType::METRIC_PACK;
+                    } else {
+                        $model->unit_type = UnitType::LOGISTIC;
+                    }
+                }
             }
         });
     }
@@ -234,6 +286,15 @@ class Unit extends Model
     public function canBeConversionTarget(): bool
     {
         return $this->unit_type?->canBeConversionTarget() ?? false;
+    }
+
+    /**
+     * Verificar si es una unidad protegida del sistema (Metro, Pieza, etc).
+     */
+    public function isSystemUnit(): bool
+    {
+        // Se normaliza el slug para comparación segura
+        return in_array(Str::slug($this->name), self::SYSTEM_UNITS);
     }
 
     /*
