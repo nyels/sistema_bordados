@@ -446,7 +446,7 @@ return [
         [
             'text' => 'Catálogos',
             'icon' => 'fas fa-fw fa-database',
-            'active' => ['attributes*', 'attribute-values*', 'estados*', 'giros*', 'recomendaciones*', 'tipos_aplicacion*', 'admin/units*'],
+            'active' => ['attributes*', 'attribute-values*', 'estados*', 'giros*', 'recomendaciones*', 'tipos_aplicacion*'],
             'submenu' => [
 
                 [

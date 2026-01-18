@@ -39,9 +39,9 @@
                         <label for="status_filter">Estado</label>
                         <select class="form-control select2" id="status_filter" style="width: 100%;">
                             <option value="">Todos los estados</option>
-                            <option value="active">Activo</option>
-                            <option value="draft">Borrador</option>
-                            <option value="discontinued">Descontinuado</option>
+                            <option value="Activo">Activo</option>
+                            <option value="Borrador">Borrador</option>
+                            <option value="Descontinuado">Descontinuado</option>
                         </select>
                     </div>
                 </div>
@@ -156,10 +156,16 @@
                                             @endif
 
                                             @if ($product->canDelete())
-                                                <a href="{{ route('admin.products.confirm_delete', $product->id) }}"
-                                                    class="btn btn-danger btn-sm" title="Eliminar">
-                                                    <i class="fas fa-trash"></i>
-                                                </a>
+                                                <form action="{{ route('admin.products.destroy', $product->id) }}"
+                                                    method="POST" class="d-inline"
+                                                    data-confirm="¿Eliminar este producto permanentemente?">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-danger btn-sm"
+                                                        title="Eliminar">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
                                             @endif
                                         </div>
                                     </td>

@@ -76,6 +76,8 @@ class ProduccionController extends Controller
                 $file = $request->file('file');
                 $path = $file->store('exports', 'public'); // Guardamos en la carpeta 'exports'
 
+                Log::info('Archivo de producción subido', ['original_name' => $file->getClientOriginalName(), 'stored_path' => $path]);
+
                 // Agregamos la información del archivo a los datos
                 $data['file_path'] = $path;
                 $data['file_name'] = $file->getClientOriginalName();
@@ -176,6 +178,8 @@ class ProduccionController extends Controller
                 // Guardar nuevo archivo
                 $file = $request->file('file');
                 $path = $file->store('exports', 'public');
+
+                Log::info('Archivo de producción actualizado', ['id' => $id, 'new_path' => $path]);
 
                 $data['file_path'] = $path;
                 $data['file_name'] = $file->getClientOriginalName();
@@ -334,23 +338,49 @@ class ProduccionController extends Controller
     /**
      * Descarga el archivo de la producción.
      */
+    /**
+     * Descarga el archivo de producción de forma directa y segura.
+     * 
+     * @param int $id
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
     public function download($id)
     {
-        try {
-            $export = DesignExport::findOrFail($id);
+        $export = DesignExport::findOrFail($id);
 
-            // Verificar que existe el archivo
-            if (!$export->file_path || !Storage::disk('public')->exists($export->file_path)) {
-                return back()->with('error', 'El archivo no existe o fue eliminado.');
-            }
+        // 1. Resolver ruta absoluta física
+        // Evitamos el facade Storage para no depender de configuraciones de discos virtuales
+        // DB path: exports/2026/01/archivo.pes
+        $relativePath = ltrim($export->file_path, '/');
+        $absolutePath = storage_path("app/public/{$relativePath}");
 
-            $filePath = Storage::disk('public')->path($export->file_path);
-            $fileName = $export->file_name ?: basename($export->file_path);
-
-            return response()->download($filePath, $fileName);
-        } catch (\Exception $e) {
-            Log::error('Error al descargar archivo de producción: ' . $e->getMessage());
-            return back()->with('error', 'Error al descargar el archivo: ' . $e->getMessage());
+        // 2. Validación estricta de existencia
+        if (!file_exists($absolutePath)) {
+            Log::error("Download failed 404: Path not found", ['path' => $absolutePath]);
+            abort(404, 'File not found on server storage.');
         }
+
+        // 3. Limpieza de buffers (CRÍTICO)
+        // Elimina cualquier caracter invisible (espacios, saltos de línea) prevenientes de includes
+        // que corrompen el binario y causan que el navegador lo detecte como texto/html
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        // 4. Preparar nombre y headers
+        // ASCII mapping for safe Content-Disposition
+        $filename = \Illuminate\Support\Str::ascii($export->file_name ?: basename($absolutePath));
+
+        $headers = [
+            'Content-Type' => 'application/octet-stream',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Length' => filesize($absolutePath),
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+        ];
+
+        // 5. Retorno directo de archivo
+        return response()->download($absolutePath, $filename, $headers);
     }
 }

@@ -22,6 +22,10 @@ class MaterialCategoryController extends Controller
                 ->ordered()
                 ->get();
 
+            if (request()->ajax()) {
+                return view('admin.material-categories.partials.table', compact('categories'));
+            }
+
             return view('admin.material-categories.index', compact('categories'));
         } catch (\Exception $e) {
             Log::error('Error al listar categorías de materiales: ' . $e->getMessage(), [
@@ -37,7 +41,10 @@ class MaterialCategoryController extends Controller
     public function create()
     {
         try {
-            return view('admin.material-categories.create');
+            // Cargar unidades de inventario (canonical) para el selector
+            $inventoryUnits = Unit::active()->canonical()->ordered()->get();
+
+            return view('admin.material-categories.create', compact('inventoryUnits'));
         } catch (\Exception $e) {
             Log::error('Error al cargar formulario de categoría: ' . $e->getMessage());
             return redirect()->route('material-categories.index')
@@ -56,6 +63,13 @@ class MaterialCategoryController extends Controller
             $category->description = $request->filled('description')
                 ? trim($request->description)
                 : null;
+
+            // Nuevos campos UX V2
+            $category->default_inventory_unit_id = $request->filled('default_inventory_unit_id')
+                ? (int) $request->default_inventory_unit_id
+                : null;
+            $category->allow_unit_override = $request->boolean('allow_unit_override', true);
+
             $category->activo = true;
             $category->save();
 
@@ -64,6 +78,7 @@ class MaterialCategoryController extends Controller
             Log::info('Categoría de material creada', [
                 'category_id' => $category->id,
                 'name' => $category->name,
+                'default_inventory_unit_id' => $category->default_inventory_unit_id,
                 'user_id' => Auth::id(),
             ]);
 
@@ -90,9 +105,14 @@ class MaterialCategoryController extends Controller
                     ->with('error', 'Categoría no válida');
             }
 
-            $category = MaterialCategory::where('activo', true)->findOrFail((int) $id);
+            $category = MaterialCategory::where('activo', true)
+                ->with(['allowedUnits', 'defaultInventoryUnit'])
+                ->findOrFail((int) $id);
 
-            return view('admin.material-categories.edit', compact('category'));
+            // Cargar unidades de inventario (canonical) para el selector
+            $inventoryUnits = Unit::active()->canonical()->ordered()->get();
+
+            return view('admin.material-categories.edit', compact('category', 'inventoryUnits'));
         } catch (\Exception $e) {
             Log::error('Error al cargar categoría para editar: ' . $e->getMessage());
             return redirect()->route('admin.material-categories.index')
@@ -118,6 +138,12 @@ class MaterialCategoryController extends Controller
                 ? trim($request->description)
                 : null;
 
+            // Nuevos campos UX V2
+            $category->default_inventory_unit_id = $request->filled('default_inventory_unit_id')
+                ? (int) $request->default_inventory_unit_id
+                : null;
+            $category->allow_unit_override = $request->boolean('allow_unit_override', true);
+
             if (!$category->isDirty()) {
                 return redirect()->route('admin.material-categories.index')
                     ->with('info', 'No se realizaron cambios');
@@ -130,6 +156,7 @@ class MaterialCategoryController extends Controller
             Log::info('Categoría de material actualizada', [
                 'category_id' => $category->id,
                 'name' => $category->name,
+                'default_inventory_unit_id' => $category->default_inventory_unit_id,
                 'user_id' => Auth::id(),
             ]);
 

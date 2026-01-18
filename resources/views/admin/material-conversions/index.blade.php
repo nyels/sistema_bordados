@@ -91,6 +91,7 @@
                         <tr>
                             <th style="width: 50px;">#</th>
                             <th>Unidad de Compra</th>
+                            <th>Referencia/Etiqueta</th>
                             <th class="text-center" style="width: 80px;"><i class="fas fa-arrow-right"></i></th>
                             <th>Unidad de Inventario</th>
                             <th class="text-center">Factor</th>
@@ -108,6 +109,25 @@
                                     </span>
                                     <small class="text-muted">({{ $conversion->fromUnit->symbol ?? '' }})</small>
                                 </td>
+                                <td class="align-middle">
+                                    @if ($conversion->label)
+                                        <span class="badge badge-light border">{{ $conversion->label }}</span>
+                                    @else
+                                        <small class="text-muted italic">Sin etiqueta</small>
+                                    @endif
+
+                                    @if ($conversion->intermediate_qty)
+                                        @php
+                                            $eachValue = $conversion->conversion_factor / $conversion->intermediate_qty;
+                                        @endphp
+                                        <br>
+                                        <small class="text-primary font-weight-bold">
+                                            <i class="fas fa-calculator"></i>
+                                            {{ number_format($conversion->intermediate_qty, 0) }} pz &times;
+                                            {{ number_format($eachValue, 4) }} {{ $conversion->toUnit->symbol }}
+                                        </small>
+                                    @endif
+                                </td>
                                 <td class="align-middle text-center">
                                     <i class="fas fa-arrow-right text-primary"></i>
                                 </td>
@@ -118,7 +138,15 @@
                                     <small class="text-muted">({{ $conversion->toUnit->symbol ?? '' }})</small>
                                 </td>
                                 <td class="align-middle text-center">
-                                    <strong>{{ number_format($conversion->conversion_factor, 4) }}</strong>
+                                    @if ($conversion->intermediate_qty && $conversion->intermediate_qty > 0)
+                                        <strong>{{ number_format($conversion->conversion_factor / $conversion->intermediate_qty, 4) }}
+                                            {{ $conversion->toUnit->symbol }}</strong>
+                                        <br>
+                                        <small class="text-muted" style="font-size: 0.75em;">(x pz)</small>
+                                    @else
+                                        <strong>{{ number_format($conversion->conversion_factor, 4) }}
+                                            {{ $conversion->toUnit->symbol }}</strong>
+                                    @endif
                                 </td>
                                 <td class="align-middle">
                                     <code>1 {{ $conversion->fromUnit->name ?? '' }} =

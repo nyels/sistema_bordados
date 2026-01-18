@@ -301,11 +301,20 @@ class DesignExportController extends Controller
 
     public function download(DesignExport $export)
     {
+        Log::info('📥 Intento de descarga de exportación', [
+            'id' => $export->id,
+            'file_name' => $export->file_name,
+            'file_path' => $export->file_path,
+            'exists' => $export->file_path ? Storage::disk('public')->exists($export->file_path) : 'No file path'
+        ]);
+
         if (!$export->file_path || !Storage::disk('public')->exists($export->file_path)) {
-            return back()->with('error', 'Archivo no encontrado.');
+            Log::error('❌ Archivo de exportación no encontrado en disco', ['path' => $export->file_path]);
+            return back()->with('error', 'El archivo no existe o fue eliminado del almacenamiento.');
         }
 
-        return response()->download(Storage::disk('public')->path($export->file_path), $export->file_name);
+        // Use Storage::download to handle different drivers automatically
+        return Storage::disk('public')->download($export->file_path, $export->file_name);
     }
 
     // =====================================================================

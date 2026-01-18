@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
+use App\Models\MaterialVariant;
 
 class ProductService
 {
@@ -34,6 +35,11 @@ class ProductService
                 // Pricing Fields
                 'base_price' => $data['base_price'] ?? null,
                 'production_cost' => $data['production_cost'] ?? null,
+                'materials_cost' => $data['materials_cost'] ?? null,
+                'embroidery_cost' => $data['embroidery_cost'] ?? null,
+                'labor_cost' => $data['labor_cost'] ?? null,
+                'extra_services_cost' => $data['extra_services_cost'] ?? null,
+                'suggested_price' => $data['suggested_price'] ?? null,
                 'profit_margin' => $data['profit_margin'] ?? null,
                 'production_lead_time' => $data['production_lead_time'] ?? null,
             ]);
@@ -53,9 +59,43 @@ class ProductService
                 $this->syncMaterials($product, $data['materials']);
             }
 
-            // Crear variante inicial si se proporcionó
+            // Crear variante inicial si se proporcionó (Legacy)
             if (!empty($data['initial_variant'])) {
                 $this->createVariant($product, $data['initial_variant']);
+            }
+
+            // CREAR VARIANTES (Wizard Step 2)
+            if (!empty($data['variants']) && is_array($data['variants'])) {
+                // Pre-fetch attribute IDs to avoid queries inside loop
+                $tallaAttr = \App\Models\Attribute::where('slug', 'talla')->value('id');
+                $colorAttr = \App\Models\Attribute::where('slug', 'color')->value('id');
+
+                foreach ($data['variants'] as $v) {
+                    $variantData = [
+                        'sku_variant' => $v['sku_variant'] ?? $v['sku'], // Frontend sends 'sku'
+                        'price' => $data['base_price'] ?? 0,
+                        'stock_alert' => 5,
+                        'attribute_values' => []
+                    ];
+
+                    // Map Attributes
+                    if (!empty($v['size_id']) && $tallaAttr) {
+                        $variantData['attribute_values'][$v['size_id']] = $tallaAttr;
+                    }
+                    if (!empty($v['color_id']) && $colorAttr) {
+                        $variantData['attribute_values'][$v['color_id']] = $colorAttr;
+                    }
+
+                    // Create with unique SKU check logic handled inside createVariant potentially, 
+                    // but here we trust the backend unique check or let it fail if duplicate
+                    try {
+                        $this->createVariant($product, $variantData);
+                    } catch (\Exception $e) {
+                        // Log duplicate SKU error but don't fail entire transaction? 
+                        // Better to fail so user knows.
+                        throw $e;
+                    }
+                }
             }
 
             Log::info('Producto creado', [
@@ -83,10 +123,22 @@ class ProductService
                 'description' => $data['description'] ?? null,
                 'specifications' => $specifications,
                 'status' => $data['status'] ?? $product->status,
+                'base_price' => $data['base_price'] ?? $product->base_price,
+                'production_cost' => $data['production_cost'] ?? $product->production_cost,
+                'materials_cost' => $data['materials_cost'] ?? $product->materials_cost,
+                'embroidery_cost' => $data['embroidery_cost'] ?? $product->embroidery_cost,
+                'labor_cost' => $data['labor_cost'] ?? $product->labor_cost,
+                'extra_services_cost' => $data['extra_services_cost'] ?? $product->extra_services_cost,
+                'suggested_price' => $data['suggested_price'] ?? $product->suggested_price,
+                'profit_margin' => $data['profit_margin'] ?? $product->profit_margin,
+                'production_lead_time' => $data['production_lead_time'] ?? $product->production_lead_time,
             ]);
 
-            // Sincronizar diseños
-            if (isset($data['designs'])) {
+            // Sincronizar diseños (Refactor Multi-Posición)
+            if (isset($data['designs_list'])) {
+                $this->syncDesignsList($product, $data['designs_list']);
+            } elseif (isset($data['designs'])) {
+                // Fallback Legacy
                 $this->syncDesigns($product, $data['designs'], $data['design_applications'] ?? []);
             }
 
@@ -318,15 +370,38 @@ class ProductService
     /**
      * Sincronizar diseños con application_type
      */
+    /**
+     * Sincronizar diseños con soporte para múltiples posiciones (Architecture Fix)
+     */
+    protected function syncDesignsList(Product $product, array $designsList): void
+    {
+        $product->designs()->detach();
+
+        foreach ($designsList as $item) {
+            $product->designs()->attach($item['design_id'], [
+                'application_type_id' => $item['application_type_id']
+            ]);
+        }
+    }
+
+    /**
+     * Sincronizar diseños con application_type (Legacy Wrapper)
+     */
     protected function syncDesigns(Product $product, array $designIds, array $applications = []): void
     {
         $syncData = [];
         foreach ($designIds as $designId) {
-            $syncData[$designId] = [
-                'application_type_id' => $applications[$designId] ?? null,
+            $appTypeId = $applications[$designId] ?? null;
+            if (!$appTypeId) {
+                continue;
+            }
+            // Construct list format for the new method
+            $syncData[] = [
+                'design_id' => $designId,
+                'application_type_id' => $appTypeId
             ];
         }
-        $product->designs()->sync($syncData);
+        $this->syncDesignsList($product, $syncData);
     }
 
     /**
@@ -372,6 +447,7 @@ class ProductService
 
             $syncData[$materialVariantId] = [
                 'quantity' => (float) $material['quantity'],
+                'unit_cost' => (float) ($material['price'] ?? $this->getMaterialSnapshotCost($materialVariantId)),
                 'is_primary' => !empty($material['is_primary']),
                 'notes' => $material['notes'] ?? null,
                 'active_for_variants' => $activeForVariants,
@@ -379,5 +455,16 @@ class ProductService
         }
 
         $product->materials()->sync($syncData);
+    }
+
+    /**
+     * Get the current cost of a material variant for snapshot
+     */
+    protected function getMaterialSnapshotCost(int $variantId): float
+    {
+        $variant = MaterialVariant::find($variantId);
+        if (!$variant) return 0;
+
+        return (float) ($variant->average_cost > 0 ? $variant->average_cost : $variant->last_purchase_cost);
     }
 }

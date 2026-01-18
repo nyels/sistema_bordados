@@ -15,35 +15,35 @@
                     DETALLE DEL PRODUCTO: {{ $product->name }}
                 </h3>
                 <div class="btn-group">
-                    <a href="{{ route('products.index') }}" class="btn btn-default btn-sm">
+                    <a href="{{ route('admin.products.index') }}" class="btn btn-default btn-sm">
                         <i class="fas fa-arrow-left mr-1"></i> Volver
                     </a>
-                    <a href="{{ route('products.edit', $product->id) }}" class="btn btn-warning btn-sm">
+                    <a href="{{ route('admin.products.edit', $product->id) }}" class="btn btn-warning btn-sm">
                         <i class="fas fa-edit mr-1"></i> Editar
                     </a>
                     @if ($product->canDelete())
-                        <a href="{{ route('products.confirm_delete', $product->id) }}" class="btn btn-danger btn-sm">
+                        <a href="{{ route('admin.products.confirm_delete', $product->id) }}" class="btn btn-danger btn-sm">
                             <i class="fas fa-trash mr-1"></i> Eliminar
                         </a>
                     @endif
                     @if ($product->status === 'active')
-                        <form action="{{ route('products.toggle_status', $product->id) }}" method="POST" class="d-inline"
-                            data-confirm="¿Cambiar a descontinuado?">
+                        <form action="{{ route('admin.products.toggle_status', $product->id) }}" method="POST"
+                            class="d-inline" data-confirm="¿Cambiar a descontinuado?">
                             @csrf
                             <button type="submit" class="btn btn-secondary btn-sm">
                                 <i class="fas fa-ban mr-1"></i> Descontinuar
                             </button>
                         </form>
                     @elseif($product->status === 'discontinued')
-                        <form action="{{ route('products.toggle_status', $product->id) }}" method="POST" class="d-inline"
-                            data-confirm="¿Activar producto?">
+                        <form action="{{ route('admin.products.toggle_status', $product->id) }}" method="POST"
+                            class="d-inline" data-confirm="¿Activar producto?">
                             @csrf
                             <button type="submit" class="btn btn-success btn-sm">
                                 <i class="fas fa-check mr-1"></i> Activar
                             </button>
                         </form>
                     @endif
-                    <form action="{{ route('products.duplicate', $product->id) }}" method="POST" class="d-inline"
+                    <form action="{{ route('admin.products.duplicate', $product->id) }}" method="POST" class="d-inline"
                         data-confirm="¿Duplicar este producto?">
                         @csrf
                         <button type="submit" class="btn btn-info btn-sm">
@@ -274,7 +274,7 @@
                     <div class="card card-outline card-primary">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h3 class="card-title">Variantes del Producto</h3>
-                            <a href="{{ route('products.variants.create', $product->id) }}"
+                            <a href="{{ route('admin.products.variants.create', $product->id) }}"
                                 class="btn btn-success btn-sm">
                                 <i class="fas fa-plus mr-1"></i> Nueva Variante
                             </a>
@@ -333,12 +333,12 @@
                                                             <a href="#" class="btn btn-info" title="Ver">
                                                                 <i class="fas fa-eye"></i>
                                                             </a>
-                                                            <a href="{{ route('products.variants.edit', ['productId' => $product->id, 'variantId' => $variant->id]) }}"
+                                                            <a href="{{ route('admin.products.variants.edit', ['product' => $product->id, 'variant' => $variant->id]) }}"
                                                                 class="btn btn-warning" title="Editar">
                                                                 <i class="fas fa-edit"></i>
                                                             </a>
                                                             <form
-                                                                action="{{ route('products.variants.destroy', ['productId' => $product->id, 'variantId' => $variant->id]) }}"
+                                                                action="{{ route('admin.products.variants.destroy', ['product' => $product->id, 'variant' => $variant->id]) }}"
                                                                 method="POST" class="d-inline"
                                                                 data-confirm="¿Eliminar esta variante?">
                                                                 @csrf
@@ -360,7 +360,7 @@
                                     <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
                                     <h5 class="text-muted">No hay variantes registradas</h5>
                                     <p class="text-muted">Crea la primera variante para este producto</p>
-                                    <a href="{{ route('products.variants.create', $product->id) }}"
+                                    <a href="{{ route('admin.products.variants.create', $product->id) }}"
                                         class="btn btn-primary">
                                         <i class="fas fa-plus mr-1"></i> Crear Primera Variante
                                     </a>
@@ -413,17 +413,17 @@
         <div class="card-footer" bis_skin_checked="1">
             <div class="row">
                 <div class="col-md-6">
-                    <a href="{{ route('products.index') }}" class="btn btn-default">
+                    <a href="{{ route('admin.products.index') }}" class="btn btn-default">
                         <i class="fas fa-arrow-left mr-1"></i> Volver al Listado
                     </a>
                 </div>
                 <div class="col-md-6 text-right">
                     <div class="btn-group">
-                        <a href="{{ route('products.edit', $product->id) }}" class="btn btn-warning">
+                        <a href="{{ route('admin.products.edit', $product->id) }}" class="btn btn-warning">
                             <i class="fas fa-edit mr-1"></i> Editar Producto
                         </a>
                         @if ($product->canDelete())
-                            <a href="{{ route('products.confirm_delete', $product->id) }}" class="btn btn-danger">
+                            <a href="{{ route('admin.products.confirm_delete', $product->id) }}" class="btn btn-danger">
                                 <i class="fas fa-trash mr-1"></i> Eliminar Producto
                             </a>
                         @endif

@@ -114,25 +114,36 @@
                                 </td>
                                 <td class="text-right">
                                     <strong>{{ number_format($variant->current_stock, 2) }}</strong>
-                                    <small class="text-muted">{{ $material->baseUnit->symbol ?? '' }}</small>
+                                    <span
+                                        style="font-weight: 700; color: #333; font-size: 0.9rem; margin-left: 2px;">{{ $material->baseUnit->symbol ?? '' }}</span>
 
                                     {{-- Mostrar equivalencias si existen conversiones --}}
                                     @foreach ($material->unitConversions as $conversion)
                                         @if ($variant->current_stock >= $conversion->conversion_factor / 10)
-                                            <div class="small text-info mt-1" style="font-size: 0.75rem; line-height: 1.1;">
+                                            <div class="mt-1"
+                                                style="color: #444; font-weight: 700; font-size: 0.85rem; line-height: 1.2;">
                                                 <i class="fas fa-equals" style="font-size: 0.6rem;"></i>
                                                 {{ number_format($variant->current_stock / $conversion->conversion_factor, 1) }}
-                                                {{ $conversion->fromUnit->name ?? 'Unid' }}
+                                                @if ($conversion->label)
+                                                    {{ $conversion->label }}
+                                                @else
+                                                    {{ $conversion->fromUnit->name ?? 'Unid' }}
+                                                    @if (stripos($conversion->fromUnit->name ?? '', 'CONO') !== false)
+                                                        ({{ number_format($conversion->conversion_factor, 0) }}m)
+                                                    @endif
+                                                @endif
                                             </div>
                                         @endif
                                     @endforeach
                                 </td>
                                 <td class="text-right">
-                                    {{ number_format($variant->min_stock_alert, 2) }}
-                                    <small class="text-muted">{{ $material->baseUnit->symbol ?? '' }}</small>
+                                    <span
+                                        style="font-weight: 600;">{{ number_format($variant->min_stock_alert, 2) }}</span>
+                                    <span
+                                        style="font-weight: 600; color: #333; font-size: 0.9rem; margin-left: 2px;">{{ $material->baseUnit->symbol ?? '' }}</span>
                                 </td>
                                 <td class="text-right">
-                                    ${{ number_format($variant->average_cost, 2) }}
+                                    ${{ number_format($variant->average_cost, 6) }}
                                 </td>
                                 <td class="text-right">
                                     <strong>${{ number_format($variant->current_value, 2) }}</strong>
@@ -180,8 +191,9 @@
                             <tr>
                                 <th colspan="3" class="text-right">TOTALES:</th>
                                 <th class="text-right">
-                                    {{ number_format($variants->sum('current_stock'), 2) }}
-                                    <small>{{ $material->baseUnit->symbol ?? '' }}</small>
+                                    <strong>{{ number_format($variants->sum('current_stock'), 2) }}</strong>
+                                    <span
+                                        style="font-weight: 700; color: #333; font-size: 0.9rem; margin-left: 2px;">{{ $material->baseUnit->symbol ?? '' }}</span>
                                 </th>
                                 <th></th>
                                 <th></th>

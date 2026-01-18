@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 use App\Traits\HasActivityLog;
 use App\Enums\UnitType;
+use App\Enums\MeasurementFamily;
 
 /**
  * =============================================================================
@@ -39,6 +40,7 @@ class Unit extends Model
         'symbol',
         'is_base',                      // @deprecated - mantener por compatibilidad
         'unit_type',                    // Fuente de verdad semántica
+        'measurement_family',           // Familia de medición para filtrado semántico
         'compatible_base_unit_id',      // FK → unidad canonical compatible
         'default_conversion_factor',    // Factor predeterminado para metric_pack
         'sort_order',
@@ -48,6 +50,7 @@ class Unit extends Model
     protected $casts = [
         'is_base' => 'boolean',                     // @deprecated
         'unit_type' => UnitType::class,
+        'measurement_family' => MeasurementFamily::class,
         'default_conversion_factor' => 'decimal:4',
         'activo' => 'boolean',
     ];
@@ -204,6 +207,40 @@ class Unit extends Model
         return $query->where('compatible_base_unit_id', $baseUnitId);
     }
 
+    /**
+     * Filtrar por familia de medición compatible.
+     * Incluye siempre las unidades "universal".
+     *
+     * @param MeasurementFamily|string $family
+     */
+    public function scopeCompatibleWithFamily(Builder $query, MeasurementFamily|string $family): Builder
+    {
+        if (is_string($family)) {
+            $family = MeasurementFamily::tryFrom($family);
+        }
+
+        if (!$family) {
+            return $query;
+        }
+
+        $compatibleFamilies = MeasurementFamily::getCompatibleFamilies($family);
+        $familyValues = array_map(fn($f) => $f->value, $compatibleFamilies);
+
+        return $query->whereIn('measurement_family', $familyValues);
+    }
+
+    /**
+     * Filtrar por familia de medición exacta.
+     */
+    public function scopeOfFamily(Builder $query, MeasurementFamily|string $family): Builder
+    {
+        if (is_string($family)) {
+            $family = MeasurementFamily::tryFrom($family);
+        }
+
+        return $query->where('measurement_family', $family?->value);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | SCOPES - LEGACY (@deprecated)
@@ -295,6 +332,68 @@ class Unit extends Model
     {
         // Se normaliza el slug para comparación segura
         return in_array(Str::slug($this->name), self::SYSTEM_UNITS);
+    }
+
+    /**
+     * Verificar si la unidad está en uso por materiales o conversiones.
+     * Usado para bloqueo por uso real (no por tipo).
+     *
+     * @return array{in_use: bool, materials_count: int, conversions_count: int, categories_count: int}
+     */
+    public function getUsageInfo(): array
+    {
+        $materialsAsBase = Material::where('base_unit_id', $this->id)->where('activo', true)->count();
+        $materialsAsConsumption = Material::where('consumption_unit_id', $this->id)->where('activo', true)->count();
+        $conversionsFrom = MaterialUnitConversion::where('from_unit_id', $this->id)->count();
+        $conversionsTo = MaterialUnitConversion::where('to_unit_id', $this->id)->count();
+        $categoriesDefault = MaterialCategory::where('default_inventory_unit_id', $this->id)->count();
+        $categoriesAllowed = $this->categories()->count();
+
+        $totalMaterials = $materialsAsBase + $materialsAsConsumption;
+        $totalConversions = $conversionsFrom + $conversionsTo;
+
+        return [
+            'in_use' => ($totalMaterials + $totalConversions + $categoriesDefault) > 0,
+            'materials_count' => $totalMaterials,
+            'conversions_count' => $totalConversions,
+            'categories_count' => $categoriesAllowed,
+            'categories_default_count' => $categoriesDefault,
+        ];
+    }
+
+    /**
+     * ¿Está la unidad en uso?
+     */
+    public function isInUse(): bool
+    {
+        return $this->getUsageInfo()['in_use'];
+    }
+
+    /**
+     * ¿Puede eliminarse esta unidad?
+     * Solo se puede eliminar si: no es de sistema Y no está en uso
+     */
+    public function canBeDeleted(): bool
+    {
+        return !$this->isSystemUnit() && !$this->isInUse();
+    }
+
+    /**
+     * ¿Puede editarse esta unidad?
+     * Las unidades de sistema no pueden editarse.
+     * Las unidades en uso pueden editarse parcialmente (nombre, símbolo) pero no su tipo.
+     */
+    public function canBeEdited(): bool
+    {
+        return !$this->isSystemUnit();
+    }
+
+    /**
+     * ¿Puede cambiarse el tipo de esta unidad?
+     */
+    public function canChangeType(): bool
+    {
+        return !$this->isSystemUnit() && !$this->isInUse();
     }
 
     /*

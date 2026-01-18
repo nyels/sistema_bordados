@@ -200,7 +200,7 @@ class ProductController extends Controller
                 });*/
 
             // 4. Materiales (Familias) - Esto alimenta el primer Select
-            $materials = Material::with('category.baseUnit')
+            $materials = Material::with('baseUnit')  // baseUnit está en material, no en category
                 ->where('activo', true)
                 ->orderBy('name')
                 ->get();
@@ -236,6 +236,8 @@ class ProductController extends Controller
     public function store(StoreProductRequest $request)
     {
         try {
+            Log::info('Attempting to store product', ['data' => $request->all()]);
+            Log::info('Designs Payload:', ['d' => $request->input('embroideries_json')]);
             $validated = $request->validated();
 
             $product = $this->productService->createProduct($validated);
@@ -250,7 +252,125 @@ class ProductController extends Controller
 
             return redirect()->route('admin.products.create')
                 ->withInput()
-                ->with('error', 'Error al crear el producto. Intente nuevamente.');
+                ->with('error', 'Error al crear el producto: ' . $e->getMessage());
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | SAVE DRAFT (AJAX)
+    |--------------------------------------------------------------------------
+    */
+    public function storeDraft(Request $request)
+    {
+        try {
+            // Log::info('Saving Draft', $request->all());
+
+            // 1. Relajar validación para borrador
+            // Aceptamos datos parciales, pero necesitamos al menos los básicos para crear el registro
+            $validated = $request->validate([
+                'name' => 'required|string|min:3',
+                // Si no hay SKU, podríamos generar uno temporal, pero Step 1 lo pide.
+                // Lo hacemos 'nullable' y generamos si falta.
+                'sku' => 'nullable|string',
+                'product_category_id' => 'nullable|integer',
+                // JSONs
+                'materials_json' => 'nullable|json',
+                'extras_json' => 'nullable|json',
+                'embroideries_json' => 'nullable|json',
+                'variants_json' => 'nullable|json',
+                'financials_json' => 'nullable|json',
+            ]);
+
+            // 2. Preparar datos para el Service (similar a StoreProductRequest::prepareForValidation)
+            // Decodificar JSONs manualmente aquí porque no usamos el FormRequest
+            $data = [
+                'name' => $validated['name'],
+                'product_category_id' => $validated['product_category_id'] ?? 1, // Default a 1 o null
+                'sku' => $validated['sku'] ?? ('DRAFT-' . time()),
+                'description' => $request->input('description', ''),
+                'status' => 'draft',
+            ];
+
+            // Materials
+            if (!empty($validated['materials_json'])) {
+                $bomData = json_decode($validated['materials_json'], true);
+                if (is_array($bomData)) {
+                    $data['materials'] = array_map(function ($item) {
+                        return [
+                            'material_variant_id' => $item['id'] ?? null,
+                            'quantity' => $item['qty'] ?? 0,
+                            'is_primary' => $item['is_primary'] ?? false,
+                            'notes' => $item['notes'] ?? null,
+                            'scope' => $item['scope'] ?? 'global',
+                            'targets' => $item['targets'] ?? [],
+                        ];
+                    }, $bomData);
+                }
+            }
+
+            // Extras
+            if (!empty($validated['extras_json'])) {
+                $extrasData = json_decode($validated['extras_json'], true);
+                if (is_array($extrasData)) {
+                    $data['extras'] = array_column($extrasData, 'id');
+                }
+            }
+
+            // Designs
+            if (!empty($validated['embroideries_json'])) {
+                $designsData = json_decode($validated['embroideries_json'], true);
+                if (is_array($designsData)) {
+                    $designIds = [];
+                    $applications = [];
+                    foreach ($designsData as $d) {
+                        if (isset($d['id'])) {
+                            $designIds[] = $d['id'];
+                            if (isset($d['position_id'])) {
+                                $applications[$d['id']] = $d['position_id'];
+                            }
+                        }
+                    }
+                    $data['designs'] = $designIds;
+                    $data['design_applications'] = $applications;
+                }
+            }
+
+            // Variants
+            if (!empty($validated['variants_json'])) {
+                $data['variants'] = json_decode($validated['variants_json'], true);
+            }
+
+            // Financials
+            if (!empty($validated['financials_json'])) {
+                $finData = json_decode($validated['financials_json'], true);
+                if (is_array($finData)) {
+                    $data['base_price'] = $finData['price'] ?? 0;
+                    $data['production_cost'] = $finData['total_cost'] ?? 0;
+                    $data['profit_margin'] = $finData['margin'] ?? 0;
+                }
+            }
+
+            // 3. Crear Producto usando el Service
+            // Nota: ProductService::createProduct podría esperar arrays limpios.
+            // Aseguramos que 'status' => 'draft' sea respetado si el service lo permite.
+            // Si el service fuerza validaciones extra, podríamos necesitar un método createDraft específico.
+            // Por ahora intentamos usar createProduct asumiendo que es flexible o fallará controladamente.
+
+            $product = $this->productService->createProduct($data);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Borrador guardado exitosamente',
+                'product_id' => $product->id,
+                'redirect_url' => route('admin.products.edit', $product->id) // Para que el usuario pueda retomarlo
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error saving draft: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al guardar borrador: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -314,8 +434,8 @@ class ProductController extends Controller
 
             $categories = ProductCategory::active()->ordered()->get();
             $extras = ProductExtra::ordered()->get();
-            $designs = Design::with('category')->orderBy('name')->get();
-            $applicationTypes = Application_types::where('activo', true)->orderBy('nombre')->get();
+            $designs = Design::with('categories')->orderBy('name')->get();
+            $applicationTypes = Application_types::where('activo', true)->orderBy('nombre_aplicacion')->get();
             $attributes = Attribute::with('values')->orderBy('name')->get();
 
             return view('admin.products.edit', compact(
@@ -512,7 +632,7 @@ class ProductController extends Controller
         try {
             $product = Product::with(['category', 'designs'])->findOrFail((int) $productId);
             $attributes = Attribute::with('values')->orderBy('name')->get();
-            $applicationTypes = Application_types::where('activo', true)->orderBy('nombre')->get();
+            $applicationTypes = Application_types::where('activo', true)->orderBy('nombre_aplicacion')->get();
 
             // Obtener design exports de los diseños asignados
             $designExports = DesignExport::whereIn('design_id', $product->designs->pluck('id'))
@@ -582,7 +702,7 @@ class ProductController extends Controller
                 ->findOrFail((int) $variantId);
 
             $attributes = Attribute::with('values')->orderBy('name')->get();
-            $applicationTypes = Application_types::where('activo', true)->orderBy('nombre')->get();
+            $applicationTypes = Application_types::where('activo', true)->orderBy('nombre_aplicacion')->get();
 
             $designExports = DesignExport::whereIn('design_id', $product->designs->pluck('id'))
                 ->orWhereHas('designVariant', function ($q) use ($product) {
@@ -719,7 +839,7 @@ class ProductController extends Controller
     {
         $term = $request->get('q');
 
-        $materials = MaterialVariant::with(['material', 'material.category', 'material.category.baseUnit'])
+        $materials = MaterialVariant::with(['material.baseUnit'])  // baseUnit está en material
             ->whereHas('material', function ($q) use ($term) {
                 $q->where('name', 'like', "%{$term}%");
             })
@@ -729,12 +849,12 @@ class ProductController extends Controller
             ->get();
 
         $results = $materials->map(function ($variant) {
-            $unitSymbol = $variant->material->category->baseUnit->symbol ?? '';
+            $unitSymbol = $variant->material->baseUnit->symbol ?? '';
             return [
                 'id' => $variant->id,
                 'text' => $variant->display_name . " (Stock: {$variant->current_stock} {$unitSymbol})",
                 'sku' => $variant->sku,
-                'unit' => $variant->material->category->baseUnit->name ?? 'Unidad',
+                'unit' => $variant->material->baseUnit->name ?? 'Unidad',
                 'symbol' => $unitSymbol,
                 'cost' => $variant->average_cost > 0 ? $variant->average_cost : $variant->last_purchase_cost,
                 'stock' => $variant->current_stock
@@ -780,6 +900,10 @@ class ProductController extends Controller
                 'changes' => $changes
             ]);
         } catch (\Exception $e) {
+            Log::error('Error al validar precios de materiales: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all()
+            ]);
             return response()->json(['error' => 'Error al validar precios'], 500);
         }
     }

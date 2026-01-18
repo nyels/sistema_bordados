@@ -74,7 +74,7 @@
                             @enderror
                         </div>
 
-                        @if ($material->category->has_color ?? false)
+                        @if ($material->has_color)
                             <div class="form-group">
                                 <label>Color</label>
                                 <input type="text" name="color"
@@ -97,7 +97,7 @@
                                     max="999999" step="0.01" required>
                                 <div class="input-group-append">
                                     <span class="input-group-text">
-                                        {{ $material->category->baseUnit->symbol ?? 'unidad' }}
+                                        {{ $material->baseUnit->symbol ?? 'unid' }}
                                     </span>
                                 </div>
                                 @error('min_stock_alert')
@@ -125,7 +125,7 @@
                                             value="{{ number_format($variant->current_stock, 2) }}" disabled>
                                         <div class="input-group-append">
                                             <span class="input-group-text">
-                                                {{ $material->category->baseUnit->symbol ?? '' }}
+                                                {{ $material->baseUnit->symbol ?? '' }}
                                             </span>
                                         </div>
                                     </div>

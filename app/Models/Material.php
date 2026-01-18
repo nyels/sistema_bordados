@@ -54,15 +54,48 @@ class Material extends Model
                 $model->uuid = (string) Str::uuid();
             }
             if (empty($model->slug) && !empty($model->name)) {
-                $model->slug = Str::slug($model->name);
+                $model->slug = static::generateUniqueSlug($model->name);
             }
         });
 
         static::updating(function (self $model): void {
             if ($model->isDirty('name')) {
-                $model->slug = Str::slug($model->name);
+                $model->slug = static::generateUniqueSlug($model->name, $model->id);
             }
         });
+    }
+
+    /**
+     * Genera un slug único para el material.
+     * Si el slug base ya existe, agrega un sufijo numérico (-1, -2, etc.)
+     *
+     * @param string $name Nombre del material
+     * @param int|null $excludeId ID del material a excluir (para edición)
+     * @return string Slug único
+     */
+    public static function generateUniqueSlug(string $name, ?int $excludeId = null): string
+    {
+        $baseSlug = Str::slug($name);
+        $slug = $baseSlug;
+        $counter = 1;
+
+        // Buscar si el slug ya existe (excluyendo el material actual si es edición)
+        while (true) {
+            $query = static::where('slug', $slug);
+
+            if ($excludeId) {
+                $query->where('id', '!=', $excludeId);
+            }
+
+            if (!$query->exists()) {
+                break;
+            }
+
+            $slug = $baseSlug . '-' . $counter;
+            $counter++;
+        }
+
+        return $slug;
     }
 
     /*

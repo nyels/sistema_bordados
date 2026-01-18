@@ -19,8 +19,8 @@ use Illuminate\Support\Facades\Auth;
  * están permitidas para cada categoría de material.
  *
  * REGLAS DE NEGOCIO:
- * - Solo unidades con is_base = false (compra/empaque) pueden asignarse
- * - Cada categoría debe tener al menos 1 unidad asignada para permitir materiales
+ * - Se pueden asignar unidades de cualquier tipo (inventario, compra, presentación)
+ * - Una categoría puede tener 0 unidades (mostrará advertencia en UI)
  * - No se puede eliminar una unidad si hay materiales usándola como base
  *
  * @see \App\Models\MaterialCategory::allowedUnits()
@@ -37,17 +37,17 @@ class MaterialCategoryUnitController extends Controller
         try {
             // Categorías activas con conteo de unidades y materiales
             $categories = MaterialCategory::where('activo', true)
-                ->with(['allowedUnits' => fn($q) => $q->orderBy('name')])
+                ->with([
+                    'allowedUnits' => fn($q) => $q->orderBy('name'),
+                    'defaultInventoryUnit:id,name,symbol,measurement_family',
+                ])
                 ->withCount(['materials' => fn($q) => $q->where('activo', true)])
                 ->ordered()
                 ->get();
 
-            // Unidades disponibles para asignar (todas)
+            // Unidades disponibles para asignar (solo empaques/contenedores)
             $availableUnits = Unit::active()
-                ->where(function ($q) {
-                    $q->whereIn('unit_type', ['logistic', 'canonical', 'metric_pack'])
-                        ->orWhereNull('unit_type');
-                })
+                ->whereIn('unit_type', ['logistic', 'metric_pack'])
                 ->ordered()
                 ->get();
 
@@ -148,7 +148,7 @@ class MaterialCategoryUnitController extends Controller
      * Eliminar una unidad de una categoría.
      * Validaciones:
      * - No se puede eliminar si hay materiales activos usando esta unidad como base
-     * - Se recomienda mantener al menos 1 unidad por categoría
+     * - Se permite eliminar todas las unidades (la UI mostrará advertencia)
      */
     public function destroy(Request $request, $categoryId, $unitId)
     {
@@ -170,15 +170,8 @@ class MaterialCategoryUnitController extends Controller
                 ], 422);
             }
 
-            // ADVERTENCIA: Si es la última unidad
-            $currentUnitsCount = $category->allowedUnits()->count();
-            if ($currentUnitsCount <= 1) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No se puede eliminar: la categoría debe tener al menos 1 unidad permitida.',
-                    'is_last_unit' => true,
-                ], 422);
-            }
+            // NOTA: Se permite eliminar incluso la última unidad.
+            // La categoría quedará sin unidades asignadas y mostrará advertencia en la UI.
 
             DB::beginTransaction();
 
@@ -269,24 +262,40 @@ class MaterialCategoryUnitController extends Controller
     public function getAvailableUnits($categoryId)
     {
         try {
-            $category = MaterialCategory::where('activo', true)->findOrFail($categoryId);
+            $category = MaterialCategory::where('activo', true)
+                ->with('defaultInventoryUnit')
+                ->findOrFail($categoryId);
 
             // IDs de unidades ya asignadas
             $assignedUnitIds = $category->allowedUnits()->pluck('units.id')->toArray();
 
-            // Unidades disponibles (cualquier tipo: logísticas, canónicas, packs)
-            $availableUnits = Unit::active()
-                ->where(function ($q) {
-                    $q->whereIn('unit_type', ['logistic', 'canonical', 'metric_pack'])
-                        ->orWhereNull('unit_type'); // Por seguridad
-                })
-                ->whereNotIn('id', $assignedUnitIds)
-                ->ordered()
-                ->get(['id', 'name', 'symbol']);
+            // Excluir también la unidad de inventario por defecto de la categoría
+            if ($category->default_inventory_unit_id) {
+                $assignedUnitIds[] = $category->default_inventory_unit_id;
+            }
+
+            // Query base: solo empaques (logistic y metric_pack)
+            $query = Unit::active()
+                ->whereIn('unit_type', ['logistic', 'metric_pack'])
+                ->whereNotIn('id', $assignedUnitIds);
+
+            // FILTRADO SEMÁNTICO: ELIMINADO
+            // Las unidades de compra (Empaques/Logísticas) pueden ser universales (ej. Caja, Paquete)
+            // y contener cualquier tipo de material (Metros, Litros, Piezas).
+            // No limitamos por familia de medición para dar total flexibilidad al usuario.
+            /*
+            if ($category->defaultInventoryUnit && $category->defaultInventoryUnit->measurement_family) {
+                $inventoryFamily = $category->defaultInventoryUnit->measurement_family;
+                $query->compatibleWithFamily($inventoryFamily);
+            }
+            */
+
+            $availableUnits = $query->ordered()->get(['id', 'name', 'symbol', 'measurement_family']);
 
             return response()->json([
                 'success' => true,
                 'units' => $availableUnits,
+                'inventory_family' => $category->defaultInventoryUnit?->measurement_family?->value,
             ]);
         } catch (\Exception $e) {
             return response()->json([

@@ -53,6 +53,10 @@ Route::get('admin/designs/{design}', [App\Http\Controllers\DesignController::cla
     ->name('admin.designs.show')
     ->middleware('auth');
 
+Route::get('admin/designs/{design}/download', [App\Http\Controllers\DesignController::class, 'downloadFile'])
+    ->name('admin.designs.download')
+    ->middleware('auth');
+
 Route::get('admin/designs/{design}/edit', [App\Http\Controllers\DesignController::class, 'edit'])
     ->name('admin.designs.edit')
     ->middleware('auth');
@@ -260,6 +264,10 @@ Route::post('admin/images/exports-counts-batch', [App\Http\Controllers\DesignExp
 // ⭐ OBTENER EXPORTACIONES POR IMAGEN
 Route::get('admin/images/{image}/exports', [App\Http\Controllers\DesignExportController::class, 'getImageExports'])
     ->name('admin.images.exports')
+    ->middleware('auth');
+
+Route::get('admin/images/{image}/download', [App\Http\Controllers\DesignController::class, 'downloadImage'])
+    ->name('admin.images.download')
     ->middleware('auth');
 
 /*
@@ -660,6 +668,15 @@ Route::get('admin/materials/create', [App\Http\Controllers\MaterialController::c
     ->name('admin.materials.create')
     ->middleware('auth');
 
+// UX V2: Wizard de creación de material
+Route::get('admin/materials/create-wizard', [App\Http\Controllers\MaterialController::class, 'createWizard'])
+    ->name('admin.materials.create-wizard')
+    ->middleware('auth');
+
+Route::post('admin/materials/store-wizard', [App\Http\Controllers\MaterialController::class, 'storeWizard'])
+    ->name('admin.materials.store-wizard')
+    ->middleware('auth');
+
 Route::post('admin/materials', [App\Http\Controllers\MaterialController::class, 'store'])
     ->name('admin.materials.store')
     ->middleware('auth');
@@ -686,6 +703,10 @@ Route::get('admin/materials/category/{categoryId}', [App\Http\Controllers\Materi
 
 Route::post('admin/products/validate-prices', [App\Http\Controllers\ProductController::class, 'validateMaterialPrices'])
     ->name('admin.products.validate-prices')
+    ->middleware('auth');
+
+Route::post('admin/products/save-draft', [App\Http\Controllers\ProductController::class, 'storeDraft'])
+    ->name('admin.products.save-draft')
     ->middleware('auth');
 
 /*

@@ -1,23 +1,54 @@
 @foreach ($materials as $material)
     <tr>
-        <td>{{ $loop->iteration }}</td>
-        <td>
+        <td class="text-center align-middle">{{ $loop->iteration }}</td>
+        <td class="text-center align-middle">
             <span class="badge badge-primary">{{ $material->category->name ?? 'N/A' }}</span>
         </td>
-        <td>
+        <td class="text-center align-middle">
             <strong>{{ $material->name }}</strong>
             @if ($material->description)
                 <br><small style="color: #333;">{{ Str::limit($material->description, 50) }}</small>
             @endif
         </td>
 
-        <td>{{ $material->composition ?? '-' }}</td>
-        <td>
-            <span class="badge badge-secondary" style="font-size: 14px; padding: 6px 10px;">
+        <td class="text-center align-middle">{{ $material->composition ?? '-' }}</td>
+        <td class="text-center align-middle">
+            <span class="badge badge-success" style="font-size: 14px; padding: 6px 10px;" title="Unidad de Inventario">
                 {{ $material->baseUnit->symbol ?? 'N/A' }}
             </span>
         </td>
-        <td class="text-center">
+        <td class="text-center align-middle py-2" style="min-width: 205px;">
+            @if ($material->unitConversions->count() > 0)
+                <div class="d-flex flex-column align-items-center" style="gap: 2px;">
+                    @foreach ($material->unitConversions as $conversion)
+                        @php
+                            $breakdown = $conversion->getBreakdownData();
+                            $baseSymbol = $material->baseUnit->symbol ?? '';
+                        @endphp
+                        <div class="text-sm mb-1" style="line-height: 1.2;">
+                            <span class="text-uppercase font-weight-bold"
+                                style="color: #333;">{{ $conversion->fromUnit->name }}</span> -
+
+                            @if ($breakdown['has_breakdown'])
+                                <span class="font-weight-bold">{{ number_format($breakdown['qty'], 0) }}
+                                    {{ $breakdown['unit_symbol'] }}</span>
+                                <span
+                                    class="text-muted ml-1">({{ number_format($breakdown['each_value'], 0, '.', ',') }}
+                                    {{ $baseSymbol }})</span>
+                                <span class="mx-1 text-muted">=</span>
+                            @endif
+
+                            <span
+                                class="font-weight-bold text-dark">{{ number_format($conversion->conversion_factor, 0, '.', ',') }}
+                                {{ $baseSymbol }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            @else
+                <small class="text-muted font-italic">Solo directa</small>
+            @endif
+        </td>
+        <td class="text-center align-middle">
             @if ($material->has_color)
                 <span class="badge badge-info" style="font-size: 14px; padding: 6px 10px;">
                     {{ $material->active_variants_count }}

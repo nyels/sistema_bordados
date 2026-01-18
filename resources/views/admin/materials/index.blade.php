@@ -31,8 +31,8 @@
             {{-- FILTROS Y ACCIONES --}}
             <div class="row mb-3">
                 <div class="col-md-12 d-flex align-items-center flex-wrap">
-                    <a href="{{ route('admin.materials.create') }}" class="btn btn-primary mr-2 mb-2">
-                        Nuevo <i class="fas fa-plus"></i>
+                    <a href="{{ route('admin.materials.create-wizard') }}" class="btn btn-primary mr-2 mb-2">
+                        <i class="fas fa-magic"></i> Nuevo Material
                     </a>
                     <a href="{{ route('admin.material-categories.index') }}" class="btn btn-secondary mr-2 mb-2">
                         <i class="fas fa-layer-group"></i> Categorías
@@ -71,10 +71,10 @@
                             <th style="width: 50px;">#</th>
                             <th>Categoría</th>
                             <th>Nombre</th>
-
                             <th>Composición</th>
-                            <th style="width: 100px;">Unidad</th>
-                            <th style="width: 100px;">Variantes</th>
+                            <th style="width: 100px;">U. Inventario</th>
+                            <th style="width: 150px;">Presentaciones</th>
+                            <th style="width: 80px;">Variantes</th>
                             <th style="width: 120px; text-align: center;">Acciones</th>
                         </tr>
                     </thead>

@@ -109,13 +109,14 @@ class PurchaseService
      */
     protected function addItem(Purchase $purchase, array $data): PurchaseItem
     {
-        $variant = MaterialVariant::with(['material', 'material.category'])
+        $variant = MaterialVariant::with(['material.baseUnit'])
             ->findOrFail($data['material_variant_id']);
 
+        // La unidad base está en el material, no en la categoría
         $conversionFactor = $this->getConversionFactor(
             $variant->material_id,
             $data['unit_id'],
-            $variant->material->category->base_unit_id
+            $variant->material->base_unit_id
         );
 
         return PurchaseItem::create([

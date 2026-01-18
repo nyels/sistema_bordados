@@ -25,6 +25,11 @@ class Product extends Model
         // Pricing Fields
         'base_price',
         'production_cost',
+        'materials_cost',
+        'embroidery_cost',
+        'labor_cost',
+        'extra_services_cost',
+        'suggested_price',
         'profit_margin',
         'production_lead_time',
     ];
@@ -32,8 +37,13 @@ class Product extends Model
     protected $casts = [
         'specifications' => 'array',
         'tenant_id' => 'integer',
-        'base_price' => 'decimal:4',
-        'production_cost' => 'decimal:4',
+        'base_price' => 'decimal:6',
+        'production_cost' => 'decimal:6',
+        'materials_cost' => 'decimal:6',
+        'embroidery_cost' => 'decimal:6',
+        'labor_cost' => 'decimal:6',
+        'extra_services_cost' => 'decimal:6',
+        'suggested_price' => 'decimal:6',
         'profit_margin' => 'decimal:2',
         'production_lead_time' => 'integer',
     ];
@@ -97,7 +107,7 @@ class Product extends Model
     {
         return $this->belongsToMany(MaterialVariant::class, 'product_materials', 'product_id', 'material_variant_id')
             ->using(ProductMaterial::class)
-            ->withPivot(['id', 'quantity', 'is_primary', 'notes', 'active_for_variants'])
+            ->withPivot(['id', 'quantity', 'unit_cost', 'total_cost', 'is_primary', 'notes', 'active_for_variants'])
             ->withTimestamps();
     }
 

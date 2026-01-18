@@ -30,13 +30,13 @@
         <div class="card-body">
             {{-- INFORMACIÓN DEL MÓDULO --}}
             <div class="alert alert-info alert-dismissible fade show" role="alert">
-                <strong><i class="fas fa-info-circle"></i> Configuración de Reglas de Dominio</strong>
+                <strong><i class="fas fa-info-circle"></i> Presentaciones de Compra por Categoría</strong>
                 <p class="mb-0 mt-2">
-                    Define qué <strong>unidades de compra/empaque</strong> están permitidas para cada categoría de material.
+                    Define en qué <strong>empaques o contenedores</strong> (Caja, Cono, Rollo, Paquete) se compran los materiales de cada categoría.
                     <br>
                     <small class="text-muted">
-                        Solo las unidades asignadas aquí aparecerán disponibles al crear/editar materiales de cada
-                        categoría.
+                        <i class="fas fa-lightbulb text-warning"></i>
+                        Las unidades de inventario (Metro, Pieza, etc.) se configuran en cada categoría, no aquí.
                     </small>
                 </p>
                 <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
@@ -59,7 +59,7 @@
                             <th style="width: 5%;">#</th>
                             <th style="width: 20%;">Categoría</th>
                             <th style="width: 25%;">Descripción</th>
-                            <th style="width: 30%;">Unidades de Compra Permitidas</th>
+                            <th style="width: 30%;">Presentaciones de Compra</th>
                             <th style="width: 10%;">Materiales</th>
                             <th style="width: 10%;">Acciones</th>
                         </tr>
@@ -70,6 +70,12 @@
                                 <td class="text-center align-middle">{{ $loop->iteration }}</td>
                                 <td class="align-middle">
                                     <strong style="font-size: 1.1rem;">{{ $category->name }}</strong>
+                                    @if ($category->defaultInventoryUnit)
+                                        <br>
+                                        <small class="text-muted">
+                                            <i class="fas fa-ruler"></i> Inventario: {{ $category->defaultInventoryUnit->symbol }}
+                                        </small>
+                                    @endif
                                 </td>
                                 <td class="align-middle">
                                     @if ($category->description)
@@ -108,7 +114,7 @@
                                                             {{ $materialsUsing }}
                                                         </span>
                                                     @endif
-                                                    @if ($canRemove && $category->allowedUnits->count() > 1)
+                                                    @if ($canRemove)
                                                         <button type="button" class="btn btn-xs btn-remove-unit ml-1"
                                                             data-category-id="{{ $category->id }}"
                                                             data-unit-id="{{ $unit->id }}"
@@ -116,6 +122,10 @@
                                                             style="background: none; border: none; color: #fff; padding: 0 4px;">
                                                             <i class="fas fa-times"></i>
                                                         </button>
+                                                    @else
+                                                        <span class="ml-1" title="No se puede quitar: {{ $materialsUsing }} material(es) usando esta unidad">
+                                                            <i class="fas fa-lock" style="font-size: 0.7rem;"></i>
+                                                        </span>
                                                     @endif
                                                 </span>
                                             @endforeach
@@ -155,8 +165,8 @@
                                 <strong>Leyenda:</strong>
                                 <span class="badge badge-primary mr-2">Unidad asignada</span>
                                 <span class="badge badge-light border mr-2">N</span> = Materiales usando esta unidad
-                                <span class="text-danger ml-3"><i class="fas fa-lock"></i></span> = No se puede eliminar
-                                (tiene materiales asociados)
+                                <span class="ml-3"><i class="fas fa-lock"></i></span> = Bloqueada (hay materiales asociados)
+                                <span class="ml-3"><i class="fas fa-times"></i></span> = Quitar unidad
                             </small>
                         </div>
                     </div>
@@ -172,7 +182,7 @@
             <div class="modal-content shadow-lg" style="border-radius: 15px; border: none;">
                 <div class="modal-header bg-success text-white">
                     <h5 class="modal-title font-weight-bold" id="addUnitModalLabel">
-                        <i class="fas fa-plus-circle"></i> Agregar Unidad de Compra
+                        <i class="fas fa-box"></i> Agregar Presentación de Compra
                     </h5>
                     <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
@@ -186,12 +196,14 @@
                     </div>
                     <div class="form-group">
                         <label for="modal-unit-select" class="font-weight-bold">
-                            Seleccionar Unidad de Compra: <span class="text-danger">*</span>
+                            Seleccionar Empaque/Contenedor: <span class="text-danger">*</span>
                         </label>
                         <select id="modal-unit-select" class="form-control">
-                            <option value="">Cargando unidades disponibles...</option>
+                            <option value="">Cargando...</option>
                         </select>
-                        <small class="text-muted">Solo se muestran unidades de compra/empaque no asignadas.</small>
+                        <small class="text-muted" id="modal-unit-help">
+                            <i class="fas fa-magic text-primary"></i> Filtrado inteligente según la unidad de inventario de la categoría.
+                        </small>
                     </div>
                 </div>
                 <div class="modal-footer">

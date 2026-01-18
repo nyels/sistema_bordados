@@ -15,13 +15,16 @@ class ProductMaterial extends Pivot
         'product_id',
         'material_variant_id',
         'quantity',
+        'unit_cost',
         'is_primary',
         'notes',
         'active_for_variants',
     ];
 
     protected $casts = [
-        'quantity' => 'decimal:4',
+        'quantity' => 'decimal:6',
+        'unit_cost' => 'decimal:6',
+        'total_cost' => 'decimal:6',
         'is_primary' => 'boolean',
         'active_for_variants' => 'array',
     ];

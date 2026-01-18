@@ -56,12 +56,12 @@ class DesignController extends Controller
                     // Usar los IDs encontrados, mantener relevancia
                     $idsString = implode(',', $matchingIds);
                     $baseQuery->whereIn('id', $matchingIds)
-                              ->orderByRaw("FIELD(id, {$idsString})");
+                        ->orderByRaw("FIELD(id, {$idsString})");
                 } else {
                     // Fallback: búsqueda LIKE tradicional si el índice no tiene resultados
                     $baseQuery->where(function ($q) use ($searchTerm) {
                         $q->where('name', 'like', "%{$searchTerm}%")
-                          ->orWhere('description', 'like', "%{$searchTerm}%");
+                            ->orWhere('description', 'like', "%{$searchTerm}%");
                     });
                 }
             }
@@ -99,7 +99,7 @@ class DesignController extends Controller
                 } elseif ($request->filled('search')) {
                     $countQuery->where(function ($q) use ($request) {
                         $q->where('name', 'like', '%' . $request->search . '%')
-                          ->orWhere('description', 'like', '%' . $request->search . '%');
+                            ->orWhere('description', 'like', '%' . $request->search . '%');
                     });
                 }
 
@@ -778,5 +778,44 @@ class DesignController extends Controller
         } catch (\Exception $e) {
             Log::error('Error al procesar imagen temporal: ' . $e->getMessage());
         }
+    }
+
+    public function downloadFile(Design $design)
+    {
+        Log::info('📥 Intento de descarga de archivo principal de diseño', [
+            'design_id' => $design->id,
+            'name' => $design->name,
+        ]);
+
+        $filePath = null;
+        $fileName = null;
+
+        // 1. Prioridad: Archivo de bordado específico
+        if ($design->embroidery_file_path && Storage::disk('public')->exists($design->embroidery_file_path)) {
+            $filePath = $design->embroidery_file_path;
+            $ext = pathinfo($filePath, PATHINFO_EXTENSION);
+            $fileName = Str::slug($design->name) . '.' . $ext;
+        }
+        // 2. Fallback: Imagen principal
+        elseif ($design->primaryImage && $design->primaryImage->file_path && Storage::disk('public')->exists($design->primaryImage->file_path)) {
+            $filePath = $design->primaryImage->file_path;
+            $ext = pathinfo($filePath, PATHINFO_EXTENSION);
+            $fileName = Str::slug($design->name) . '.' . $ext;
+        }
+
+        if ($filePath) {
+            return Storage::disk('public')->download($filePath, $fileName);
+        }
+
+        return back()->with('error', 'No hay archivo disponible para descargar.');
+    }
+
+    public function downloadImage(Image $image)
+    {
+        if ($image->file_path && Storage::disk('public')->exists($image->file_path)) {
+            $fileName = $image->original_filename ?? basename($image->file_path);
+            return Storage::disk('public')->download($image->file_path, $fileName);
+        }
+        return back()->with('error', 'Imagen no encontrada.');
     }
 }

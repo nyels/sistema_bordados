@@ -71,6 +71,9 @@ class ReceptionService
 
                 $convertedQty = $itemData['quantity'] * $purchaseItem->conversion_factor;
 
+                // Calcular el subtotal exacto de esta recepción parcial/total basado en el precio unitario original
+                $actualSubtotal = (float) $itemData['quantity'] * (float) $purchaseItem->unit_price;
+
                 // Registrar entrada en inventario
                 $movement = $this->inventoryService->registerEntry(
                     variantId: $purchaseItem->material_variant_id,
@@ -78,7 +81,8 @@ class ReceptionService
                     unitCost: $purchaseItem->converted_unit_cost,
                     referenceType: 'purchase_reception',
                     referenceId: $reception->id,
-                    notes: "Recepción {$reception->reception_number} - OC: {$purchase->purchase_number}"
+                    notes: "Recepción {$reception->reception_number} - OC: {$purchase->purchase_number}",
+                    totalCost: $actualSubtotal
                 );
 
                 // Crear item de recepción

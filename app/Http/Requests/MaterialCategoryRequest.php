@@ -31,6 +31,16 @@ class MaterialCategoryRequest extends FormRequest
                 'max:500',
                 'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\.\,\-\_\(\)\:]+$/u',
             ],
+            // Nuevos campos UX V2
+            'default_inventory_unit_id' => [
+                'nullable',
+                'integer',
+                'exists:units,id',
+            ],
+            'allow_unit_override' => [
+                'nullable',
+                'boolean',
+            ],
         ];
     }
 

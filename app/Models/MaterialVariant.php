@@ -31,9 +31,9 @@ class MaterialVariant extends Model
     protected $casts = [
         'current_stock' => 'decimal:4',
         'min_stock_alert' => 'decimal:4',
-        'current_value' => 'decimal:4',
-        'average_cost' => 'decimal:4',
-        'last_purchase_cost' => 'decimal:4',
+        'current_value' => 'decimal:6',
+        'average_cost' => 'decimal:6',
+        'last_purchase_cost' => 'decimal:6',
         'activo' => 'boolean',
     ];
 
@@ -110,7 +110,7 @@ class MaterialVariant extends Model
 
     public function getFormattedAverageCostAttribute(): string
     {
-        return '$' . number_format($this->average_cost, 2);
+        return '$' . number_format($this->average_cost, 6);
     }
 
     public function getIsLowStockAttribute(): bool

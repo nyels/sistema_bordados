@@ -19,11 +19,14 @@ class MaterialCategory extends Model
         'name',
         'slug',
         'description',
+        'default_inventory_unit_id',
+        'allow_unit_override',
         'activo',
     ];
 
     protected $casts = [
         'activo' => 'boolean',
+        'allow_unit_override' => 'boolean',
     ];
 
     /*
@@ -55,17 +58,54 @@ class MaterialCategory extends Model
     |--------------------------------------------------------------------------
     */
 
-
+    /**
+     * Unidad de inventario por defecto para esta categoría.
+     * Ejemplo: HILOS → METRO, BOTONES → PIEZA
+     */
+    public function defaultInventoryUnit()
+    {
+        return $this->belongsTo(Unit::class, 'default_inventory_unit_id');
+    }
 
     public function materials()
     {
         return $this->hasMany(Material::class, 'material_category_id');
     }
 
+    /**
+     * Unidades de compra/presentación permitidas para esta categoría.
+     */
     public function allowedUnits()
     {
         return $this->belongsToMany(Unit::class, 'category_unit', 'material_category_id', 'unit_id')
             ->withTimestamps();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | HELPERS
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Verificar si permite que materiales usen una unidad diferente a la por defecto.
+     */
+    public function allowsUnitOverride(): bool
+    {
+        return $this->allow_unit_override ?? true;
+    }
+
+    /**
+     * Obtener unidades de inventario disponibles para materiales de esta categoría.
+     * Si allow_unit_override es false, solo devuelve la unidad por defecto.
+     */
+    public function getAvailableInventoryUnits(): \Illuminate\Database\Eloquent\Collection
+    {
+        if (!$this->allowsUnitOverride() && $this->default_inventory_unit_id) {
+            return Unit::where('id', $this->default_inventory_unit_id)->get();
+        }
+
+        return Unit::active()->canonical()->ordered()->get();
     }
 
     /*

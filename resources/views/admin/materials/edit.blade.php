@@ -91,26 +91,22 @@
                         <div class="row">
                             <div class="col-12">
                                 <div class="form-group">
-                                    <label>Unidad Base (Inventario/Consumo) <span class="text-danger">*</span></label>
+                                    <label>Unidad de Inventario (No editable)</label>
                                     <div class="input-group">
-                                        <select name="base_unit_id" id="base_unit_id"
-                                            class="form-control @error('base_unit_id') is-invalid @enderror" required>
-                                            <option value="">...</option>
-                                            @foreach ($baseUnits as $unit)
-                                                <option value="{{ $unit->id }}" data-symbol="{{ $unit->symbol }}"
-                                                    data-id="{{ $unit->id }}"
-                                                    {{ old('base_unit_id', $material->base_unit_id) == $unit->id ? 'selected' : '' }}>
-                                                    {{ $unit->name }} ({{ $unit->symbol }})
-                                                </option>
-                                            @endforeach
-                                        </select>
+                                        <input type="text" class="form-control bg-light"
+                                            value="{{ $material->baseUnit->name }} ({{ $material->baseUnit->symbol }})"
+                                            readonly>
                                         <div class="input-group-append">
-                                            <button type="button" class="btn bg-purple" data-toggle="modal"
-                                                data-target="#unitModal" title="Crear nueva unidad">
-                                                <i class="fas fa-plus"></i>
-                                            </button>
+                                            <span class="input-group-text bg-light">
+                                                <i class="fas fa-lock text-muted"></i>
+                                            </span>
                                         </div>
                                     </div>
+                                    <small class="text-muted">La unidad de inventario no se puede cambiar una vez creado el
+                                        material.</small>
+                                    <input type="hidden" name="base_unit_id" value="{{ $material->base_unit_id }}">
+                                    <input type="hidden" name="consumption_unit_id"
+                                        value="{{ $material->consumption_unit_id }}">
                                 </div>
                             </div>
                         </div>

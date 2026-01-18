@@ -41,11 +41,21 @@ class GiroController extends Controller
 
             if ($existingGiro) {
                 if ($existingGiro->activo) {
+                    if ($request->ajax()) {
+                        return response()->json(['error' => 'El nombre del giro ya ha sido registrado.'], 422);
+                    }
                     return back()->withErrors(['nombre_giro' => 'El nombre del giro ya ha sido registrado.'])->withInput();
                 } else {
                     // Reactivar si existía pero estaba eliminado logicamente
                     $existingGiro->activo = true;
                     $existingGiro->save();
+                    if ($request->ajax()) {
+                        return response()->json([
+                            'success' => true,
+                            'message' => 'Giro reactivado exitosamente',
+                            'data' => $existingGiro
+                        ]);
+                    }
                     return redirect()->route('admin.giros.index')->with('success', 'Giro reactivado exitosamente');
                 }
             }
@@ -53,8 +63,20 @@ class GiroController extends Controller
             $giro = new Giro();
             $giro->nombre_giro = $nombre;
             $giro->save();
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Giro guardado exitosamente',
+                    'data' => $giro
+                ]);
+            }
             return redirect()->route('admin.giros.index')->with('success', 'Giro guardado exitosamente');
         } catch (\Exception $e) {
+        } catch (\Exception $e) {
+            if ($request->ajax()) {
+                return response()->json(['error' => 'Error al guardar el giro: ' . $e->getMessage()], 500);
+            }
             return redirect()->route('admin.giros.index')->with('error', 'Error al guardar el giro: ' . $e->getMessage());
         }
     }

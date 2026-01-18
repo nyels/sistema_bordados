@@ -39,7 +39,8 @@ class MaterialVariantRequest extends FormRequest
                 'nullable',
                 'string',
                 'max:50',
-                'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-\_\#\/\(\)]+$/u',
+                // Se agregan: guion medio (–), guion largo (—) y punto (.)
+                'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-\_\#\/\(\)\–\—\.]+$/u',
             ],
             'sku' => [
                 'required',

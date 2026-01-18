@@ -50,7 +50,8 @@
         </div>
 
         <div class="card-body">
-            <form method="POST" action="{{ route('admin.material-conversions.update', [$material->id, $conversion->id]) }}">
+            <form method="POST"
+                action="{{ route('admin.material-conversions.update', [$material->id, $conversion->id]) }}">
                 @csrf
                 @method('PUT')
                 <input type="hidden" name="material_id" value="{{ $material->id }}">
@@ -135,13 +136,13 @@
                                 <option value="">Seleccionar unidad...</option>
                                 @foreach ($purchaseUnits as $unit)
                                     @if (!in_array($unit->id, $usedUnitIds) || $unit->id == $conversion->from_unit_id)
-                                        <option value="{{ $unit->id }}"
-                                            data-symbol="{{ $unit->symbol }}"
+                                        <option value="{{ $unit->id }}" data-symbol="{{ $unit->symbol }}"
                                             data-factor="{{ $unit->default_conversion_factor }}"
                                             {{ old('from_unit_id', $conversion->from_unit_id) == $unit->id ? 'selected' : '' }}>
                                             {{ $unit->name }} ({{ $unit->symbol }})
-                                            @if($unit->isMetricPack() && $unit->default_conversion_factor)
-                                                = {{ number_format($unit->default_conversion_factor, 0) }} {{ $consumptionUnit->symbol ?? '' }}
+                                            @if ($unit->isMetricPack() && $unit->default_conversion_factor)
+                                                = {{ number_format($unit->default_conversion_factor, 0) }}
+                                                {{ $consumptionUnit->symbol ?? '' }}
                                             @endif
                                         </option>
                                     @endif
@@ -154,6 +155,15 @@
                                 Unidades compatibles con
                                 <strong>{{ $consumptionUnit->name ?? 'N/A' }}</strong>
                             </small>
+                        </div>
+
+                        {{-- CAMPO DE ETIQUETA OPCIONAL --}}
+                        <div class="form-group">
+                            <label>Nombre de Presentación (Opcional)</label>
+                            <input type="text" name="label" class="form-control"
+                                placeholder="Ej: Caja (x12), Caja Master" value="{{ old('label', $conversion->label) }}">
+                            <small class="form-text text-muted">Añada un nombre si tiene varias presentaciones de esta
+                                unidad.</small>
                         </div>
 
                         <div class="form-group">

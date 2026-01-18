@@ -68,7 +68,7 @@ enum UnitType: string
     public function label(): string
     {
         return match ($this) {
-            self::CANONICAL => 'Consumo',
+            self::CANONICAL => 'Inventario',
             self::METRIC_PACK => 'Presentación',
             self::LOGISTIC => 'Compra',
         };
@@ -80,7 +80,7 @@ enum UnitType: string
     public function description(): string
     {
         return match ($this) {
-            self::CANONICAL => 'Unidad en la que el material se gasta durante producción (metro, litro, pieza, minuto)',
+            self::CANONICAL => 'Unidad en la que el sistema controla existencias y calcula costos',
             self::METRIC_PACK => 'Empaque con cantidad fija (Rollo 25m, Caja 100pz)',
             self::LOGISTIC => 'Unidad en la que se compra el material (cono, saco, paquete)',
         };
@@ -92,7 +92,7 @@ enum UnitType: string
     public function helpText(): string
     {
         return match ($this) {
-            self::CANONICAL => 'Unidad física real que se consume al producir una pieza',
+            self::CANONICAL => 'El sistema controlará existencias y calculará costos en esta unidad',
             self::METRIC_PACK => 'Presentación comercial con cantidad predefinida',
             self::LOGISTIC => 'Empaque físico en el que llega el material del proveedor',
         };

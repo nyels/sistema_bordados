@@ -24,7 +24,8 @@ class InventoryService
         string $referenceType,
         int $referenceId,
         ?string $notes = null,
-        ?int $userId = null
+        ?int $userId = null,
+        ?float $totalCost = null
     ): InventoryMovement {
         return $this->createMovement(
             variantId: $variantId,
@@ -34,7 +35,8 @@ class InventoryService
             referenceType: $referenceType,
             referenceId: $referenceId,
             notes: $notes,
-            userId: $userId
+            userId: $userId,
+            totalCost: $totalCost
         );
     }
 
@@ -120,7 +122,8 @@ class InventoryService
         string $referenceType,
         ?int $referenceId,
         ?string $notes,
-        ?int $userId = null
+        ?int $userId = null,
+        ?float $totalCost = null
     ): InventoryMovement {
         // Resolvemos el ID del usuario: prioridad parámetro, luego sesión actual
         $finalUserId = $userId ?? Auth::id();
@@ -141,11 +144,22 @@ class InventoryService
             $valueBefore = $variant->current_value;
             $avgCostBefore = $variant->average_cost;
 
-            $totalCost = $quantity * $unitCost;
+            $actualMovementTotalCost = $totalCost ?? ($quantity * $unitCost);
             $stockChange = $quantity * $type->affectsStock();
 
             $newStock = $stockBefore + $stockChange;
-            $newValue = $this->calculateNewValue($variant, $type, $quantity, $unitCost);
+
+            // Calculamos el nuevo valor total
+            if ($type->affectsStock() > 0) {
+                // Entrada: sumamos el costo total real (evita errores de redondeo)
+                $newValue = $valueBefore + $actualMovementTotalCost;
+            } else {
+                // Salida: usamos el costo según método (PMP)
+                $newValue = $this->calculateNewValue($variant, $type, $quantity, $unitCost);
+                // Si es salida, ajustamos el totalCost del movimiento para el log basado en el valor consumido
+                $actualMovementTotalCost = $valueBefore - $newValue;
+            }
+
             $newAvgCost = $newStock > 0 ? ($newValue / $newStock) : 0;
 
             // Actualizar variante
@@ -168,7 +182,7 @@ class InventoryService
                 'reference_id' => $referenceId,
                 'quantity' => $quantity,
                 'unit_cost' => $unitCost,
-                'total_cost' => $totalCost,
+                'total_cost' => $actualMovementTotalCost,
                 'stock_before' => $stockBefore,
                 'stock_after' => $variant->current_stock,
                 'average_cost_before' => $avgCostBefore,

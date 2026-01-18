@@ -47,10 +47,20 @@
             <h3 class="card-title" style="font-weight: bold;font-size: 20px;">
                 <i class="fas fa-plus-circle"></i> NUEVA VARIANTE DE: {{ $material->name }}
             </h3>
+            <div class="card-tools">
+                <a href="{{ route('admin.material-variants.index', $material->id) }}" id="btn-back"
+                    class="btn btn-secondary font-weight-bold" title="Regresar">
+                    <i class="fas fa-arrow-left"></i> Regresar
+                </a>
+                <button type="submit" form="variant-form" id="btn-save-variant"
+                    class="btn btn-outline-light font-weight-bold ml-2" title="Guardar Variante">
+                    <i class="fas fa-save"></i> Guardar
+                </button>
+            </div>
         </div>
 
         <div class="card-body">
-            <form method="POST" action="{{ route('admin.material-variants.store', $material->id) }}">
+            <form id="variant-form" method="POST" action="{{ route('admin.material-variants.store', $material->id) }}">
                 @csrf
                 <input type="hidden" name="material_id" value="{{ $material->id }}">
 
@@ -151,16 +161,7 @@
                     </div>
                 </div>
 
-                <hr>
 
-                <div class="text-center">
-                    <a href="{{ route('admin.material-variants.index', $material->id) }}" class="btn btn-secondary">
-                        <i class="fas fa-times-circle"></i> Regresar
-                    </a>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Guardar
-                    </button>
-                </div>
             </form>
         </div>
     </div>
@@ -172,6 +173,16 @@
             // Convertir SKU a mayúsculas en tiempo real
             $('input[name="sku"]').on('input', function() {
                 this.value = this.value.toUpperCase().replace(/[^A-Z0-9\-]/g, '');
+            });
+
+            // Evitar doble submit y mostrar loading
+            $('#variant-form').on('submit', function() {
+                var $btnSave = $('#btn-save-variant');
+                var $btnBack = $('#btn-back');
+
+                $btnSave.prop('disabled', true);
+                $btnBack.addClass('disabled');
+                $btnSave.html('<i class="fas fa-spinner fa-spin"></i> Guardando...');
             });
         });
     </script>

@@ -251,14 +251,16 @@ class StorePurchaseRequest extends FormRequest
                 continue;
             }
 
-            $variant = MaterialVariant::with(['material.category.baseUnit'])
+            // Cargar variante con el material y su unidad base
+            $variant = MaterialVariant::with(['material.baseUnit'])
                 ->find($item['material_variant_id']);
 
-            if (!$variant) {
+            if (!$variant || !$variant->material) {
                 continue;
             }
 
-            $baseUnitId = $variant->material->category->base_unit_id ?? null;
+            // La unidad base está en el material, no en la categoría
+            $baseUnitId = $variant->material->base_unit_id ?? null;
             $unitId = $item['unit_id'];
 
             // Si es la unidad base, es válido
@@ -268,7 +270,7 @@ class StorePurchaseRequest extends FormRequest
 
             // Verificar si existe conversión o es unidad compatible
             $unit = Unit::find($unitId);
-            if ($unit && $unit->compatible_base_unit_id != $baseUnitId) {
+            if ($unit && $unit->compatible_base_unit_id && $unit->compatible_base_unit_id != $baseUnitId) {
                 $validator->errors()->add(
                     "items.{$index}.unit_id",
                     "La unidad '{$unit->name}' no es compatible con el material seleccionado."

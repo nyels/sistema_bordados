@@ -20,7 +20,9 @@
       "Bash(php -l:*)",
       "Bash(php check_units.php:*)",
       "Bash(php fix_units.php:*)",
-      "Bash(more:*)"
+      "Bash(more:*)",
+      "Bash(powershell -Command \"Get-Content ''c:\\\\xampp\\\\htdocs\\\\laravel\\\\sistema_bordados\\\\storage\\\\logs\\\\laravel.log'' -Tail 150 | Select-String -Pattern ''product|Product|Validation''\")",
+      "Bash(powershell -Command \"Get-Content ''c:\\\\xampp\\\\htdocs\\\\laravel\\\\sistema_bordados\\\\storage\\\\logs\\\\laravel.log'' -Tail 80\")"
     ]
   }
 }

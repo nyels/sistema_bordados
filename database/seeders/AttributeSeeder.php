@@ -32,10 +32,10 @@ class AttributeSeeder extends Seeder
             ['value' => 'Rosa', 'hex_color' => '#FFC0CB', 'order' => 6],
         ]);
 
-        // Crear atributo Tamaño
+        // Crear atributo Talla
         $sizeAttr = Attribute::create([
-            'name' => 'Tamaño',
-            'slug' => 'tamano',
+            'name' => 'Talla',
+            'slug' => 'talla',
             'type' => 'select',
             'is_required' => false,
             'order' => 2

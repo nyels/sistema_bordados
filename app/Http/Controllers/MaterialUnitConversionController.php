@@ -90,12 +90,30 @@ class MaterialUnitConversionController extends Controller
             // - Que sean compatibles con la unidad de consumo O sean genéricas (null)
             // - Excluir la unidad base del material (ya es la principal)
             // =============================================
-            $purchaseUnits = Unit::where('activo', true)
+            // =============================================
+            // Filtrar unidades de compra compatibles:
+            // - Que pertenezcan a la CATEGORIA del material (Whitelist)
+            // - Tipo LOGISTIC o METRIC_PACK
+            // - Que sean compatibles con la unidad de consumo O sean genéricas (null)
+            // - Excluir la unidad base del material (ya es la principal)
+            // =============================================
+
+            // Si la categoría no tiene unidades asignadas, fallback a todas las compatibles
+            // (Opcional: puedes ser estricto y no mostrar nada si no hay asignadas)
+            $categoryUnitsQuery = $material->category->allowedUnits();
+
+            if ($categoryUnitsQuery->count() > 0) {
+                $baseQuery = $categoryUnitsQuery;
+            } else {
+                $baseQuery = Unit::query();
+            }
+
+            $purchaseUnits = $baseQuery->where('activo', true)
                 ->where(function ($query) use ($consumptionUnit) {
                     $query->where('compatible_base_unit_id', $consumptionUnit->id)
                         ->orWhereNull('compatible_base_unit_id');
                 })
-                ->where('id', '!=', $material->base_unit_id) // Excluir la unidad principal
+                ->where('units.id', '!=', $material->base_unit_id) // Excluir la unidad principal (desambiguar ID)
                 ->whereIn('unit_type', ['logistic', 'metric_pack'])
                 ->orderBy('unit_type') // Primero logistic, luego metric_pack
                 ->orderBy('name')
@@ -156,6 +174,26 @@ class MaterialUnitConversionController extends Controller
             $conversion->from_unit_id = (int) $request->from_unit_id;
             $conversion->to_unit_id = (int) $request->to_unit_id;
             $conversion->conversion_factor = (float) $request->conversion_factor;
+            $conversion->label = $request->label;
+
+            // Campos de desglose (si se usó la calculadora/wizard)
+            if ($request->filled('intermediate_unit_id') && $request->filled('intermediate_qty')) {
+                $conversion->intermediate_unit_id = (int) $request->intermediate_unit_id;
+                $conversion->intermediate_qty = (float) $request->intermediate_qty;
+
+                // VALIDACIÓN DE INTEGRIDAD (ARQUITECTURA EMPRESARIAL)
+                // Si la unidad intermedia es la misma que la unidad de consumo (Base),
+                // el valor unitario IMPLÍCITO debe ser 1.
+                // Por tanto, el Factor Total debe ser igual a la Cantidad Intermedia.
+                $consumptionUnit = $material->consumptionUnit ?? $material->baseUnit;
+                if ($consumptionUnit && $conversion->intermediate_unit_id == $consumptionUnit->id) {
+                    $diff = abs($conversion->conversion_factor - $conversion->intermediate_qty);
+                    if ($diff > 0.001) {
+                        throw new \Exception('Error de integridad: Si selecciona la unidad base como contenido, el valor unitario debe ser 1.');
+                    }
+                }
+            }
+
             $conversion->save();
 
             DB::commit();
@@ -277,6 +315,7 @@ class MaterialUnitConversionController extends Controller
             $conversion->from_unit_id = (int) $request->from_unit_id;
             $conversion->to_unit_id = (int) $request->to_unit_id;
             $conversion->conversion_factor = (float) $request->conversion_factor;
+            $conversion->label = $request->label;
 
             if (!$conversion->isDirty()) {
                 return redirect()->route('admin.material-conversions.index', $material->id)

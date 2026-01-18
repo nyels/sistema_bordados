@@ -549,7 +549,7 @@ class PurchaseController extends Controller
 
             $purchase = Purchase::with([
                 'proveedor',
-                'items.materialVariant.material.category.baseUnit',
+                'items.materialVariant.material.baseUnit',  // baseUnit está en material, no en category
                 'items.unit',
             ])->where('activo', true)->findOrFail((int) $id);
 
@@ -875,41 +875,46 @@ class PurchaseController extends Controller
                 return response()->json(['error' => 'Material no válido'], 400);
             }
 
-            $material = Material::with(['category.baseUnit'])->findOrFail((int) $materialId);
-            $baseUnitId = $material->category->base_unit_id;
+            // Cargar material con su unidad base (de inventario)
+            $material = Material::with(['baseUnit', 'category.allowedUnits'])->findOrFail((int) $materialId);
+
+            // Unidad base del material (unidad de inventario)
+            $baseUnitId = $material->base_unit_id;
 
             // Unidad base siempre disponible
             $units = collect();
-            if ($material->category->baseUnit) {
+            if ($material->baseUnit) {
                 $units->push([
-                    'id' => $material->category->baseUnit->id,
-                    'name' => $material->category->baseUnit->name,
-                    'symbol' => $material->category->baseUnit->symbol,
+                    'id' => $material->baseUnit->id,
+                    'name' => $material->baseUnit->name,
+                    'symbol' => $material->baseUnit->symbol,
                     'conversion_factor' => 1,
                     'is_base' => true,
                 ]);
             }
 
-            // Unidades de compra con conversión configurada
+            // Unidades de compra con conversión configurada para este material
             $conversions = MaterialUnitConversion::where('material_id', $material->id)
                 ->with('fromUnit')
                 ->get();
 
             foreach ($conversions as $conversion) {
-                $units->push([
-                    'id' => $conversion->from_unit_id,
-                    'name' => $conversion->fromUnit->name,
-                    'symbol' => $conversion->fromUnit->symbol,
-                    'conversion_factor' => $conversion->conversion_factor,
-                    'is_base' => false,
-                ]);
+                if ($conversion->fromUnit) {
+                    $units->push([
+                        'id' => $conversion->from_unit_id,
+                        'name' => $conversion->fromUnit->name,
+                        'symbol' => $conversion->fromUnit->symbol,
+                        'conversion_factor' => $conversion->conversion_factor,
+                        'is_base' => false,
+                    ]);
+                }
             }
 
             return response()->json([
                 'material_id' => $material->id,
                 'material_name' => $material->name,
                 'base_unit_id' => $baseUnitId,
-                'base_unit_symbol' => $material->category->baseUnit->symbol ?? '',
+                'base_unit_symbol' => $material->baseUnit->symbol ?? '',
                 'units' => $units,
             ]);
         } catch (ModelNotFoundException $e) {

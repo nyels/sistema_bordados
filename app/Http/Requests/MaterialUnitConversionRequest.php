@@ -40,10 +40,10 @@ class MaterialUnitConversionRequest extends FormRequest
                 'integer',
                 'min:1',
                 'exists:units,id',
-                // Validación de integridad: No duplicar la misma unidad base para el mismo material
-                Rule::unique('material_unit_conversions', 'from_unit_id')
-                    ->where('material_id', $materialId)
-                    ->ignore($conversionId),
+                // Validación de integridad: Eliminada para permitir múltiples presentaciones (ej. Caja 12 y Caja 50)
+                // Rule::unique('material_unit_conversions', 'from_unit_id')
+                //    ->where('material_id', $materialId)
+                //    ->ignore($conversionId),
                 // REGLA ELIMINADA: Ya no se exige que coincida con base_unit_id antiguo
                 // REGLA ELIMINADA: Ya no se exige solo logístico estricto
             ],
@@ -61,6 +61,21 @@ class MaterialUnitConversionRequest extends FormRequest
                 'numeric',
                 'min:0.0001',
                 'max:999999999.9999',
+            ],
+            'intermediate_unit_id' => [
+                'nullable',
+                'integer',
+                'exists:units,id',
+            ],
+            'intermediate_qty' => [
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
+            'label' => [
+                'nullable',
+                'string',
+                'max:50',
             ],
         ];
     }

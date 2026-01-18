@@ -40,54 +40,8 @@
             </div>
             <hr>
 
-            <div class="table-responsive">
-                <table id="example1" class="table table-bordered table-hover text-center">
-                    <thead class="thead-dark text-center">
-                        <tr>
-                            <th>#</th>
-                            <th>Nombre</th>
-                            <th>Descripción</th>
-                            <th>Unidades Permitidas</th>
-                            <th>Materiales</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($categories as $category)
-                            <tr>
-                                <td>{{ $loop->iteration }}</td>
-                                <td>{{ $category->name }}</td>
-                                <td>{{ $category->description ?? 'N/A' }}</td>
-                                <td>
-                                    @foreach ($category->allowedUnits as $unit)
-                                        <span class="badge badge-secondary">{{ $unit->name }}</span>
-                                    @endforeach
-                                    @if ($category->allowedUnits->isEmpty())
-                                        <span class="text-muted small">Sin asignar</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <button class="btn btn-info btn-sm btn-show-materials" data-id="{{ $category->id }}"
-                                        data-name="{{ $category->name }}" style="font-size: 1rem; font-weight: bold;">
-                                        {{ $category->materials_count }}
-                                    </button>
-                                </td>
-                                <td>
-                                    <div class="d-flex justify-content-center align-items-center gap-1">
-                                        <a href="{{ route('admin.material-categories.edit', $category->id) }}"
-                                            class="btn btn-warning btn-sm" title="Editar">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <a href="{{ route('admin.material-categories.confirm_delete', $category->id) }}"
-                                            class="btn btn-danger btn-sm" title="Eliminar">
-                                            <i class="fas fa-trash"></i>
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+            <div class="table-responsive" id="mainTableContainer">
+                @include('admin.material-categories.partials.table')
             </div>
         </div>
     </div>
@@ -367,7 +321,7 @@
             function resetUnitManager() {
                 $categoryLabel.text('---');
                 $unitSelect.html('<option value="">Primero selecciona categoría...</option>').prop('disabled',
-                true);
+                    true);
                 $assignBtn.prop('disabled', true);
                 $tableBody.html(
                     '<tr><td colspan="4" class="text-muted py-4"><i class="fas fa-arrow-up mr-2"></i> Selecciona una categoría arriba.</td></tr>'
@@ -379,7 +333,7 @@
                 // Mostrar Loading
                 $tableBody.html(
                     '<tr><td colspan="4" class="py-4"><i class="fas fa-spinner fa-spin fa-2x text-primary"></i></td></tr>'
-                    );
+                );
                 $unitSelect.prop('disabled', true).html('<option>Cargando...</option>');
 
                 // 1. Cargar Unidades Asignadas (Tabla)
@@ -486,6 +440,8 @@
                         _token: '{{ csrf_token() }}'
                     },
                     success: function(response) {
+                        changesMade = true; // MARCAR CAMBIO
+
                         // Toast Success
                         Swal.fire({
                             icon: 'success',
@@ -502,6 +458,9 @@
 
                         // Reset boton
                         $assignBtn.html('<i class="fas fa-save mr-1"></i> Asignar');
+
+                        // REFRESCAR DATATABLE
+                        refreshMainTable();
                     },
                     error: function(xhr) {
                         const msg = xhr.responseJSON?.message || 'Error al guardar';
@@ -545,6 +504,8 @@
                                 _token: '{{ csrf_token() }}'
                             },
                             success: function(response) {
+                                changesMade = true; // MARCAR CAMBIO
+
                                 Swal.fire({
                                     icon: 'success',
                                     title: 'Eliminado',
@@ -555,6 +516,9 @@
                                     timer: 3000
                                 });
                                 loadCategoryDetails(categoryId);
+
+                                // REFRESCAR DATATABLE
+                                refreshMainTable();
                             },
                             error: function(xhr) {
                                 Swal.fire({
@@ -572,6 +536,91 @@
                     }
                 });
             });
+
+            // FLAG PARA DETECTAR CAMBIOS
+            let changesMade = false;
+
+            // Al abrir modal, resetear flag
+            $('#manageUnitsModal').on('show.bs.modal', function() {
+                changesMade = false;
+            });
+
+            // Al cerrar modal, limpiar flag (ya no refrescamos aquí)
+            $('#manageUnitsModal').on('hidden.bs.modal', function() {
+                // Ahora el refresco es inmediato al guardar/eliminar
+            });
+
+            // FUNCION PARA REFRESCAR TABLA PRINCIPAL
+            function refreshMainTable() {
+                // Destruir instancia previa si existe
+                if ($.fn.DataTable.isDataTable('#example1')) {
+                    $('#example1').DataTable().destroy();
+                }
+
+                // Construir URL robusta
+                var currentUrl = window.location.href.split('#')[0];
+                var urlObj = new URL(currentUrl);
+                urlObj.searchParams.set('t', new Date().getTime());
+                var tableUrl = urlObj.toString();
+
+                $.get(tableUrl, function(html) {
+                    $("#mainTableContainer").html(html);
+
+                    // Reinicializar DataTable
+                    $("#example1").DataTable({
+                        "pageLength": 10,
+                        "language": {
+                            "emptyTable": "No hay informacion",
+                            "info": "Mostrando _START_ a _END_ de _TOTAL_ Categorías",
+                            "infoEmpty": "Mostrando 0 a 0 de 0 Categorías",
+                            "infoFiltered": "(Filtrado de _MAX_ total Categorías)",
+                            "lengthMenu": "Mostrar _MENU_ Categorías",
+                            "loadingRecords": "Cargando...",
+                            "processing": "Procesando...",
+                            "search": "Buscador:",
+                            "zeroRecords": "Sin resultados encontrados",
+                            "paginate": {
+                                "first": "Primero",
+                                "last": "Ultimo",
+                                "next": "Siguiente",
+                                "previous": "Anterior"
+                            }
+                        },
+                        "responsive": true,
+                        "lengthChange": true,
+                        "autoWidth": false,
+                        buttons: [{
+                                text: '<i class="fas fa-copy"></i> COPIAR',
+                                extend: 'copy',
+                                className: 'btn btn-default'
+                            },
+                            {
+                                text: '<i class="fas fa-file-pdf"></i> PDF',
+                                extend: 'pdf',
+                                className: 'btn btn-danger'
+                            },
+                            {
+                                text: '<i class="fas fa-file-csv"></i> CSV',
+                                extend: 'csv',
+                                className: 'btn btn-info'
+                            },
+                            {
+                                text: '<i class="fas fa-file-excel"></i> EXCEL',
+                                extend: 'excel',
+                                className: 'btn btn-success'
+                            },
+                            {
+                                text: '<i class="fas fa-print"></i> IMPRIMIR',
+                                extend: 'print',
+                                className: 'btn btn-default'
+                            }
+                        ]
+                    }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+                }).fail(function() {
+                    console.error("Error al refrescar tabla");
+                    location.reload(); // Fallback
+                });
+            }
 
             $("#example1").DataTable({
                 "pageLength": 10,

@@ -66,21 +66,31 @@
                             @enderror
                         </div>
 
-                        {{-- Giro --}}
+                        {{-- Giro (Con botón de agregar rápido) --}}
                         <div class="form-group">
                             <label>Giro <span style="color: red;">*</span></label>
-                            <select name="giro_id"
-                                class="form-control form-control-sm @error('giro_id') is-invalid @enderror" required>
-                                <option value="">Selecciona un Giro</option>
-                                @foreach ($giros as $giro)
-                                    <option value="{{ $giro->id }}" {{ old('giro_id') == $giro->id ? 'selected' : '' }}>
-                                        {{ $giro->nombre_giro }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('giro_id')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                            <div class="input-group input-group-sm">
+                                <select name="giro_id" id="giro_id"
+                                    class="form-control @error('giro_id') is-invalid @enderror" required>
+                                    <option value="">Selecciona un Giro</option>
+                                    @foreach ($giros as $giro)
+                                        <option value="{{ $giro->id }}"
+                                            {{ old('giro_id') == $giro->id ? 'selected' : '' }}>
+                                            {{ $giro->nombre_giro }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <div class="input-group-append">
+                                    <button type="button" class="btn btn-purple"
+                                        style="background-color: #6f42c1; color: white;" data-toggle="modal"
+                                        data-target="#modalCreateGiro" title="Nuevo Giro">
+                                        <i class="fas fa-database"></i>
+                                    </button>
+                                </div>
+                                @error('giro_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
                         </div>
 
                         {{-- Dirección --}}
@@ -205,6 +215,45 @@
             </form>
         </div>
     </div>
+    {{-- MODAL CREAR GIRO (AJAX) --}}
+    <div class="modal fade" id="modalCreateGiro" tabindex="-1" role="dialog" aria-labelledby="modalCreateGiroLabel"
+        aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title font-weight-bold" id="modalCreateGiroLabel">
+                        <i class="fas fa-building mr-2"></i> NUEVO GIRO
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+
+                <form id="formCreateGiro" action="{{ route('admin.giros.store') }}" method="POST">
+                    <div class="modal-body">
+                        @csrf
+                        <div class="form-group">
+                            <label for="nombre_giro_modal" class="font-weight-bold text-primary">Nombre del Giro <span
+                                    class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="nombre_giro_modal" name="nombre_giro"
+                                placeholder="Ej: TELAS" required pattern="[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+"
+                                title="Solo se permiten letras y espacios"
+                                oninput="this.value = this.value.replace(/[^a-zA-ZñÑáéíóúÁÉÍÓÚ\s]/g, '').toUpperCase()">
+                            <small class="text-muted">El nombre se guardará en mayúsculas automáticamente.</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary" id="btnCancelGiroModal">
+                            <i class="fas fa-times-circle"></i> Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="btnSaveGiroModal">
+                            <i class="fas fa-save"></i> Guardar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 @stop
 
 @section('css')
@@ -214,6 +263,205 @@
 
 @section('js')
     <script>
-        console.log("Hi, I'm using the Laravel-AdminLTE package!");
+        $(function() {
+            var $modal = $('#modalCreateGiro');
+            var $form = $('#formCreateGiro');
+            var $btnSave = $('#btnSaveGiroModal');
+            var $btnCancel = $('#btnCancelGiroModal');
+            var $input = $('#nombre_giro_modal');
+            var isSubmitting = false;
+
+            // ============================================
+            // FUNCIÓN MAESTRA: Habilitar botones
+            // ============================================
+            function enableButtons() {
+                $btnSave
+                    .prop('disabled', false)
+                    .removeAttr('disabled')
+                    .removeClass('disabled')
+                    .css('pointer-events', 'auto')
+                    .html('<i class="fas fa-save"></i> Guardar');
+
+                $btnCancel
+                    .prop('disabled', false)
+                    .removeAttr('disabled')
+                    .removeClass('disabled')
+                    .css('pointer-events', 'auto');
+
+                isSubmitting = false;
+            }
+
+            // ============================================
+            // FUNCIÓN MAESTRA: Deshabilitar botones
+            // ============================================
+            function disableButtons() {
+                isSubmitting = true;
+
+                $btnSave
+                    .prop('disabled', true)
+                    .attr('disabled', 'disabled')
+                    .addClass('disabled')
+                    .css('pointer-events', 'none')
+                    .html('<i class="fas fa-spinner fa-spin"></i> Guardando...');
+
+                $btnCancel
+                    .prop('disabled', true)
+                    .attr('disabled', 'disabled')
+                    .addClass('disabled')
+                    .css('pointer-events', 'none');
+            }
+
+            // ============================================
+            // FUNCIÓN MAESTRA: Reset completo del modal
+            // ============================================
+            function resetModal() {
+                // 1. Limpiar formulario
+                $form[0].reset();
+                $input.val('');
+                $form.find('.is-invalid').removeClass('is-invalid');
+
+                // 2. Habilitar botones
+                enableButtons();
+            }
+
+            // ============================================
+            // EVENTOS DEL MODAL
+            // ============================================
+
+            // Al ABRIR: Reset total
+            $modal.on('show.bs.modal', function() {
+                resetModal();
+            });
+
+            // Al terminar de CERRAR: Reset total (garantía)
+            $modal.on('hidden.bs.modal', function() {
+                resetModal();
+            });
+
+            // Botón X (cerrar): permitir cierre
+            $modal.find('.close').on('click', function() {
+                if (!isSubmitting) {
+                    $modal.modal('hide');
+                }
+            });
+
+            // Botón Cancelar
+            $btnCancel.on('click', function(e) {
+                e.preventDefault();
+                if (!isSubmitting) {
+                    $modal.modal('hide');
+                }
+            });
+
+            // ============================================
+            // SUBMIT AJAX
+            // ============================================
+            $form.on('submit', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Prevenir doble submit
+                if (isSubmitting) {
+                    return false;
+                }
+
+                // Validar campo vacío
+                var nombre = $input.val().trim();
+                if (!nombre) {
+                    $input.addClass('is-invalid').focus();
+                    return false;
+                }
+
+                // Deshabilitar botones
+                disableButtons();
+
+                $.ajax({
+                    type: 'POST',
+                    url: $form.attr('action'),
+                    data: $form.serialize(),
+                    dataType: 'json',
+                    timeout: 30000, // 30 segundos timeout
+                    success: function(response) {
+                        if (response.success) {
+                            // Toast éxito
+                            Swal.fire({
+                                position: 'top-end',
+                                icon: 'success',
+                                title: response.message || 'Giro creado correctamente',
+                                showConfirmButton: false,
+                                timer: 1500,
+                                toast: true
+                            });
+
+                            // Agregar al select y seleccionar
+                            var newOption = new Option(response.data.nombre_giro, response.data.id, true, true);
+                            $('#giro_id').append(newOption);
+
+                            // Cerrar modal (hidden.bs.modal hará el reset)
+                            $modal.modal('hide');
+                        } else {
+                            // Respuesta success:false del servidor
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: response.message || 'No se pudo guardar'
+                            });
+                            enableButtons();
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        var msg = 'Ocurrió un error al guardar.';
+
+                        if (status === 'timeout') {
+                            msg = 'Tiempo de espera agotado. Intente de nuevo.';
+                        } else if (xhr.responseJSON) {
+                            if (xhr.responseJSON.error) {
+                                msg = xhr.responseJSON.error;
+                            } else if (xhr.responseJSON.message) {
+                                msg = xhr.responseJSON.message;
+                            } else if (xhr.responseJSON.errors) {
+                                var firstError = Object.values(xhr.responseJSON.errors)[0];
+                                msg = Array.isArray(firstError) ? firstError[0] : firstError;
+                            }
+                        } else if (xhr.status === 422) {
+                            msg = 'Datos inválidos. Verifique el formulario.';
+                        } else if (xhr.status === 500) {
+                            msg = 'Error interno del servidor.';
+                        } else if (xhr.status === 0) {
+                            msg = 'Sin conexión al servidor.';
+                        }
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: msg
+                        });
+
+                        // Reactivar botones
+                        enableButtons();
+                    },
+                    complete: function() {
+                        // Garantía: si el modal sigue abierto, asegurar estado correcto
+                        if ($modal.hasClass('show') && !isSubmitting) {
+                            enableButtons();
+                        }
+                    }
+                });
+
+                return false;
+            });
+
+            // ============================================
+            // GARANTÍA EXTRA: Click directo en botón guardar
+            // ============================================
+            $btnSave.on('click', function(e) {
+                if (isSubmitting) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+                // Si no está en submit, dejar que el form maneje el evento
+            });
+        });
     </script>
 @stop
