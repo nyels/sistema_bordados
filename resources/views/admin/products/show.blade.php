@@ -1,487 +1,654 @@
-{{-- resources/views/admin/products/show.blade.php --}}
 @extends('adminlte::page')
 
-@section('title', 'Detalle del Producto')
+@section('title', 'Detalle de Producto')
 
 @section('content_header')
+    <div class="row mb-2">
+        <div class="col-sm-6">
+            <h1 class="m-0 text-dark font-weight-bold">
+                <i class="fas fa-tshirt mr-2 text-primary"></i>Detalle del Producto
+                <span class="text-dark ml-2">#{{ $product->id }}</span>
+            </h1>
+        </div>
+        <div class="col-sm-6">
+            <ol class="breadcrumb float-sm-right">
+                <li class="breadcrumb-item"><a href="{{ route('home') }}">Inicio</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('admin.products.index') }}">Productos</a></li>
+                <li class="breadcrumb-item active">{{ $product->sku }}</li>
+            </ol>
+        </div>
+    </div>
 @stop
 
 @section('content')
-    <br>
-    <div class="card card-primary" bis_skin_checked="1">
-        <div class="card-header" bis_skin_checked="1">
-            <div class="d-flex justify-content-between align-items-center">
-                <h3 class="card-title" style="font-weight: bold;font-size: 20px;">
-                    DETALLE DEL PRODUCTO: {{ $product->name }}
-                </h3>
-                <div class="btn-group">
-                    <a href="{{ route('admin.products.index') }}" class="btn btn-default btn-sm">
-                        <i class="fas fa-arrow-left mr-1"></i> Volver
-                    </a>
-                    <a href="{{ route('admin.products.edit', $product->id) }}" class="btn btn-warning btn-sm">
-                        <i class="fas fa-edit mr-1"></i> Editar
-                    </a>
-                    @if ($product->canDelete())
-                        <a href="{{ route('admin.products.confirm_delete', $product->id) }}" class="btn btn-danger btn-sm">
-                            <i class="fas fa-trash mr-1"></i> Eliminar
-                        </a>
-                    @endif
-                    @if ($product->status === 'active')
-                        <form action="{{ route('admin.products.toggle_status', $product->id) }}" method="POST"
-                            class="d-inline" data-confirm="¿Cambiar a descontinuado?">
-                            @csrf
-                            <button type="submit" class="btn btn-secondary btn-sm">
-                                <i class="fas fa-ban mr-1"></i> Descontinuar
-                            </button>
-                        </form>
-                    @elseif($product->status === 'discontinued')
-                        <form action="{{ route('admin.products.toggle_status', $product->id) }}" method="POST"
-                            class="d-inline" data-confirm="¿Activar producto?">
-                            @csrf
-                            <button type="submit" class="btn btn-success btn-sm">
-                                <i class="fas fa-check mr-1"></i> Activar
-                            </button>
-                        </form>
-                    @endif
-                    <form action="{{ route('admin.products.duplicate', $product->id) }}" method="POST" class="d-inline"
-                        data-confirm="¿Duplicar este producto?">
-                        @csrf
-                        <button type="submit" class="btn btn-info btn-sm">
-                            <i class="fas fa-copy mr-1"></i> Duplicar
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-        <!-- /.card-header -->
+    {{-- OPTIMIZATION: Load missing relationships for BOM and cost details directly in view --}}
+    @php
+        $product->loadMissing([
+            'materials.material.category',
+            'materials.material.consumptionUnit',
+            'materials.material.baseUnit',
+            'designs.category',
+            'variants.attributes.attribute',
+            'images',
+            'primaryImage',
+        ]);
 
-        <div class="card-body" bis_skin_checked="1">
-            <!-- Mensajes de éxito/error -->
-            @if (session('success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('success') }}
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-            @endif
+        // Calculate totals for summary if not present
+        $totalMaterialCost =
+            $product->materials_cost > 0
+                ? $product->materials_cost
+                : $product->materials->sum(function ($m) {
+                    return $m->pivot->quantity * $m->pivot->unit_cost;
+                });
 
-            @if (session('error'))
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    {{ session('error') }}
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-            @endif
+        $totalDesignCost = $product->embroidery_cost;
+        $totalLaborCost = $product->labor_cost;
+        $totalServicesCost = $product->extra_services_cost;
 
-            <div class="row">
-                <!-- Columna izquierda: Información principal -->
-                <div class="col-md-8">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="info-box bg-light">
-                                <span class="info-box-icon bg-info"><i class="fas fa-barcode"></i></span>
-                                <div class="info-box-content">
-                                    <span class="info-box-text">SKU</span>
-                                    <span class="info-box-number">{{ $product->sku }}</span>
-                                </div>
-                            </div>
-                        </div>
+        // Use stored production cost if available and valid, otherwise recalc
+        $grandTotal =
+            $product->production_cost > 0
+                ? $product->production_cost
+                : $totalMaterialCost + $totalDesignCost + $totalLaborCost + $totalServicesCost;
 
-                        <div class="col-md-6">
-                            <div class="info-box bg-light">
-                                <span class="info-box-icon bg-{{ $product->status_color }}">
-                                    <i
-                                        class="fas fa-{{ $product->status === 'active' ? 'check' : ($product->status === 'draft' ? 'file' : 'ban') }}"></i>
-                                </span>
-                                <div class="info-box-content">
-                                    <span class="info-box-text">Estado</span>
-                                    <span class="info-box-number">{{ $product->status_label }}</span>
-                                </div>
-                            </div>
-                        </div>
+        // Margin calculation
+        $margin = $product->profit_margin;
+        $suggestedPrice = $product->suggested_price;
 
-                        <div class="col-md-6">
-                            <div class="info-box bg-light">
-                                <span class="info-box-icon bg-success"><i class="fas fa-tags"></i></span>
-                                <div class="info-box-content">
-                                    <span class="info-box-text">Categoría</span>
-                                    <span class="info-box-number">{{ $product->category->name ?? 'Sin categoría' }}</span>
-                                </div>
-                            </div>
-                        </div>
+        // Fetch application types for design details
+        $applicationTypes = \App\Models\Application_types::all();
+    @endphp
 
-                        <div class="col-md-6">
-                            <div class="info-box bg-light">
-                                <span class="info-box-icon bg-warning"><i class="fas fa-dollar-sign"></i></span>
-                                <div class="info-box-content">
-                                    <span class="info-box-text">Precio Base</span>
-                                    <span class="info-box-number">{{ $product->formatted_base_price }}</span>
+    <div class="container-fluid fade-in">
+
+        {{-- 1. EXECUTIVE HEADER --}}
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body p-4">
+                <div class="row align-items-center">
+                    <div class="col-lg-6">
+                        <div class="d-flex align-items-center">
+                            {{-- Status Badge --}}
+                            <span class="badge badge-{{ $product->status_color }} p-2 mr-3" style="font-size: 0.9rem;">
+                                <i
+                                    class="fas fa-{{ $product->status === 'active' ? 'check-circle' : ($product->status === 'draft' ? 'pencil-alt' : 'ban') }}"></i>
+                                {{ strtoupper($product->status_label) }}
+                            </span>
+                            <div>
+                                <h3 class="font-weight-bold mb-0 text-dark">{{ $product->name }}</h3>
+                                <div class="text-dark font-weight-bold mt-1">
+                                    <i class="fas fa-barcode mr-1"></i> {{ $product->sku }}
+                                    <span class="mx-2">|</span>
+                                    <i class="fas fa-tag mr-1"></i> {{ $product->category->name ?? 'Sin Categoría' }}
+                                    @if ($product->production_lead_time)
+                                        <span class="mx-2">|</span>
+                                        <span class="badge badge-warning text-dark border border-dark"
+                                            style="font-size: 100%;">
+                                            <i class="fas fa-clock mr-1"></i> {{ $product->production_lead_time }} días
+                                            producción
+                                        </span>
+                                    @endif
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Descripción -->
-                    <div class="card card-outline card-info mt-3">
-                        <div class="card-header">
-                            <h3 class="card-title">Descripción</h3>
-                        </div>
-                        <div class="card-body">
-                            {{ $product->description ?? 'Sin descripción' }}
-                        </div>
-                    </div>
+                    {{-- Actions Toolbar --}}
+                    <div class="col-lg-6 text-lg-right mt-3 mt-lg-0">
+                        <div class="btn-group shadow-sm">
+                            <a href="{{ route('admin.products.index') }}" class="btn btn-default">
+                                <i class="fas fa-arrow-left mr-1"></i> Volver
+                            </a>
 
-                    <!-- Especificaciones -->
-                    @if ($product->specifications && count($product->specifications) > 0)
-                        <div class="card card-outline card-success mt-3">
-                            <div class="card-header">
-                                <h3 class="card-title">Especificaciones Técnicas</h3>
-                            </div>
-                            <div class="card-body">
-                                <table class="table table-bordered">
-                                    <thead>
-                                        <tr>
-                                            <th style="width: 40%">Característica</th>
-                                            <th>Valor</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach ($product->specifications as $key => $value)
-                                            <tr>
-                                                <td><strong>{{ $key }}</strong></td>
-                                                <td>{{ $value }}</td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    @endif
-                </div>
-
-                <!-- Columna derecha: Imágenes y extras -->
-                <div class="col-md-4">
-                    <!-- Imagen principal -->
-                    <div class="card card-outline card-primary">
-                        <div class="card-header">
-                            <h3 class="card-title">Imagen Principal</h3>
-                        </div>
-                        <div class="card-body text-center">
-                            @if ($product->primary_image_url)
-                                <img src="{{ asset($product->primary_image_url) }}" alt="{{ $product->name }}"
-                                    class="img-fluid" style="max-height: 250px; object-fit: contain;">
-                            @else
-                                <div class="text-center py-5">
-                                    <i class="fas fa-image fa-5x text-muted"></i>
-                                    <p class="mt-2 text-muted">Sin imagen</p>
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-
-                    <!-- Extras -->
-                    @if ($product->extras->count() > 0)
-                        <div class="card card-outline card-warning mt-3">
-                            <div class="card-header">
-                                <h3 class="card-title">Extras Asociados</h3>
-                            </div>
-                            <div class="card-body">
-                                <ul class="list-group list-group-flush">
-                                    @foreach ($product->extras as $extra)
-                                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                                            {{ $extra->name }}
-                                            <span
-                                                class="badge badge-primary badge-pill">{{ $extra->formatted_price }}</span>
-                                        </li>
-                                    @endforeach
-                                </ul>
-                            </div>
-                        </div>
-                    @endif
-
-                    <!-- Estadísticas -->
-                    <div class="card card-outline card-secondary mt-3">
-                        <div class="card-header">
-                            <h3 class="card-title">Estadísticas</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="small-box bg-info">
-                                <div class="inner">
-                                    <h3>{{ $product->variants_count }}</h3>
-                                    <p>Variantes</p>
-                                </div>
-                                <div class="icon">
-                                    <i class="fas fa-layer-group"></i>
-                                </div>
-                                <a href="#variants-section" class="small-box-footer">
-                                    Ver variantes <i class="fas fa-arrow-circle-down"></i>
+                            @if ($product->status !== 'discontinued')
+                                <a href="{{ route('admin.products.edit', $product->id) }}"
+                                    class="btn btn-warning font-weight-bold">
+                                    <i class="fas fa-edit mr-1"></i> Editar
                                 </a>
-                            </div>
-
-                            @if ($product->designs->count() > 0)
-                                <div class="small-box bg-success mt-3">
-                                    <div class="inner">
-                                        <h3>{{ $product->designs->count() }}</h3>
-                                        <p>Diseños Asociados</p>
-                                    </div>
-                                    <div class="icon">
-                                        <i class="fas fa-palette"></i>
-                                    </div>
-                                </div>
                             @endif
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Diseños Asociados -->
-            @if ($product->designs->count() > 0)
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <div class="card card-outline card-info">
-                            <div class="card-header">
-                                <h3 class="card-title">Diseños Asociados</h3>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    @foreach ($product->designs as $design)
-                                        <div class="col-md-4 mb-3">
-                                            <div class="card">
-                                                <div class="card-body">
-                                                    <h5 class="card-title">{{ $design->name }}</h5>
-                                                    <p class="card-text">
-                                                        <strong>Código:</strong> {{ $design->code }}<br>
-                                                        <strong>Puntadas:</strong> {{ $design->stitch_count ?? 'N/A' }}<br>
-                                                        <strong>Tipo de Aplicación:</strong>
-                                                        {{ $design->pivot->application_type_id ? $applicationTypes->firstWhere('id', $design->pivot->application_type_id)->nombre ?? 'N/A' : 'N/A' }}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            @endif
-
-            <!-- Variantes del Producto -->
-            <div class="row mt-4" id="variants-section">
-                <div class="col-12">
-                    <div class="card card-outline card-primary">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h3 class="card-title">Variantes del Producto</h3>
-                            <a href="{{ route('admin.products.variants.create', $product->id) }}"
-                                class="btn btn-success btn-sm">
-                                <i class="fas fa-plus mr-1"></i> Nueva Variante
-                            </a>
-                        </div>
-                        <div class="card-body">
-                            @if ($product->variants->count() > 0)
-                                <div class="table-responsive">
-                                    <table class="table table-bordered table-hover">
-                                        <thead class="thead-dark">
-                                            <tr>
-                                                <th>SKU Variante</th>
-                                                <th>Atributos</th>
-                                                <th>Precio</th>
-                                                <th>Precio + Extras</th>
-                                                <th>Alerta Stock</th>
-                                                <th>Exportaciones</th>
-                                                <th style="width: 120px;">Acciones</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach ($product->variants as $variant)
-                                                <tr>
-                                                    <td>
-                                                        <span class="badge badge-dark">{{ $variant->sku_variant }}</span>
-                                                    </td>
-                                                    <td>
-                                                        @if ($variant->attributes->count() > 0)
-                                                            <div class="d-flex flex-wrap gap-1">
-                                                                @foreach ($variant->attributes as $attribute)
-                                                                    <span class="badge badge-info">
-                                                                        {{ $attribute->attribute->name ?? 'N/A' }}:
-                                                                        {{ $attribute->value }}
-                                                                    </span>
-                                                                @endforeach
-                                                            </div>
-                                                        @else
-                                                            <span class="text-muted">Sin atributos</span>
-                                                        @endif
-                                                    </td>
-                                                    <td class="text-right font-weight-bold">
-                                                        {{ $variant->formatted_price }}</td>
-                                                    <td class="text-right font-weight-bold text-success">
-                                                        {{ $variant->formatted_total_with_extras }}</td>
-                                                    <td class="text-center">
-                                                        <span
-                                                            class="badge badge-{{ $variant->stock_alert > 0 ? 'warning' : 'secondary' }}">
-                                                            {{ $variant->stock_alert }}
-                                                        </span>
-                                                    </td>
-                                                    <td class="text-center">
-                                                        <span
-                                                            class="badge badge-secondary">{{ $variant->designExports->count() }}</span>
-                                                    </td>
-                                                    <td>
-                                                        <div class="btn-group btn-group-sm">
-                                                            <a href="#" class="btn btn-info" title="Ver">
-                                                                <i class="fas fa-eye"></i>
-                                                            </a>
-                                                            <a href="{{ route('admin.products.variants.edit', ['product' => $product->id, 'variant' => $variant->id]) }}"
-                                                                class="btn btn-warning" title="Editar">
-                                                                <i class="fas fa-edit"></i>
-                                                            </a>
-                                                            <form
-                                                                action="{{ route('admin.products.variants.destroy', ['product' => $product->id, 'variant' => $variant->id]) }}"
-                                                                method="POST" class="d-inline"
-                                                                data-confirm="¿Eliminar esta variante?">
-                                                                @csrf
-                                                                @method('DELETE')
-                                                                <button type="submit" class="btn btn-danger"
-                                                                    title="Eliminar">
-                                                                    <i class="fas fa-trash"></i>
-                                                                </button>
-                                                            </form>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
-                                </div>
-                            @else
-                                <div class="text-center py-4">
-                                    <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
-                                    <h5 class="text-muted">No hay variantes registradas</h5>
-                                    <p class="text-muted">Crea la primera variante para este producto</p>
-                                    <a href="{{ route('admin.products.variants.create', $product->id) }}"
-                                        class="btn btn-primary">
-                                        <i class="fas fa-plus mr-1"></i> Crear Primera Variante
-                                    </a>
-                                </div>
+                            {{-- Toggle Status --}}
+                            @if ($product->status === 'active')
+                                <form action="{{ route('admin.products.toggle_status', $product->id) }}" method="POST"
+                                    class="d-inline" data-confirm="¿Descontinuar este producto?">
+                                    @csrf
+                                    <button type="submit" class="btn btn-secondary text-white">
+                                        <i class="fas fa-ban mr-1"></i> Desactivar
+                                    </button>
+                                </form>
+                            @elseif($product->status === 'discontinued')
+                                <form action="{{ route('admin.products.toggle_status', $product->id) }}" method="POST"
+                                    class="d-inline" data-confirm="¿Reactivar este producto?">
+                                    @csrf
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="fas fa-check mr-1"></i> Reactivar
+                                    </button>
+                                </form>
                             @endif
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Información de Auditoría -->
-            <div class="row mt-4">
-                <div class="col-12">
-                    <div class="card card-outline card-secondary">
-                        <div class="card-header">
-                            <h3 class="card-title">Información de Auditoría</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-3">
-                                    <p><strong>Creado:</strong><br>
-                                        {{ $product->created_at->format('d/m/Y H:i:s') }}<br>
-                                        <small class="text-muted">{{ $product->created_at->diffForHumans() }}</small>
-                                    </p>
-                                </div>
-                                <div class="col-md-3">
-                                    <p><strong>Actualizado:</strong><br>
-                                        {{ $product->updated_at->format('d/m/Y H:i:s') }}<br>
-                                        <small class="text-muted">{{ $product->updated_at->diffForHumans() }}</small>
-                                    </p>
-                                </div>
-                                <div class="col-md-3">
-                                    <p><strong>UUID:</strong><br>
-                                        <code>{{ $product->uuid }}</code>
-                                    </p>
-                                </div>
-                                <div class="col-md-3">
-                                    <p><strong>Tenant ID:</strong><br>
-                                        {{ $product->tenant_id }}
-                                    </p>
-                                </div>
-                            </div>
+                            <form action="{{ route('admin.products.duplicate', $product->id) }}" method="POST"
+                                class="d-inline" data-confirm="¿Crear una copia de este producto?">
+                                @csrf
+                                <button type="submit" class="btn btn-info">
+                                    <i class="fas fa-copy mr-1"></i> Duplicar
+                                </button>
+                            </form>
+
+                            @if ($product->canDelete())
+                                <form action="{{ route('admin.products.destroy', $product->id) }}" method="POST"
+                                    class="d-inline" data-confirm="¿Eliminar permanentemente?">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-danger">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            @endif
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <!-- /.card-body -->
 
-        <div class="card-footer" bis_skin_checked="1">
-            <div class="row">
-                <div class="col-md-6">
-                    <a href="{{ route('admin.products.index') }}" class="btn btn-default">
-                        <i class="fas fa-arrow-left mr-1"></i> Volver al Listado
-                    </a>
+        {{-- 2. KPI CARDS (Financial Summary) --}}
+        <div class="row mb-4">
+            <div class="col-md-3 col-sm-6">
+                <div class="info-box shadow-sm border-left-primary">
+                    <span class="info-box-icon bg-light text-primary"><i class="fas fa-money-bill-wave"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text text-uppercase text-dark font-weight-bold">Costo Producción</span>
+                        <span class="info-box-number text-dark h5 mb-0">${{ number_format($grandTotal, 2) }}</span>
+                    </div>
                 </div>
-                <div class="col-md-6 text-right">
-                    <div class="btn-group">
-                        <a href="{{ route('admin.products.edit', $product->id) }}" class="btn btn-warning">
-                            <i class="fas fa-edit mr-1"></i> Editar Producto
-                        </a>
-                        @if ($product->canDelete())
-                            <a href="{{ route('admin.products.confirm_delete', $product->id) }}" class="btn btn-danger">
-                                <i class="fas fa-trash mr-1"></i> Eliminar Producto
-                            </a>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="info-box shadow-sm border-left-success">
+                    <span class="info-box-icon bg-light text-success"><i class="fas fa-tag"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text text-uppercase text-dark font-weight-bold">Precio Sugerido</span>
+                        <span class="info-box-number text-dark h5 mb-0">
+                            ${{ number_format($suggestedPrice, 2) }}
+                            <span class="text-success ml-1">({{ number_format($margin, 1) }}%)</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="info-box shadow-sm border-left-info">
+                    <span class="info-box-icon bg-light text-info"><i class="fas fa-cubes"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text text-uppercase text-dark font-weight-bold">Composición</span>
+                        <span class="info-box-number text-dark h5 mb-0">
+                            {{ $product->materials->count() }} Mats <span class="text-dark">|</span>
+                            {{ $product->variants_count }} Vars
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="info-box shadow-sm border-left-warning">
+                    <span class="info-box-icon bg-light text-warning"><i class="fas fa-dollar-sign"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text text-uppercase text-dark font-weight-bold">Precio Final</span>
+                        <span class="info-box-number text-dark h5 mb-0 font-weight-bold">
+                            ${{ number_format($product->base_price, 2) }}
+                            @if ($product->base_price != $suggestedPrice)
+                                <span class="text-dark ml-1" style="font-size: 0.9rem;">
+                                    | Dif: ${{ number_format($product->base_price - $suggestedPrice, 2) }}
+                                </span>
+                            @endif
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            {{-- 3. LEFT COLUMN: ENGINEERING & COSTS (BOM) --}}
+            <div class="col-lg-8">
+
+                {{-- COST STRUCTURE BREAKDOWN --}}
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-light border-0">
+                        <h3 class="card-title font-weight-bold text-dark">
+                            <i class="fas fa-chart-pie mr-2 text-secondary"></i>Estructura de Costos
+                        </h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm">
+                            <thead class="text-dark font-weight-bold">
+                                <tr>
+                                    <th class="pl-4">Concepto</th>
+                                    <th class="text-right">Costo Unitario</th>
+                                    <th class="text-right pr-4">% del Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="pl-4"><i class="fas fa-boxes text-primary mr-2" style="width:20px;"></i>
+                                        Materiales Directos</td>
+                                    <td class="text-right font-weight-bold">${{ number_format($totalMaterialCost, 2) }}
+                                    </td>
+                                    <td class="text-right pr-4 text-dark font-weight-bold">
+                                        {{ $grandTotal > 0 ? number_format(($totalMaterialCost / $grandTotal) * 100, 1) : 0 }}%
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="pl-4"><i class="fas fa-tshirt text-info mr-2" style="width:20px;"></i>
+                                        Bordado / Diseño</td>
+                                    <td class="text-right font-weight-bold">${{ number_format($totalDesignCost, 2) }}</td>
+                                    <td class="text-right pr-4 text-dark font-weight-bold">
+                                        {{ $grandTotal > 0 ? number_format(($totalDesignCost / $grandTotal) * 100, 1) : 0 }}%
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="pl-4"><i class="fas fa-hand-holding-usd text-warning mr-2"
+                                            style="width:20px;"></i> Mano de Obra</td>
+                                    <td class="text-right font-weight-bold">${{ number_format($totalLaborCost, 2) }}</td>
+                                    <td class="text-right pr-4 text-dark font-weight-bold">
+                                        {{ $grandTotal > 0 ? number_format(($totalLaborCost / $grandTotal) * 100, 1) : 0 }}%
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="pl-4"> <i class="fas fa-concierge-bell mr-2 text-secondary"></i>
+                                        Servicios Extras</td>
+                                    <td class="text-right font-weight-bold">${{ number_format($totalServicesCost, 2) }}
+                                    </td>
+                                    <td class="text-right pr-4 text-dark font-weight-bold">
+                                        {{ $grandTotal > 0 ? number_format(($totalServicesCost / $grandTotal) * 100, 1) : 0 }}%
+                                    </td>
+                                </tr>
+                                {{-- Extras removed from here to show in detailed table --}}
+                                <tr class="bg-light" style="border-top: 2px solid #dee2e6;">
+                                    <td class="pl-4 font-weight-bold text-uppercase">Total Costo Producción</td>
+                                    <td class="text-right font-weight-bold h6 mb-0 text-success">
+                                        ${{ number_format($grandTotal, 2) }}</td>
+                                    <td class="text-right pr-4 font-weight-bold text-dark">100%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {{-- BILL OF MATERIALS (BOM) --}}
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header border-0 bg-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h3 class="card-title font-weight-bold text-dark">
+                                <i class="fas fa-scroll mr-2 text-primary"></i>Receta de Materiales (BOM)
+                            </h3>
+                            <span class="badge badge-light border">{{ $product->materials->count() }} Insumos</span>
+                        </div>
+                    </div>
+                    <div class="card-body p-0 table-responsive">
+                        <table class="table table-hover table-striped mb-0">
+                            <thead class="bg-light text-uppercase font-weight-bold text-dark">
+                                <tr>
+                                    <th class="pl-4">Material</th>
+                                    <th>Categoría</th>
+                                    <th class="text-center">Alcance</th>
+                                    <th class="text-center">Consumo</th>
+                                    <th class="text-right">Costo Unit.</th>
+                                    <th class="text-right pr-4">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($product->materials->sortBy('material.category.name') as $mat)
+                                    <tr>
+                                        <td class="pl-4 align-middle">
+                                            <div class="font-weight-bold text-dark pb-0 mb-0" style="line-height:1.2;">
+                                                {{ $mat->material->name ?? 'N/A' }}
+                                                @if ($mat->color)
+                                                    <span class="text-dark">- {{ $mat->color }}</span>
+                                                @endif
+                                            </div>
+                                            @if ($mat->pivot->notes)
+                                                <div class="text-dark d-block"><i
+                                                        class="fas fa-info-circle mr-1"></i>{{ $mat->pivot->notes }}</div>
+                                            @endif
+                                        </td>
+                                        <td class="align-middle">
+                                            <span
+                                                class="badge badge-light border text-dark">{{ $mat->material->category->name ?? 'N/A' }}</span>
+                                        </td>
+                                        <td class="align-middle text-center">
+                                            @if ($mat->pivot->active_for_variants)
+                                                <span class="badge badge-info"
+                                                    title="Aplica solo a algunas variantes">Específico</span>
+                                            @else
+                                                <span class="badge badge-secondary"
+                                                    title="Aplica a todas las variantes">Global</span>
+                                            @endif
+                                        </td>
+                                        <td class="align-middle text-center font-weight-bold">
+                                            {{ floatval($mat->pivot->quantity) }}
+                                            <span
+                                                class="text-dark">{{ $mat->material->consumptionUnit->symbol ?? ($mat->material->baseUnit->symbol ?? 'unid') }}</span>
+                                        </td>
+                                        <td class="align-middle text-right text-dark">
+                                            ${{ number_format($mat->pivot->unit_cost, 2) }}
+                                        </td>
+                                        <td class="align-middle text-right pr-4 font-weight-bold text-dark">
+                                            ${{ number_format($mat->pivot->quantity * $mat->pivot->unit_cost, 2) }}
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="6" class="text-center py-4 text-muted">
+                                            <i class="fas fa-box-open mr-2"></i>No hay materiales registrados en la receta.
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {{-- SERVICES EXTRAS TABLE (MIRROR BOM FORMAT) --}}
+                @if ($product->extras->count() > 0)
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header border-0 bg-white">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h3 class="card-title font-weight-bold text-dark">
+                                    <i class="fas fa-concierge-bell mr-2 text-warning"></i>Servicios Extras
+                                </h3>
+                                <span class="badge badge-light border text-dark">{{ $product->extras->count() }}
+                                    Servicios</span>
+                            </div>
+                        </div>
+                        <div class="card-body p-0 table-responsive">
+                            <table class="table table-hover table-striped mb-0">
+                                <thead class="bg-light text-uppercase font-weight-bold text-dark">
+                                    <tr>
+                                        <th class="pl-4">Servicio</th>
+                                        <th>Categoría</th>
+                                        <th class="text-center">Alcance</th>
+                                        <th class="text-center">Cantidad</th>
+                                        <th class="text-right">Costo Unit.</th>
+                                        <th class="text-right pr-4">Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach ($product->extras as $extra)
+                                        <tr>
+                                            <td class="pl-4 align-middle">
+                                                <div class="font-weight-bold text-dark pb-0 mb-0">
+                                                    {{ $extra->name }}
+                                                </div>
+                                            </td>
+                                            <td class="align-middle">
+                                                <span class="badge badge-light border text-dark">Servicio</span>
+                                            </td>
+                                            <td class="align-middle text-center">
+                                                <span class="badge badge-secondary">Global</span>
+                                            </td>
+                                            <td class="align-middle text-center font-weight-bold text-dark">
+                                                1 <span class="text-dark">srv</span>
+                                            </td>
+                                            <td class="align-middle text-right text-dark">
+                                                ${{ number_format($extra->price_addition, 2) }}
+                                            </td>
+                                            <td class="align-middle text-right pr-4 font-weight-bold text-dark">
+                                                ${{ number_format($extra->price_addition, 2) }}
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                    <tr class="bg-light border-top">
+                                        <td colspan="5" class="pl-4 font-weight-bold text-dark text-right">TOTAL EXTRAS
+                                        </td>
+                                        <td class="text-right pr-4 font-weight-bold text-dark">
+                                            ${{ number_format($product->extras->sum('price_addition'), 2) }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                @endif
+
+            </div>
+
+            {{-- 4. RIGHT COLUMN: CONTEXT & MEDIA --}}
+            <div class="col-lg-4">
+
+                {{-- PRODUCT IMAGE --}}
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body text-center p-2 bg-light rounded">
+                        @if ($product->primary_image_url)
+                            <img src="{{ $product->primary_image_url }}" alt="{{ $product->name }}"
+                                class="img-fluid rounded shadow-sm"
+                                style="max-height: 280px; width: 100%; object-fit: contain; background:white;">
+                        @else
+                            <div class="text-center py-5 bg-white rounded border border-light">
+                                <i class="fas fa-image fa-4x text-dark"></i>
+                                <p class="mt-2 text-dark font-weight-bold">Sin imagen principal</p>
+                            </div>
                         @endif
                     </div>
+                    <div class="card-footer bg-white p-2">
+                        <span class="text-dark font-weight-bold text-uppercase d-block mb-2">Galería</span>
+                        <div class="d-flex gap-2">
+                            @forelse($product->images->take(4) as $img)
+                                <img src="{{ asset($img->url) }}" class="rounded border"
+                                    style="width: 40px; height: 40px; object-fit: cover;">
+                            @empty
+                                <span class="text-dark font-italic">No hay imágenes adicionales</span>
+                            @endforelse
+                        </div>
+                    </div>
                 </div>
+
+                {{-- DESIGNS / EMBROIDERY --}}
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white border-bottom-0 pb-0">
+                        <h3 class="card-title font-weight-bold text-dark">
+                            <i class="fas fa-vector-square mr-2 text-info"></i>Diseños
+                        </h3>
+                    </div>
+                    <div class="card-body pt-2">
+                        @forelse($product->designs as $design)
+                            <div class="d-flex align-items-center mb-3 pb-3 border-bottom last-no-border">
+                                <div class="mr-3 text-center bg-light rounded p-2"
+                                    style="width:50px; height:50px; display:flex; align-items:center; justify-content:center;">
+                                    <i class="fas fa-palette text-secondary"></i>
+                                </div>
+                                <div>
+                                    <h6 class="font-weight-bold mb-0 text-dark">{{ $design->name }}</h6>
+                                    <div class="text-dark d-block">
+                                        {{ $design->stitch_count ? number_format($design->stitch_count) . ' pts' : 'N/A' }}
+                                        @if (isset($applicationTypes) && $design->pivot->application_type_id)
+                                            •
+                                            {{ $applicationTypes->firstWhere('id', $design->pivot->application_type_id)->nombre_aplicacion ?? '' }}
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        @empty
+                            <p class="text-dark font-italic mb-0">No hay diseños asociados (Producto liso)</p>
+                        @endforelse
+                    </div>
+                </div>
+
+                {{-- SPECS SUMMARY --}}
+                @if ($product->specifications && count($product->specifications) > 0)
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-white border-0">
+                            <h3 class="card-title font-weight-bold text-dark text-small">Especificaciones</h3>
+                        </div>
+                        <div class="card-body p-0">
+                            <table class="table table-sm table-striped">
+                                <tbody>
+                                    @foreach ($product->specifications as $key => $value)
+                                        <tr>
+                                            <td class="pl-3 text-muted small font-weight-bold text-uppercase"
+                                                style="width:40%;">{{ $key }}</td>
+                                            <td class="small">{{ $value }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                @endif
+            </div>
+
+        </div>
+
+        {{-- 5. VARIANTS TABLE (Full Width) --}}
+        <div class="card shadow-sm border-0 mb-4" id="variants-section">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <h3 class="card-title font-weight-bold">
+                    <i class="fas fa-th mr-2"></i>Variantes del Producto ({{ $product->variants->count() }})
+                </h3>
+            </div>
+
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light text-uppercase small">
+                        <tr>
+                            <th class="pl-4">SKU Variante</th>
+                            <th>Atributos (Talla / Color)</th>
+                            <th class="text-right">Precio Base</th>
+                            <th class="text-right">Precio Final</th>
+                            <th class="text-center">Stock Alerta</th>
+                            <th class="text-right pr-4">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($product->variants as $variant)
+                            <tr>
+                                <td class="pl-4">
+                                    <span class="font-weight-bold text-dark">{{ $variant->sku_variant }}</span>
+                                </td>
+                                <td>
+                                    @foreach ($variant->attributes as $attr)
+                                        <span class="badge badge-light border text-dark mr-1">
+                                            {{ $attr->value }}
+                                        </span>
+                                    @endforeach
+                                </td>
+                                <td class="text-right text-dark">${{ number_format($variant->price, 2) }}</td>
+                                <td class="text-right font-weight-bold text-success">
+                                    {{ $variant->formatted_total_with_extras }}
+                                </td>
+                                <td class="text-center">
+                                    @if ($variant->stock_alert > 0)
+                                        <span class="text-warning font-weight-bold"><i
+                                                class="fas fa-exclamation-triangle mr-1"></i>{{ $variant->stock_alert }}</span>
+                                    @else
+                                        <span class="text-dark">-</span>
+                                    @endif
+                                </td>
+                                <td class="text-right pr-4">
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ route('admin.products.variants.edit', ['product' => $product->id, 'variant' => $variant->id]) }}"
+                                            class="btn btn-default" title="Editar Variante">
+                                            <i class="fas fa-pencil-alt text-warning"></i>
+                                        </a>
+                                        <form
+                                            action="{{ route('admin.products.variants.destroy', ['product' => $product->id, 'variant' => $variant->id]) }}"
+                                            method="POST" class="d-inline"
+                                            data-confirm="¿Eliminar esta variante permanentemente?">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="button" class="btn btn-default delete-variant-btn"
+                                                title="Eliminar">
+                                                <i class="fas fa-trash text-danger"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="text-center py-5">
+                                    <i class="fas fa-search fa-2x text-dark mb-3 block"></i>
+                                    <p class="text-dark">No existen variantes activas para este producto.</p>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
+
+        {{-- 6. FOOTER AUDIT --}}
+        <div class="d-flex justify-content-between align-items-center mb-4 text-dark px-2">
+            <div>
+                <strong>Creado:</strong> {{ $product->created_at->format('d/m/Y H:i') }} |
+                <strong>Actualizado:</strong> {{ $product->updated_at->format('d/m/Y H:i') }}
+            </div>
+            <div class="font-italic">
+                UUID: {{ $product->uuid }}
+            </div>
+        </div>
+
     </div>
 @stop
 
 @section('css')
     <style>
-        .info-box {
-            margin-bottom: 15px;
-            box-shadow: 0 0 1px rgba(0, 0, 0, .125), 0 1px 3px rgba(0, 0, 0, .2);
-            border-radius: .25rem;
+        .card {
+            border-radius: 8px;
         }
 
-        .small-box {
-            border-radius: .25rem;
-            position: relative;
-            display: block;
-            margin-bottom: 20px;
-            box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+        .shadow-sm {
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
         }
 
-        .small-box>.inner {
-            padding: 10px;
+        .border-left-primary {
+            border-left: 4px solid #007bff !important;
         }
 
-        .small-box .icon {
-            position: absolute;
-            top: -10px;
-            right: 10px;
-            z-index: 0;
-            font-size: 70px;
-            color: rgba(0, 0, 0, 0.15);
+        .border-left-success {
+            border-left: 4px solid #28a745 !important;
         }
 
-        .gap-1 {
-            gap: 0.25rem;
+        .border-left-info {
+            border-left: 4px solid #17a2b8 !important;
+        }
+
+        .border-left-warning {
+            border-left: 4px solid #ffc107 !important;
+        }
+
+        .info-box-icon {
+            border-radius: 8px;
+        }
+
+        .last-no-border:last-child {
+            border-bottom: none !important;
+            padding-bottom: 0 !important;
+            margin-bottom: 0 !important;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
     </style>
 @stop
 
 @section('js')
-    <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
     <script>
         $(document).ready(function() {
-            // SweetAlert para confirmaciones
-            $(document).on('submit', 'form[data-confirm]', function(e) {
+            // Global delete confirmation
+            $('form[data-confirm]').on('submit', function(e) {
                 e.preventDefault();
-                var form = this;
-
+                const form = this;
                 Swal.fire({
-                    title: '¿Estás seguro?',
+                    title: '¿Confirmar acción?',
                     text: $(this).data('confirm'),
                     icon: 'warning',
                     showCancelButton: true,
@@ -496,18 +663,10 @@
                 });
             });
 
-            // Scroll suave a la sección de variantes
-            $('a[href="#variants-section"]').click(function(e) {
-                e.preventDefault();
-                $('html, body').animate({
-                    scrollTop: $("#variants-section").offset().top - 20
-                }, 500);
+            // Special handler for variant deletion button (which is type="button" to prevent auto submit)
+            $('.delete-variant-btn').on('click', function() {
+                $(this).closest('form').submit();
             });
-
-            // Auto-ocultar alertas después de 5 segundos
-            setTimeout(function() {
-                $('.alert').fadeOut('slow');
-            }, 5000);
         });
     </script>
 @stop

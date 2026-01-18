@@ -232,11 +232,11 @@ class Product extends Model
     {
         $image = $this->primaryImage;
         if ($image) {
-            return $image->url;
+            return $image->display_url;
         }
 
-        $firstImage = $this->images()->first();
-        return $firstImage ? $firstImage->url : null;
+        $firstImage = $this->images->first();
+        return $firstImage ? $firstImage->display_url : null;
     }
 
     /*
