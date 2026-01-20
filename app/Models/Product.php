@@ -93,6 +93,7 @@ class Product extends Model
     public function extras()
     {
         return $this->belongsToMany(ProductExtra::class, 'product_extra_assignment', 'product_id', 'product_extra_id')
+            ->withPivot(['id', 'snapshot_cost', 'snapshot_price', 'snapshot_time'])
             ->withTimestamps();
     }
 
@@ -197,20 +198,18 @@ class Product extends Model
         return $total;
     }
 
-    public function getBasePrice(): float
+    public function getLowestVariantPrice(): float
     {
         $variant = $this->variants()->orderBy('price', 'asc')->first();
         return $variant ? (float) $variant->price : 0;
     }
 
-    public function getBasePriceAttribute(): float
-    {
-        return $this->getBasePrice();
-    }
+    // REMOVIDO: getBasePriceAttribute() sobreescribía el valor de BD
+    // Ahora base_price se lee directamente de la columna en BD
 
     public function getFormattedBasePriceAttribute(): string
     {
-        return '$' . number_format($this->base_price, 2);
+        return '$' . number_format($this->attributes['base_price'] ?? 0, 2);
     }
 
     public function getExtrasTotal(): float

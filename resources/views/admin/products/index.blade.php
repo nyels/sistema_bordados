@@ -21,44 +21,43 @@
             </div>
             <hr>
 
-            <!-- Filtros -->
-            <div class="row mb-3">
-                <div class="col-md-3">
-                    <div class="form-group">
-                        <label for="category_filter">Categoría</label>
-                        <select class="form-control select2" id="category_filter" style="width: 100%;">
-                            <option value="">Todas las categorías</option>
-                            @foreach ($categories as $category)
-                                <option value="{{ $category->id }}">{{ $category->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+            <!-- Filtros de Productos -->
+            <div class="card card-outline card-secondary mb-3">
+                <div class="card-header py-2">
+                    <h3 class="card-title"><i class="fas fa-filter mr-2"></i>Filtros de Productos</h3>
                 </div>
-                <div class="col-md-3">
-                    <div class="form-group">
-                        <label for="status_filter">Estado</label>
-                        <select class="form-control select2" id="status_filter" style="width: 100%;">
-                            <option value="">Todos los estados</option>
-                            <option value="Activo">Activo</option>
-                            <option value="Borrador">Borrador</option>
-                            <option value="Descontinuado">Descontinuado</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group">
-                        <label for="search_filter">Búsqueda</label>
-                        <input type="text" class="form-control" id="search_filter" placeholder="Nombre, SKU...">
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group d-flex align-items-end">
-                        <button type="button" id="btn_filter" class="btn btn-primary mr-2">
-                            <i class="fas fa-filter mr-1"></i> Filtrar
-                        </button>
-                        <button type="button" id="btn_reset" class="btn btn-default">
-                            <i class="fas fa-undo mr-1"></i> Limpiar
-                        </button>
+                <div class="card-body py-3">
+                    <div class="row align-items-end">
+                        <div class="col-md-3">
+                            <label for="category_filter" class="mb-1 font-weight-bold">Categoría</label>
+                            <select class="form-control border" id="category_filter">
+                                <option value="">Todas</option>
+                                @foreach ($categories as $category)
+                                    <option value="{{ $category->id }}">{{ $category->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="status_filter" class="mb-1 font-weight-bold">Estado</label>
+                            <select class="form-control border" id="status_filter">
+                                <option value="">Todos</option>
+                                <option value="Activo" selected>Activo</option>
+                                <option value="Borrador">Borrador</option>
+                                <option value="Descontinuado">Descontinuado</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="search_filter" class="mb-1 font-weight-bold">Búsqueda</label>
+                            <input type="text" class="form-control border" id="search_filter" placeholder="Buscar por nombre o SKU...">
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end justify-content-end">
+                            <button type="button" id="btn_filter" class="btn btn-primary">
+                                <i class="fas fa-search mr-1"></i> Filtrar
+                            </button>
+                            <button type="button" id="btn_reset" class="btn btn-outline-secondary ml-2">
+                                <i class="fas fa-undo mr-1"></i> Limpiar
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -83,7 +82,7 @@
                         <tbody>
                             @foreach ($products as $product)
                                 <tr>
-                                    <td>{{ $loop->iteration }}</td>
+                                    <td class="text-center">{{ $loop->iteration }}</td>
                                     <td class="text-center">
                                         @if ($product->primary_image_url)
                                             <img src="{{ asset($product->primary_image_url) }}" alt="{{ $product->name }}"
@@ -94,24 +93,42 @@
                                             </div>
                                         @endif
                                     </td>
-                                    <td>
+                                    <td class="text-center">
                                         <span class="badge badge-dark">{{ $product->sku }}</span>
                                     </td>
-                                    <td>
+                                    <td class="text-center">
                                         <strong>{{ $product->name }}</strong>
                                         @if ($product->description)
                                             <br><small
                                                 class="text-muted">{{ Str::limit($product->description, 50) }}</small>
                                         @endif
                                     </td>
-                                    <td>
+                                    <td class="text-center">
                                         <span
                                             class="badge badge-info">{{ $product->category->name ?? 'Sin categoría' }}</span>
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge badge-secondary">{{ $product->variants_count }}</span>
+                                        @if ($product->variants->count() > 0)
+                                            <div class="d-flex flex-column align-items-center justify-content-center"
+                                                style="gap: 3px;">
+                                                @foreach ($product->variants->take(3) as $variant)
+                                                    <span class="badge badge-light border text-xs"
+                                                        style="font-weight: normal; font-size: 0.85em;">
+                                                        {{ Str::limit($variant->attributes_display, 20) }}
+                                                    </span>
+                                                @endforeach
+
+                                                @if ($product->variants->count() > 3)
+                                                    <span class="badge badge-secondary text-xs">
+                                                        +{{ $product->variants->count() - 3 }} más
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        @else
+                                            <span class="badge badge-secondary">0</span>
+                                        @endif
                                     </td>
-                                    <td>
+                                    <td class="text-center">
                                         @if ($product->status === 'active')
                                             <span class="badge badge-success">{{ $product->status_label }}</span>
                                         @elseif($product->status === 'draft')
@@ -120,36 +137,38 @@
                                             <span class="badge badge-danger">{{ $product->status_label }}</span>
                                         @endif
                                     </td>
-                                    <td class="text-right">
+                                    <td class="text-center">
                                         <span class="font-weight-bold">{{ $product->formatted_base_price }}</span>
                                     </td>
-                                    <td>{{ $product->created_at->format('d/m/Y') }}</td>
+                                    <td class="text-center">{{ $product->created_at->format('d/m/Y') }}</td>
                                     <td class="text-center">
-                                        <div class="d-flex justify-content-center align-items-center gap-1">
-                                            <a href="{{ route('admin.products.show', $product->id) }}"
-                                                class="btn btn-info btn-sm" title="Ver">
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ route('admin.products.show', $product->id) }}" class="btn btn-info"
+                                                title="Ver">
                                                 <i class="fas fa-eye"></i>
                                             </a>
                                             <a href="{{ route('admin.products.edit', $product->id) }}"
-                                                class="btn btn-warning btn-sm" title="Editar">
+                                                class="btn btn-warning" title="Editar">
                                                 <i class="fas fa-edit"></i>
                                             </a>
 
                                             @if ($product->status === 'active')
                                                 <form action="{{ route('admin.products.toggle_status', $product->id) }}"
-                                                    method="POST" class="d-inline"
+                                                    method="POST" style="display: inline-block;"
                                                     data-confirm="¿Cambiar a descontinuado?">
                                                     @csrf
-                                                    <button type="submit" class="btn btn-secondary btn-sm"
-                                                        title="Descontinuar">
+                                                    <button type="submit" class="btn btn-secondary" title="Descontinuar"
+                                                        style="border-radius: 0;">
                                                         <i class="fas fa-ban"></i>
                                                     </button>
                                                 </form>
                                             @elseif($product->status === 'discontinued')
                                                 <form action="{{ route('admin.products.toggle_status', $product->id) }}"
-                                                    method="POST" class="d-inline" data-confirm="¿Activar producto?">
+                                                    method="POST" style="display: inline-block;"
+                                                    data-confirm="¿Activar producto?">
                                                     @csrf
-                                                    <button type="submit" class="btn btn-success btn-sm" title="Activar">
+                                                    <button type="submit" class="btn btn-success" title="Activar"
+                                                        style="border-radius: 0;">
                                                         <i class="fas fa-check"></i>
                                                     </button>
                                                 </form>
@@ -157,12 +176,12 @@
 
                                             @if ($product->canDelete())
                                                 <form action="{{ route('admin.products.destroy', $product->id) }}"
-                                                    method="POST" class="d-inline"
+                                                    method="POST" style="display: inline-block;"
                                                     data-confirm="¿Eliminar este producto permanentemente?">
                                                     @csrf
                                                     @method('DELETE')
-                                                    <button type="submit" class="btn btn-danger btn-sm"
-                                                        title="Eliminar">
+                                                    <button type="submit" class="btn btn-danger" title="Eliminar"
+                                                        style="border-top-left-radius: 0; border-bottom-left-radius: 0;">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
                                                 </form>
@@ -260,7 +279,7 @@
 
         <script>
             $(document).ready(function() {
-                // Inicializar Select2
+                // Initialize Select2 (Existing)
                 $('.select2').select2({
                     theme: 'bootstrap4',
                     language: 'es'
@@ -346,11 +365,13 @@
 
                 // Botón de filtrar
                 $('#btn_filter').on('click', function() {
-                    let category = $('#category_filter').val();
+                    // FIX: Usar texto del option, no el ID (DataTables busca en contenido visible)
+                    let categoryText = $('#category_filter option:selected').text().trim();
+                    if (categoryText === 'Todas') categoryText = '';
                     let status = $('#status_filter').val();
                     let search = $('#search_filter').val();
 
-                    table.column(4).search(category);
+                    table.column(4).search(categoryText);
                     table.column(6).search(status);
                     table.search(search).draw();
                 });

@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
@@ -22,6 +23,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'staff_id',
+        'is_active',
     ];
 
     /**
@@ -44,6 +47,23 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * Relacion con Personal (opcional)
+     */
+    public function staff(): BelongsTo
+    {
+        return $this->belongsTo(Staff::class, 'staff_id');
+    }
+
+    /**
+     * Scope: Solo activos
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
     }
 }

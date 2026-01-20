@@ -8,7 +8,8 @@ class UpdateProductRequest extends StoreProductRequest
 {
     public function rules(): array
     {
-        $productId = $this->route('id');
+        // Ruta usa {product}, no {id}
+        $productId = $this->route('product');
 
         $rules = parent::rules();
 

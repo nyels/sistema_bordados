@@ -26,10 +26,12 @@ use App\Models\Material;
 class ProductController extends Controller
 {
     protected ProductService $productService;
+    protected \App\Services\ImageService $imageService;
 
-    public function __construct(ProductService $productService)
+    public function __construct(ProductService $productService, \App\Services\ImageService $imageService)
     {
         $this->productService = $productService;
+        $this->imageService = $imageService;
     }
 
     /*
@@ -50,7 +52,7 @@ class ProductController extends Controller
             $query = Product::with([
                 'category',
                 'extras',
-                'variants.attributes.attribute',
+                'variants.attributeValues.attribute',
                 'variants.designExports',
                 'designs',
             ])->orderBy('created_at', 'desc');
@@ -98,9 +100,29 @@ class ProductController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    public function create()
+    public function create(Request $request)
     {
         try {
+            // === CLONE MODE: Detectar si viene de duplicar ===
+            $cloneMode = false;
+            $cloneProduct = null;
+            if ($request->has('clone_from') && is_numeric($request->clone_from)) {
+                $cloneProduct = Product::with([
+                    'category',
+                    'extras',
+                    'designs.exports',
+                    'designs.generalExports',
+                    'variants.attributeValues.attribute',
+                    'materials.material.baseUnit',
+                    'images',
+                    'primaryImage',
+                ])->find((int) $request->clone_from);
+
+                if ($cloneProduct) {
+                    $cloneMode = true;
+                }
+            }
+
             // 1. Cargar categorías (sin bloquear si están vacías)
             $categories = ProductCategory::active()->ordered()->get();
 
@@ -180,8 +202,8 @@ class ProductController extends Controller
                 });
 
             // 3. Atributos
-            $sizeAttribute = Attribute::with('values')->where('slug', 'talla')->first();
-            $colorAttribute = Attribute::with('values')->where('slug', 'color')->first();
+            $sizeAttribute = Attribute::with(['values' => fn($q) => $q->orderBy('value')])->where('slug', 'talla')->first();
+            $colorAttribute = Attribute::with(['values' => fn($q) => $q->orderBy('value')])->where('slug', 'color')->first();
 
             // 4. NUEVO: Materiales para la Fase 3 (Optimizado)
             // Solo traemos lo estrictamente necesario para el selector
@@ -215,7 +237,9 @@ class ProductController extends Controller
                 'applicationTypes',
                 'sizeAttribute',
                 'colorAttribute',
-                'materials'
+                'materials',
+                'cloneMode',
+                'cloneProduct'
             ));
         } catch (\Exception $e) {
             Log::error("Product Create Error [Line {$e->getLine()}]: " . $e->getMessage(), [
@@ -241,6 +265,21 @@ class ProductController extends Controller
             $validated = $request->validated();
 
             $product = $this->productService->createProduct($validated);
+
+            // Handle Image Upload
+            if ($request->hasFile('primary_image')) {
+                try {
+                    $this->imageService->uploadImage(
+                        $request->file('primary_image'),
+                        Product::class,
+                        $product->id,
+                        ['is_primary' => true, 'alt_text' => $product->name]
+                    );
+                } catch (\Exception $e) {
+                    Log::error('Error saving image for product ' . $product->id . ': ' . $e->getMessage());
+                    // Don't fail the whole request, just log
+                }
+            }
 
             return redirect()->route('admin.products.show', $product->id)
                 ->with('success', "Producto '{$product->name}' creado exitosamente");
@@ -317,22 +356,20 @@ class ProductController extends Controller
                 }
             }
 
-            // Designs
+            // Designs (Producciones de bordado)
+            // Frontend envía export_id (ID de DesignExport), app_type_slug, scope, target_variant
             if (!empty($validated['embroideries_json'])) {
                 $designsData = json_decode($validated['embroideries_json'], true);
                 if (is_array($designsData)) {
-                    $designIds = [];
-                    $applications = [];
-                    foreach ($designsData as $d) {
-                        if (isset($d['id'])) {
-                            $designIds[] = $d['id'];
-                            if (isset($d['position_id'])) {
-                                $applications[$d['id']] = $d['position_id'];
-                            }
-                        }
-                    }
-                    $data['designs'] = $designIds;
-                    $data['design_applications'] = $applications;
+                    // Nueva estructura: designs_list para ProductService::syncDesignsList
+                    $data['designs_list'] = array_map(function ($d) {
+                        return [
+                            'export_id' => $d['export_id'] ?? $d['id'] ?? null,
+                            'app_type_slug' => $d['app_type_slug'] ?? null,
+                            'scope' => $d['scope'] ?? 'global',
+                            'target_variant' => $d['target_variant'] ?? null,
+                        ];
+                    }, $designsData);
                 }
             }
 
@@ -391,8 +428,8 @@ class ProductController extends Controller
             $product = Product::with([
                 'category',
                 'extras',
-                'designs.category',
-                'variants.attributes.attribute',
+                'designs.categories',
+                'variants.attributeValues.attribute',
                 'variants.designExports.designVariant',
                 'images',
             ])->findOrFail((int) $id);
@@ -428,24 +465,43 @@ class ProductController extends Controller
             $product = Product::with([
                 'category',
                 'extras',
-                'designs',
-                'variants.attributes',
+                'designs.exports',
+                'designs.generalExports',
+                'variants.attributeValues.attribute',
+                'materials.material.baseUnit',
+                'images',
+                'primaryImage',
             ])->findOrFail((int) $id);
 
+            // Datos para el wizard (mismos que create)
             $categories = ProductCategory::active()->ordered()->get();
             $extras = ProductExtra::ordered()->get();
-            $designs = Design::with('categories')->orderBy('name')->get();
             $applicationTypes = Application_types::where('activo', true)->orderBy('nombre_aplicacion')->get();
             $attributes = Attribute::with('values')->orderBy('name')->get();
 
-            return view('admin.products.edit', compact(
-                'product',
-                'categories',
-                'extras',
-                'designs',
-                'applicationTypes',
-                'attributes'
-            ));
+            // Materiales para selector (Paso 3)
+            $materials = Material::with('baseUnit')
+                ->where('activo', true)
+                ->orderBy('name')
+                ->get();
+
+            // Atributos específicos para variantes
+            $sizeAttribute = \App\Models\Attribute::with(['values' => fn($q) => $q->orderBy('value')])->where('slug', 'talla')->first();
+            $colorAttribute = \App\Models\Attribute::with(['values' => fn($q) => $q->orderBy('value')])->where('slug', 'color')->first();
+
+            // === PRECARGAR DATOS PARA EL STATE ===
+            // Usamos la MISMA vista que create, con editMode=true
+            return view('admin.products.create', [
+                'editMode' => true,
+                'product' => $product,
+                'categories' => $categories,
+                'extras' => $extras,
+                'applicationTypes' => $applicationTypes,
+                'attributes' => $attributes,
+                'materials' => $materials,
+                'sizeAttribute' => $sizeAttribute,
+                'colorAttribute' => $colorAttribute,
+            ]);
         } catch (ModelNotFoundException $e) {
             return redirect()->route('admin.products.index')
                 ->with('error', 'Producto no encontrado');
@@ -477,6 +533,20 @@ class ProductController extends Controller
             $validated = $request->validated();
 
             $product = $this->productService->updateProduct($product, $validated);
+
+            // Handle Image Upload
+            if ($request->hasFile('primary_image')) {
+                try {
+                    $this->imageService->uploadImage(
+                        $request->file('primary_image'),
+                        Product::class,
+                        $product->id,
+                        ['is_primary' => true, 'alt_text' => $product->name]
+                    );
+                } catch (\Exception $e) {
+                    Log::error('Error updating image for product ' . $product->id . ': ' . $e->getMessage());
+                }
+            }
 
             return redirect()->route('admin.products.show', $product->id)
                 ->with('success', "Producto '{$product->name}' actualizado exitosamente");
@@ -571,11 +641,12 @@ class ProductController extends Controller
                     ->with('error', 'Producto no válido');
             }
 
+            // Verificar que el producto existe
             $product = Product::findOrFail((int) $id);
-            $newProduct = $this->productService->duplicateProduct($product);
 
-            return redirect()->route('admin.products.edit', $newProduct->id)
-                ->with('success', "Producto duplicado exitosamente. Modifique los datos necesarios.");
+            // Redirect a CREATE con clone_from para precargar datos
+            return redirect()->route('admin.products.create', ['clone_from' => $product->id])
+                ->with('info', "Creando copia de '{$product->name}'. Modifique SKU y datos necesarios.");
         } catch (ModelNotFoundException $e) {
             return redirect()->route('admin.products.index')
                 ->with('error', 'Producto no encontrado');
@@ -697,7 +768,7 @@ class ProductController extends Controller
     {
         try {
             $product = Product::findOrFail((int) $productId);
-            $variant = ProductVariant::with(['attributes.attribute', 'designExports'])
+            $variant = ProductVariant::with(['attributeValues.attribute', 'designExports'])
                 ->where('product_id', $product->id)
                 ->findOrFail((int) $variantId);
 
@@ -728,8 +799,39 @@ class ProductController extends Controller
         }
     }
 
+    /**
+     * API JSON para obtener datos de variante (Modal AJAX)
+     */
+    public function getVariantJson($productId, $variantId)
+    {
+        try {
+            $product = Product::findOrFail((int) $productId);
+            $variant = ProductVariant::with(['attributeValues.attribute'])
+                ->where('product_id', $product->id)
+                ->findOrFail((int) $variantId);
+
+            return response()->json([
+                'success' => true,
+                'variant' => [
+                    'id' => $variant->id,
+                    'sku_variant' => $variant->sku_variant,
+                    'price' => (float) $variant->price,
+                    'stock_alert' => (int) $variant->stock_alert,
+                    'attributes_display' => $variant->attributes_display,
+                    'product_base_price' => (float) $product->base_price,
+                ],
+            ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['success' => false, 'message' => 'Variante no encontrada'], 404);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error al cargar variante'], 500);
+        }
+    }
+
     public function updateVariant(Request $request, $productId, $variantId)
     {
+        $isAjax = $request->expectsJson() || $request->ajax();
+
         try {
             $product = Product::findOrFail((int) $productId);
             $variant = ProductVariant::where('product_id', $product->id)
@@ -751,15 +853,42 @@ class ProductController extends Controller
 
             $variant = $this->productService->updateVariant($variant, $validated);
 
+            if ($isAjax) {
+                // Calculate extras total for frontend (to display final price)
+                $extrasTotal = $product->extras->sum('price_addition');
+
+                return response()->json([
+                    'success' => true,
+                    'message' => "Variante '{$variant->sku_variant}' actualizada",
+                    'variant' => [
+                        'id' => $variant->id,
+                        'sku_variant' => $variant->sku_variant,
+                        'price' => (float) $variant->price,
+                        'stock_alert' => (int) $variant->stock_alert,
+                        'attributes_display' => $variant->attributes_display,
+                        'extras_total' => (float) $extrasTotal,
+                    ],
+                ]);
+            }
+
             return redirect()->route('admin.products.show', $product->id)
                 ->with('success', "Variante '{$variant->sku_variant}' actualizada exitosamente");
         } catch (ValidationException $e) {
+            if ($isAjax) {
+                return response()->json(['success' => false, 'errors' => $e->errors()], 422);
+            }
             return redirect()->back()->withInput()->withErrors($e->errors());
         } catch (ModelNotFoundException $e) {
+            if ($isAjax) {
+                return response()->json(['success' => false, 'message' => 'Variante no encontrada'], 404);
+            }
             return redirect()->route('admin.products.index')
                 ->with('error', 'Producto o variante no encontrado');
         } catch (\Exception $e) {
             Log::error('Error al actualizar variante: ' . $e->getMessage());
+            if ($isAjax) {
+                return response()->json(['success' => false, 'message' => 'Error al actualizar'], 500);
+            }
             return redirect()->back()->withInput()
                 ->with('error', 'Error al actualizar la variante');
         }
@@ -829,6 +958,71 @@ class ProductController extends Controller
             return response()->json($attributes);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Error al obtener atributos'], 500);
+        }
+    }
+
+    /**
+     * Obtener producciones de bordado aprobadas para el selector del wizard
+     * Endpoint AJAX para cargar dinámicamente al abrir el modal
+     */
+    public function getApprovedDesignExports()
+    {
+        try {
+            // Cargar tipos de aplicación para mapear slugs a nombres legibles
+            $appTypes = Application_types::where('activo', true)
+                ->pluck('nombre_aplicacion', 'slug')
+                ->toArray();
+
+            $exports = DesignExport::where('status', 'aprobado')
+                ->with(['design.categories', 'variant', 'image'])
+                ->orderBy('application_type')
+                ->orderBy('application_label')
+                ->get()
+                ->map(function ($export) use ($appTypes) {
+                    $variantName = $export->variant?->name;
+
+                    // Imagen: SOLO el preview real del archivo de producción
+                    // SIN FALLBACK a diseño o variante (eso confunde al usuario)
+                    $imageUrl = $export->image ? $export->image->display_url : null;
+
+                    // Familia (categoría del diseño)
+                    $familyName = $export->design->categories->first()?->name ?? null;
+
+                    // Formato del archivo (extensión)
+                    $fileFormat = strtoupper($export->file_format ?? pathinfo($export->file_name ?? '', PATHINFO_EXTENSION));
+
+                    // Tipo de aplicación: slug y nombre legible
+                    $appTypeSlug = $export->application_type ?? 'general';
+                    $appTypeName = $appTypes[$appTypeSlug] ?? ucfirst(str_replace('_', ' ', $appTypeSlug));
+
+                    return [
+                        'id' => $export->id,
+                        // Datos del archivo de producción
+                        'export_name' => $export->application_label,
+                        'file_format' => $fileFormat,
+                        // Preview: Prioridad 1) SVG del archivo, 2) imagen de referencia
+                        'svg_content' => $export->svg_content,
+                        'image_url' => $imageUrl,
+                        // Tipo de aplicación (ubicación del bordado)
+                        'app_type_slug' => $appTypeSlug,
+                        'app_type_name' => $appTypeName,
+                        // Trazabilidad: de dónde viene
+                        'design_id' => $export->design_id,
+                        'design_name' => $export->design->name,
+                        'variant_id' => $export->design_variant_id,
+                        'variant_name' => $variantName,
+                        'family_name' => $familyName,
+                        // Especificaciones técnicas
+                        'dimensions_label' => $export->width_mm . 'x' . $export->height_mm . ' mm',
+                        'stitches' => $export->stitches_count ?? 0,
+                        'stitches_formatted' => number_format($export->stitches_count ?? 0),
+                        'colors' => $export->colors_count ?? 0,
+                    ];
+                });
+
+            return response()->json($exports);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error al obtener producciones: ' . $e->getMessage()], 500);
         }
     }
 

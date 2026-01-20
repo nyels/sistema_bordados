@@ -1,6 +1,6 @@
 @extends('adminlte::page')
 
-@section('title', 'Nuevo Producto - Enterprise Configurator')
+@section('title', isset($editMode) && $editMode ? 'Editar Producto - ' . $product->name : (isset($cloneMode) && $cloneMode ? 'Duplicar Producto - ' . $cloneProduct->name : 'Nuevo Producto - Enterprise Configurator'))
 
 @section('plugins.Sweetalert2', true)
 @section('plugins.Select2', true)
@@ -10,7 +10,11 @@
         <div class="d-flex justify-content-between align-items-center">
             <div>
                 <h1 class="text-white"><i class="fas fa-cube mr-2"></i> Configurador de Productos</h1>
-                <p class="text-white-50 mb-0">Crea tu producto paso a paso: define, configura y publica</p>
+                @if(isset($cloneMode) && $cloneMode)
+                    <p class="text-white-50 mb-0"><i class="fas fa-copy mr-1"></i> Duplicando: {{ $cloneProduct->name }} - Modifique SKU y datos necesarios</p>
+                @else
+                    <p class="text-white-50 mb-0">Crea tu producto paso a paso: define, configura y publica</p>
+                @endif
             </div>
             <div class="d-flex align-items-center gap-3">
                 <div class="live-cost-badge d-none d-md-block">
@@ -27,8 +31,17 @@
 
 @section('content')
     <div class="content-wrapper-custom">
-        <form id="productForm" action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data">
+        @php
+            $formAction = isset($editMode) && $editMode
+                ? route('admin.products.update', $product->id)
+                : route('admin.products.store');
+        @endphp
+        <form id="productForm" action="{{ $formAction }}" method="POST" enctype="multipart/form-data">
             @csrf
+            @if(isset($editMode) && $editMode)
+                @method('PUT')
+                <input type="hidden" name="product_id" value="{{ $product->id }}">
+            @endif
 
             <div class="stepper-nav-container">
                 <button type="button" class="stepper-arrow stepper-arrow-prev" id="btnPrev" disabled
@@ -47,11 +60,11 @@
                     </div>
                     <div class="stepper-item" data-step="3" onclick="navigateToStep(3)" style="cursor:pointer;">
                         <div class="step-counter">3</div>
-                        <div class="step-name">Receta <span class="step-badge d-none" id="badgeStep3"></span></div>
+                        <div class="step-name">Materiales <span class="step-badge d-none" id="badgeStep3"></span></div>
                     </div>
                     <div class="stepper-item" data-step="4" onclick="navigateToStep(4)" style="cursor:pointer;">
                         <div class="step-counter">4</div>
-                        <div class="step-name">Diseño <span class="step-badge d-none" id="badgeStep4"></span></div>
+                        <div class="step-name">Bordado <span class="step-badge d-none" id="badgeStep4"></span></div>
                     </div>
                     <div class="stepper-item" data-step="5" onclick="navigateToStep(5)" style="cursor:pointer;">
                         <div class="step-counter">5</div>
@@ -83,200 +96,9 @@
         </form>
     </div>
 
-    {{-- MODALS --}}
-    <div class="modal fade" id="materialScopeModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title"><i class="fas fa-bullseye mr-2"></i>Definir Alcance del Material</h5>
-                    <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
-                </div>
-                <div class="modal-body text-center">
-                    <p class="text-muted mb-4" style="font-size: 1.1rem;">¿Este material se aplica a todas las variantes o
-                        solo a algunas específicas?</p>
-
-                    {{-- ALERTA EXPLICATIVA --}}
-                    <div class="bg-light border rounded p-3 mb-4">
-                        <h6 class="mb-2 text-center" style="font-size: 1rem;"><i
-                                class="fas fa-lightbulb text-warning mr-2"></i>¿Cómo funciona?</h6>
-                        <ul class="mb-2 pl-4 text-muted text-left" style="font-size: 0.95rem;">
-                            <li><strong>Global:</strong> Aplica a todas las variantes</li>
-                            <li><strong>Específico:</strong> Solo aplica a las variantes seleccionadas</li>
-                        </ul>
-                        <small class="text-secondary"><i class="fas fa-info-circle mr-1"></i>Si agregas Global +
-                            Específico
-                            del mismo material, los consumos se suman.</small>
-                    </div>
-
-                    {{-- TOGGLE BUTTONS --}}
-                    <div class="d-flex justify-content-center mb-4 gap-3">
-                        <button type="button" class="scope-toggle-btn" id="btnScopeGlobal"
-                            onclick="selectScope('global')">
-                            <i class="fas fa-globe mr-2"></i>GLOBAL
-                        </button>
-                        <button type="button" class="scope-toggle-btn" id="btnScopeSpecific"
-                            onclick="selectScope('specific')">
-                            <i class="fas fa-filter mr-2"></i>ESPECÍFICO
-                        </button>
-                    </div>
-                    <input type="hidden" name="materialScope" id="materialScopeValue" value="">
-
-                    <div id="specificVariantsContainer" class="d-none text-left">
-                        <label class="font-weight-bold">Selecciona las variantes:</label>
-                        <select class="form-control select2" multiple id="targetVariantsSelect"
-                            style="width:100%"></select>
-                    </div>
-                </div>
-                <div class="modal-footer justify-content-center border-top pt-3">
-                    <button type="button" class="btn btn-outline-secondary px-4 py-2" data-dismiss="modal"
-                        style="border-width: 2px; font-weight: 600;">
-                        <i class="fas fa-times mr-2"></i>Cancelar
-                    </button>
-                    <button type="button" class="btn btn-primary px-4 py-2" onclick="confirmAddMaterial()"
-                        style="font-weight: 600;">
-                        <i class="fas fa-plus mr-2"></i>Agregar al BOM
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- DESIGN CONFIG MODAL - PREMIUM REDESIGN --}}
-    <div class="modal fade" id="designConfigModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-md">
-            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
-                <!-- HEADER - Premium gradient -->
-                <div class="modal-header border-0 text-white py-3 text-center"
-                    style="background: linear-gradient(135deg, #17a2b8, #138496);">
-                    <div class="w-100">
-                        <h4 class="modal-title mb-1 font-weight-bold text-uppercase" id="designModalLabel"
-                            style="font-size: 1.5rem; letter-spacing: 1px;">NOMBRE ETIQUETA</h4>
-                        <small id="designModalOrigin" class="d-block" style="opacity: 0.85;"><i
-                                class="fas fa-sitemap mr-1"></i>Origen</small>
-                    </div>
-                    <button type="button" class="close text-white position-absolute" data-dismiss="modal"
-                        aria-label="Close" style="right: 15px; top: 15px;">
-                        <span aria-hidden="true" style="font-size: 1.5rem;">&times;</span>
-                    </button>
-                </div>
-
-                <!-- BODY -->
-                <div class="modal-body p-4">
-                    {{-- Preview Section --}}
-                    <div class="text-center mb-4">
-                        <img id="designModalImage" src="" class="img-fluid rounded-lg shadow mb-3"
-                            style="max-height: 140px; display: none; border-radius: 12px;">
-
-                        {{-- Position Badge - Where it will be applied --}}
-                        <div class="mb-3">
-                            <span class="badge px-4 py-2" id="designModalPosition"
-                                style="background: linear-gradient(135deg, #ffc107, #e0a800); color: #212529; font-size: 1.1rem; border-radius: 20px;">
-                                <i class="fas fa-map-marker-alt mr-2"></i>Posición
-                            </span>
-                        </div>
-
-                        {{-- Technical Data - Clean Row --}}
-                        <div class="d-flex justify-content-center">
-                            <div class="text-center px-3">
-                                <i class="fas fa-ruler-combined text-primary mb-1" style="font-size: 1.3rem;"></i>
-                                <div class="font-weight-bold text-dark" style="font-size: 1rem;"
-                                    id="designModalDimensions">-</div>
-                                <small class="text-muted">Tamaño</small>
-                            </div>
-                            <div class="text-center px-3 border-left border-right">
-                                <i class="fas fa-palette text-info mb-1" style="font-size: 1.3rem;"></i>
-                                <div class="font-weight-bold text-dark" style="font-size: 1rem;" id="designModalColors">-
-                                </div>
-                                <small class="text-muted">Colores</small>
-                            </div>
-                            <div class="text-center px-3">
-                                <i class="fas fa-th text-success mb-1" style="font-size: 1.3rem;"></i>
-                                <div class="font-weight-bold text-dark" style="font-size: 1rem;"
-                                    id="designModalStitches">-</div>
-                                <small class="text-muted">Puntadas</small>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- Hidden elements for compatibility --}}
-                    <span id="designModalName" class="d-none"></span>
-                    <span id="designModalAppType" class="d-none"></span>
-                    <div id="designVariantContainer" class="d-none">
-                        <select id="designVariantSelect"></select>
-                    </div>
-                    <div class="d-none">
-                        <select id="designPositionSelect">
-                            @foreach ($applicationTypes as $appType)
-                                <option value="{{ $appType->id }}"
-                                    data-slug="{{ Str::slug($appType->nombre_aplicacion) }}">
-                                    {{ $appType->nombre_aplicacion }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    {{-- Scope Selection - Cleaner Design --}}
-                    <div class="bg-light rounded p-3 mb-3" style="border-radius: 12px !important;">
-                        <label class="font-weight-bold text-dark mb-2 d-block">
-                            <i class="fas fa-bullseye text-info mr-2"></i>Aplicar a:
-                        </label>
-                        <div class="d-flex">
-                            <button type="button" class="btn btn-info btn-sm flex-fill design-scope-btn active mr-2"
-                                data-scope="global" onclick="selectDesignScope('global')" style="border-radius: 8px;">
-                                <i class="fas fa-globe mr-1"></i> Todas las Variantes
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm flex-fill design-scope-btn"
-                                data-scope="specific" onclick="selectDesignScope('specific')"
-                                style="border-radius: 8px;">
-                                <i class="fas fa-filter mr-1"></i> Específicas
-                            </button>
-                        </div>
-                        <input type="hidden" id="designScopeValue" value="global">
-                        <div id="designVariantsContainer" class="d-none mt-3">
-                            <select class="form-control select2" multiple id="designTargetVariants"
-                                data-placeholder="Seleccione variantes..."></select>
-                        </div>
-                    </div>
-
-                    {{-- Configured Positions List --}}
-                    <div id="designConfiguredPositions" class="d-none mb-3">
-                        <label class="font-weight-bold text-dark mb-2">
-                            <i class="fas fa-layer-group text-success mr-2"></i>Configuraciones:
-                        </label>
-                        <div id="configuredPositionsList" class="d-flex flex-wrap"></div>
-                    </div>
-                </div>
-
-                {{-- FOOTER --}}
-                <div class="modal-footer border-0 bg-light px-4 py-3">
-                    <div id="justAddedFeedback" class="alert alert-success py-2 mb-2 d-none w-100">
-                        <i class="fas fa-check mr-1"></i> <span id="justAddedText"></span>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center w-100">
-                        {{-- LEFT: Add Button + Count --}}
-                        <div class="d-flex align-items-center">
-                            <button type="button" class="btn btn-info px-4 mr-3 font-weight-bold shadow-sm"
-                                onclick="confirmAddDesignDirect()" style="border-radius: 8px;">
-                                <i class="fas fa-plus mr-1"></i> AGREGAR
-                            </button>
-                            <div class="text-dark small">
-                                <i class="fas fa-check-circle text-success mr-1"></i>
-                                <strong id="designsAddedCount">0</strong> agregado(s)
-                            </div>
-                        </div>
-
-                        {{-- RIGHT: Close Button (Darker) --}}
-                        <button type="button" class="btn btn-dark px-4 font-weight-bold shadow-sm" data-dismiss="modal"
-                            style="border-radius: 8px;">
-                            CERRAR
-                        </button>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-    </div>
-    </div>
+    {{-- MODALES ELIMINADOS - UX Simplificada --}}
+    {{-- El sistema ahora usa secciones separadas para materiales comunes vs específicos --}}
+    {{-- El diseño es read-only, no requiere modal de configuración --}}
 
     {{-- ================= TEMPLATES (DATA FROM DB) ================= --}}
 
@@ -328,16 +150,8 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="font-weight-bold">Estado</label>
-                                <select class="form-control" name="status" id="inpStatus" >
-                                    <option value="">-- Selecciona un estado --</option>
-                                    <option value="draft" {{ old('status', 'draft') == 'draft' ? 'selected' : '' }}>Borrador</option>
-                                    <option value="active" {{ old('status') == 'active' ? 'selected' : '' }}>Activo</option>
-                                </select>
-                            </div>
-                        </div>
+                        {{-- HIDDEN STATUS: Always Active --}}
+                        <input type="hidden" name="status" value="active">
                     </div>
                     {{-- ROW 3: DESCRIPTION --}}
                     <div class="row">
@@ -354,7 +168,7 @@
                 <div class="col-md-4 d-flex flex-column">
                     <label class="font-weight-bold">Imagen del Producto</label>
                     <div class="custom-dropzone text-center p-3 flex-grow-1" id="productImageDropzone">
-                        <input type="file" name="image" id="inpImage" accept="image/*" class="d-none" onchange="previewImage(this)">
+                        <input type="file" name="primary_image" id="inpImage" accept="image/*" class="d-none" onchange="previewImage(this)">
                         
                         {{-- PLACEHOLDER STATE --}}
                         <div id="dropzonePlaceholder">
@@ -384,22 +198,22 @@
     </script>
 
 
-    {{-- STEP 2: VARIANTES --}}
+    {{-- STEP 2: PRESENTACIONES --}}
     <script type="text/template" id="tpl_step2">
     <div class="card shadow-sm border-0">
         <div class="card-body p-4">
             <h5 class="step-title"><i class="fas fa-th text-primary"></i> Presentaciones del Producto</h5>
             <p class="step-description text-muted mb-4">
                 <i class="fas fa-lightbulb text-warning mr-1"></i>
-                Las <strong>presentaciones</strong> son las combinaciones de talla y color que ofrecerás. 
+                Las <strong>presentaciones</strong> son las combinaciones de talla y color que ofrecerás.
                 Ejemplo: Si vendes en tallas S, M, L y colores Azul y Rojo, tendrás 6 presentaciones diferentes.
             </p>
-            
+
             <div class="row">
                 {{-- LEFT COLUMN: Selectors --}}
                 <div class="col-md-4">
                     <div class="card shadow-sm h-100">
-                        <div class="card-header bg-white font-weight-bold">Configurar Variantes</div>
+                        <div class="card-header bg-white font-weight-bold">Configurar Presentaciones</div>
                         <div class="card-body">
                             <div class="form-group">
                                 <label>Tallas</label>
@@ -409,12 +223,12 @@
                                             <option value="{{ $val->id }}">{{ $val->value }}</option>
                                         @endforeach
                                     </select>
-                                    <i class="fas fa-times clear-btn-internal" 
-                                       onclick="$('#selSizes').val(null).trigger('change')" 
+                                    <i class="fas fa-times clear-btn-internal"
+                                       onclick="$('#selSizes').val(null).trigger('change')"
                                        title="Limpiar tallas"></i>
                                 </div>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label>Colores</label>
                                 <div class="position-relative">
@@ -423,24 +237,24 @@
                                             <option value="{{ $val->id }}" data-hex="{{ $val->hex_color }}">{{ $val->value }}</option>
                                         @endforeach
                                     </select>
-                                    <i class="fas fa-times clear-btn-internal" 
-                                       onclick="$('#selColors').val(null).trigger('change')" 
+                                    <i class="fas fa-times clear-btn-internal"
+                                       onclick="$('#selColors').val(null).trigger('change')"
                                        title="Limpiar colores"></i>
                                 </div>
                             </div>
-                            
+
                             <button type="button" class="btn btn-primary btn-block btn-lg" onclick="generateMatrix()">
-                                <i class="fas fa-bolt mr-2"></i>Generar Variantes
+                                <i class="fas fa-bolt mr-2"></i>Generar Presentaciones
                             </button>
                         </div>
                     </div>
                 </div>
-                
-                {{-- RIGHT COLUMN: Variants Table --}}
+
+                {{-- RIGHT COLUMN: Presentations Table --}}
                 <div class="col-md-8">
                     <div class="card shadow-sm h-100">
                         <div class="card-header bg-white align-items-center">
-                            <span class="font-weight-bold" style="font-size: 1.1rem;">Variantes Generadas</span>
+                            <span class="font-weight-bold" style="font-size: 1.1rem;">Presentaciones Generadas</span>
                             <span class="badge badge-primary ml-2 shadow-sm" id="variantCountBadge" style="font-size: 1.1rem; padding: 0.35em 0.6em;">0</span>
                         </div>
                         <div class="card-body p-0">
@@ -448,7 +262,7 @@
                                 <table class="table table-hover mb-0">
                                     <thead class="thead-light">
                                         <tr>
-                                            <th>Variante</th>
+                                            <th>Presentación (Talla / Color)</th>
                                             <th>SKU Generado</th>
                                             <th class="text-center" style="width:80px">Acción</th>
                                         </tr>
@@ -470,334 +284,290 @@
     </div>
 </script>
 
-    {{-- STEP 3: BOM (ENGINEERING) --}}
+    {{-- STEP 3: MATERIALES DEL PRODUCTO (BOM) - REORGANIZADO UX --}}
     <script type="text/template" id="tpl_step3">
-    <div class="card shadow-sm border-0 mb-3">
-        <div class="card-body p-4">
-            <h5 class="step-title"><i class="fas fa-boxes text-primary"></i> Receta del Producto</h5>
-            <p class="step-description text-muted mb-3">
-                <i class="fas fa-lightbulb text-warning mr-1"></i>
-                Lista los <strong>materiales necesarios</strong> para fabricar cada unidad. 
-                Como una receta de cocina: ¿qué ingredientes necesitas y cuánto de cada uno?
-            </p>
-
+    {{-- BLOQUEO: Sin presentaciones --}}
+    <div id="bomBlockedState" class="d-none">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-5 text-center">
+                <div class="mb-4">
+                    <i class="fas fa-exclamation-triangle text-warning" style="font-size: 4rem;"></i>
+                </div>
+                <h4 class="font-weight-bold text-dark mb-3">Define primero las presentaciones</h4>
+                <p class="text-muted mb-4" style="font-size: 1.1rem;">
+                    Para agregar materiales al producto, primero debes definir al menos una presentación (talla/color) en el paso anterior.
+                </p>
+                <button type="button" class="btn btn-primary btn-lg px-5" onclick="navigate(-1)">
+                    <i class="fas fa-arrow-left mr-2"></i> Volver a Presentaciones
+                </button>
+            </div>
         </div>
     </div>
-    <div class="row">
-        <div class="col-md-4">
-            <div class="card shadow-sm h-100">
-                <div class="card-header bg-white font-weight-bold">Catálogo de Insumos</div>
-                <div class="card-body">
-                    <div class="form-group">
-                        <label>Familia de Material</label>
-                        <div class="position-relative">
-                            <select class="form-control select2" id="bomFamilySelector" data-placeholder="Seleccione Familia...">
-                                <option value=""></option>
-                                @foreach($materials ?? [] as $m)
-                                    <option value="{{ $m->id }}" data-unit="{{ $m->category->baseUnit->symbol ?? 'unid' }}">{{ $m->name }}</option>
-                                @endforeach
-                            </select>
-                            <i class="fas fa-times clear-btn-internal" 
-                               onclick="$('#bomFamilySelector').val(null).trigger('change')" 
-                               title="Limpiar selección"></i>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Material Específico / Color</label>
-                        <div class="position-relative">
-                            <select class="form-control select2" id="bomMaterialSelector" disabled data-placeholder="Seleccione Material..."></select>
-                            <i class="fas fa-times clear-btn-internal" 
-                               onclick="$('#bomMaterialSelector').val(null).trigger('change')" 
-                               title="Limpiar selección"></i>
-                        </div>
-                        <div id="materialInfo" class="mt-2 small d-none p-2 bg-light rounded border">
-                            <div>Stock: <b id="matStock">-</b> | Costo: <b id="matCost" class="text-success">$-</b></div>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Cantidad (Consumo)</label>
-                        <div class="input-group">
-                            <input type="number" class="form-control" id="bomQty" placeholder="0.00" step="0.01" oninput="updateBomCostPreview()">
-                            <div class="input-group-append">
-                                <span class="input-group-text" id="bomUnit">unid</span>
+
+    {{-- CONTENIDO PRINCIPAL: Con presentaciones --}}
+    <div id="bomActiveState">
+        {{-- SECCIÓN A: MATERIALES COMUNES --}}
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-boxes mr-2"></i> Materiales Comunes</h5>
+                <span class="badge badge-light text-primary">Base</span>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">
+                    <i class="fas fa-info-circle text-primary mr-1"></i>
+                    Estos materiales se usan como base para todas las presentaciones.
+                </p>
+
+                <div class="row">
+                    {{-- Formulario de materiales comunes --}}
+                    <div class="col-md-5">
+                        <div class="bg-light rounded p-3">
+                            <div class="form-group mb-2">
+                                <label>Familia de Material</label>
+                                <div class="position-relative">
+                                    <select class="form-control select2" id="bomFamilySelectorGlobal" data-placeholder="Seleccione familia...">
+                                        <option value=""></option>
+                                        @foreach($materials ?? [] as $m)
+                                            <option value="{{ $m->id }}" data-unit="{{ $m->baseUnit->symbol ?? 'unid' }}">{{ $m->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
                             </div>
-                        </div>
-                        <div id="bomCostPreview" class="mt-2 small text-success font-weight-bold d-none">
-                            <i class="fas fa-calculator"></i> Costo Estimado: <span id="bomCostPreviewValue">$0.00</span>
-                        </div>
-                    </div>
-                    
-                    {{-- INLINE SCOPE SELECTION --}}
-                    <div class="form-group">
-                        <label>¿Aplica a todas las presentaciones?</label>
-                        <div class="d-flex gap-2 mb-2">
-                            <button type="button" class="btn btn-outline-secondary btn-sm flex-fill scope-inline-btn active" data-scope="global" onclick="setInlineScope('global')">
-                                <i class="fas fa-globe"></i> Todas
+                            <div class="form-group mb-2">
+                                <label>Material / Variante</label>
+                                <select class="form-control select2" id="bomMaterialSelectorGlobal" disabled data-placeholder="Seleccione material..."></select>
+                                <div id="materialInfoGlobal" class="mt-2 small d-none p-2 bg-white rounded border">
+                                    <span>Stock: <b id="matStockGlobal">-</b></span> |
+                                    <span>Costo: <b id="matCostGlobal" class="text-success">$-</b></span>
+                                </div>
+                            </div>
+                            <div class="form-group mb-2">
+                                <label>Cantidad por unidad</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="bomQtyGlobal" placeholder="0.00" step="0.01" min="0.01">
+                                    <div class="input-group-append">
+                                        <span class="input-group-text" id="bomUnitGlobal">unid</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="materialIsPrimaryGlobal">
+                                <label class="form-check-label small" for="materialIsPrimaryGlobal">Material principal</label>
+                            </div>
+                            <button type="button" class="btn btn-primary btn-block" onclick="addMaterialCommon()">
+                                <i class="fas fa-plus-circle mr-1"></i> Agregar Material Común
                             </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm flex-fill scope-inline-btn" data-scope="specific" onclick="setInlineScope('specific')">
-                                <i class="fas fa-filter"></i> Solo algunas
-                            </button>
-                        </div>
-                        <input type="hidden" id="inlineScopeValue" value="global">
-                        <div id="inlineVariantsContainer" class="d-none">
-                            <select class="form-control select2" multiple id="inlineTargetVariants" data-placeholder="Seleccione presentaciones..."></select>
                         </div>
                     </div>
-                    
-                    <div class="form-check mb-3">
-                         <input class="form-check-input" type="checkbox" id="materialIsPrimary">
-                         <label class="form-check-label small" for="materialIsPrimary">Material Base (Principal)</label>
+
+                    {{-- Tabla de materiales comunes --}}
+                    <div class="col-md-7">
+                        <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                            <table class="table table-sm table-hover mb-0" id="bomTableGlobal">
+                                <thead class="thead-light sticky-top">
+                                    <tr>
+                                        <th>Material</th>
+                                        <th class="text-center" style="width: 100px;">Cantidad</th>
+                                        <th class="text-right" style="width: 90px;">Costo</th>
+                                        <th style="width: 50px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bomTableBodyGlobal">
+                                    <tr id="noMaterialsGlobalRow">
+                                        <td colspan="4" class="text-center text-muted py-3">
+                                            <i class="fas fa-inbox mr-1"></i> Sin materiales comunes
+                                        </td>
+                                    </tr>
+                                </tbody>
+                                <tfoot class="bg-light font-weight-bold">
+                                    <tr>
+                                        <td colspan="2">Total Materiales Comunes</td>
+                                        <td class="text-right" id="bomTotalGlobal">$0.00</td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
                     </div>
-                    <button type="button" class="btn btn-success btn-block" onclick="addMaterialDirect()">
-                        <i class="fas fa-plus-circle"></i> Agregar a la Receta
-                    </button>
                 </div>
             </div>
         </div>
-        <div class="col-md-8">
-            <div class="card shadow-sm h-100">
-                <div class="card-header bg-white d-flex justify-content-between">
-                    <span class="font-weight-bold">Lista de Ingredientes</span>
+
+        {{-- SECCIÓN B: MATERIALES POR PRESENTACIÓN --}}
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-layer-group mr-2"></i> Ajustes por Presentación <small class="font-weight-normal">(opcional)</small></h5>
+                <span class="badge badge-light text-info">Excepciones</span>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">
+                    <i class="fas fa-lightbulb text-warning mr-1"></i>
+                    Aquí puedes ajustar o agregar materiales solo para una presentación específica.<br>
+                    <small>Si un material ya existe en comunes, este valor lo reemplaza solo para esta presentación.</small>
+                </p>
+
+                <div class="row">
+                    {{-- Formulario de materiales específicos --}}
+                    <div class="col-md-5">
+                        <div class="bg-light rounded p-3">
+                            {{-- Selector de presentación PRIMERO --}}
+                            <div class="form-group mb-3">
+                                <label class="text-info font-weight-bold">
+                                    <i class="fas fa-tag mr-1"></i> Presentación destino
+                                </label>
+                                <select class="form-control select2" id="bomTargetVariant" data-placeholder="Seleccione presentación...">
+                                    <option value=""></option>
+                                </select>
+                            </div>
+
+                            <hr class="my-3">
+
+                            <div class="form-group mb-2">
+                                <label>Familia de Material</label>
+                                <select class="form-control select2" id="bomFamilySelectorSpecific" data-placeholder="Seleccione familia...">
+                                    <option value=""></option>
+                                    @foreach($materials ?? [] as $m)
+                                        <option value="{{ $m->id }}" data-unit="{{ $m->baseUnit->symbol ?? 'unid' }}">{{ $m->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="form-group mb-2">
+                                <label>Material / Variante</label>
+                                <select class="form-control select2" id="bomMaterialSelectorSpecific" disabled data-placeholder="Seleccione material..."></select>
+                                <div id="materialInfoSpecific" class="mt-2 small d-none p-2 bg-white rounded border">
+                                    <span>Stock: <b id="matStockSpecific">-</b></span> |
+                                    <span>Costo: <b id="matCostSpecific" class="text-success">$-</b></span>
+                                </div>
+                            </div>
+                            <div class="form-group mb-2">
+                                <label>Cantidad por unidad</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="bomQtySpecific" placeholder="0.00" step="0.01" min="0.01">
+                                    <div class="input-group-append">
+                                        <span class="input-group-text" id="bomUnitSpecific">unid</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-info btn-block" onclick="addMaterialSpecific()">
+                                <i class="fas fa-plus-circle mr-1"></i> Agregar a esta Presentación
+                            </button>
+                        </div>
+                    </div>
+
+                    {{-- Tabla de materiales específicos --}}
+                    <div class="col-md-7">
+                        <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                            <table class="table table-sm table-hover mb-0" id="bomTableSpecific">
+                                <thead class="thead-light sticky-top">
+                                    <tr>
+                                        <th>Material</th>
+                                        <th>Presentación</th>
+                                        <th class="text-center" style="width: 100px;">Cantidad</th>
+                                        <th class="text-right" style="width: 90px;">Costo</th>
+                                        <th style="width: 50px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bomTableBodySpecific">
+                                    <tr id="noMaterialsSpecificRow">
+                                        <td colspan="5" class="text-center text-muted py-3">
+                                            <i class="fas fa-inbox mr-1"></i> Sin materiales específicos
+                                        </td>
+                                    </tr>
+                                </tbody>
+                                <tfoot class="bg-light font-weight-bold">
+                                    <tr>
+                                        <td colspan="3">Total Materiales Específicos</td>
+                                        <td class="text-right" id="bomTotalSpecific">$0.00</td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body p-0 table-responsive">
-                    <table class="table table-bordered table-striped mb-0" id="bomTable">
-                        <thead class="bg-light">
-                            <tr>
-                                <th class="text-center align-middle">Insumo</th>
-                                <th class="text-center align-middle">Variantes</th>
-                                <th class="text-center align-middle">Consumo</th>
-                                <th class="text-center align-middle">Alcance</th>
-                                <th class="text-center align-middle">
-                                    <div style="line-height: 1;">Costo</div>
-                                    <div id="bomTotalCostBadge" class="badge badge-success mt-1" style="font-size: 0.85rem;">Total: $0.00</div>
-                                </th>
-                                <th class="text-center align-middle">Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody id="bomTableBody" class="text-center" style="font-size: 0.9rem;">
-                            <tr><td colspan="6" class="text-center text-muted py-4">Sin materiales asignados</td></tr>
-                        </tbody>
-                    </table>
+            </div>
+        </div>
+
+        {{-- RESUMEN TOTAL BOM --}}
+        <div class="card shadow-sm border-0 mt-4 bg-dark text-white">
+            <div class="card-body py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0"><i class="fas fa-calculator mr-2"></i> Costo Total de Materiales</h5>
+                        <small class="text-white-50">Suma de materiales comunes + específicos</small>
+                    </div>
+                    <div class="text-right">
+                        <h3 class="mb-0 font-weight-bold" id="bomGrandTotal">$0.00</h3>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </script>
 
-    {{-- STEP 4: DESIGN (EMBROIDERY) - NEW FLAT UI WITH FILTERS --}}
+    {{-- STEP 4: DISEÑO DE BORDADO - READ-ONLY --}}
     <script type="text/template" id="tpl_step4">
     <div class="card shadow-sm border-0">
-        <div class="card-body">
-            <h5 class="step-title"><i class="fas fa-vector-square text-primary"></i> Diseños de Bordado</h5>
-            <p class="step-description text-muted mb-3">
-                <i class="fas fa-lightbulb text-warning mr-1"></i>
-                Selecciona las <strong>producciones de bordado</strong> que aplicarás a tu producto.
-                Usa los filtros para encontrar rápidamente lo que necesitas.
-            </p>
-
-            {{-- Toggle + Filters Row --}}
-            <div class="row mb-3">
-                <div class="col-md-4">
-                    <div class="custom-control custom-switch pt-2">
-                        <input type="checkbox" class="custom-control-input" id="toggleNoDesign" onchange="toggleNoDesignMode()">
-                        <label class="custom-control-label font-weight-bold" for="toggleNoDesign">
-                            <i class="fas fa-tshirt mr-1"></i> Este producto es liso (sin bordado)
-                        </label>
-                    </div>
-                </div>
-                <div class="col-md-8">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <input type="text" class="form-control form-control-sm" placeholder="Buscar diseño..." id="searchDesign">
-                        </div>
-                        <div class="col-md-3">
-                            <select class="form-control form-control-sm" id="filterDesignBase">
-                                <option value="">Todos los diseños</option>
-                                @foreach($designs as $design)
-                                    <option value="{{ $design->id }}">{{ $design->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <select class="form-control form-control-sm" id="filterAppType">
-                                <option value="">Todas las ubicaciones</option>
-                                @foreach($applicationTypes as $appType)
-                                    <option value="{{ $appType->slug }}">{{ $appType->nombre_aplicacion }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <button type="button" class="btn btn-outline-secondary btn-sm btn-block" onclick="clearDesignFilters()">
-                                <i class="fas fa-times"></i> Limpiar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Results Counter --}}
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <small class="text-muted" id="designExportCounter">
-                    Mostrando <strong>{{ count($designExports) }}</strong> producciones disponibles
-                </small>
-                <div class="btn-group btn-group-sm" role="group">
-                    <button type="button" class="btn btn-outline-secondary active" onclick="setDesignViewMode('grid')" id="btnViewGrid">
-                        <i class="fas fa-th"></i>
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary" onclick="setDesignViewMode('list')" id="btnViewList">
-                        <i class="fas fa-list"></i>
-                    </button>
-                </div>
-            </div>
+        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-palette mr-2"></i> Diseños de Bordado</h5>
+            <button type="button" class="btn btn-light btn-sm" onclick="openDesignModal()">
+                <i class="fas fa-plus mr-1"></i> Agregar Diseño
+            </button>
         </div>
+        <div class="card-body">
+            {{-- Encabezado informativo --}}
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <p class="text-muted mb-0">
+                    <i class="fas fa-info-circle text-info mr-1"></i>
+                    Selecciona las producciones de bordado que se aplicarán a este producto.
+                </p>
+                <div class="custom-control custom-switch">
+                    <input type="checkbox" class="custom-control-input" id="toggleNoDesign" onchange="toggleProductoLiso()">
+                    <label class="custom-control-label" for="toggleNoDesign">
+                        <small class="text-muted">Producto liso (sin bordado)</small>
+                    </label>
+                </div>
+            </div>
 
-        {{-- Grid of Design Exports --}}
-        <div class="design-grid-container" id="designExportsContainer">
-            <div class="row px-3 pb-3" id="designGrid">
-                @forelse($designExports as $export)
-                    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3 design-export-item"
-                         data-design-id="{{ $export['design_id'] }}"
-                         data-variant-id="{{ $export['variant_id'] ?? '' }}"
-                         data-app-type="{{ strtolower($export['application_type'] ?? '') }}"
-                         data-label="{{ strtolower($export['application_label'] ?? '') }}"
-                         data-name="{{ strtolower($export['design_name']) }}"
-                         data-dimensions="{{ $export['dimensions'] }}">
-                        <div class="card h-100 design-export-card"
-                             onclick='selectDesignExport(this, @json($export))'
-                             data-export-id="{{ $export['id'] }}">
+            {{-- Grid de diseños asignados --}}
+            <div id="designCardsContainer">
+                <div id="designCardsGrid" class="row">
+                    {{-- Cards se renderizan dinámicamente --}}
+                </div>
+                <div id="noDesignsMessage" class="text-center py-5">
+                    <i class="fas fa-vector-square text-muted mb-3" style="font-size: 4rem;"></i>
+                    <h5 class="text-muted">Sin diseños asignados</h5>
+                    <p class="text-muted mb-3">Haz clic en "Agregar Diseño" para seleccionar una producción de bordado.</p>
+                    <button type="button" class="btn btn-outline-info" onclick="openDesignModal()">
+                        <i class="fas fa-plus mr-1"></i> Agregar Diseño
+                    </button>
+                </div>
+            </div>
 
-                            {{-- Origin Badge: BLUE = Design, PURPLE = Variant --}}
-                            @if($export['variant_name'])
-                                <div class="origin-badge variant" title="Variante: {{ $export['variant_name'] }}">
-                                    <i class="fas fa-code-branch"></i>
-                                </div>
-                            @else
-                                <div class="origin-badge design" title="Diseño Principal">
-                                    <i class="fas fa-vector-square"></i>
-                                </div>
-                            @endif
-
-                            {{-- Image / SVG Preview - Use same route as production index --}}
-                            <div class="card-img-top design-thumb d-flex align-items-center justify-content-center bg-white" style="height: 90px; overflow: hidden;">
-                                <img src="{{ route('admin.production.preview', $export['id']) }}" 
-                                     class="img-fluid" 
-                                     style="max-height: 80px; max-width: 100%; object-fit: contain;">
-                            </div>
-
-                            {{-- Body --}}
-                            <div class="card-body p-2">
-                                {{-- Label Name (Primary - Most Important) --}}
-                                <h6 class="text-truncate mb-1 font-weight-bold text-dark text-center" title="{{ $export['application_label'] }}" style="font-size: 0.95rem;">
-                                    {{ Str::limit($export['application_label'], 18) }}
-                                </h6>
-
-                                {{-- Design Origin --}}
-                                <div class="text-center mb-2">
-                                    <small class="text-muted d-block" title="{{ $export['design_name'] }}">
-                                        <i class="fas fa-sitemap mr-1"></i>{{ Str::limit($export['design_name'], 20) }}
-                                    </small>
-                                    @if($export['variant_name'])
-                                        <small class="text-purple d-block font-weight-bold" title="{{ $export['variant_name'] }}">
-                                            <i class="fas fa-code-branch mr-1"></i>{{ Str::limit($export['variant_name'], 20) }}
-                                        </small>
-                                    @endif
-                                </div>
-
-                                {{-- Technical Data Row --}}
-                                <div class="d-flex justify-content-between align-items-center tech-data-row">
-                                    <span title="Dimensiones">
-                                        <i class="fas fa-ruler-combined text-primary"></i>
-                                        <strong>{{ $export['dimensions_label'] }}</strong>
-                                    </span>
-                                    <span title="Colores">
-                                        <i class="fas fa-palette text-info"></i>
-                                        <strong>{{ $export['colors'] }}</strong>
-                                    </span>
-                                    <span title="Puntadas">
-                                        <i class="fas fa-th text-success"></i>
-                                        <strong>{{ number_format($export['stitches'] / 1000, 1) }}k</strong>
-                                    </span>
-                                </div>
-                            </div>
+            {{-- Resumen de puntadas totales --}}
+            <div id="designSummary" class="d-none mt-4">
+                <div class="bg-light rounded p-3">
+                    <div class="row text-center">
+                        <div class="col-md-4">
+                            <i class="fas fa-layer-group text-info mb-1" style="font-size: 1.2rem;"></i>
+                            <div class="font-weight-bold" id="totalDesignsCount">0</div>
+                            <small class="text-muted">Diseños</small>
+                        </div>
+                        <div class="col-md-4">
+                            <i class="fas fa-th text-success mb-1" style="font-size: 1.2rem;"></i>
+                            <div class="font-weight-bold" id="totalStitchesCount">0</div>
+                            <small class="text-muted">Puntadas Totales</small>
+                        </div>
+                        <div class="col-md-4">
+                            <i class="fas fa-dollar-sign text-primary mb-1" style="font-size: 1.2rem;"></i>
+                            <div class="font-weight-bold" id="estimatedEmbCost">$0.00</div>
+                            <small class="text-muted">Costo Estimado</small>
                         </div>
                     </div>
-                @empty
-                    <div class="col-12 text-center text-muted py-5">
-                        <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
-                        No hay producciones de bordado aprobadas disponibles
-                    </div>
-                @endforelse
+                </div>
             </div>
         </div>
     </div>
-
-    {{-- Premium Card Styles --}}
-    <style>
-        .design-export-card {
-            position: relative;
-            border: 2px solid #e9ecef;
-            border-radius: 12px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-            overflow: hidden;
-            background: #fff;
-        }
-        .design-export-card:hover {
-            border-color: #17a2b8;
-            box-shadow: 0 8px 25px rgba(23, 162, 184, 0.25);
-            transform: translateY(-4px);
-        }
-        .design-export-card.selected {
-            border-color: #28a745;
-            box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.3);
-        }
-        .design-export-card .origin-badge {
-            position: absolute;
-            top: 8px;
-            left: 8px;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.75rem;
-            z-index: 10;
-            color: #fff;
-        }
-        .design-export-card .origin-badge.design {
-            background: linear-gradient(135deg, #007bff, #0056b3);
-        }
-        .design-export-card .origin-badge.variant {
-            background: linear-gradient(135deg, #6f42c1, #5a32a3);
-        }
-        .design-export-card .tech-data-row {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 6px 8px;
-            font-size: 0.75rem;
-        }
-        .design-export-card .tech-data-row span {
-            display: flex;
-            align-items: center;
-            gap: 3px;
-        }
-        .design-export-card .tech-data-row strong {
-            color: #495057;
-        }
-        .design-export-card .svg-preview {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .design-export-card .svg-preview svg {
-            max-width: 100%;
-            max-height: 75px;
-            width: auto;
-            height: auto;
-        }
-        .text-purple { color: #6f42c1; }
-    </style>
 </script>
 
     {{-- BACKUP: OLD STEP 4 - Uncomment to revert to original design-based view
@@ -1212,6 +982,53 @@
 
         .gap-3 {
             gap: 1rem;
+        }
+
+        /* ========================================= */
+        /* DESIGN MODAL CARDS STYLES                */
+        /* ========================================= */
+        .design-modal-card {
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .design-modal-card:hover {
+            border-color: #007bff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,123,255,0.15);
+        }
+
+        .design-modal-card.border-primary {
+            border-color: #007bff !important;
+        }
+
+        .design-modal-card.border-warning {
+            border-color: #ffc107 !important;
+        }
+
+        .bg-warning-light {
+            background-color: rgba(255, 193, 7, 0.1) !important;
+        }
+
+        /* Scrollbar styling for design modal */
+        #designModalGrid::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #designModalGrid::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        #designModalGrid::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        #designModalGrid::-webkit-scrollbar-thumb:hover {
+            background: #a1a1a1;
         }
 
         /* ========================================= */
@@ -2750,40 +2567,203 @@
         // Global flag to control when to re-render design previews (avoids flickering)
         let shouldRenderDesigns = false;
 
+        // --- EDIT / CLONE MODE DETECTION ---
+        const isEditMode = {{ isset($editMode) && $editMode ? 'true' : 'false' }};
+        const isCloneMode = {{ isset($cloneMode) && $cloneMode ? 'true' : 'false' }};
+        const editProductId = {{ isset($product) && $product ? $product->id : 'null' }};
+
         // --- STATE MANAGEMENT ---
-        // --- STATE MANAGEMENT ---
+        @php
+            // === CLONE MODE: Precargar datos desde producto origen SIN IDs ===
+            if (isset($cloneMode) && $cloneMode && isset($cloneProduct)) {
+                // Definición: copiar TODO excepto SKU (vacío para forzar uno nuevo)
+                $defData = json_encode([
+                    'name' => $cloneProduct->name . ' (Copia)',
+                    'sku' => '', // FORZAR VACÍO - usuario debe asignar nuevo SKU
+                    'category_id' => $cloneProduct->product_category_id,
+                    'desc' => $cloneProduct->description ?? '',
+                    'production_lead_time' => $cloneProduct->production_lead_time ?? 7,
+                ]);
+
+                // Variantes: copiar estructura SIN db_id (serán nuevas)
+                $varIndex = 0;
+                $varData = json_encode($cloneProduct->variants->map(function ($v) use (&$varIndex) {
+                    $sizeVal = $v->attributeValues->first(fn($av) => ($av->attribute?->slug ?? '') === 'talla');
+                    $colorVal = $v->attributeValues->first(fn($av) => ($av->attribute?->slug ?? '') === 'color');
+                    $varIndex++;
+                    return [
+                        'temp_id' => 'clone_' . $varIndex, // ID temporal nuevo
+                        // SIN db_id - variantes son nuevas
+                        'sku' => '', // SKU vacío - se generará automático
+                        'size' => $sizeVal?->value ?? '', 'size_id' => $sizeVal?->id ?? null,
+                        'color' => $colorVal?->value ?? '', 'color_id' => $colorVal?->id ?? null,
+                        'price' => (float) $v->price,
+                    ];
+                })->values()->toArray());
+
+                // Diseños: copiar con export_id (son referencias, no se duplican)
+                $desData = json_encode($cloneProduct->designs->map(function ($d) {
+                    $exp = $d->generalExports()->where('status','aprobado')->first() ?? $d->exports()->where('status','aprobado')->first();
+                    $appT = \App\Models\Application_types::find($d->pivot->application_type_id ?? 1);
+                    return [
+                        'export_id' => $exp?->id, 'design_id' => $d->id,
+                        'name' => $exp?->application_label ?? $d->name, 'design_name' => $d->name,
+                        'variant_name' => $exp?->variant?->name ?? null,
+                        'app_type_slug' => $appT?->slug ?? 'general', 'app_type_name' => $appT?->nombre_aplicacion ?? 'General',
+                        'stitches' => $exp?->stitches_count ?? 0, 'colors' => $exp?->colors_count ?? 0,
+                        'dimensions' => $exp ? ($exp->width_mm.'x'.$exp->height_mm.' mm') : '',
+                        'file_format' => strtoupper($exp?->file_format ?? ''),
+                        'svg_content' => $exp?->svg_content ?? null, 'image' => $exp?->image?->display_url ?? null,
+                        'scope' => 'global', 'target_variant' => null,
+                    ];
+                })->values()->toArray());
+
+                // BOM: copiar materiales con cantidades y costos
+                $bomData = json_encode($cloneProduct->materials->map(function ($m) {
+                    return [
+                        'material_id' => $m->id, 'family_name' => $m->material?->name ?? '',
+                        'variant_name' => $m->name ?? '',
+                        'name' => ($m->material?->name ?? '').' - '.($m->name ?? ''),
+                        'qty' => (float) $m->pivot->quantity, 'cost' => (float) $m->pivot->unit_cost,
+                        'calculated_total' => (float) $m->pivot->total_cost,
+                        'unit' => $m->material?->baseUnit?->abbreviation ?? 'unid',
+                        'scope' => 'global', 'targets' => [],
+                    ];
+                })->values()->toArray());
+
+                // Extras: copiar servicios extra
+                $extData = json_encode($cloneProduct->extras->map(function ($e) {
+                    return [
+                        'id' => $e->id, 'name' => $e->name,
+                        'cost' => (float) ($e->pivot->snapshot_price ?? $e->price_addition ?? 0),
+                        'price' => (float) ($e->pivot->snapshot_price ?? $e->price_addition ?? 0),
+                        'time' => (int) ($e->pivot->snapshot_time ?? $e->minutes_addition ?? 0),
+                    ];
+                })->values()->toArray());
+
+                // Financials: copiar costos y precios
+                $finData = json_encode([
+                    'material_cost' => (float) ($cloneProduct->materials_cost ?? 0),
+                    'embroidery_cost' => (float) ($cloneProduct->embroidery_cost ?? 0),
+                    'extras_cost' => (float) ($cloneProduct->extra_services_cost ?? 0),
+                    'labor_cost' => (float) ($cloneProduct->labor_cost ?? 0),
+                    'total_cost' => (float) ($cloneProduct->production_cost ?? 0),
+                    'margin' => (float) ($cloneProduct->profit_margin ?? 35),
+                    'price' => (float) ($cloneProduct->base_price ?? 0),
+                    'lead_time' => (int) ($cloneProduct->production_lead_time ?? 7),
+                ]);
+            }
+            // === EDIT MODE: construir datos desde $product ===
+            elseif (isset($editMode) && $editMode && isset($product)) {
+                $defData = json_encode([
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'sku' => $product->sku,
+                    'category_id' => $product->product_category_id,
+                    'desc' => $product->description ?? '',
+                    'production_lead_time' => $product->production_lead_time ?? 7,
+                ]);
+
+                $varData = json_encode($product->variants->map(function ($v) {
+                    $sizeVal = $v->attributeValues->first(fn($av) => ($av->attribute?->slug ?? '') === 'talla');
+                    $colorVal = $v->attributeValues->first(fn($av) => ($av->attribute?->slug ?? '') === 'color');
+                    return [
+                        'temp_id' => 'v_' . $v->id, 'db_id' => $v->id, 'sku' => $v->sku_variant,
+                        'size' => $sizeVal?->value ?? '', 'size_id' => $sizeVal?->id ?? null,
+                        'color' => $colorVal?->value ?? '', 'color_id' => $colorVal?->id ?? null,
+                        'price' => (float) $v->price,
+                    ];
+                })->values()->toArray());
+
+                $desData = json_encode($product->designs->map(function ($d) {
+                    $exp = $d->generalExports()->where('status','aprobado')->first() ?? $d->exports()->where('status','aprobado')->first();
+                    $appT = \App\Models\Application_types::find($d->pivot->application_type_id ?? 1);
+                    return [
+                        'export_id' => $exp?->id, 'design_id' => $d->id,
+                        'name' => $exp?->application_label ?? $d->name, 'design_name' => $d->name,
+                        'variant_name' => $exp?->variant?->name ?? null,
+                        'app_type_slug' => $appT?->slug ?? 'general', 'app_type_name' => $appT?->nombre_aplicacion ?? 'General',
+                        'stitches' => $exp?->stitches_count ?? 0, 'colors' => $exp?->colors_count ?? 0,
+                        'dimensions' => $exp ? ($exp->width_mm.'x'.$exp->height_mm.' mm') : '',
+                        'file_format' => strtoupper($exp?->file_format ?? ''),
+                        'svg_content' => $exp?->svg_content ?? null, 'image' => $exp?->image?->display_url ?? null,
+                        'scope' => 'global', 'target_variant' => null,
+                    ];
+                })->values()->toArray());
+
+                $bomData = json_encode($product->materials->map(function ($m) {
+                    return [
+                        'material_id' => $m->id, 'family_name' => $m->material?->name ?? '',
+                        'variant_name' => $m->name ?? '',
+                        'name' => ($m->material?->name ?? '').' - '.($m->name ?? ''),
+                        'qty' => (float) $m->pivot->quantity, 'cost' => (float) $m->pivot->unit_cost,
+                        'calculated_total' => (float) $m->pivot->total_cost,
+                        'unit' => $m->material?->baseUnit?->abbreviation ?? 'unid',
+                        'scope' => 'global', 'targets' => [],
+                    ];
+                })->values()->toArray());
+
+                $extData = json_encode($product->extras->map(function ($e) {
+                    return [
+                        'id' => $e->id, 'name' => $e->name,
+                        'cost' => (float) ($e->pivot->snapshot_price ?? $e->price_addition ?? 0),
+                        'price' => (float) ($e->pivot->snapshot_price ?? $e->price_addition ?? 0),
+                        'time' => (int) ($e->pivot->snapshot_time ?? $e->minutes_addition ?? 0),
+                    ];
+                })->values()->toArray());
+            } else {
+                // CREATE mode o EDIT tras error de validación
+                $defData = json_encode(['name'=>old('name',''),'sku'=>old('sku',''),'category_id'=>old('product_category_id',''),'desc'=>old('description','')]);
+                $varData = old('variants_json', '[]');
+                $desData = old('embroideries_json', '[]');
+                $bomData = old('materials_json', '[]');
+                $extData = old('extras_json', '[]');
+            }
+
+            // FIX: En EDIT tras error, priorizar old() sobre datos de BD
+            if (isset($editMode) && $editMode && old('variants_json')) {
+                $varData = old('variants_json');
+                $desData = old('embroideries_json', $desData);
+                $bomData = old('materials_json', $bomData);
+                $extData = old('extras_json', $extData);
+            }
+        @endphp
+
         const State = {
             step: 1,
-            definition: {
-                name: @json(old('name', '')),
-                sku: @json(old('sku', '')),
-                category_id: @json(old('product_category_id', '')),
-                category: '', // Will be updated on step validation
-                desc: @json(old('description', ''))
-            },
-            variants: {!! old('variants_json', '[]') !!},
-            bom: {!! old('materials_json', '[]') !!},
-            designs: {!! old('embroideries_json', '[]') !!},
-            extras: {!! old('extras_json', '[]') !!}, // This was actually array of IDs in Request, but State stores objects?
-            // Wait, StoreProductRequest prepares 'extras' as IDs. But State.extras usually objects.
-            // If validation failed, 'extras_json' should contain the JSON string of OBJECTS that we put in hidden input. 
-            // So it should be fine.
-            financials: {!! old(
-                'financials_json',
-                str_replace(
-                    "'",
-                    "\'",
-                    json_encode([
-                        'material_cost' => 0,
-                        'embroidery_cost' => 0,
-                        'extras_cost' => 0,
-                        'labor_cost' => 0,
-                        'total_cost' => 0,
-                        'margin' => 35,
-                        'price' => 0,
-                    ]),
-                ),
-            ) !!}
+            definition: {!! $defData !!},
+            variants: {!! $varData !!},
+            bom: {!! $bomData !!},
+            designs: {!! $desData !!},
+            extras: {!! $extData !!},
+            @php
+                // Financials: Clone mode ya definió $finData arriba
+                if (isset($cloneMode) && $cloneMode && isset($finData)) {
+                    // Ya está definido en el bloque de clone
+                } elseif (isset($editMode) && $editMode && isset($product)) {
+                    // Priorizar old() si hay error de validación
+                    if (old('financials_json')) {
+                        $finData = old('financials_json');
+                    } else {
+                        $finData = json_encode([
+                            'material_cost' => (float) ($product->materials_cost ?? 0),
+                            'embroidery_cost' => (float) ($product->embroidery_cost ?? 0),
+                            'extras_cost' => (float) ($product->extra_services_cost ?? 0),
+                            'labor_cost' => (float) ($product->labor_cost ?? 0),
+                            'total_cost' => (float) ($product->production_cost ?? 0),
+                            'margin' => (float) ($product->profit_margin ?? 35),
+                            'price' => (float) ($product->base_price ?? 0),
+                            'lead_time' => (int) ($product->production_lead_time ?? 7),
+                        ]);
+                    }
+                } elseif (!isset($finData)) {
+                    $finData = old('financials_json', json_encode([
+                        'material_cost' => 0, 'embroidery_cost' => 0, 'extras_cost' => 0,
+                        'labor_cost' => 0, 'total_cost' => 0, 'margin' => 35, 'price' => 0, 'lead_time' => 7,
+                    ]));
+                }
+            @endphp
+            financials: {!! $finData !!}
         };
 
         // Flag for async validation bypass
@@ -2795,8 +2775,6 @@
 
         // Navigate directly to a specific step (clicking on step numbers)
         window.navigateToStep = function(targetStep) {
-            console.log('navigateToStep called:', targetStep, 'current:', State.step, 'maxVisited:', maxVisitedStep);
-
             if (targetStep < 1 || targetStep > TOTAL_STEPS) return;
             if (targetStep === State.step) return; // Already on this step
 
@@ -2920,19 +2898,13 @@
                     State.definition.category_id = $('#inpCategory').val();
                     return true;
                 case 2:
-                    // At least one variant ideally
+                    // OBLIGATORIO: Al menos una presentación para continuar a Materiales
                     if (State.variants.length === 0) {
                         Swal.fire({
-                            title: '¿Continuar sin variantes?',
-                            text: 'No has agregado presentaciones. ¿Deseas continuar?',
-                            icon: 'question',
-                            showCancelButton: true,
-                            confirmButtonText: 'Sí, continuar',
-                            cancelButtonText: 'Agregar variantes'
-                        }).then((result) => {
-                            if (result.isConfirmed) {
-                                goToStep(3);
-                            }
+                            title: 'Presentaciones requeridas',
+                            html: 'Debes agregar al menos <strong>una presentación</strong> (talla y color) antes de continuar.<br><br>Los materiales se asignan a las presentaciones del producto.',
+                            icon: 'warning',
+                            confirmButtonText: 'Entendido'
                         });
                         return false;
                     }
@@ -2959,20 +2931,27 @@
                     if (typeof renderVariantsTable === 'function') renderVariantsTable();
                     break;
                 case 3:
-                    if (typeof renderBOM === 'function') renderBOM();
+                    // NUEVO: Verificar si hay presentaciones para mostrar/bloquear BOM
+                    if (State.variants.length === 0) {
+                        $('#bomBlockedState').removeClass('d-none');
+                        $('#bomActiveState').addClass('d-none');
+                    } else {
+                        $('#bomBlockedState').addClass('d-none');
+                        $('#bomActiveState').removeClass('d-none');
+                        initBomSelectors();
+                        renderBOMSplit();
+                    }
                     break;
                 case 4:
-                    // Design grid is filtered/rendered by default via Blade, 
-                    // but we sync state
-                    if (typeof syncDesignCardsWithState === 'function') syncDesignCardsWithState();
+                    // NUEVO: Diseño read-only - renderizar información
+                    renderDesignReadOnly();
                     break;
                 case 5:
                     recalcFinance();
-                    // if renderExtrasTable exists
                     if (typeof renderExtrasTable === 'function') renderExtrasTable();
                     break;
                 case 6:
-                    shouldRenderDesigns = true; // Ensure designs render on direct entry
+                    shouldRenderDesigns = true;
                     recalcFinance();
                     renderReview();
                     validateMaterialPrices();
@@ -3098,6 +3077,981 @@
             // Any cleanup needed when leaving a step
         }
 
+        // ============================================================
+        // BOM DIVIDIDO: Materiales Comunes + Por Presentación
+        // Responsabilidad: Inicialización y manejo de selectores BOM
+        // ============================================================
+
+        // ============================================================
+        // BOM PASO 3: INICIALIZACIÓN ROBUSTA
+        // ============================================================
+
+        // ------------------------------------------------------------
+        // initBomSelectors: Punto de entrada principal para Paso 3
+        // RESPONSABILIDAD: Configurar todos los selectores del BOM
+        // ------------------------------------------------------------
+        function initBomSelectors() {
+            destroyBomSelect2Instances();
+            populatePresentationSelector();
+            initBomSelect2Instances();
+            bindBomEventHandlers();
+        }
+
+        // ------------------------------------------------------------
+        // destroyBomSelect2Instances: Limpia instancias previas
+        // ------------------------------------------------------------
+        function destroyBomSelect2Instances() {
+            var selectors = [
+                '#bomFamilySelectorGlobal',
+                '#bomMaterialSelectorGlobal',
+                '#bomFamilySelectorSpecific',
+                '#bomMaterialSelectorSpecific',
+                '#bomTargetVariant'
+            ];
+
+            selectors.forEach(function(sel) {
+                var $el = $(sel);
+                if ($el.length && $el.hasClass('select2-hidden-accessible')) {
+                    try {
+                        $el.select2('destroy');
+                    } catch (e) {}
+                }
+            });
+        }
+
+        // ------------------------------------------------------------
+        // populatePresentationSelector: Llena #bomTargetVariant
+        // DEBE ejecutarse ANTES de Select2 init
+        // ------------------------------------------------------------
+        function populatePresentationSelector() {
+            var vSel = $('#bomTargetVariant');
+            if (!vSel.length) return;
+
+            vSel.empty();
+            vSel.append('<option value=""></option>');
+
+            State.variants.forEach(function(v) {
+                var label = v.size + ' / ' + v.color;
+                vSel.append('<option value="' + v.temp_id + '">' + label + '</option>');
+            });
+        }
+
+        // ------------------------------------------------------------
+        // initBomSelect2Instances: Inicializa Select2 en selectores BOM
+        // ------------------------------------------------------------
+        function initBomSelect2Instances() {
+            // --- Familia Global ---
+            if ($('#bomFamilySelectorGlobal').length) {
+                $('#bomFamilySelectorGlobal').select2({
+                    width: '100%',
+                    placeholder: 'Seleccione familia...',
+                    allowClear: true
+                });
+            }
+
+            // --- Material Global ---
+            if ($('#bomMaterialSelectorGlobal').length) {
+                $('#bomMaterialSelectorGlobal').select2({
+                    width: '100%',
+                    placeholder: 'Seleccione material...',
+                    allowClear: true
+                });
+            }
+
+            // --- Presentación Destino ---
+            if ($('#bomTargetVariant').length) {
+                $('#bomTargetVariant').select2({
+                    width: '100%',
+                    placeholder: 'Seleccione presentación...',
+                    allowClear: true
+                });
+            }
+
+            // --- Familia Específica ---
+            if ($('#bomFamilySelectorSpecific').length) {
+                $('#bomFamilySelectorSpecific').select2({
+                    width: '100%',
+                    placeholder: 'Seleccione familia...',
+                    allowClear: true
+                });
+            }
+
+            // --- Material Específico ---
+            if ($('#bomMaterialSelectorSpecific').length) {
+                $('#bomMaterialSelectorSpecific').select2({
+                    width: '100%',
+                    placeholder: 'Seleccione material...',
+                    allowClear: true
+                });
+            }
+        }
+
+        // ------------------------------------------------------------
+        // bindBomEventHandlers: Conecta eventos change a los selectores
+        // IMPORTANTE: Select2 dispara 'change' en el elemento original
+        // ------------------------------------------------------------
+        function bindBomEventHandlers() {
+            // Limpiar handlers previos (namespace .bom)
+            $('#bomFamilySelectorGlobal').off('change.bom');
+            $('#bomFamilySelectorSpecific').off('change.bom');
+            $('#bomMaterialSelectorGlobal').off('change.bom');
+            $('#bomMaterialSelectorSpecific').off('change.bom');
+
+            // --- Handler: Familia GLOBAL cambia → cargar materiales ---
+            $('#bomFamilySelectorGlobal').on('change.bom', function() {
+                var familyId = $(this).val();
+                fetchMaterialVariantsFor('Global', familyId);
+            });
+
+            // --- Handler: Familia ESPECÍFICA cambia → cargar materiales ---
+            $('#bomFamilySelectorSpecific').on('change.bom', function() {
+                var familyId = $(this).val();
+                fetchMaterialVariantsFor('Specific', familyId);
+            });
+
+            // --- Handler: Material GLOBAL seleccionado → mostrar info ---
+            $('#bomMaterialSelectorGlobal').on('change.bom', function() {
+                showMaterialInfo('Global');
+            });
+
+            // --- Handler: Material ESPECÍFICO seleccionado → mostrar info ---
+            $('#bomMaterialSelectorSpecific').on('change.bom', function() {
+                showMaterialInfo('Specific');
+            });
+        }
+
+        // ------------------------------------------------------------
+        // fetchMaterialVariantsFor: Carga materiales via AJAX
+        // @param suffix: 'Global' o 'Specific'
+        // @param familyId: ID de la familia de material
+        // ------------------------------------------------------------
+        function fetchMaterialVariantsFor(suffix, familyId) {
+            var sel = $('#bomMaterialSelector' + suffix);
+            var infoBox = $('#materialInfo' + suffix);
+
+            // Reset si no hay familia seleccionada
+            if (!familyId) {
+                sel.empty().prop('disabled', true).trigger('change');
+                infoBox.addClass('d-none');
+                return;
+            }
+
+            var url = '{{ route("admin.material-variants.conversiones", ["materialId" => "__ID__"]) }}'.replace('__ID__', familyId);
+
+            $.ajax({
+                url: url,
+                method: 'GET',
+                success: function(data) {
+                    sel.empty().prop('disabled', false);
+
+                    // Agregar opción vacía para placeholder
+                    sel.append('<option value=""></option>');
+
+                    data.forEach(function(v) {
+                        var opt = $('<option></option>')
+                            .val(v.id)
+                            .text(v.variant_name || v.text)
+                            .attr('data-cost', v.cost_base || 0)
+                            .attr('data-stock', v.stock_real || 0)
+                            .attr('data-unit', v.symbol || 'unid')
+                            .attr('data-name', v.text || '')
+                            .attr('data-family', v.family_name || '')
+                            .attr('data-variant', v.variant_name || '')
+                            .attr('data-sku', v.sku || '');
+                        sel.append(opt);
+                    });
+
+                    sel.trigger('change');
+                },
+                error: function() {
+                    Swal.fire('Error', 'No se pudieron cargar los materiales', 'error');
+                }
+            });
+        }
+
+        // ------------------------------------------------------------
+        // showMaterialInfo: Muestra info del material seleccionado
+        // @param suffix: 'Global' o 'Specific'
+        // ------------------------------------------------------------
+        function showMaterialInfo(suffix) {
+            var sel = $('#bomMaterialSelector' + suffix);
+            var opt = sel.find('option:selected');
+            var infoBox = $('#materialInfo' + suffix);
+
+            if (!sel.val()) {
+                infoBox.addClass('d-none');
+                return;
+            }
+
+            var stock = parseFloat(opt.data('stock')) || 0;
+            var cost = parseFloat(opt.data('cost')) || 0;
+            var unit = opt.data('unit') || 'unid';
+
+            $('#matStock' + suffix).text(stock.toLocaleString() + ' ' + unit);
+            $('#matCost' + suffix).text('$' + cost.toFixed(2));
+            $('#bomUnit' + suffix).text(unit);
+            infoBox.removeClass('d-none');
+        }
+
+        // ------------------------------------------------------------
+        // NOTA: Event handlers para BOM ahora se bindean en bindBomEventHandlers()
+        // que se llama desde initBomSelectors() después de inicializar Select2
+        // ------------------------------------------------------------
+
+        // Agregar material COMÚN (scope: global)
+        window.addMaterialCommon = function() {
+            const matId = $('#bomMaterialSelectorGlobal').val();
+            const qty = parseFloat($('#bomQtyGlobal').val());
+
+            if (!matId || !qty || qty <= 0) {
+                Swal.fire('Error', 'Seleccione un material e ingrese una cantidad válida', 'warning');
+                return;
+            }
+
+            // VALIDACIÓN: No permitir duplicar material que ya existe en Específicos
+            const existsInSpecific = State.bom.some(m => m.material_id == matId && m.scope === 'specific');
+            if (existsInSpecific) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Material ya existe',
+                    html: 'Este material ya está agregado en <strong>Ajustes por Presentación</strong>.<br><br>No puede existir en ambas secciones. Elimínelo de Ajustes primero si desea agregarlo como material común.',
+                    confirmButtonText: 'Entendido'
+                });
+                return;
+            }
+
+            const opt = $('#bomMaterialSelectorGlobal option:selected');
+            const cost = parseFloat(opt.data('cost')) || 0;
+            const unit = opt.data('unit') || 'unid';
+
+            const material = {
+                material_id: matId,
+                name: opt.data('name') || '',
+                family_name: opt.data('family') || '',
+                variant_name: opt.data('variant') || '',
+                sku: opt.data('sku') || '',
+                cost: cost,
+                unit: unit,
+                qty: qty,
+                is_primary: $('#materialIsPrimaryGlobal').is(':checked'),
+                scope: 'global',
+                targets: []
+            };
+
+            // Verificar si ya existe
+            const existingIdx = State.bom.findIndex(m => m.material_id == matId && m.scope === 'global');
+            if (existingIdx > -1) {
+                State.bom[existingIdx].qty += qty;
+                State.bom[existingIdx].calculated_total = State.bom[existingIdx].cost * State.bom[existingIdx].qty;
+            } else {
+                material.calculated_total = material.cost * material.qty;
+                State.bom.push(material);
+            }
+
+            renderBOMSplit();
+            recalcFinance();
+
+            // Reset form
+            $('#bomQtyGlobal').val('');
+            $('#bomMaterialSelectorGlobal').val(null).trigger('change');
+            $('#materialInfoGlobal').addClass('d-none');
+            $('#materialIsPrimaryGlobal').prop('checked', false);
+        };
+
+        // Agregar material ESPECÍFICO (scope: specific)
+        window.addMaterialSpecific = function() {
+            const targetVariant = $('#bomTargetVariant').val();
+            const matId = $('#bomMaterialSelectorSpecific').val();
+            const qty = parseFloat($('#bomQtySpecific').val());
+
+            if (!targetVariant) {
+                Swal.fire('Error', 'Seleccione primero la presentación destino', 'warning');
+                return;
+            }
+
+            if (!matId || !qty || qty <= 0) {
+                Swal.fire('Error', 'Seleccione un material e ingrese una cantidad válida', 'warning');
+                return;
+            }
+
+            // VALIDACIÓN: No permitir duplicar material que ya existe en Comunes
+            const existsInGlobal = State.bom.some(m => m.material_id == matId && m.scope === 'global');
+            if (existsInGlobal) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Material ya existe',
+                    html: 'Este material ya está agregado en <strong>Materiales Comunes</strong>.<br><br>Si necesita ajustar la cantidad para esta presentación, elimínelo de Comunes primero.',
+                    confirmButtonText: 'Entendido'
+                });
+                return;
+            }
+
+            const opt = $('#bomMaterialSelectorSpecific option:selected');
+            const cost = parseFloat(opt.data('cost')) || 0;
+            const unit = opt.data('unit') || 'unid';
+
+            const material = {
+                material_id: matId,
+                name: opt.data('name') || '',
+                family_name: opt.data('family') || '',
+                variant_name: opt.data('variant') || '',
+                sku: opt.data('sku') || '',
+                cost: cost,
+                unit: unit,
+                qty: qty,
+                is_primary: false,
+                scope: 'specific',
+                targets: [targetVariant]
+            };
+
+            // Verificar si ya existe exactamente igual
+            const existingIdx = State.bom.findIndex(m =>
+                m.material_id == matId &&
+                m.scope === 'specific' &&
+                m.targets.length === 1 &&
+                m.targets[0] === targetVariant
+            );
+
+            if (existingIdx > -1) {
+                State.bom[existingIdx].qty += qty;
+                State.bom[existingIdx].calculated_total = State.bom[existingIdx].cost * State.bom[existingIdx].qty;
+            } else {
+                material.calculated_total = material.cost * material.qty;
+                State.bom.push(material);
+            }
+
+            renderBOMSplit();
+            recalcFinance();
+
+            // Reset form (mantener presentación seleccionada para agregar más)
+            $('#bomQtySpecific').val('');
+            $('#bomMaterialSelectorSpecific').val(null).trigger('change');
+            $('#materialInfoSpecific').addClass('d-none');
+        };
+
+        // Renderizar BOM dividido en dos tablas
+        function renderBOMSplit() {
+            const globalMaterials = State.bom.filter(m => m.scope === 'global');
+            const specificMaterials = State.bom.filter(m => m.scope === 'specific');
+
+            // Renderizar tabla GLOBAL
+            const tbodyGlobal = $('#bomTableBodyGlobal');
+            tbodyGlobal.empty();
+            let totalGlobal = 0;
+
+            if (globalMaterials.length === 0) {
+                tbodyGlobal.html(`<tr id="noMaterialsGlobalRow">
+                    <td colspan="4" class="text-center text-muted py-3">
+                        <i class="fas fa-inbox mr-1"></i> Sin materiales comunes
+                    </td>
+                </tr>`);
+            } else {
+                globalMaterials.forEach((m, idx) => {
+                    const realIdx = State.bom.findIndex(x => x === m);
+                    totalGlobal += m.calculated_total || 0;
+                    tbodyGlobal.append(`<tr>
+                        <td>
+                            <div class="font-weight-bold">${m.family_name || m.name}${m.variant_name ? ' - ' + m.variant_name : ''}</div>
+                            <small class="text-muted">${m.sku || ''}</small>
+                            ${m.is_primary ? '<span class="badge badge-warning badge-sm ml-1">Principal</span>' : ''}
+                        </td>
+                        <td class="text-center" style="min-width: 120px;">
+                            <div class="input-group input-group-sm">
+                                <input type="number" class="form-control form-control-sm text-center bom-qty-input"
+                                    value="${m.qty}" step="0.01" min="0.01"
+                                    data-bom-idx="${realIdx}"
+                                    onchange="updateBomQty(${realIdx}, this.value)"
+                                    style="max-width: 70px;">
+                                <div class="input-group-append">
+                                    <span class="input-group-text" style="font-size: 0.8rem;">${m.unit}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-right font-weight-bold">$${(m.calculated_total || 0).toFixed(2)}</td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeBomItem(${realIdx})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>`);
+                });
+            }
+            $('#bomTotalGlobal').text('$' + totalGlobal.toFixed(2));
+
+            // Renderizar tabla ESPECÍFICO
+            const tbodySpecific = $('#bomTableBodySpecific');
+            tbodySpecific.empty();
+            let totalSpecific = 0;
+
+            if (specificMaterials.length === 0) {
+                tbodySpecific.html(`<tr id="noMaterialsSpecificRow">
+                    <td colspan="5" class="text-center text-muted py-3">
+                        <i class="fas fa-inbox mr-1"></i> Sin materiales específicos
+                    </td>
+                </tr>`);
+            } else {
+                specificMaterials.forEach((m, idx) => {
+                    const realIdx = State.bom.findIndex(x => x === m);
+                    totalSpecific += m.calculated_total || 0;
+
+                    // Obtener nombre de presentación
+                    const targetNames = m.targets.map(tid => {
+                        const v = State.variants.find(va => va.temp_id === tid);
+                        return v ? `${v.size} / ${v.color}` : '';
+                    }).filter(Boolean).join(', ');
+
+                    tbodySpecific.append(`<tr>
+                        <td>
+                            <div class="font-weight-bold">${m.family_name || m.name}${m.variant_name ? ' - ' + m.variant_name : ''}</div>
+                            <small class="text-muted">${m.sku || ''}</small>
+                        </td>
+                        <td><span class="badge badge-info">${targetNames}</span></td>
+                        <td class="text-center" style="min-width: 120px;">
+                            <div class="input-group input-group-sm">
+                                <input type="number" class="form-control form-control-sm text-center bom-qty-input"
+                                    value="${m.qty}" step="0.01" min="0.01"
+                                    data-bom-idx="${realIdx}"
+                                    onchange="updateBomQty(${realIdx}, this.value)"
+                                    style="max-width: 70px;">
+                                <div class="input-group-append">
+                                    <span class="input-group-text" style="font-size: 0.8rem;">${m.unit}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-right font-weight-bold">$${(m.calculated_total || 0).toFixed(2)}</td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeBomItem(${realIdx})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>`);
+                });
+            }
+            $('#bomTotalSpecific').text('$' + totalSpecific.toFixed(2));
+
+            // Total general
+            $('#bomGrandTotal').text('$' + (totalGlobal + totalSpecific).toFixed(2));
+        }
+
+        // Actualizar cantidad de un material en el BOM
+        window.updateBomQty = function(idx, newQty) {
+            const qty = parseFloat(newQty);
+            if (isNaN(qty) || qty <= 0) {
+                Swal.fire('Error', 'La cantidad debe ser mayor a 0', 'warning');
+                renderBOMSplit(); // Re-render to reset input
+                return;
+            }
+
+            if (idx >= 0 && idx < State.bom.length) {
+                State.bom[idx].qty = qty;
+                State.bom[idx].calculated_total = (parseFloat(State.bom[idx].cost) || 0) * qty;
+                renderBOMSplit();
+                recalcFinance();
+            }
+        };
+
+        // Eliminar item del BOM
+        window.removeBomItem = function(idx) {
+            if (idx >= 0 && idx < State.bom.length) {
+                State.bom.splice(idx, 1);
+                renderBOMSplit();
+                recalcFinance();
+            }
+        };
+
+        // ============================================================
+        // PASO 4: DISEÑOS DE BORDADO
+        // ============================================================
+
+        // URL para cargar diseños dinámicamente
+        const designExportsUrl = "{{ route('admin.products.ajax.approved_exports') }}";
+
+        // Renderizar cards de diseños/producciones asignados en el grid de Step 4
+        function renderDesignCards() {
+            const grid = $('#designCardsGrid');
+            const noMsg = $('#noDesignsMessage');
+            const summary = $('#designSummary');
+
+            grid.empty();
+
+            if (State.designs.length === 0) {
+                noMsg.removeClass('d-none');
+                summary.addClass('d-none');
+                return;
+            }
+
+            noMsg.addClass('d-none');
+            summary.removeClass('d-none');
+
+            let totalStitches = 0;
+
+            State.designs.forEach((d, idx) => {
+                totalStitches += parseInt(d.stitches) || 0;
+
+                // Badge de alcance (scope)
+                const scopeBadge = d.scope === 'global'
+                    ? '<span class="badge badge-dark"><i class="fas fa-globe mr-1"></i>Todas</span>'
+                    : `<span class="badge badge-info"><i class="fas fa-tag mr-1"></i>${getVariantName(d.target_variant)}</span>`;
+
+                // Badge de tipo de aplicación (ubicación)
+                const appTypeBadge = d.app_type_name
+                    ? `<span class="badge badge-warning"><i class="fas fa-map-marker-alt mr-1"></i>${d.app_type_name}</span>`
+                    : '<span class="badge badge-secondary">General</span>';
+
+                // Badge de formato de archivo
+                const formatBadge = d.file_format
+                    ? `<span class="badge badge-light border">${d.file_format}</span>`
+                    : '';
+
+                // Preview: Prioridad 1) SVG del archivo, 2) imagen referencia, 3) placeholder
+                // NUNCA usar imágenes de diseño/variante
+                let imgHtml;
+                if (d.svg_content) {
+                    // SVG inline del archivo de bordado (preview REAL)
+                    imgHtml = `<div class="d-flex align-items-center justify-content-center bg-white h-100" style="overflow: hidden;">${d.svg_content}</div>`;
+                } else if (d.image) {
+                    imgHtml = `<img src="${d.image}" style="max-width: 100%; max-height: 70px; object-fit: contain;" alt="Imagen de referencia">`;
+                } else {
+                    const fmt = (d.file_format || 'EMB').toUpperCase();
+                    imgHtml = `<div class="d-flex flex-column align-items-center justify-content-center bg-secondary text-white h-100 rounded" title="Sin preview">
+                        <i class="fas fa-file-code" style="font-size: 1.5rem;"></i>
+                        <small style="font-size: 0.7rem; font-weight: bold;">${fmt}</small>
+                    </div>`;
+                }
+
+                // Trazabilidad: Diseño → Variante (si existe)
+                const hasVariant = d.variant_name !== null && d.variant_name !== undefined && d.variant_name !== '';
+                const originHtml = hasVariant
+                    ? `<small class="text-muted d-block text-truncate" title="${d.design_name} → ${d.variant_name}"><i class="fas fa-sitemap mr-1"></i>${d.design_name} → ${d.variant_name}</small>`
+                    : `<small class="text-muted d-block text-truncate" title="${d.design_name || 'Sin diseño'}"><i class="fas fa-paint-brush mr-1"></i>${d.design_name || 'Sin diseño'}</small>`;
+
+                grid.append(`
+                    <div class="col-md-4 col-sm-6 mb-3">
+                        <div class="card h-100 border shadow-sm design-assigned-card">
+                            <div class="card-body p-3">
+                                <!-- Encabezado con imagen y nombre -->
+                                <div class="d-flex mb-2">
+                                    <div class="design-thumb bg-light rounded mr-3 d-flex align-items-center justify-content-center" style="width: 80px; height: 70px; flex-shrink: 0; overflow: hidden;">
+                                        ${imgHtml}
+                                    </div>
+                                    <div class="flex-grow-1 overflow-hidden">
+                                        <h6 class="font-weight-bold mb-1 text-truncate" title="${d.name || 'Sin nombre'}">${d.name || 'Sin nombre'}</h6>
+                                        ${originHtml}
+                                    </div>
+                                </div>
+
+                                <!-- Badges: Tipo aplicación + Formato + Alcance -->
+                                <div class="mb-2">
+                                    ${appTypeBadge}
+                                    ${formatBadge}
+                                    ${scopeBadge}
+                                </div>
+
+                                <!-- Datos técnicos -->
+                                <div class="row text-center small border-top pt-2">
+                                    <div class="col-4" title="Dimensiones">
+                                        <i class="fas fa-ruler-combined text-primary"></i>
+                                        <div class="font-weight-bold small">${d.dimensions || '-'}</div>
+                                    </div>
+                                    <div class="col-4" title="Colores">
+                                        <i class="fas fa-palette text-info"></i>
+                                        <div class="font-weight-bold small">${d.colors || 0}</div>
+                                    </div>
+                                    <div class="col-4" title="Puntadas">
+                                        <i class="fas fa-th text-success"></i>
+                                        <div class="font-weight-bold small">${(d.stitches || 0).toLocaleString()}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-white border-top p-2 text-right">
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeDesign(${idx})" title="Quitar producción">
+                                    <i class="fas fa-trash"></i> Quitar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `);
+            });
+
+            // Actualizar resumen
+            $('#totalDesignsCount').text(State.designs.length);
+            $('#totalStitchesCount').text(totalStitches.toLocaleString());
+            const rate = parseFloat($('#finStitchRate').val()) || 1.0;
+            const estCost = (totalStitches / 1000) * rate;
+            $('#estimatedEmbCost').text('$' + estCost.toFixed(2));
+        }
+
+        // Obtener nombre de variante por temp_id
+        function getVariantName(tempId) {
+            const v = State.variants.find(va => va.temp_id === tempId);
+            return v ? `${v.size} / ${v.color}` : tempId;
+        }
+
+        // Toggle producto liso
+        window.toggleProductoLiso = function() {
+            const isLiso = $('#toggleNoDesign').is(':checked');
+            if (isLiso) {
+                State.designs = [];
+                renderDesignCards();
+            }
+        };
+
+        // =====================================================
+        // MODAL PRODUCCIONES DE BORDADO - VERSIÓN DEFINITIVA
+        // =====================================================
+        window.openDesignModal = function() {
+            Swal.fire({
+                title: 'Cargando producciones...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            $.ajax({
+                url: designExportsUrl,
+                method: 'GET',
+                dataType: 'json',
+                success: function(catalog) {
+                    Swal.close();
+
+                    if (!catalog || catalog.length === 0) {
+                        Swal.fire('Sin producciones', 'No hay producciones de bordado aprobadas.', 'info');
+                        return;
+                    }
+
+                    window._designCatalog = catalog;
+
+                    // Extraer tipos de aplicación únicos (por slug para filtrar, nombre para mostrar)
+                    const appTypesMap = {};
+                    catalog.forEach(e => {
+                        if (e.app_type_slug) {
+                            appTypesMap[e.app_type_slug] = e.app_type_name || e.app_type_slug;
+                        }
+                    });
+                    let appTypeOptions = '<option value="">Todas las ubicaciones</option>';
+                    Object.keys(appTypesMap).sort().forEach(slug => {
+                        appTypeOptions += `<option value="${slug}">${appTypesMap[slug]}</option>`;
+                    });
+
+                    // Presentaciones del producto
+                    let variantOptionsHtml = '';
+                    State.variants.forEach(v => {
+                        variantOptionsHtml += `<option value="${v.temp_id}">${v.size} / ${v.color}</option>`;
+                    });
+                    const hasVariants = State.variants.length > 0;
+
+                    Swal.fire({
+                        title: '<i class="fas fa-tshirt mr-2"></i> Seleccionar Producción',
+                        width: '950px',
+                        showCloseButton: true,
+                        html: `
+                            <div class="text-left">
+                                <!-- FILTROS -->
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <div class="input-group">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                            </div>
+                                            <input type="text" id="designSearchInput" class="form-control" placeholder="Buscar por nombre de producción...">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <select id="filterAppType" class="form-control">
+                                            ${appTypeOptions}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-1">
+                                        <button type="button" class="btn btn-outline-secondary btn-block" onclick="clearDesignFilters()" title="Limpiar">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- CONTADOR -->
+                                <div class="mb-2 d-flex justify-content-between align-items-center">
+                                    <small class="text-muted"><strong id="designResultsCount">${catalog.length}</strong> producciones</small>
+                                </div>
+
+                                <!-- GRID DE PRODUCCIONES -->
+                                <div id="designModalGrid" style="max-height: 380px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 6px; padding: 8px; background: #fafafa;">
+                                    <div class="row" id="designCardsModalContainer"></div>
+                                    <div id="noDesignResults" class="text-center py-5 d-none">
+                                        <i class="fas fa-search text-muted" style="font-size: 2.5rem;"></i>
+                                        <p class="text-muted mt-2 mb-0">Sin resultados</p>
+                                    </div>
+                                </div>
+
+                                <!-- PANEL SELECCIÓN -->
+                                <div id="designSelectionPanel" class="mt-3 p-3 border rounded d-none" style="background: #e8f4fd;">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-5">
+                                            <small class="text-muted">Seleccionado:</small>
+                                            <div class="font-weight-bold" id="selectedDesignName">-</div>
+                                            <input type="hidden" id="selectedDesignId">
+                                        </div>
+                                        <div class="col-md-7">
+                                            <small class="text-muted d-block mb-1">Aplicar a:</small>
+                                            <div class="d-flex align-items-center flex-wrap">
+                                                <div class="custom-control custom-radio mr-3">
+                                                    <input type="radio" id="scopeGlobal" name="designScope" class="custom-control-input" value="global" checked>
+                                                    <label class="custom-control-label" for="scopeGlobal">
+                                                        <i class="fas fa-globe-americas text-primary mr-1"></i> Todas las presentaciones
+                                                    </label>
+                                                </div>
+                                                ${hasVariants ? `
+                                                <div class="custom-control custom-radio">
+                                                    <input type="radio" id="scopeSpecific" name="designScope" class="custom-control-input" value="specific">
+                                                    <label class="custom-control-label" for="scopeSpecific">
+                                                        <i class="fas fa-bullseye text-warning mr-1"></i> Solo:
+                                                    </label>
+                                                </div>
+                                                <select id="swalVariantSelect" class="form-control form-control-sm ml-2" style="width: auto; min-width: 140px;" disabled>
+                                                    <option value="">Seleccione...</option>
+                                                    ${variantOptionsHtml}
+                                                </select>
+                                                ` : '<span class="text-muted small">(Defina presentaciones primero)</span>'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `,
+                        showCancelButton: true,
+                        confirmButtonText: '<i class="fas fa-plus mr-1"></i> Agregar',
+                        cancelButtonText: 'Cerrar',
+                        confirmButtonColor: '#28a745',
+                        didOpen: () => {
+                            renderDesignModalCards(catalog);
+                            $('#designSearchInput').on('input', filterDesignModal);
+                            $('#filterAppType').on('change', filterDesignModal);
+                            $('input[name="designScope"]').on('change', function() {
+                                $('#swalVariantSelect').prop('disabled', $(this).val() !== 'specific');
+                                if ($(this).val() !== 'specific') $('#swalVariantSelect').val('');
+                            });
+                        },
+                        preConfirm: () => {
+                            const exportId = $('#selectedDesignId').val();
+                            if (!exportId) {
+                                Swal.showValidationMessage('Seleccione una producción haciendo clic en una tarjeta');
+                                return false;
+                            }
+                            const scope = $('input[name="designScope"]:checked').val() || 'global';
+                            let targetVariant = null;
+                            if (scope === 'specific') {
+                                targetVariant = $('#swalVariantSelect').val();
+                                if (!targetVariant) {
+                                    Swal.showValidationMessage('Seleccione la presentación destino');
+                                    return false;
+                                }
+                            }
+                            // Validar duplicados
+                            const existingGlobal = State.designs.find(d => d.export_id == exportId && d.scope === 'global');
+                            if (existingGlobal) {
+                                Swal.showValidationMessage('Esta producción ya está asignada a TODAS las presentaciones');
+                                return false;
+                            }
+                            const existingSpecific = State.designs.filter(d => d.export_id == exportId && d.scope === 'specific');
+                            if (scope === 'global' && existingSpecific.length > 0) {
+                                Swal.showValidationMessage('Esta producción tiene asignaciones específicas. Elimínelas primero.');
+                                return false;
+                            }
+                            if (scope === 'specific' && existingSpecific.some(d => d.target_variant === targetVariant)) {
+                                Swal.showValidationMessage('Ya asignada a esa presentación');
+                                return false;
+                            }
+                            const sel = window._designCatalog.find(d => d.id == exportId);
+                            return { exportId, scope, targetVariant, sel };
+                        }
+                    }).then((result) => {
+                        if (result.isConfirmed && result.value) {
+                            const { exportId, scope, targetVariant, sel } = result.value;
+                            State.designs.push({
+                                export_id: exportId,
+                                name: sel.export_name || 'Producción',
+                                stitches: parseInt(sel.stitches) || 0,
+                                dimensions: sel.dimensions_label || '',
+                                colors: parseInt(sel.colors) || 0,
+                                app_type_slug: sel.app_type_slug || '',
+                                app_type_name: sel.app_type_name || '',
+                                design_name: sel.design_name || '',
+                                variant_name: sel.variant_name || null,
+                                // Preview: prioridad SVG > imagen > null
+                                svg_content: sel.svg_content || null,
+                                image: sel.image_url || null,
+                                file_format: sel.file_format || '',
+                                scope: scope,
+                                target_variant: targetVariant
+                            });
+                            $('#toggleNoDesign').prop('checked', false);
+                            renderDesignCards();
+                            recalcFinance();
+                        }
+                    });
+                },
+                error: function(xhr) {
+                    Swal.fire('Error', 'No se pudieron cargar las producciones.', 'error');
+                }
+            });
+        };
+
+        // =====================================================
+        // RENDERIZAR CARDS DE PRODUCCIÓN EN MODAL
+        // =====================================================
+        window.renderDesignModalCards = function(productions) {
+            const container = $('#designCardsModalContainer');
+            container.empty();
+
+            if (!productions || productions.length === 0) {
+                $('#noDesignResults').removeClass('d-none');
+                $('#designResultsCount').text('0');
+                return;
+            }
+
+            $('#noDesignResults').addClass('d-none');
+            $('#designResultsCount').text(productions.length);
+
+            productions.forEach(p => {
+                const isAssigned = State.designs.some(d => d.export_id == p.id);
+                const assignedClass = isAssigned ? 'border-warning' : '';
+                const assignedBadge = isAssigned ? '<span class="badge badge-warning position-absolute" style="top: 6px; right: 6px; font-size: 0.7rem; z-index: 5;">YA ASIGNADO</span>' : '';
+
+                // Preview: Prioridad 1) SVG del archivo, 2) imagen referencia, 3) placeholder
+                // NUNCA usar imágenes de diseño/variante
+                let previewHtml;
+                if (p.svg_content) {
+                    // SVG inline del archivo de bordado (preview REAL)
+                    previewHtml = `<div class="d-flex align-items-center justify-content-center bg-white border rounded" style="width: 70px; height: 70px; overflow: hidden; flex-shrink: 0;">${p.svg_content}</div>`;
+                } else if (p.image_url) {
+                    // Imagen de referencia subida
+                    previewHtml = `<img src="${p.image_url}" class="border rounded" style="width: 70px; height: 70px; object-fit: contain; flex-shrink: 0;" title="Imagen de referencia">`;
+                } else {
+                    // Placeholder neutro con formato del archivo
+                    const fmt = (p.file_format || 'EMB').toUpperCase();
+                    previewHtml = `<div class="d-flex flex-column align-items-center justify-content-center bg-secondary rounded text-white" style="width: 70px; height: 70px; flex-shrink: 0;" title="Sin preview">
+                         <i class="fas fa-file-code" style="font-size: 1.5rem;"></i>
+                         <span style="font-size: 0.7rem; font-weight: bold;">${fmt}</span>
+                       </div>`;
+                }
+
+                // Trazabilidad (origen)
+                const hasVariant = p.variant_id !== null && p.variant_id !== undefined;
+                const originText = hasVariant
+                    ? `${p.design_name} → ${p.variant_name}`
+                    : p.design_name;
+
+                const cardHtml = `
+                    <div class="col-lg-4 col-md-6 mb-3">
+                        <div class="card design-modal-card h-100 ${assignedClass}" data-id="${p.id}" onclick="selectDesignCard(${p.id})" style="cursor: pointer; transition: all 0.15s;">
+                            ${assignedBadge}
+                            <div class="card-body p-3">
+                                <!-- HEADER: Preview + Info -->
+                                <div class="d-flex align-items-start mb-2">
+                                    <div class="mr-3">${previewHtml}</div>
+                                    <div class="flex-grow-1 overflow-hidden">
+                                        <h6 class="font-weight-bold mb-1 text-truncate" style="font-size: 0.95rem;" title="${p.export_name || ''}">${p.export_name || 'Sin nombre'}</h6>
+                                        <span class="badge badge-info" style="font-size: 0.75rem;">
+                                            <i class="fas fa-map-marker-alt mr-1"></i>${p.app_type_name || 'General'}
+                                        </span>
+                                    </div>
+                                </div>
+                                <!-- SPECS: Formato, Puntadas, Colores, Dimensiones -->
+                                <div class="d-flex flex-wrap align-items-center mb-2" style="gap: 8px;">
+                                    <span class="badge badge-dark" style="font-size: 0.75rem;">${p.file_format || 'PES'}</span>
+                                    <span style="font-size: 0.85rem;"><i class="fas fa-th text-success mr-1"></i><strong>${p.stitches_formatted || '0'}</strong> pts</span>
+                                    <span style="font-size: 0.85rem;"><i class="fas fa-palette text-info mr-1"></i><strong>${p.colors || 0}</strong> col</span>
+                                    <span style="font-size: 0.85rem;"><i class="fas fa-ruler-combined text-primary mr-1"></i>${p.dimensions_label || '-'}</span>
+                                </div>
+                                <!-- ORIGEN / TRAZABILIDAD -->
+                                <div class="border-top pt-2">
+                                    <small class="text-muted d-block text-truncate" style="font-size: 0.8rem;" title="${originText}">
+                                        <i class="fas fa-sitemap mr-1"></i>${originText}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.append(cardHtml);
+            });
+        };
+
+        // =====================================================
+        // SELECCIONAR CARD DE PRODUCCIÓN
+        // =====================================================
+        window.selectDesignCard = function(productionId) {
+            $('.design-modal-card').removeClass('border-primary').css('box-shadow', '');
+            const card = $(`.design-modal-card[data-id="${productionId}"]`);
+            card.addClass('border-primary').css('box-shadow', '0 0 0 3px rgba(0,123,255,0.3)');
+
+            const prod = window._designCatalog.find(d => d.id == productionId);
+            if (prod) {
+                $('#selectedDesignId').val(productionId);
+                $('#selectedDesignName').html(`
+                    <span class="badge badge-info mr-1">${prod.app_type_name || 'General'}</span>
+                    ${prod.export_name || 'Producción'}
+                    <small class="text-muted ml-2">${prod.file_format || ''} · ${prod.stitches_formatted || 0} pts</small>
+                `);
+                $('#designSelectionPanel').removeClass('d-none');
+            }
+        };
+
+        // =====================================================
+        // FILTRAR PRODUCCIONES EN MODAL
+        // =====================================================
+        window.filterDesignModal = function() {
+            const searchTerm = String($('#designSearchInput').val() || '').toLowerCase().trim();
+            const appTypeFilter = String($('#filterAppType').val() || '');
+
+            if (!window._designCatalog) return;
+
+            let filtered = window._designCatalog.filter(p => {
+                // Filtro por nombre de producción
+                const name = String(p.export_name || '').toLowerCase();
+                const matchesSearch = !searchTerm || name.includes(searchTerm);
+
+                // Filtro por tipo de aplicación (slug)
+                const matchesAppType = !appTypeFilter || p.app_type_slug === appTypeFilter;
+
+                return matchesSearch && matchesAppType;
+            });
+
+            renderDesignModalCards(filtered);
+
+            // Limpiar selección si ya no está visible
+            const selectedId = $('#selectedDesignId').val();
+            if (selectedId && !filtered.some(d => d.id == selectedId)) {
+                $('#selectedDesignId').val('');
+                $('#selectedDesignName').html('-');
+                $('#designSelectionPanel').addClass('d-none');
+            }
+        };
+
+        // Limpiar filtros
+        window.clearDesignFilters = function() {
+            $('#designSearchInput').val('');
+            $('#filterAppType').val('');
+            if (window._designCatalog) {
+                renderDesignModalCards(window._designCatalog);
+            }
+            $('#selectedDesignId').val('');
+            $('#selectedDesignName').html('-');
+            $('#designSelectionPanel').addClass('d-none');
+        };
+
+        // Quitar diseño
+        window.removeDesign = function(idx) {
+            if (idx >= 0 && idx < State.designs.length) {
+                State.designs.splice(idx, 1);
+                renderDesignCards();
+                recalcFinance();
+            }
+        };
+
+        // Compatibilidad: función anterior
+        function renderDesignReadOnly() {
+            renderDesignCards();
+        }
+
         // Load templates into step containers
         function loadTemplates() {
             for (let i = 1; i <= TOTAL_STEPS; i++) {
@@ -3118,24 +4072,34 @@
 
         // Initialize plugins (Select2, etc)
         function initPlugins() {
-            // Initialize Select2 on all selects
-            $('.select2').select2({
-                width: '100%'
+            // Initialize Select2 on all selects EXCEPT BOM selectors
+            // BOM selectors are handled by initBomSelectors() when entering Step 3
+            var bomSelectorIds = [
+                'bomFamilySelectorGlobal',
+                'bomMaterialSelectorGlobal',
+                'bomFamilySelectorSpecific',
+                'bomMaterialSelectorSpecific',
+                'bomTargetVariant'
+            ];
+
+            $('.select2').each(function() {
+                var id = $(this).attr('id');
+                // Skip BOM selectors - they are initialized in initBomSelectors()
+                if (bomSelectorIds.indexOf(id) !== -1) {
+                    return; // continue to next element
+                }
+                $(this).select2({
+                    width: '100%',
+                    allowClear: false
+                });
             });
 
             // Initialize Select2 for category
             $('#inpCategory').select2({
                 width: '100%',
-                placeholder: 'Seleccione categoría...'
+                placeholder: 'Seleccione categoría...',
+                allowClear: false
             });
-
-            // Initialize Select2 for BOM family
-            if ($('#bomFamilySelector').length) {
-                $('#bomFamilySelector').select2({
-                    width: '100%',
-                    placeholder: 'Seleccione familia...'
-                });
-            }
         }
 
         // --- SKU GENERATION (ENTERPRISE-GRADE) ---
@@ -3286,6 +4250,67 @@
             loadTemplates();
             initPlugins();
             updateButtons();
+
+            // ============================================================
+            // INICIALIZACIÓN: Renderizar estado desde BD (edit) o repoblado (error validación)
+            // ============================================================
+
+            // En modo EDIT o CLONE: precargar campos del formulario
+            if ((isEditMode || isCloneMode) && State.definition) {
+                $('#inpName').val(State.definition.name || '');
+                $('#inpSku').val(State.definition.sku || '');
+                $('#inpCategory').val(State.definition.category_id || '').trigger('change');
+                $('#inpDesc').val(State.definition.desc || State.definition.description || '');
+                // Tiempo de producción
+                const leadTimeVal = State.definition.production_lead_time || State.financials.lead_time || 7;
+                $('#finLeadTime, #productionLeadTime, #revLeadTime').val(leadTimeVal);
+
+                // Precargar imagen principal existente
+                @if(isset($editMode) && $editMode && isset($product) && $product->primary_image_url)
+                setTimeout(function() {
+                    const existingImg = '{{ $product->primary_image_url }}';
+                    if (existingImg) {
+                        $('#imgPreview').attr('src', existingImg);
+                        $('#dropzonePlaceholder').addClass('d-none');
+                        $('#dropzonePreview').removeClass('d-none').addClass('d-flex align-items-center justify-content-center');
+                    }
+                }, 100);
+                @endif
+            }
+
+            // En modo EDIT o CLONE: precargar campos financieros que existen en document ready
+            if ((isEditMode || isCloneMode) && State.financials) {
+                const fin = State.financials;
+                if (fin.labor_cost && fin.labor_cost > 0) {
+                    $('#finLaborInput').val(parseFloat(fin.labor_cost).toFixed(2));
+                }
+                if (fin.margin && fin.margin > 0) {
+                    $('#revProfitMargin, #finProfitMargin').val(fin.margin);
+                }
+                // Tiempo de producción desde financials
+                if (State.financials.lead_time > 0) {
+                    $('#revLeadTime').val(State.financials.lead_time);
+                }
+                // NOTA: #revFinalPrice se precarga en renderReview() cuando se entra al paso 6
+            }
+
+            // Renderizar datos precargados
+            if (State.variants && State.variants.length > 0) {
+                if (typeof renderVariantsTable === 'function') renderVariantsTable();
+            }
+            if (State.bom && State.bom.length > 0) {
+                if (typeof renderBOMSplit === 'function') renderBOMSplit();
+            }
+            if (State.designs && State.designs.length > 0) {
+                if (typeof renderDesignCards === 'function') renderDesignCards();
+            }
+            if (State.extras && State.extras.length > 0) {
+                if (typeof renderExtrasTable === 'function') renderExtrasTable();
+            }
+            // Recalcular finanzas si hay datos
+            if ((State.bom && State.bom.length > 0) || (State.designs && State.designs.length > 0) || (State.extras && State.extras.length > 0)) {
+                if (typeof recalcFinance === 'function') recalcFinance();
+            }
 
             // Listener para cambio de Familia de Material (Paso 3)
             // Usamos delegación de eventos porque el select se crea dinámicamente
@@ -3489,20 +4514,33 @@
             filterDesignExports();
         });
 
-        // Master filter function for design exports
+        // Master filter function for design exports (UI Legacy - Step 4 Grid)
+        // NOTA: Esta función es para el grid estático del Paso 4 (si existe)
         function filterDesignExports() {
-            const searchTerm = $('#searchDesign').val().toLowerCase().trim();
-            const designFilter = $('#filterDesignBase').val();
-            const appTypeFilter = $('#filterAppType').val().toLowerCase();
+            // Validación defensiva: verificar que los elementos existan
+            const $searchDesign = $('#searchDesign');
+            const $filterDesignBase = $('#filterDesignBase');
+            const $filterAppType = $('#filterAppType');
+            const $designGrid = $('#designGrid .design-export-item');
+
+            // Si no existen los elementos del UI legacy, salir silenciosamente
+            if ($searchDesign.length === 0 && $filterDesignBase.length === 0 && $designGrid.length === 0) {
+                return;
+            }
+
+            // Obtener valores con validación defensiva
+            const searchTerm = String($searchDesign.val() || '').toLowerCase().trim();
+            const designFilter = String($filterDesignBase.val() || '');
+            const appTypeFilter = String($filterAppType.val() || '').toLowerCase();
 
             let visibleCount = 0;
 
-            $('#designGrid .design-export-item').each(function() {
+            $designGrid.each(function() {
                 const $item = $(this);
-                const name = $item.data('name') || '';
-                const label = $item.data('label') || '';
-                const designId = String($item.data('design-id'));
-                const appType = ($item.data('app-type') || '').toLowerCase();
+                const name = String($item.data('name') || '').toLowerCase();
+                const label = String($item.data('label') || '').toLowerCase();
+                const designId = String($item.data('design-id') || '');
+                const appType = String($item.data('app-type') || '').toLowerCase();
 
                 let show = true;
 
@@ -3533,17 +4571,21 @@
                 }
             });
 
-            // Update counter
-            $('#designExportCounter').html(`Mostrando <strong>${visibleCount}</strong> producciones`);
+            // Update counter (solo si existe)
+            const $counter = $('#designExportCounter');
+            if ($counter.length) {
+                $counter.html(`Mostrando <strong>${visibleCount}</strong> producciones`);
+            }
         }
 
-        // Clear all filters
-        window.clearDesignFilters = function() {
+        // Clear all filters (Legacy UI) - NO sobrescribir window.clearDesignFilters del modal nuevo
+        // Esta función se mantiene para compatibilidad con el grid estático si existe
+        function clearDesignFiltersLegacy() {
             $('#searchDesign').val('');
             $('#filterDesignBase').val('');
             $('#filterAppType').val('');
             filterDesignExports();
-        };
+        }
 
         // View mode toggle (grid/list)
         window.setDesignViewMode = function(mode) {
@@ -3602,34 +4644,8 @@
             });
         };
 
-        function loadTemplates() {
-            try {
-                $('#step1-content').html($('#tpl_step1').html());
-            } catch (e) {}
-            try {
-                $('#step2-content').html($('#tpl_step2').html());
-            } catch (e) {}
-            try {
-                $('#step3-content').html($('#tpl_step3').html());
-            } catch (e) {}
-            try {
-                $('#step4-content').html($('#tpl_step4').html());
-            } catch (e) {}
-            try {
-                $('#step5-content').html($('#tpl_step5').html());
-            } catch (e) {}
-            try {
-                $('#step6-content').html($('#tpl_step6').html());
-            } catch (e) {}
-        }
-
-        function initPlugins() {
-            $('.select2').select2({
-                width: '100%',
-                placeholder: "Seleccione...",
-                allowClear: false // Disabled to avoid double X with custom button
-            });
-        }
+        // NOTE: loadTemplates() and initPlugins() are defined earlier in the file (around line 3094-3131)
+        // Do not duplicate them here
 
         // --- NAVIGATION ---
         window.navigate = function(direction) {
@@ -3666,6 +4682,18 @@
 
             // Logic Hooks
             if (State.step === 2) updateVariantCountBadge();
+            if (State.step === 3) {
+                // BOM: Verificar presentaciones y inicializar selectores
+                if (State.variants.length === 0) {
+                    $('#bomBlockedState').removeClass('d-none');
+                    $('#bomActiveState').addClass('d-none');
+                } else {
+                    $('#bomBlockedState').addClass('d-none');
+                    $('#bomActiveState').removeClass('d-none');
+                    initBomSelectors();
+                    renderBOMSplit();
+                }
+            }
             if (State.step === 4) syncDesignCardsWithState(); // FIX-3: Re-apply selected state
             if (State.step === 5) renderExtrasTable();
             if (State.step === 6) renderReview();
@@ -3735,21 +4763,15 @@
                 };
             }
             if (step === 2) {
+                // OBLIGATORIO: Al menos una presentación para continuar a Materiales
                 if (State.variants.length === 0) {
-                    // FIX: Allow single variant autofill if empty
-                    const baseSku = $('#inpSku').val();
-                    if (baseSku) {
-                        State.variants.push({
-                            temp_id: 'default',
-                            sku: baseSku,
-                            size: 'Unitalla',
-                            color: 'N/A',
-                            size_id: null,
-                            color_id: null
-                        });
-                        updateVariantCountBadge();
-                        return true;
-                    }
+                    Swal.fire({
+                        title: 'Presentaciones requeridas',
+                        html: 'Debes agregar al menos <strong>una presentación</strong> (talla y color) antes de continuar.<br><br>Los materiales se asignan a las presentaciones del producto.',
+                        icon: 'warning',
+                        confirmButtonText: 'Entendido'
+                    });
+                    return false;
                 }
             }
             if (step === 3) {
@@ -3781,39 +4803,12 @@
                 }
             }
             if (step === 4) {
-                const isNoDesign = $('#toggleNoDesign').is(':checked');
-                // If toggle is ON or designs are selected, proceed
-                if (isNoDesign || State.designs.length > 0) {
-                    return true;
+                // SIMPLIFICADO: Diseño es read-only, siempre permite continuar
+                // El toggle se marca automáticamente si no hay diseños
+                if (State.designs.length === 0) {
+                    $('#toggleNoDesign').prop('checked', true);
                 }
-
-                // REVOLUTIONARY: Suggestive validation (not restrictive)
-                // Offer user a choice instead of just blocking
-                Swal.fire({
-                    title: '💡 Este producto no tiene bordados',
-                    html: `<p class="mb-3">No has seleccionado ningún diseño de bordado.</p>
-                               <p class="text-muted">¿Es un <strong>producto liso</strong> (sin bordado) o necesitas agregar diseños?</p>`,
-                    icon: 'question',
-                    showCancelButton: true,
-                    showDenyButton: true,
-                    confirmButtonText: '<i class="fas fa-tshirt mr-1"></i> Sí, es liso',
-                    denyButtonText: '<i class="fas fa-vector-square mr-1"></i> Agregar diseño',
-                    cancelButtonText: 'Cancelar',
-                    confirmButtonColor: '#28a745',
-                    denyButtonColor: '#17a2b8'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        // User confirms it's a liso product - activate toggle and proceed
-                        $('#toggleNoDesign').prop('checked', true).trigger('change');
-                        navigate(1); // Retry navigation
-                    } else if (result.isDenied) {
-                        // User wants to add design - stay on step but don't navigate
-                        // No action needed, they remain on Step 4
-                    }
-                    // If cancelled, also stay on step
-                });
-
-                return false; // Block immediate navigation, wait for user choice
+                return true;
             }
             return true;
         }
@@ -3907,7 +4902,7 @@
 
             State.variants.forEach(v => {
                 tbody.append(`<tr data-id="${v.temp_id}">
-                        <td>${v.size} / ${v.color}</td>
+                        <td>${v.size} (${v.color})</td>
                         <td class="font-weight-bold text-primary">${v.sku}</td>
                         <td><button class="btn btn-sm btn-danger" onclick="removeVariant('${v.temp_id}', this)"><i class="fas fa-trash"></i></button></td>
                     </tr>`);
@@ -3954,7 +4949,7 @@
                     });
 
                     tbody.append(`<tr data-id="${tempId}">
-                        <td>${s.text} / ${c.text}</td>
+                        <td>${s.text} (${c.text})</td>
                         <td class="font-weight-bold text-primary">${sku}</td>
                         <td><button class="btn btn-sm btn-danger" onclick="removeVariant('${tempId}', this)"><i class="fas fa-trash"></i></button></td>
                     </tr>`);
@@ -3983,13 +4978,13 @@
                     showConfirmButton: false
                 });
             } else if (addedCount > 0) {
-                Swal.fire({
+                /* Swal.fire({
                     icon: 'success',
                     title: '¡Generado!',
                     text: `${addedCount} variantes agregadas.`,
                     timer: 1500,
                     showConfirmButton: false
-                });
+                }); */
             }
 
             // Hide placeholder row and update count badge
@@ -4073,11 +5068,8 @@
                     // Adaptar según la respuesta JSON real de tu controlador
                     // Asumiendo estructura: {id, text, cost_base, stock_real, symbol, family_name, variant_name, sku, stock_display}
 
-                    // Construct display text to remove SKU (User Request)
-                    let displayText = v.text;
-                    if (v.family_name && v.variant_name) {
-                        displayText = `${v.family_name} - ${v.variant_name}`;
-                    }
+                    // Solo mostrar el nombre de la variante (sin familia) en el select de Material Específico
+                    let displayText = v.variant_name || v.text;
 
                     sel.append(
                         `<option value="${v.id}"
@@ -4285,7 +5277,7 @@
                         const targetNames = m.targets.map(tid => {
                             const v = State.variants.find(va => va.temp_id === tid);
                             // ONLY Name/Color, NO SKU
-                            return v ? `${v.size} / ${v.color}` : '';
+                            return v ? `${v.size} (${v.color})` : '';
                         }).filter(Boolean).join(', ');
 
                         variantInfo =
@@ -4438,7 +5430,7 @@
             vSel.empty();
             State.variants.forEach(v => {
                 // User request: Show only variant name (Size / Color) without parentheses or SKU
-                vSel.append(`<option value="${v.temp_id}">${v.size} / ${v.color}</option>`);
+                vSel.append(`<option value="${v.temp_id}">${v.size} (${v.color})</option>`);
             });
             if (!vSel.hasClass('select2-hidden-accessible')) {
                 vSel.select2({
@@ -4693,7 +5685,7 @@
                     if (d.scope === 'specific' && d.targets && d.targets.length > 0) {
                         const variantNames = d.targets.map(tid => {
                             const v = State.variants.find(va => va.temp_id === tid);
-                            return v ? `${v.size}/${v.color}` : '';
+                            return v ? `${v.size} (${v.color})` : '';
                         }).filter(Boolean).join(', ');
                         variantInfo = `<small class="d-block text-dark">→ ${variantNames}</small>`;
                     } else {
@@ -4949,54 +5941,46 @@
             const designPreviews = $('#finDesignPreviews');
             designPreviews.empty();
 
+            if (!State.designs || State.designs.length === 0) {
+                designPreviews.html('<div class="text-muted small">Sin diseños seleccionados...</div>');
+                return;
+            }
+
             State.designs.forEach(d => {
-                // Get image URL from State (already captured from DOM or preview route)
-                let displayImg = d.image_url || '';
+                // Tipo de aplicación (ubicación) - usar nombre correcto de propiedad
+                const appLabel = d.app_type_name || d.position_name || 'General';
 
-                // Fallback: Construct preview URL from export_id
-                if (!displayImg && d.export_id) {
-                    displayImg = "{{ route('admin.production.preview', ['export' => '__ID__']) }}".replace(
-                        '__ID__', d.export_id);
-                }
-
-                // Get label from position_name
-                let appLabel = d.position_name || 'N/A';
-
-                // If no image in state, try DOM fallback
-                if (!displayImg) {
-                    // Find card by export_id (unique) on the inner card element
-                    const step4Card = $(`.design-export-card[data-export-id="${d.export_id}"]`);
-                    if (step4Card.length > 0) {
-                        const imgTag = step4Card.find('.design-thumb img');
-                        if (imgTag.length > 0 && imgTag.attr('src')) {
-                            displayImg = imgTag.attr('src');
-                        }
-                    }
-                }
-
-                // Render Thumbnail - CLEAN & ROBUST (No ghost icons)
+                // Preview: Prioridad 1) SVG, 2) imagen, 3) placeholder
                 let thumbContent;
-                if (displayImg) {
+                if (d.svg_content) {
+                    // SVG inline del archivo de bordado
+                    thumbContent = `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; overflow:hidden;">${d.svg_content}</div>`;
+                } else if (d.image || d.image_url) {
+                    const imgSrc = d.image || d.image_url;
                     thumbContent = `
-                        <img src="${displayImg}" style="width:100%; height:100%; object-fit:contain;" 
-                            onerror="this.parentNode.innerHTML='<div class=\'d-flex align-items-center justify-content-center h-100 text-muted\'><i class=\'fas fa-image fa-lg py-3\'></i></div>'">
+                        <img src="${imgSrc}" style="width:100%; height:100%; object-fit:contain;"
+                            onerror="this.parentNode.innerHTML='<div class=\\'d-flex flex-column align-items-center justify-content-center h-100 bg-secondary text-white\\'><i class=\\'fas fa-file-code\\'></i><small>${d.file_format || 'EMB'}</small></div>'">
                     `;
                 } else {
+                    // Placeholder con formato de archivo
+                    const fmt = (d.file_format || 'EMB').toUpperCase();
                     thumbContent = `
-                        <div class="d-flex align-items-center justify-content-center h-100 text-muted bg-light">
-                            <i class="fas fa-image fa-lg"></i>
+                        <div class="d-flex flex-column align-items-center justify-content-center h-100 bg-secondary text-white">
+                            <i class="fas fa-file-code"></i>
+                            <small style="font-size:0.6rem;">${fmt}</small>
                         </div>
                     `;
                 }
 
+                const safeName = (d.name || 'Producción').replace(/'/g, "\\'");
+
                 designPreviews.append(`
-                    <div class="d-flex flex-column align-items-center text-center mr-2 mb-2" style="width: 120px;" title="${d.name}">
-                        <div style="width:75px; height:75px; border-radius:10px; overflow:hidden; border:2px solid #dee2e6; cursor:pointer; background:#fff; display:flex; align-items:center; justify-content:center;" 
-                             onclick="showDesignZoom('${displayImg.replace(/'/g, "\\'")}', '${d.name.replace(/'/g, "\\'")}')">
+                    <div class="d-flex flex-column align-items-center text-center mr-2 mb-2" style="width: 120px;" title="${d.name || 'Producción'}">
+                        <div style="width:75px; height:75px; border-radius:10px; overflow:hidden; border:2px solid #dee2e6; cursor:pointer; background:#fff; display:flex; align-items:center; justify-content:center;">
                             ${thumbContent}
                         </div>
                         <div class="mt-2 w-100">
-                            <div style="font-size:0.95rem; color:#1a252f; font-weight:700; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${d.name}</div>
+                            <div style="font-size:0.95rem; color:#1a252f; font-weight:700; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${d.name || 'Producción'}</div>
                             <div class="badge w-100 text-truncate mt-1 text-white border-0" style="font-size:0.85rem; background:#117a8b; font-weight:600;">${appLabel}</div>
                         </div>
                     </div>
@@ -5010,11 +5994,12 @@
         };
 
         window.recalcFinance = function() {
-            // 1. MATERIAL COST
+            // 1. MATERIAL COST - Costo REAL de producción
+            // TODOS los materiales suman (comunes + específicos)
+            // Son materiales físicos que se compran para entregar al cliente
             let matCost = 0;
             const matList = $('#finMaterialsList');
 
-            // Safety check for element existence
             if (matList.length === 0) {
                 console.error('CRITICAL: #finMaterialsList Not Found!');
             } else {
@@ -5023,27 +6008,30 @@
 
             if (State.bom && State.bom.length > 0) {
                 let html = '';
+
+                // TODOS los materiales suman al costo
                 State.bom.forEach(m => {
-                    // Use calculated_total if available to match Step 4, otherwise recalc
                     let subTotal = m.calculated_total;
                     if (subTotal === undefined || subTotal === null) {
                         subTotal = (parseFloat(m.cost) || 0) * (parseFloat(m.qty) || 0);
                     }
-
                     matCost += subTotal;
 
-                    // Display Logic
-                    let matName = m.name || (m.family_name ? `${m.family_name} - ${m.variant_name}` :
-                        'Material');
+                    let matName = m.name || (m.family_name ? `${m.family_name} - ${m.variant_name}` : 'Material');
 
-                    // Scope Badge
-                    let scopeBadge = '';
-                    if (m.scope === 'global') {
-                        scopeBadge =
-                            `<span class="badge badge-dark custom-scope-badge mr-1" style="font-size: 0.8rem;">Global</span>`;
-                    } else {
-                        scopeBadge =
-                            `<span class="badge badge-info custom-scope-badge mr-1" style="font-size: 0.8rem;">Específico</span>`;
+                    // Badge según scope (solo visual, ambos suman)
+                    let scopeBadge = m.scope === 'global'
+                        ? `<span class="badge badge-dark custom-scope-badge mr-1" style="font-size: 0.8rem;">Base</span>`
+                        : `<span class="badge badge-info custom-scope-badge mr-1" style="font-size: 0.8rem;">Específico</span>`;
+
+                    // Info de presentaciones para materiales específicos
+                    let targetInfo = '';
+                    if (m.scope === 'specific' && m.targets && m.targets.length > 0) {
+                        const targetNames = m.targets.map(tid => {
+                            const v = State.variants.find(va => va.temp_id === tid);
+                            return v ? `${v.size}-${v.color}` : tid;
+                        }).join(', ');
+                        targetInfo = `<br><small class="text-info"><i class="fas fa-tag mr-1"></i>${targetNames}</small>`;
                     }
 
                     html += `<div class="calc-mat-item border-bottom pb-2 mb-2">
@@ -5054,7 +6042,8 @@
                                     <div class="font-weight-bold text-dark" style="font-size: 0.95rem; line-height:1.1;">${matName}</div>
                                 </div>
                                 <div class="text-muted" style="font-size: 0.85rem;">
-                                    <i class="fas fa-ruler-combined mr-1"></i>${m.qty} ${m.unit || 'unid'}
+                                    <i class="fas fa-ruler-combined mr-1"></i>${m.qty} ${m.unit || 'unid'} × $${(parseFloat(m.cost) || 0).toFixed(2)}
+                                    ${targetInfo}
                                 </div>
                             </div>
                             <div class="font-weight-bold text-primary pl-2" style="font-size: 1rem;">$${subTotal.toFixed(2)}</div>
@@ -5076,7 +6065,7 @@
             // Calculate total stitches for finance
             let totalStitches = 0;
             State.designs.forEach(d => {
-                totalStitches += parseInt(d.stitches);
+                totalStitches += parseInt(d.stitches) || 0;
             });
 
             // Update design previews:
@@ -5162,7 +6151,11 @@
             const totalCost = matCost + embCost + laborCost + extrasCost;
             $('#revTotalCost').text('$' + totalCost.toFixed(2));
 
-            const leadTime = parseInt($('#revLeadTime').val()) || 1;
+            const leadTime = parseInt($('#revLeadTime').val()) || State.financials.lead_time || 1;
+
+            // CRÍTICO: Preservar price y margin existentes al recalcular
+            const existingPrice = State.financials.price || 0;
+            const existingMargin = State.financials.margin || 35;
 
             State.financials = {
                 material_cost: matCost,
@@ -5170,7 +6163,9 @@
                 labor_cost: laborCost,
                 extras_cost: extrasCost,
                 total_cost: totalCost,
-                lead_time: leadTime
+                lead_time: leadTime,
+                price: existingPrice,
+                margin: existingMargin
             };
 
             recalcReviewPrice();
@@ -5191,8 +6186,8 @@
                 let varHtml = '';
                 State.variants.forEach(v => {
                     varHtml += `<div class="review-variant-item">
-                        <span class="review-variant-text">${v.size} / ${v.color}</span>
-                        <span class="review-variant-sku">SKU: ${v.sku_variant}</span>
+                        <span class="review-variant-text">${v.size} (${v.color})</span>
+                        <span class="review-variant-sku">SKU: ${v.sku_variant || v.sku}</span>
                     </div>`;
                 });
                 $('#revVariants').html(varHtml);
@@ -5268,6 +6263,12 @@
 
             // Initialize pricing controls
             $('#revMarginInput').val(f.margin || 35);
+
+            // CRÍTICO: Precargar precio personalizado ANTES de recalcular
+            if (f.price > 0) {
+                $('#revFinalPrice').val(f.price.toFixed(2));
+            }
+
             recalcReviewPrice();
         };
 
@@ -5281,11 +6282,17 @@
             if (margin < 100) {
                 suggestedPrice = f.total_cost / (1 - (margin / 100));
             }
-            f.price = suggestedPrice;
             f.suggested_price = suggestedPrice;
 
             $('#revSuggestedPrice').text(`$${suggestedPrice.toFixed(2)}`);
             $('#revFinalPrice').attr('placeholder', suggestedPrice.toFixed(2));
+
+            // CRÍTICO: NO sobreescribir precio personalizado si ya existe
+            // Solo establecer si no hay precio o es el primer cálculo
+            const currentInputPrice = parseFloat($('#revFinalPrice').val()) || 0;
+            if (currentInputPrice <= 0 && f.price <= 0) {
+                f.price = suggestedPrice;
+            }
         };
 
         // Update header when manual price is entered
@@ -5314,18 +6321,61 @@
 
         // --- SUBMIT ---
         window.submitForm = async function() {
-            // Frontend Validation: Production Lead Time
-            const leadTime = parseInt($('#revLeadTime').val());
-            if (isNaN(leadTime) || leadTime < 1) {
-                Swal.fire('Atención', 'El Tiempo de Producción es obligatorio y debe ser al menos 1 día.',
-                    'warning');
+            // ============================================================
+            // VALIDACIONES CRÍTICAS ANTES DE GUARDAR
+            // ============================================================
+
+            // 1. Tiempo de Producción (obligatorio > 0)
+            const leadTime = parseInt($('#revLeadTime').val()) || parseInt(State.financials.lead_time) || 0;
+            if (leadTime < 1) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Tiempo de Producción Requerido',
+                    text: 'Debe especificar el tiempo de producción (mínimo 1 día).',
+                    confirmButtonText: 'Entendido'
+                });
                 return;
             }
 
+            // 2. Mano de Obra (obligatorio > 0)
+            const laborCost = parseFloat($('#finLaborInput').val()) || parseFloat(State.financials.labor_cost) || 0;
+            if (laborCost <= 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Mano de Obra Requerida',
+                    text: 'Debe especificar el costo de mano de obra (debe ser mayor a $0).',
+                    confirmButtonText: 'Entendido'
+                });
+                return;
+            }
+
+            // 3. Precio Final (obligatorio > 0)
+            // CRÍTICO: Sincronizar valor del input ANTES de validar
+            const inputFinalPrice = parseFloat($('#revFinalPrice').val()) || 0;
+            if (inputFinalPrice > 0) {
+                State.financials.price = inputFinalPrice;
+            }
+            const finalPrice = parseFloat(State.financials.price) || 0;
+            if (finalPrice <= 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Precio Final Requerido',
+                    text: 'Debe definir un precio final válido (debe ser mayor a $0).',
+                    confirmButtonText: 'Entendido'
+                });
+                return;
+            }
+
+            // Sincronizar valores validados al State
+            State.financials.lead_time = leadTime;
+            State.financials.labor_cost = laborCost;
+            State.financials.price = finalPrice;
+
             // Enterprise Concurrency Control: JIT Validation
+            const actionText = isEditMode ? '¿Actualizar Producto?' : '¿Crear Producto?';
             Swal.fire({
-                title: '¿Crear Producto?',
-                text: `Precio Final: $${State.financials.price.toFixed(2)}`,
+                title: actionText,
+                text: `Precio Final: $${finalPrice.toFixed(2)}`,
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonText: 'Guardar Producto'
@@ -5379,13 +6429,12 @@
             if (typeof filterDesignExports === 'function') {
                 filterDesignExports();
             } else {
-                // Fallback for old UI
-                const term = $(this).val().toLowerCase();
+                // Fallback for old UI - con protección defensiva
+                const term = String($(this).val() || '').toLowerCase();
                 $('#designGrid .design-export-item, #designGrid .col-md-3').each(function() {
                     const card = $(this).find('.design-card');
-                    const name = ($(this).data('name') || card.find('h5, h6').text()).toLowerCase();
-                    const appType = ($(this).data('app-type') || card.data('app-type') || '')
-                        .toLowerCase();
+                    const name = String($(this).data('name') || card.find('h5, h6').text() || '').toLowerCase();
+                    const appType = String($(this).data('app-type') || card.data('app-type') || '').toLowerCase();
 
                     if (name.includes(term) || appType.includes(term) || term === '') {
                         $(this).show();
@@ -5431,7 +6480,7 @@
             // --- RESTORE UI FROM STATE (After Validation Error) ---
             if (State.variants.length > 0) renderVariantsTable();
             if (State.bom.length > 0) renderBOM();
-            if (State.designs.length > 0) renderDesignsTable();
+            if (State.designs.length > 0) renderDesignCards();
             if (State.extras.length > 0) renderExtrasTable();
 
             // Always recalc finance if we have data
@@ -5457,14 +6506,23 @@
                 }
             });
 
-            // FIX: Update Unit Label immediately when Family is selected
+            // FIX: Update Unit Label and Load Variants immediately when Family is selected
+            // FIX: Update Unit Label and Load Variants immediately when Family is selected
             $('#bomFamilySelector').on('change', function() {
                 const selectedOption = $(this).find(':selected');
+                const val = $(this).val();
                 const unit = selectedOption.data('unit');
+
+                // 1. Update Unit Label
                 if (unit) {
                     $('#bomUnit').text(unit);
                 } else {
                     $('#bomUnit').text('unid');
+                }
+
+                // 2. Fetch Variants (Important: Trigger logic)
+                if (typeof window.fetchMaterialVariants === 'function') {
+                    window.fetchMaterialVariants(val);
                 }
             });
 
@@ -5483,6 +6541,12 @@
                 formData.append('embroideries_json', JSON.stringify(State.designs));
                 formData.append('extras_json', JSON.stringify(State.extras));
                 formData.append('financials_json', JSON.stringify(State.financials));
+
+                // Append Primary Image if selected
+                const fileInput = document.getElementById('inpImage');
+                if (fileInput && fileInput.files.length > 0) {
+                    formData.append('primary_image', fileInput.files[0]);
+                }
 
                 Swal.fire({
                     title: 'Guardando borrador...',
@@ -5644,18 +6708,34 @@
                 }
             });
         });
-    </script>
 
-    @if ($errors->any())
-        <script>
+        // ============================================================
+        // NOTA: Lógica de imagen dropzone está en líneas ~3335-3409
+        // Este bloque duplicado fue eliminado para evitar doble click
+        // ============================================================
+
+        // ============================================================
+        // MANEJO DE ERRORES DE VALIDACIÓN (Server-side)
+        // Responsabilidad: Mostrar errores de Laravel al usuario
+        // ============================================================
+        @if ($errors->any())
+        (function() {
+            var errorList = @json($errors->all());
+            var errorHtml = '<ul class="text-left text-danger mb-0">';
+            errorList.forEach(function(err) {
+                errorHtml += '<li>' + err + '</li>';
+            });
+            errorHtml += '</ul>';
+
             document.addEventListener('DOMContentLoaded', function() {
                 Swal.fire({
                     title: '¡Atención!',
-                    html: `<div class="text-left text-danger"><ul>@foreach ($errors->all() as $error) <li>{{ $error }}</li> @endforeach</ul></div>`,
+                    html: errorHtml,
                     icon: 'error',
                     confirmButtonText: 'Revisar'
                 });
             });
-        </script>
-    @endif
+        })();
+        @endif
+    </script>
 @stop

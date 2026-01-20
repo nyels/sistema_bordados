@@ -67,6 +67,10 @@ class ClienteController extends Controller
                 'nullable',
                 'regex:/^[1-9]\d{1,2}(\.(?:[1-9]|\d[1-9]))?$/'
             ],
+            'largo_vestido' => [
+                'nullable',
+                'regex:/^[1-9]\d{1,2}(\.(?:[1-9]|\d[1-9]))?$/'
+            ],
         ]);
 
         try {
@@ -86,6 +90,7 @@ class ClienteController extends Controller
             $cliente->cintura = $request->cintura;
             $cliente->cadera = $request->cadera;
             $cliente->largo = $request->largo;
+            $cliente->largo_vestido = $request->largo_vestido;
             $cliente->save();
             return redirect()->route('admin.clientes.index')->with('success', 'Cliente creado correctamente');
         } catch (\Exception $e) {
@@ -159,6 +164,10 @@ class ClienteController extends Controller
                 'nullable',
                 'regex:/^[1-9]\d{1,2}(\.(?:[1-9]|\d[1-9]))?$/'
             ],
+            'largo_vestido' => [
+                'nullable',
+                'regex:/^[1-9]\d{1,2}(\.(?:[1-9]|\d[1-9]))?$/'
+            ],
         ]);
 
         try {
@@ -178,6 +187,7 @@ class ClienteController extends Controller
             $cliente->cintura = $request->cintura;
             $cliente->cadera = $request->cadera;
             $cliente->largo = $request->largo;
+            $cliente->largo_vestido = $request->largo_vestido;
 
             if (!$cliente->isDirty()) {
                 return redirect()->route('admin.clientes.index')->with('warning', 'No se realizaron cambios');
@@ -214,6 +224,46 @@ class ClienteController extends Controller
         } catch (\Exception $e) {
             Log::error('Error al eliminar el cliente: ' . $e->getMessage());
             return redirect()->route('admin.clientes.index')->with('error', 'Error al eliminar el cliente: ' . $e->getMessage());
+        }
+    }
+
+    // === AJAX: CREAR CLIENTE RÁPIDO (desde modal de pedidos) ===
+    public function quickStore(Request $request)
+    {
+        $request->validate([
+            'nombre' => ['required', 'string', 'max:255', 'regex:/^[A-Za-záéíóúÁÉÍÓÚñÑ\s]+$/u'],
+            'apellidos' => ['nullable', 'string', 'max:255', 'regex:/^[A-Za-záéíóúÁÉÍÓÚñÑ\s]*$/u'],
+            'telefono' => ['required', 'regex:/^[0-9]{10}$/', 'unique:clientes,telefono'],
+        ]);
+
+        try {
+            $cliente = new Cliente();
+            $cliente->nombre = mb_strtoupper(trim($request->nombre), 'UTF-8');
+            $cliente->apellidos = mb_strtoupper(trim($request->apellidos ?? ''), 'UTF-8');
+            $cliente->telefono = $request->telefono;
+            $cliente->activo = true;
+
+            // Valores por defecto para campos requeridos
+            $defaultEstado = Estado::first();
+            $defaultRecomendacion = Recomendacion::first();
+            $cliente->estado_id = $defaultEstado?->id;
+            $cliente->recomendacion_id = $defaultRecomendacion?->id;
+            $cliente->ciudad = 'POR DEFINIR';
+
+            $cliente->save();
+
+            // Respuesta JSON para Select2
+            return response()->json([
+                'success' => true,
+                'id' => $cliente->id,
+                'text' => "{$cliente->nombre} {$cliente->apellidos} - {$cliente->telefono}",
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error al crear cliente rápido: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear cliente: ' . $e->getMessage(),
+            ], 422);
         }
     }
 }

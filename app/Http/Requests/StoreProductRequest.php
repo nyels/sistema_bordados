@@ -27,7 +27,7 @@ class StoreProductRequest extends FormRequest
                 'string',
                 'min:3',
                 'max:200',
-                'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-\_\.\/]+$/u',
+                'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-\_\.\/\(\)]+$/u',
             ],
             'sku' => [
                 'required',
@@ -64,7 +64,7 @@ class StoreProductRequest extends FormRequest
                 'max:500',
             ],
 
-            // Diseños asignados
+            // Diseños asignados (legacy)
             'designs' => [
                 'nullable',
                 'array',
@@ -72,6 +72,16 @@ class StoreProductRequest extends FormRequest
             'designs.*' => [
                 'integer',
                 'exists:designs,id',
+            ],
+            // Producciones de bordado (nuevo wizard)
+            'designs_list' => [
+                'nullable',
+                'array',
+            ],
+            'designs_list.*.export_id' => [
+                'required_with:designs_list',
+                'integer',
+                'exists:design_exports,id',
             ],
 
             // Extras
@@ -140,6 +150,7 @@ class StoreProductRequest extends FormRequest
             'suggested_price' => ['nullable', 'numeric', 'min:0'],
             'profit_margin' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'production_lead_time' => ['required', 'integer', 'min:1', 'max:365'],
+            'primary_image' => ['nullable', 'image', 'max:10240'], // 10MB max
         ];
     }
 
@@ -225,37 +236,22 @@ class StoreProductRequest extends FormRequest
             }
         }
 
-        // 3. Embroideries (Designs)
+        // 3. Embroideries (Producciones de bordado)
+        // Frontend envía: export_id, app_type_slug, scope, target_variant
         if ($this->has('embroideries_json')) {
             $designsData = json_decode($this->input('embroideries_json'), true);
             if (is_array($designsData)) {
-                $designIds = [];
-                $applications = [];
+                // Nueva estructura para ProductService::syncDesignsList
+                $designsList = array_map(function ($d) {
+                    return [
+                        'export_id' => $d['export_id'] ?? $d['id'] ?? null,
+                        'app_type_slug' => $d['app_type_slug'] ?? null,
+                        'scope' => $d['scope'] ?? 'global',
+                        'target_variant' => $d['target_variant'] ?? null,
+                    ];
+                }, array_filter($designsData, fn($d) => !empty($d['export_id']) || !empty($d['id'])));
 
-                foreach ($designsData as $d) {
-                    if (isset($d['id'])) {
-                        $designIds[] = $d['id'];
-                        // Map specific application (position)
-                        // Make sure we capture it. If missing, it will be null, leading to DB error.
-                        // We should enforce it or default it (if valid). DB says NOT NULL.
-                        // So we must ensure it's there.
-                        if (!empty($d['position_id'])) {
-                            $applications[$d['id']] = $d['position_id'];
-                        } else {
-                            // Log or default? If it's required, we can't default blindly.
-                            // But wait, if user adds a design, they MUST pick a position in UI.
-                            // Logic: If missing, set to 1 (or some default) OR better, fail validation?
-                            // Since we can't easily fail validation inside prepareForValidation without throwing,
-                            // let's try to map correctly.
-                            // For now, let's assume if it's missing, we log it.
-                            Log::warning('Design missing position_id', ['d' => $d]);
-                        }
-                    }
-                }
-                $this->merge([
-                    'designs' => $designIds,
-                    'design_applications' => $applications
-                ]);
+                $this->merge(['designs_list' => $designsList]);
             }
         }
 

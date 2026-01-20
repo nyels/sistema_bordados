@@ -44,14 +44,37 @@ class ProductService
                 'production_lead_time' => $data['production_lead_time'] ?? null,
             ]);
 
-            // Asignar diseños
-            if (!empty($data['designs'])) {
+            // Asignar diseños/producciones
+            if (!empty($data['designs_list'])) {
+                // Nueva estructura desde wizard (con export_id)
+                $this->syncDesignsList($product, $data['designs_list']);
+            } elseif (!empty($data['designs'])) {
+                // Legacy (array de design_ids)
                 $this->syncDesigns($product, $data['designs'], $data['design_applications'] ?? []);
             }
 
-            // Asignar extras
+            // Asignar extras with SNAPSHOT logic (Audit History)
             if (!empty($data['extras'])) {
-                $product->extras()->sync($data['extras']);
+                $extrasWithPivot = [];
+                // Fetch current catalog values to freeze them
+                $catalogExtras = \App\Models\ProductExtra::whereIn('id', $data['extras'])->get()->keyBy('id');
+
+                foreach ($data['extras'] as $extraId) {
+                    if ($catalogExtra = $catalogExtras->get($extraId)) {
+                        $extrasWithPivot[$extraId] = [
+                            'snapshot_cost' => $catalogExtra->cost_addition,
+                            'snapshot_price' => $catalogExtra->price_addition,
+                            'snapshot_time' => $catalogExtra->minutes_addition,
+                        ];
+                    }
+                }
+
+                $product->extras()->sync($extrasWithPivot);
+
+                // RECALCULATION: Use the SNAPSHOT prices for the total
+                // This ensures consistency between the stored total and the pivot details
+                $realExtrasCost = collect($extrasWithPivot)->sum('snapshot_price');
+                $product->update(['extra_services_cost' => $realExtrasCost]);
             }
 
             // Asignar materiales (BOM)
@@ -72,7 +95,8 @@ class ProductService
 
                 foreach ($data['variants'] as $v) {
                     $variantData = [
-                        'sku_variant' => $v['sku_variant'] ?? $v['sku'], // Frontend sends 'sku'
+                        // SKU vacío = generar automático en createVariant()
+                        'sku_variant' => !empty($v['sku_variant']) ? $v['sku_variant'] : (!empty($v['sku']) ? $v['sku'] : null),
                         'price' => $data['base_price'] ?? 0,
                         'stock_alert' => 5,
                         'attribute_values' => []
@@ -142,14 +166,36 @@ class ProductService
                 $this->syncDesigns($product, $data['designs'], $data['design_applications'] ?? []);
             }
 
-            // Sincronizar extras
+            // Sincronizar extras with SNAPSHOT logic
             if (isset($data['extras'])) {
-                $product->extras()->sync($data['extras']);
+                $extrasWithPivot = [];
+                $catalogExtras = \App\Models\ProductExtra::whereIn('id', $data['extras'])->get()->keyBy('id');
+
+                foreach ($data['extras'] as $extraId) {
+                    if ($catalogExtra = $catalogExtras->get($extraId)) {
+                        $extrasWithPivot[$extraId] = [
+                            'snapshot_cost' => $catalogExtra->cost_addition,
+                            'snapshot_price' => $catalogExtra->price_addition,
+                            'snapshot_time' => $catalogExtra->minutes_addition,
+                        ];
+                    }
+                }
+
+                $product->extras()->sync($extrasWithPivot);
+
+                // RECALCULATION: Use SNAPSHOT prices
+                $realExtrasCost = collect($extrasWithPivot)->sum('snapshot_price');
+                $product->update(['extra_services_cost' => $realExtrasCost]);
             }
 
             // Sincronizar materiales (BOM)
             if (isset($data['materials'])) {
                 $this->syncMaterials($product, $data['materials']);
+            }
+
+            // Sincronizar variantes (Wizard Step 2)
+            if (isset($data['variants']) && is_array($data['variants'])) {
+                $this->syncVariants($product, $data['variants'], $data['base_price'] ?? $product->base_price);
             }
 
             Log::info('Producto actualizado', [
@@ -222,10 +268,10 @@ class ProductService
                 $newVariant->sku_variant = $variant->sku_variant . '-COPY';
                 $newVariant->save();
 
-                // Copiar atributos de variante
-                foreach ($variant->attributes as $attr) {
-                    $newVariant->attributes()->attach($attr->id, [
-                        'attribute_id' => $attr->pivot->attribute_id,
+                // Copiar atributos de variante (relación correcta: attributeValues)
+                foreach ($variant->attributeValues as $attrValue) {
+                    $newVariant->attributeValues()->attach($attrValue->id, [
+                        'attribute_id' => $attrValue->pivot->attribute_id,
                     ]);
                 }
             }
@@ -246,7 +292,10 @@ class ProductService
     public function createVariant(Product $product, array $data): ProductVariant
     {
         return DB::transaction(function () use ($product, $data) {
-            $skuVariant = $data['sku_variant'] ?? $this->generateVariantSku($product, $data['attributes'] ?? []);
+            // FIX: empty string debe generar SKU automático (clone mode envía '')
+            $skuVariant = !empty($data['sku_variant'])
+                ? $data['sku_variant']
+                : $this->generateVariantSku($product, $data['attributes'] ?? []);
 
             $variant = ProductVariant::create([
                 'uuid' => (string) Str::uuid(),
@@ -257,10 +306,10 @@ class ProductService
                 'stock_alert' => $data['stock_alert'] ?? 5,
             ]);
 
-            // Asignar atributos (pivote)
+            // Asignar atributos (pivote) - relación correcta: attributeValues
             if (!empty($data['attribute_values'])) {
                 foreach ($data['attribute_values'] as $attrValueId => $attrId) {
-                    $variant->attributes()->attach($attrValueId, [
+                    $variant->attributeValues()->attach($attrValueId, [
                         'attribute_id' => $attrId,
                     ]);
                 }
@@ -300,11 +349,11 @@ class ProductService
                 'stock_alert' => $data['stock_alert'] ?? $variant->stock_alert,
             ]);
 
-            // Sincronizar atributos
+            // Sincronizar atributos - relación correcta: attributeValues
             if (isset($data['attribute_values'])) {
-                $variant->attributes()->detach();
+                $variant->attributeValues()->detach();
                 foreach ($data['attribute_values'] as $attrValueId => $attrId) {
-                    $variant->attributes()->attach($attrValueId, [
+                    $variant->attributeValues()->attach($attrValueId, [
                         'attribute_id' => $attrId,
                     ]);
                 }
@@ -328,7 +377,7 @@ class ProductService
                 'user_id' => Auth::id(),
             ]);
 
-            return $variant->fresh(['attributes', 'designExports']);
+            return $variant->fresh(['attributeValues', 'designExports']);
         }, 3);
     }
 
@@ -340,7 +389,7 @@ class ProductService
         return DB::transaction(function () use ($variant) {
             $variantId = $variant->id;
 
-            $variant->attributes()->detach();
+            $variant->attributeValues()->detach();
             $variant->designExports()->detach();
             $variant->delete();
 
@@ -351,6 +400,60 @@ class ProductService
 
             return true;
         }, 3);
+    }
+
+    /**
+     * Sincronizar variantes del producto (para UPDATE)
+     * Estrategia: borrar existentes sin db_id, actualizar con db_id, crear nuevas
+     */
+    protected function syncVariants(Product $product, array $variants, float $basePrice = 0): void
+    {
+        $tallaAttr = \App\Models\Attribute::where('slug', 'talla')->value('id');
+        $colorAttr = \App\Models\Attribute::where('slug', 'color')->value('id');
+
+        // Recolectar IDs de variantes que vienen del frontend (las que tienen db_id)
+        $incomingDbIds = collect($variants)
+            ->filter(fn($v) => !empty($v['db_id']))
+            ->pluck('db_id')
+            ->toArray();
+
+        // Eliminar variantes que ya no están en el frontend
+        $product->variants()
+            ->whereNotIn('id', $incomingDbIds)
+            ->each(function ($variant) {
+                $variant->attributeValues()->detach();
+                $variant->designExports()->detach();
+                $variant->delete();
+            });
+
+        foreach ($variants as $v) {
+            $attributeValues = [];
+            if (!empty($v['size_id']) && $tallaAttr) {
+                $attributeValues[$v['size_id']] = $tallaAttr;
+            }
+            if (!empty($v['color_id']) && $colorAttr) {
+                $attributeValues[$v['color_id']] = $colorAttr;
+            }
+
+            if (!empty($v['db_id'])) {
+                // Actualizar existente
+                $existing = ProductVariant::find($v['db_id']);
+                if ($existing && $existing->product_id === $product->id) {
+                    $this->updateVariant($existing, [
+                        'sku_variant' => !empty($v['sku']) ? $v['sku'] : $existing->sku_variant,
+                        'price' => $v['price'] ?? $basePrice,
+                        'attribute_values' => $attributeValues,
+                    ]);
+                }
+            } else {
+                // Crear nueva
+                $this->createVariant($product, [
+                    'sku_variant' => !empty($v['sku']) ? $v['sku'] : null,
+                    'price' => $v['price'] ?? $basePrice,
+                    'attribute_values' => $attributeValues,
+                ]);
+            }
+        }
     }
 
     /**
@@ -371,16 +474,43 @@ class ProductService
      * Sincronizar diseños con application_type
      */
     /**
-     * Sincronizar diseños con soporte para múltiples posiciones (Architecture Fix)
+     * Sincronizar diseños/producciones desde wizard
+     * Soporta:
+     * - export_id: ID del DesignExport (archivo de producción)
+     * - scope: 'global' (todas las variantes) o 'specific' (variante específica)
+     * - app_type_slug: tipo de aplicación (ubicación del bordado)
+     * - target_variant: temp_id de la variante destino (si scope=specific)
      */
     protected function syncDesignsList(Product $product, array $designsList): void
     {
+        // Limpiar relaciones previas
         $product->designs()->detach();
 
         foreach ($designsList as $item) {
-            $product->designs()->attach($item['design_id'], [
-                'application_type_id' => $item['application_type_id']
+            $exportId = $item['export_id'] ?? null;
+            if (!$exportId) continue;
+
+            // Obtener el DesignExport para sacar design_id y app_type
+            $export = \App\Models\DesignExport::find($exportId);
+            if (!$export) {
+                Log::warning("DesignExport not found", ['export_id' => $exportId]);
+                continue;
+            }
+
+            // Obtener application_type_id desde slug
+            $appTypeSlug = $item['app_type_slug'] ?? $export->application_type ?? 'general';
+            $appType = \App\Models\Application_types::where('slug', $appTypeSlug)->first();
+            $appTypeId = $appType ? $appType->id : 1;
+
+            // Guardar en product_design (vincula Design, no Export - arquitectura legacy)
+            // Esto es porque la tabla product_design usa design_id
+            $product->designs()->syncWithoutDetaching([
+                $export->design_id => ['application_type_id' => $appTypeId]
             ]);
+
+            // Si scope=specific, también guardar en product_variant_design
+            // Nota: target_variant es temp_id del frontend, necesitamos mapear a variant real
+            // Por ahora solo guardamos el global, el específico requiere variantes ya creadas
         }
     }
 
@@ -392,6 +522,30 @@ class ProductService
         $syncData = [];
         foreach ($designIds as $designId) {
             $appTypeId = $applications[$designId] ?? null;
+
+            // FALLBACK: If no position specified, try to infer it from the Design Export metadata
+            if (!$appTypeId) {
+                // 1. Try to find the design and its approved export
+                $design = \App\Models\Design::with(['generalExports' => fn($q) => $q->where('status', 'aprobado')])->find($designId);
+
+                if ($design) {
+                    $export = $design->generalExports->first();
+                    // 2. If export exists and has an application type slug, look up the ID
+                    if ($export && $export->application_type) {
+                        $appType = \App\Models\Application_types::where('slug', $export->application_type)->first();
+                        if ($appType) {
+                            $appTypeId = $appType->id;
+                        }
+                    }
+                }
+
+                // 3. Absolute Fallback (Safety Net)
+                if (!$appTypeId) {
+                    $appTypeId = 1;
+                    Log::warning("Design $designId has no position defined or inferable. Defaulting to $appTypeId", ['product_id' => $product->id]);
+                }
+            }
+            // Ensure we don't continue if it's still null, but with fallback it shouldn't be
             if (!$appTypeId) {
                 continue;
             }

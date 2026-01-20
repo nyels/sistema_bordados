@@ -22,7 +22,12 @@
       "Bash(php fix_units.php:*)",
       "Bash(more:*)",
       "Bash(powershell -Command \"Get-Content ''c:\\\\xampp\\\\htdocs\\\\laravel\\\\sistema_bordados\\\\storage\\\\logs\\\\laravel.log'' -Tail 150 | Select-String -Pattern ''product|Product|Validation''\")",
-      "Bash(powershell -Command \"Get-Content ''c:\\\\xampp\\\\htdocs\\\\laravel\\\\sistema_bordados\\\\storage\\\\logs\\\\laravel.log'' -Tail 80\")"
+      "Bash(powershell -Command \"Get-Content ''c:\\\\xampp\\\\htdocs\\\\laravel\\\\sistema_bordados\\\\storage\\\\logs\\\\laravel.log'' -Tail 80\")",
+      "Bash(awk:*)",
+      "Bash(mysql:*)",
+      "Bash(/c/xampp/mysql/bin/mysql:*)",
+      "Bash(grep:*)",
+      "Bash(xargs basename:*)"
     ]
   }
 }

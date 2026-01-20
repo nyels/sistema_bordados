@@ -444,6 +444,11 @@ Route::get('/clientes/measures/{id}', [App\Http\Controllers\ClienteController::c
     ->name('admin.clientes.measures')
     ->middleware('auth');
 
+// Quick store (AJAX para crear cliente rapido desde pedidos)
+Route::post('/clientes/quick-store', [App\Http\Controllers\ClienteController::class, 'quickStore'])
+    ->name('admin.clientes.quick-store')
+    ->middleware('auth');
+
 // Tipos de aplicacion
 Route::get('/tipos_aplicacion', [App\Http\Controllers\ApplicationTypesController::class, 'index'])
     ->name('admin.tipos_aplicacion.index')
@@ -935,6 +940,7 @@ Route::prefix('admin/products')->name('admin.products.')->middleware('auth')->gr
         Route::get('create', [App\Http\Controllers\ProductController::class, 'createVariant'])->name('create');
         Route::post('/', [App\Http\Controllers\ProductController::class, 'storeVariant'])->name('store');
         Route::get('{variant}/edit', [App\Http\Controllers\ProductController::class, 'editVariant'])->name('edit');
+        Route::get('{variant}/json', [App\Http\Controllers\ProductController::class, 'getVariantJson'])->name('json');
         Route::put('{variant}', [App\Http\Controllers\ProductController::class, 'updateVariant'])->name('update');
         Route::delete('{variant}', [App\Http\Controllers\ProductController::class, 'destroyVariant'])->name('destroy');
     });
@@ -943,6 +949,7 @@ Route::prefix('admin/products')->name('admin.products.')->middleware('auth')->gr
     Route::prefix('ajax')->name('ajax.')->group(function () {
         Route::get('designs-by-category/{categoryId}', [App\Http\Controllers\ProductController::class, 'getDesignsByCategory'])->name('designs');
         Route::get('design-exports/{designId}', [App\Http\Controllers\ProductController::class, 'getDesignExports'])->name('exports');
+        Route::get('approved-design-exports', [App\Http\Controllers\ProductController::class, 'getApprovedDesignExports'])->name('approved_exports');
         Route::get('attributes', [App\Http\Controllers\ProductController::class, 'getAttributes'])->name('attributes');
         Route::get('search-materials', [App\Http\Controllers\ProductController::class, 'searchMaterials'])->name('search_materials');
     });
@@ -1107,3 +1114,78 @@ Route::get('/product_extras/confirm_delete/{id}', [App\Http\Controllers\ProductE
 Route::delete('/product_extras/delete/{id}', [App\Http\Controllers\ProductExtraController::class, 'destroy'])
     ->name('admin.product_extras.destroy')
     ->middleware('auth');
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE PERSONAL (STAFF)
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('admin/staff')->name('admin.staff.')->middleware('auth')->group(function () {
+    Route::get('/', [App\Http\Controllers\StaffController::class, 'index'])->name('index');
+    Route::get('create', [App\Http\Controllers\StaffController::class, 'create'])->name('create');
+    Route::post('/', [App\Http\Controllers\StaffController::class, 'store'])->name('store');
+    Route::get('{staff}/edit', [App\Http\Controllers\StaffController::class, 'edit'])->name('edit');
+    Route::put('{staff}', [App\Http\Controllers\StaffController::class, 'update'])->name('update');
+    Route::delete('{staff}', [App\Http\Controllers\StaffController::class, 'destroy'])->name('destroy');
+});
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE USUARIOS
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('admin/users')->name('admin.users.')->middleware('auth')->group(function () {
+    Route::get('/', [App\Http\Controllers\UserController::class, 'index'])->name('index');
+    Route::get('create', [App\Http\Controllers\UserController::class, 'create'])->name('create');
+    Route::post('/', [App\Http\Controllers\UserController::class, 'store'])->name('store');
+    Route::get('{user}/edit', [App\Http\Controllers\UserController::class, 'edit'])->name('edit');
+    Route::put('{user}', [App\Http\Controllers\UserController::class, 'update'])->name('update');
+    Route::delete('{user}', [App\Http\Controllers\UserController::class, 'destroy'])->name('destroy');
+});
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE PEDIDOS (ORDERS)
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('admin/orders')->name('admin.orders.')->middleware('auth')->group(function () {
+    Route::get('/', [App\Http\Controllers\OrderController::class, 'index'])->name('index');
+    Route::get('create', [App\Http\Controllers\OrderController::class, 'create'])->name('create');
+    Route::post('/', [App\Http\Controllers\OrderController::class, 'store'])->name('store');
+    Route::get('{order}', [App\Http\Controllers\OrderController::class, 'show'])->name('show');
+    // NOTA: edit/update DESHABILITADOS - Los pedidos NO se editan (documento comercial)
+    // Flujo correcto: Crear → Ver → Gestionar pagos/estado
+    Route::patch('{order}/status', [App\Http\Controllers\OrderController::class, 'updateStatus'])->name('update-status');
+    Route::patch('{order}/cancel', [App\Http\Controllers\OrderController::class, 'cancel'])->name('cancel');
+    Route::post('{order}/payments', [App\Http\Controllers\OrderController::class, 'storePayment'])->name('payments.store');
+
+    // AJAX
+    Route::get('ajax/search-clientes', [App\Http\Controllers\OrderController::class, 'searchClientes'])->name('ajax.search-clientes');
+    Route::get('ajax/search-products', [App\Http\Controllers\OrderController::class, 'searchProducts'])->name('ajax.search-products');
+    Route::get('ajax/cliente/{cliente}/measurements', [App\Http\Controllers\OrderController::class, 'getClientMeasurements'])->name('ajax.client-measurements');
+    Route::get('ajax/{order}/check-annex-type', [App\Http\Controllers\OrderController::class, 'checkAnnexType'])->name('ajax.check-annex-type');
+    Route::post('ajax/store-quick', [App\Http\Controllers\OrderController::class, 'storeQuick'])->name('ajax.store-quick');
+
+    // Pedidos Anexos
+    Route::get('{order}/annex/create', [App\Http\Controllers\OrderController::class, 'createAnnex'])->name('create-annex');
+    Route::post('{order}/annex', [App\Http\Controllers\OrderController::class, 'storeAnnex'])->name('store-annex');
+    Route::post('{order}/annex-items', [App\Http\Controllers\OrderController::class, 'storeAnnexItems'])->name('store-annex-items');
+});
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE MEDIDAS DE CLIENTE
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('admin/client-measurements')->name('admin.client-measurements.')->middleware('auth')->group(function () {
+    Route::get('cliente/{cliente}', [App\Http\Controllers\ClientMeasurementController::class, 'index'])->name('index');
+    Route::post('/', [App\Http\Controllers\ClientMeasurementController::class, 'store'])->name('store');
+    Route::get('{measurement}', [App\Http\Controllers\ClientMeasurementController::class, 'show'])->name('show');
+    Route::put('{measurement}', [App\Http\Controllers\ClientMeasurementController::class, 'update'])->name('update');
+    Route::patch('{measurement}/primary', [App\Http\Controllers\ClientMeasurementController::class, 'setPrimary'])->name('set-primary');
+    Route::delete('{measurement}', [App\Http\Controllers\ClientMeasurementController::class, 'destroy'])->name('destroy');
+});

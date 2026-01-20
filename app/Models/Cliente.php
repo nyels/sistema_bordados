@@ -28,6 +28,7 @@ class Cliente extends Model
         'cintura',
         'cadera',
         'largo',
+        'largo_vestido',
     ];
     public function estado()
     {

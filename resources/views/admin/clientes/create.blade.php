@@ -301,9 +301,9 @@
                                     @enderror
                                 </div>
                             </div>
-                            {{-- LARGO --}}
+                            {{-- LARGO BLUSA --}}
                             <div class="form-group col-md-4 text-center">
-                                <label for="largo" class="medida-label">LARGO</label>
+                                <label for="largo" class="medida-label">LARGO BLUSA</label>
                                 <div class="medida-card">
                                     <img src="{{ asset('images/largo.png') }}" alt="Medidas"
                                         class="img-fluid medida-img">
@@ -316,6 +316,23 @@
                                     @enderror
                                 </div>
                             </div>
+                            {{-- LARGO VESTIDO --}}
+                            <div class="form-group col-md-4 text-center">
+                                <label for="largo_vestido" class="medida-label">LARGO VESTIDO</label>
+                                <div class="medida-card">
+                                    <img src="{{ asset('images/largo_vestido.png') }}" alt="Medidas"
+                                        class="img-fluid medida-img">
+                                    <input type="text" name="largo_vestido" id="largo_vestido"
+                                        class="form-control form-control-sm medida-input @error('largo_vestido') is-invalid @enderror"
+                                        value="{{ old('largo_vestido') }}" placeholder="Ej: 80.56" maxlength="6"
+                                        inputmode="decimal" oninput="validateMedida(this)">
+                                    @error('largo_vestido')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            {{-- FIN LARGO VESTIDO --}}
+
                         </div>
 
                     </div>
@@ -352,7 +369,7 @@
 
         /* === IMAGEN === */
         .medida-img {
-            width: 55%;
+            width: 100%;
             margin-bottom: 10px;
             transition: transform 0.25s ease, opacity 0.25s ease;
         }
@@ -394,6 +411,48 @@
         .invalid-feedback {
             font-size: 0.75rem;
             margin-top: 6px;
+        }
+
+        /* === TOUCH: mejoras táctiles para móviles === */
+        /* Eliminar delay de 300ms en móviles */
+        .medida-card {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* Permitir selección en inputs */
+        .medida-card .medida-input {
+            user-select: text;
+            -webkit-user-select: text;
+            touch-action: auto;
+        }
+
+        @media (hover: none) and (pointer: coarse) {
+            /* Desactivar hover en dispositivos táctiles */
+            .medida-card:hover {
+                transform: none;
+                border-color: #e5e7eb;
+                box-shadow: none;
+            }
+
+            .medida-card:hover .medida-img {
+                transform: none;
+                opacity: 1;
+            }
+
+            /* Solo aplicar efecto visual cuando está activo (tocando) */
+            .medida-card:active,
+            .medida-card:focus-within {
+                border-color: rgba(247, 0, 255, 0.6);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            }
+
+            .medida-input {
+                min-height: 38px;
+                font-size: 16px; /* Evita zoom en iOS */
+            }
         }
     </style>
 @stop
@@ -441,6 +500,68 @@
 
             input.value = value;
         }
+
+        // ==========================================
+        // HARD FIX: Click/Touch en card enfoca el input
+        // Solución robusta para iOS/Android doble-tap
+        // ==========================================
+        (function() {
+            const cards = document.querySelectorAll('.medida-card');
+
+            cards.forEach(function(card) {
+                // Variable para tracking
+                let lastTouchTime = 0;
+
+                // Handler unificado
+                function focusInput(e) {
+                    // Ignorar si el target es el input
+                    if (e.target.tagName === 'INPUT') return;
+
+                    // Encontrar el input
+                    const input = card.querySelector('.medida-input');
+                    if (!input) return;
+
+                    // Prevenir default y propagación
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    // Focus inmediato
+                    input.focus();
+
+                    // Seleccionar contenido después de focus
+                    requestAnimationFrame(function() {
+                        input.select();
+                    });
+                }
+
+                // TOUCHSTART: Capturar inicio del touch
+                card.addEventListener('touchstart', function(e) {
+                    if (e.target.tagName === 'INPUT') return;
+                    lastTouchTime = Date.now();
+                }, { passive: true });
+
+                // TOUCHEND: Focus inmediato en touch
+                card.addEventListener('touchend', function(e) {
+                    if (e.target.tagName === 'INPUT') return;
+
+                    // Solo si fue un tap rápido (< 300ms)
+                    const touchDuration = Date.now() - lastTouchTime;
+                    if (touchDuration < 300) {
+                        focusInput(e);
+                    }
+                }, { passive: false });
+
+                // CLICK: Solo para desktop (mouse)
+                card.addEventListener('click', function(e) {
+                    if (e.target.tagName === 'INPUT') return;
+
+                    // Ignorar si hubo touch reciente (evita doble disparo)
+                    if (Date.now() - lastTouchTime < 500) return;
+
+                    focusInput(e);
+                });
+            });
+        })();
     </script>
 
 @stop

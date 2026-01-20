@@ -53,7 +53,7 @@ class ProductVariant extends Model
         return $this->belongsTo(Product::class, 'product_id');
     }
 
-    public function attributes()
+    public function attributeValues()
     {
         return $this->belongsToMany(
             AttributeValue::class,
@@ -110,7 +110,7 @@ class ProductVariant extends Model
     public function getAttributesDisplayAttribute(): string
     {
         $attrs = [];
-        foreach ($this->attributes as $attrValue) {
+        foreach ($this->attributeValues as $attrValue) {
             $attrs[] = $attrValue->value;
         }
         return implode(' / ', $attrs);
@@ -119,7 +119,7 @@ class ProductVariant extends Model
     public function getAttributesDetailedAttribute(): array
     {
         $result = [];
-        foreach ($this->attributes as $attrValue) {
+        foreach ($this->attributeValues as $attrValue) {
             $result[] = [
                 'attribute' => $attrValue->attribute->name ?? 'N/A',
                 'value' => $attrValue->value,

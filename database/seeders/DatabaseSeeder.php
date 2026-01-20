@@ -196,7 +196,7 @@ class DatabaseSeeder extends Seeder
         );
 
         // 9. RELACIONES PIVOTE
-        $variant->attributes()->syncWithoutDetaching([
+        $variant->attributeValues()->syncWithoutDetaching([
             $valAzul->id => ['attribute_id' => $attrColor->id],
             $valL->id => ['attribute_id' => $attrTalla->id],
         ]);

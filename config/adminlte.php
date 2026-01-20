@@ -307,6 +307,14 @@ return [
         ['header' => 'GESTIÓN COMERCIAL'],
 
         [
+            'text' => 'Pedidos',
+            'url' => 'admin/orders',
+            'icon' => 'fas fa-fw fa-clipboard-list',
+            'active' => ['admin/orders*'],
+            'label' => 'Nuevo',
+            'label_color' => 'success',
+        ],
+        [
             'text' => 'Clientes',
             'url' => 'clientes',
             'icon' => 'fas fa-fw fa-users',
@@ -345,7 +353,7 @@ return [
                     'active' => ['admin/designs*'],
                 ],
                 [
-                    'text' => 'Para bordar',
+                    'text' => 'Bordados / Exportaciones Técnicas',
                     'url' => 'admin/production',
                     'icon' => 'fas fa-fw fa-industry',
                     'active' => ['admin/production*'],
@@ -485,8 +493,20 @@ return [
         [
             'text' => 'Sistema',
             'icon' => 'fas fa-fw fa-cogs',
-            'active' => ['admin/activity-logs*', 'admin/settings*'],
+            'active' => ['admin/activity-logs*', 'admin/settings*', 'admin/staff*', 'admin/users*'],
             'submenu' => [
+                [
+                    'text' => 'Personal',
+                    'url' => 'admin/staff',
+                    'icon' => 'fas fa-fw fa-id-badge',
+                    'active' => ['admin/staff*'],
+                ],
+                [
+                    'text' => 'Usuarios',
+                    'url' => 'admin/users',
+                    'icon' => 'fas fa-fw fa-users-cog',
+                    'active' => ['admin/users*'],
+                ],
                 [
                     'text' => 'Configuración',
                     'url' => 'admin/settings',

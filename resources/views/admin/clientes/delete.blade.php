@@ -304,9 +304,9 @@
                                     @enderror
                                 </div>
                             </div>
-                            {{-- LARGO --}}
+                            {{-- LARGO BLUSA --}}
                             <div class="form-group col-md-4 text-center">
-                                <label for="largo" class="medida-label">LARGO</label>
+                                <label for="largo" class="medida-label">LARGO BLUSA</label>
                                 <div class="medida-card">
                                     <img src="{{ asset('images/largo.png') }}" alt="Medidas"
                                         class="img-fluid medida-img">
@@ -319,6 +319,27 @@
                                     @enderror
                                 </div>
                             </div>
+                            {{-- fin largo blusa --}}
+
+                            {{-- LARGO VESTIDO --}}
+                            <div class="form-group col-md-4 text-center">
+                                <label for="largo_vestido" class="medida-label">LARGO VESTIDO</label>
+                                <div class="medida-card">
+                                    <img src="{{ asset('images/largo_vestido.png') }}" alt="Medidas"
+                                        class="img-fluid medida-img">
+                                    <input type="text" name="largo_vestido" id="largo_vestido"
+                                        class="form-control form-control-sm medida-input @error('largo_vestido') is-invalid @enderror"
+                                        value="{{ old('largo', $cliente->largo_vestido) }}" placeholder="Ej: 80.56"
+                                        maxlength="6" inputmode="decimal" oninput="validateMedida(this)" disabled>
+                                    @error('largo_vestido')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            {{-- FIN LARGO VESTIDO --}}
+
+
+
                         </div>
 
                     </div>

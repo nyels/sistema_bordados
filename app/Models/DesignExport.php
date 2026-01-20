@@ -84,6 +84,14 @@ class DesignExport extends Model
     }
 
     /**
+     * Alias de variant() para compatibilidad con código legacy.
+     */
+    public function designVariant()
+    {
+        return $this->belongsTo(DesignVariant::class, 'design_variant_id');
+    }
+
+    /**
      * Relación con la imagen específica (opcional).
      * Permite vincular una producción a una imagen específica de la galería.
      */
