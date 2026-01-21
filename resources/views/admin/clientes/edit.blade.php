@@ -319,12 +319,13 @@
                             <div class="form-group col-md-4 text-center">
                                 <label for="largo_vestido" class="medida-label">LARGO VESTIDO</label>
                                 <div class="medida-card">
-                                    <img src="{{ asset('images/largo_vestido_vestido.png') }}" alt="Medidas"
+                                    <img src="{{ asset('images/largo_vestido.png') }}" alt="Medidas"
                                         class="img-fluid medida-img">
                                     <input type="text" name="largo_vestido" id="largo_vestido"
                                         class="form-control form-control-sm medida-input @error('largo_vestido') is-invalid @enderror"
-                                        value="{{ old('largo_vestido', $cliente->largo_vestido) }}" placeholder="Ej: 80.56"
-                                        maxlength="6" inputmode="decimal" oninput="validateMedida(this)">
+                                        value="{{ old('largo_vestido', $cliente->largo_vestido) }}"
+                                        placeholder="Ej: 80.56" maxlength="6" inputmode="decimal"
+                                        oninput="validateMedida(this)">
                                     @error('largo_vestido')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -428,6 +429,7 @@
         }
 
         @media (hover: none) and (pointer: coarse) {
+
             /* Desactivar hover en dispositivos táctiles */
             .medida-card:hover {
                 transform: none;
@@ -449,7 +451,8 @@
 
             .medida-input {
                 min-height: 38px;
-                font-size: 16px; /* Evita zoom en iOS */
+                font-size: 16px;
+                /* Evita zoom en iOS */
             }
         }
     </style>
@@ -536,7 +539,9 @@
                 card.addEventListener('touchstart', function(e) {
                     if (e.target.tagName === 'INPUT') return;
                     lastTouchTime = Date.now();
-                }, { passive: true });
+                }, {
+                    passive: true
+                });
 
                 // TOUCHEND: Focus inmediato en touch
                 card.addEventListener('touchend', function(e) {
@@ -547,7 +552,9 @@
                     if (touchDuration < 300) {
                         focusInput(e);
                     }
-                }, { passive: false });
+                }, {
+                    passive: false
+                });
 
                 // CLICK: Solo para desktop (mouse)
                 card.addEventListener('click', function(e) {

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Str;
 use App\Traits\HasActivityLog;
 use App\Models\MaterialCategory;
@@ -13,7 +14,7 @@ use App\Models\Unit;
 
 class Material extends Model
 {
-    use HasActivityLog;
+    use HasActivityLog, HasFactory;
 
     protected $table = 'materials';
 

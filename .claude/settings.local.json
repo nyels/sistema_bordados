@@ -27,7 +27,19 @@
       "Bash(mysql:*)",
       "Bash(/c/xampp/mysql/bin/mysql:*)",
       "Bash(grep:*)",
-      "Bash(xargs basename:*)"
+      "Bash(xargs basename:*)",
+      "Bash(php assign_product_types.php:*)",
+      "Bash(if not exist \"c:\\\\xampp\\\\htdocs\\\\laravel\\\\sistema_bordados\\\\storage\\\\app\\\\public\\\\products\" mkdir \"c:\\\\xampp\\\\htdocs\\\\laravel\\\\sistema_bordados\\\\storage\\\\app\\\\public\\\\products\")",
+      "Bash(copy \"c:\\\\xampp\\\\htdocs\\\\laravel\\\\sistema_bordados\\\\public\\\\images\\\\foto hipil.jpeg\" \"c:\\\\xampp\\\\htdocs\\\\laravel\\\\sistema_bordados\\\\storage\\\\app\\\\public\\\\products\\\\hipil-bordado-tradicional.jpeg\")",
+      "Bash(cmd /c \"if not exist \"\"c:\\\\xampp\\\\htdocs\\\\laravel\\\\sistema_bordados\\\\storage\\\\app\\\\public\\\\products\"\" mkdir \"\"c:\\\\xampp\\\\htdocs\\\\laravel\\\\sistema_bordados\\\\storage\\\\app\\\\public\\\\products\"\"\")",
+      "Bash(cmd /c:*)",
+      "Bash(php check_bom.php:*)",
+      "Bash(php clean_hipil.php:*)",
+      "Bash(php check_costs.php:*)",
+      "Bash(php sync_bom_costs.php:*)",
+      "Bash(php verify_totals.php:*)",
+      "Bash(php reset_hipil.php:*)",
+      "Bash(git log:*)"
     ]
   }
 }

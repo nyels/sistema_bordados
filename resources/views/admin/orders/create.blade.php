@@ -1,10 +1,10 @@
 @extends('adminlte::page')
 
-@section('title', 'Nuevo Pedido')
+@section('title', isset($isEdit) ? 'Editar Pedido' : 'Nuevo Pedido')
 
 @section('content_header')
     <div class="d-flex justify-content-between align-items-center">
-        <h1><i class="fas fa-clipboard-list mr-2"></i> Nuevo Pedido</h1>
+        <h1><i class="fas fa-clipboard-list mr-2"></i> {{ isset($isEdit) ? 'Editar Pedido #' . $order->order_number : 'Nuevo Pedido' }}</h1>
         <a href="{{ route('admin.orders.index') }}" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i> Volver
         </a>
@@ -180,7 +180,7 @@
         }
 
         /* ================================================== */
-        /* === 3. PRODUCTOS: SCROLL FIJO ==================== */
+        /* === 5. PRODUCTOS: SCROLL FIJO ==================== */
         /* ================================================== */
         .products-scroll-container {
             max-height: 300px;
@@ -230,14 +230,14 @@
         }
 
         /* ================================================== */
-        /* === 4. PAGO: SIEMPRE VISIBLE ===================== */
+        /* === 3. PAGO: SIEMPRE VISIBLE ===================== */
         /* ================================================== */
         .payment-section .form-group {
             margin-bottom: 0.75rem;
         }
 
         /* ================================================== */
-        /* === 5. ENTREGA: SIEMPRE VISIBLE ================== */
+        /* === 4. ENTREGA: SIEMPRE VISIBLE ================== */
         /* ================================================== */
         .urgency-badge {
             font-size: 0.9rem;
@@ -303,7 +303,7 @@
                 flex-direction: column;
             }
 
-            /* Orden móvil: 1.Cliente → 2.Medidas → 3.Productos → 4.Pago → 5.Entrega → 6.Resumen → 7.Notas → 8.Botón */
+            /* Orden: 1.Cliente → 2.Productos → 3.Pago → 4.Entrega → 5.Resumen → 6.Notas → 7.Botón */
             .order-mobile-1 { order: 1; }
             .order-mobile-2 { order: 2; }
             .order-mobile-3 { order: 3; }
@@ -311,7 +311,6 @@
             .order-mobile-5 { order: 5; }
             .order-mobile-6 { order: 6; }
             .order-mobile-7 { order: 7; }
-            .order-mobile-8 { order: 8; }
 
             /* Las columnas deben ser hijos directos para que order funcione */
             .main-column,
@@ -408,168 +407,22 @@
         }
 
         /* ================================================== */
-        /* === MODAL MEDIDAS (PRESERVADO) =================== */
-        /* ================================================== */
-        #measurementsModal .modal-dialog {
-            margin: 0.5rem auto;
-            max-width: 95vw;
-        }
+        /* === CSS MODAL MEDIDAS EXTERNO — ELIMINADO (FASE 1)
+             El modal #measurementsModal ya no existe.
+             Clases eliminadas: .medida-card, .medida-img,
+             .medida-input, .medida-label, .medida-hint, .medidas-grid,
+             .measurement-history-item
+             ================================================== */
 
-        #measurementsModal .modal-body {
-            padding: 0.75rem;
-        }
-
-        #measurementsModal .modal-header {
-            padding: 0.5rem 1rem;
-        }
-
-        .medida-card {
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 8px 6px 10px;
-            background: #ffffff;
-            transition: box-shadow 0.2s ease, border-color 0.2s ease;
-            cursor: pointer;
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-            user-select: none;
-        }
-
-        .medida-card:hover,
-        .medida-card:focus-within {
-            border-color: rgba(247, 0, 255, 0.6);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        }
-
-        .medida-img {
-            width: 45px;
-            height: 45px;
-            object-fit: contain;
-            margin-bottom: 6px;
-        }
-
-        .medida-input {
-            border-radius: 6px;
-            font-size: 0.9rem;
-            padding: 0.35rem 0.5rem;
-            text-align: center;
-            user-select: text;
-            -webkit-user-select: text;
-            touch-action: auto;
-        }
-
-        .medida-input:focus {
-            border-color: #7f00ff;
-            box-shadow: 0 0 0 2px rgba(127, 0, 255, 0.2);
-        }
-
-        .medida-label {
-            font-weight: 600;
+        /* Badge requiere medidas (se mantiene para tabla de items) */
+        .badge-requires-measurements {
+            background: linear-gradient(135deg, #e100ff 0%, #7f00ff 100%);
+            color: #fff;
             font-size: 0.7rem;
-            letter-spacing: 0.3px;
-            margin-bottom: 4px;
-            display: block;
-            color: #111827;
-            text-transform: uppercase;
-        }
-
-        .medida-hint {
-            display: block;
-            font-size: 0.85rem;
-            color: #7f00ff;
-            margin-top: 8px;
-            font-weight: 700;
-        }
-
-        .medidas-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-        }
-
-        @media (min-width: 992px) {
-            #measurementsModal .modal-dialog {
-                max-width: 800px;
-            }
-
-            .medida-img {
-                width: 100px;
-                height: 100px;
-            }
-
-            .medida-label {
-                font-size: 0.85rem;
-            }
-
-            .medida-card {
-                padding: 16px 12px 18px;
-            }
-
-            .medidas-grid {
-                gap: 16px;
-            }
-
-            .medida-input {
-                font-size: 1rem;
-                padding: 0.5rem 0.6rem;
-            }
-        }
-
-        @media (max-width: 400px) {
-            .medidas-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .medida-img {
-                width: 40px;
-                height: 40px;
-            }
-
-            .medida-label {
-                font-size: 0.65rem;
-            }
-        }
-
-        @media (hover: none) and (pointer: coarse) {
-            .medida-card {
-                min-height: 90px;
-            }
-
-            .medida-card:hover {
-                border-color: #e5e7eb;
-                box-shadow: none;
-            }
-
-            .medida-card:active,
-            .medida-card:focus-within {
-                border-color: rgba(247, 0, 255, 0.6);
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            }
-
-            .medida-input {
-                min-height: 38px;
-                font-size: 16px;
-            }
-        }
-
-        /* Historial medidas */
-        .measurement-history-item {
-            border: 1px solid #dee2e6;
-            border-radius: 6px;
-            padding: 8px 10px;
-            margin-bottom: 6px;
-            background: #fff;
-            transition: all 0.2s ease;
-        }
-
-        .measurement-history-item:hover {
-            border-color: #7f00ff;
-            background: #faf5ff;
-        }
-
-        .measurement-history-item.active {
-            border-color: #28a745;
-            background: #f0fff4;
+            padding: 0.2em 0.5em;
+            border-radius: 3px;
+            font-weight: 600;
+            white-space: nowrap;
         }
 
         .btn-xs {
@@ -607,12 +460,118 @@
                 max-width: 95vw;
             }
         }
+
+        /* ================================================== */
+        /* === MEDIDAS MODAL: CARDS CON IMÁGENES ============ */
+        /* ================================================== */
+        #measurementsModal .medida-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 12px 10px 10px;
+            background: #ffffff;
+            transition:
+                box-shadow 0.25s ease,
+                transform 0.25s ease,
+                border-color 0.25s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        #measurementsModal .medida-card:hover {
+            transform: translateY(-4px);
+            border-color: #6f42c1;
+            box-shadow:
+                0 10px 22px rgba(0, 0, 0, 0.06),
+                0 4px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        #measurementsModal .medida-img {
+            width: 100%;
+            max-height: 80px;
+            object-fit: contain;
+            margin-bottom: 8px;
+            transition: transform 0.25s ease, opacity 0.25s ease;
+        }
+
+        #measurementsModal .medida-card:hover .medida-img {
+            transform: scale(1.03);
+            opacity: 0.95;
+        }
+
+        #measurementsModal .medida-input {
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+            transition:
+                box-shadow 0.2s ease,
+                border-color 0.2s ease;
+        }
+
+        #measurementsModal .medida-input:focus {
+            border-color: #6f42c1;
+            box-shadow: 0 0 0 3px rgba(111, 66, 193, 0.15);
+        }
+
+        #measurementsModal .medida-label {
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            display: block;
+            color: #6f42c1;
+            font-size: 0.75rem;
+        }
+
+        #measurementsModal .medida-input.is-invalid {
+            border-color: #dc3545;
+            box-shadow: none;
+        }
+
+        /* Touch: mejoras táctiles para móviles */
+        #measurementsModal .medida-card {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #measurementsModal .medida-card .medida-input {
+            user-select: text;
+            -webkit-user-select: text;
+            touch-action: auto;
+        }
+
+        @media (hover: none) and (pointer: coarse) {
+            #measurementsModal .medida-card:hover {
+                transform: none;
+                border-color: #e5e7eb;
+                box-shadow: none;
+            }
+
+            #measurementsModal .medida-card:hover .medida-img {
+                transform: none;
+                opacity: 1;
+            }
+
+            #measurementsModal .medida-card:active,
+            #measurementsModal .medida-card:focus-within {
+                border-color: #6f42c1;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            }
+
+            #measurementsModal .medida-input {
+                min-height: 38px;
+                font-size: 16px;
+            }
+        }
     </style>
 @stop
 
 @section('content')
-    <form action="{{ route('admin.orders.store') }}" method="POST" id="orderForm">
+    <form action="{{ isset($isEdit) ? route('admin.orders.update', $order) : route('admin.orders.store') }}" method="POST" id="orderForm">
         @csrf
+        @if(isset($isEdit))
+            @method('PUT')
+        @endif
 
         @if ($errors->any())
             <div class="alert alert-danger alert-dismissible fade show">
@@ -660,80 +619,21 @@
                     </div>
                 </div>
 
-                {{-- 2. MEDIDAS --}}
-                <div class="card card-erp order-mobile-2">
-                    <div class="card-header bg-purple text-white py-2"
-                        style="background: linear-gradient(135deg, #e100ff 0%, #7f00ff 100%);">
-                        <h5 class="mb-0"><i class="fas fa-ruler mr-2"></i> 2. Medidas</h5>
-                    </div>
-                    <div class="card-body medidas-section">
-                        <input type="hidden" name="client_measurement_id" id="client_measurement_id" value="">
+                {{-- ======================================================
+                     CARD MEDIDAS GLOBAL — ELIMINADO (FASE 1)
+                     Las medidas ahora se capturan INLINE en el modal de producto.
+                     ====================================================== --}}
 
-                        <div id="medidasPlaceholder" class="medidas-placeholder">
-                            <span><i class="fas fa-user-slash mr-2"></i> Seleccione un cliente primero</span>
-                        </div>
-
-                        <div id="clientMeasuresSection" style="display: none;">
-                            <div id="measurementsEmpty" style="display: none;">
-                                <div class="alert alert-warning mb-2 py-2">
-                                    <i class="fas fa-exclamation-triangle mr-1"></i>
-                                    <strong>Cliente sin medidas registradas.</strong>
-                                </div>
-                                <button type="button" class="btn btn-primary btn-sm" id="btnCapturarMedidas">
-                                    <i class="fas fa-plus mr-1"></i> Capturar Medidas
-                                </button>
-                            </div>
-
-                            <div id="measurementsList" style="display: none;">
-                                <div id="activeMeasurement" class="border rounded p-2 mb-2 bg-light">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div>
-                                            <span class="badge badge-success mr-1">ACTIVA</span>
-                                            <small class="text-muted" id="activeMeasurementDate"></small>
-                                        </div>
-                                        <div>
-                                            <button type="button" class="btn btn-xs btn-outline-primary mr-1"
-                                                id="btnEditActiveMeasurement" title="Editar">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-xs btn-outline-secondary"
-                                                id="btnShowAllMeasurements" title="Ver todas">
-                                                <i class="fas fa-list"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div id="activeMeasurementSummary" class="mt-1 small"></div>
-                                </div>
-
-                                <div id="measurementsHistory" style="display: none;">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <small class="text-muted font-weight-bold">HISTORIAL</small>
-                                        <button type="button" class="btn btn-outline-primary btn-xs"
-                                            id="btnCapturarNuevas">
-                                            <i class="fas fa-plus"></i> Nueva
-                                        </button>
-                                    </div>
-                                    <div id="measurementsHistoryList"></div>
-                                </div>
-                            </div>
-
-                            <div id="measurementsLoading" class="text-center py-2" style="display: none;">
-                                <i class="fas fa-spinner fa-spin mr-1"></i> Cargando...
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- 4. PAGO --}}
-                <div class="card card-erp order-mobile-4">
+                {{-- 3. PAGO --}}
+                <div class="card card-erp order-mobile-3">
                     <div class="card-header bg-info text-white py-2">
-                        <h5 class="mb-0"><i class="fas fa-dollar-sign mr-2"></i> 4. Pago</h5>
+                        <h5 class="mb-0"><i class="fas fa-dollar-sign mr-2"></i> 3. Pago</h5>
                     </div>
                     <div class="card-body payment-section">
                         <div class="form-group mb-2">
                             <label class="font-weight-bold mb-1">Método de Pago</label>
-                            <select name="payment_method" id="paymentMethod" class="form-control form-control-sm" required>
-                                <option value="">-- Selecciona una opción --</option>
+                            <select name="payment_method" id="paymentMethod" class="form-control form-control-sm">
+                                <option value="">-- Sin pago inicial --</option>
                                 <option value="cash" {{ old('payment_method') == 'cash' ? 'selected' : '' }}>Efectivo</option>
                                 <option value="transfer" {{ old('payment_method') == 'transfer' ? 'selected' : '' }}>Transferencia</option>
                                 <option value="card" {{ old('payment_method') == 'card' ? 'selected' : '' }}>Tarjeta</option>
@@ -762,10 +662,10 @@
                     </div>
                 </div>
 
-                {{-- 5. ENTREGA --}}
-                <div class="card card-erp order-mobile-5">
+                {{-- 4. ENTREGA --}}
+                <div class="card card-erp order-mobile-4">
                     <div class="card-header bg-warning py-2">
-                        <h5 class="mb-0"><i class="fas fa-truck mr-2"></i> 5. Entrega</h5>
+                        <h5 class="mb-0"><i class="fas fa-truck mr-2"></i> 4. Entrega</h5>
                     </div>
                     <div class="card-body">
                         <div class="form-group mb-2">
@@ -806,14 +706,14 @@
             {{-- ============================================== --}}
             <div class="col-lg-7 sidebar-column">
 
-                {{-- 3. PRODUCTOS --}}
-                <div class="card card-erp order-mobile-3">
+                {{-- 2. PRODUCTOS --}}
+                <div class="card card-erp order-mobile-2">
                     <div class="card-header bg-primary text-white py-2 productos-header">
                         <h5 class="mb-0">
-                            <i class="fas fa-box mr-2"></i> 3. Productos
+                            <i class="fas fa-box mr-2"></i> 2. Productos
                             <span id="itemsCounter" class="badge badge-light items-counter ml-2" style="display:none;">0</span>
                         </h5>
-                        <button type="button" class="btn btn-light btn-sm" data-toggle="modal" data-target="#addProductModal">
+                        <button type="button" class="btn btn-light btn-sm" id="btnAddProduct">
                             <i class="fas fa-plus"></i> Agregar
                         </button>
                     </div>
@@ -825,8 +725,8 @@
                                         <th style="width: 60px;">Img</th>
                                         <th>Producto</th>
                                         <th style="width: 80px;">Cant.</th>
-                                        <th style="width: 100px;">Precio</th>
-                                        <th style="width: 100px;">Subtotal</th>
+                                        <th style="width: 90px;">Días Prod.</th>
+                                        <th style="width: 120px;">Subtotal</th>
                                         <th style="width: 50px;"></th>
                                     </tr>
                                 </thead>
@@ -843,10 +743,10 @@
                     </div>
                 </div>
 
-                {{-- 6. RESUMEN (con IVA integrado) --}}
-                <div class="card card-erp resumen-card order-mobile-6">
+                {{-- 5. RESUMEN (con IVA integrado) --}}
+                <div class="card card-erp resumen-card order-mobile-5">
                     <div class="card-header bg-success text-white py-2">
-                        <h5 class="mb-0"><i class="fas fa-calculator mr-2"></i> 6. Resumen</h5>
+                        <h5 class="mb-0"><i class="fas fa-calculator mr-2"></i> 5. Resumen</h5>
                     </div>
                     <div class="card-body">
                         <div class="resumen-totals">
@@ -883,8 +783,8 @@
                     </div>
                 </div>
 
-                {{-- NOTAS --}}
-                <div class="card card-erp order-mobile-7">
+                {{-- 6. NOTAS --}}
+                <div class="card card-erp order-mobile-6">
                     <div class="card-header bg-light py-2">
                         <h5 class="mb-0"><i class="fas fa-sticky-note mr-2"></i> Notas</h5>
                     </div>
@@ -894,8 +794,8 @@
                     </div>
                 </div>
 
-                {{-- BOTÓN CREAR PEDIDO --}}
-                <div class="order-mobile-8">
+                {{-- 7. BOTÓN CREAR PEDIDO --}}
+                <div class="order-mobile-7">
                     <button type="submit" class="btn btn-success btn-lg btn-block" id="submitBtn">
                         <i class="fas fa-save mr-2"></i> Crear Pedido
                     </button>
@@ -991,13 +891,43 @@
                 </div>
                 <div class="modal-body">
                     <div class="row">
+                        {{-- COLUMNA IZQUIERDA: Preview + Estados --}}
                         <div class="col-md-4 text-center">
                             <img id="productPreviewImage" src="{{ asset('img/no-image.png') }}"
-                                class="img-fluid rounded mb-2" style="max-height: 200px;">
+                                class="img-fluid rounded mb-2" style="max-height: 150px;">
                             <div id="productPreviewName" class="font-weight-bold">-</div>
                             <div id="productPreviewSku" class="text-muted small">-</div>
+                            <div id="productPreviewType" class="small mt-1" style="display: none;"></div>
+
+                            {{-- Precio base vs precio final --}}
+                            <div id="priceComparisonContainer" class="mt-2 p-2 rounded" style="display: none; background: #f8f9fa; font-size: 0.85rem;">
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Base:</span>
+                                    <span id="modalBasePriceDisplay">$0.00</span>
+                                </div>
+                                <div id="extrasAdditionRow" class="d-flex justify-content-between text-info" style="display: none;">
+                                    <span>+ Extras:</span>
+                                    <span id="modalExtrasDisplay">$0.00</span>
+                                </div>
+                                <hr class="my-1">
+                                <div class="d-flex justify-content-between font-weight-bold">
+                                    <span>Final:</span>
+                                    <span id="modalFinalPriceDisplay" class="text-success">$0.00</span>
+                                </div>
+                            </div>
+
+                            {{-- ESTADOS MEDIDAS LEGACY — ELIMINADO (FASE 1)
+                                 Ahora las medidas se capturan inline en el modal --}}
+
+                            {{-- Alerta de precio modificado --}}
+                            <div id="priceModifiedAlert" class="alert alert-info py-1 px-2 mt-2 mb-0" style="display: none; font-size: 0.75rem;">
+                                <i class="fas fa-info-circle mr-1"></i> Precio ajustado manualmente
+                            </div>
                         </div>
+
+                        {{-- COLUMNA DERECHA: Formulario --}}
                         <div class="col-md-8">
+                            {{-- Buscar Producto --}}
                             <div class="form-group">
                                 <label class="font-weight-bold">Buscar Producto</label>
                                 <select id="modalProductSelect" class="form-control" style="width: 100%;">
@@ -1005,6 +935,7 @@
                                 </select>
                             </div>
 
+                            {{-- Variante (condicional) --}}
                             <div class="form-group" id="variantGroup" style="display: none;">
                                 <label class="font-weight-bold">Variante</label>
                                 <select id="modalVariantSelect" class="form-control">
@@ -1012,36 +943,122 @@
                                 </select>
                             </div>
 
+                            {{-- Cantidad y Precio --}}
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-6">
                                     <div class="form-group">
                                         <label class="font-weight-bold">Cantidad *</label>
-                                        <input type="number" id="modalQuantity" class="form-control" value="1"
-                                            min="1" max="999">
+                                        <input type="number" id="modalQuantity" class="form-control" value="1" min="1" max="999">
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-6">
                                     <div class="form-group">
-                                        <label class="font-weight-bold">Precio Unitario *</label>
+                                        <label class="font-weight-bold">Precio Unit. *</label>
                                         <div class="input-group">
                                             <div class="input-group-prepend"><span class="input-group-text">$</span></div>
-                                            <input type="number" id="modalPrice" class="form-control" step="0.01"
-                                                min="0">
+                                            <input type="number" id="modalPrice" class="form-control" step="0.01" min="0">
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="form-group">
-                                <label>Texto a Bordar</label>
-                                <input type="text" id="modalEmbroideryText" class="form-control" maxlength="255"
-                                    placeholder="Nombre, frase, iniciales...">
+                            {{-- ═══════════════════════════════════════════ --}}
+                            {{-- SECCIÓN MEDIDAS (solo si producto requiere) --}}
+                            {{-- ═══════════════════════════════════════════ --}}
+                            <div class="card mb-2" id="measurementsSection" style="display: none; border-color: #6f42c1;">
+                                <div class="card-header py-2 px-3" style="background: linear-gradient(135deg, #6f42c1 0%, #8b5cf6 100%); color: white;">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <i class="fas fa-ruler-combined mr-1"></i>
+                                            <strong>Medidas del Ítem</strong>
+                                            <span class="badge badge-light ml-2" id="measurementsStatusBadge">Sin capturar</span>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-light" id="btnOpenMeasurementsModal">
+                                            <i class="fas fa-edit mr-1"></i> <span id="btnMeasurementsText">Capturar</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body py-2 px-3" id="measurementsSummaryBody" style="display: none;">
+                                    {{-- Resumen de medidas capturadas --}}
+                                    <div class="row small" id="measurementsSummaryContent">
+                                        {{-- Se llena dinámicamente --}}
+                                    </div>
+                                </div>
                             </div>
 
-                            <div class="form-group mb-0">
-                                <label>Notas de Personalización</label>
-                                <textarea id="modalCustomizationNotes" class="form-control" rows="2" maxlength="1000"
-                                    placeholder="Instrucciones especiales..."></textarea>
+                            {{-- ═══════════════════════════════════════════ --}}
+                            {{-- SECCIÓN PERSONALIZACIÓN (EXPANDIBLE) --}}
+                            {{-- ═══════════════════════════════════════════ --}}
+                            <div class="card mb-2" id="customizationCard">
+                                <div class="card-header py-2 px-3" style="background: #f8f9fa; cursor: pointer;" id="customizationToggle">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <div class="custom-control custom-checkbox d-inline-block">
+                                                <input type="checkbox" class="custom-control-input" id="isCustomized">
+                                                <label class="custom-control-label font-weight-bold" for="isCustomized">
+                                                    <i class="fas fa-magic mr-1 text-purple"></i> Personalizar producto
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <i class="fas fa-chevron-down text-muted" id="customizationChevron"></i>
+                                    </div>
+                                </div>
+                                <div class="card-body py-3 px-3" id="customizationBody" style="display: none;">
+                                    {{-- Texto a Bordar --}}
+                                    <div class="form-group mb-3">
+                                        <label class="font-weight-bold mb-1">
+                                            <i class="fas fa-pen-fancy mr-1 text-info"></i> Texto a Bordar
+                                        </label>
+                                        <input type="text" id="modalEmbroideryText" class="form-control" maxlength="255"
+                                            placeholder="Nombre, frase, iniciales...">
+                                    </div>
+
+                                    {{-- EXTRAS: Botón + Lista de seleccionados --}}
+                                    <div class="form-group mb-3" id="productExtrasSection" style="display: none;">
+                                        <label class="font-weight-bold mb-1">
+                                            <i class="fas fa-plus-circle mr-1 text-success"></i> Extras
+                                        </label>
+                                        <div class="d-flex align-items-center mb-2">
+                                            <button type="button" class="btn btn-outline-success btn-sm" id="btnOpenExtrasModal">
+                                                <i class="fas fa-list-ul mr-1"></i> Seleccionar Extras
+                                            </button>
+                                            <span class="ml-2 text-info font-weight-bold" id="extrasSubtotalDisplay">+$0.00</span>
+                                        </div>
+                                        {{-- Lista de extras seleccionados --}}
+                                        <div id="selectedExtrasList" class="border rounded" style="display: none; max-height: 120px; overflow-y: auto;">
+                                            {{-- Se llena dinámicamente con JS --}}
+                                        </div>
+                                        <small class="text-muted" id="noExtrasSelectedMsg">Sin extras seleccionados</small>
+                                    </div>
+
+                                    {{-- Ajuste de precio adicional (temporal - para futuro cálculo por medidas) --}}
+                                    <div class="form-group mb-3">
+                                        <label class="font-weight-bold mb-1">
+                                            <i class="fas fa-dollar-sign mr-1 text-warning"></i> Ajuste de precio adicional
+                                        </label>
+                                        <div class="input-group">
+                                            <div class="input-group-prepend"><span class="input-group-text">+$</span></div>
+                                            <input type="number" id="modalExtrasCost" class="form-control" step="0.01" min="0" value="0">
+                                        </div>
+                                        <small class="text-muted">Ajuste manual por medidas especiales o trabajos adicionales</small>
+                                    </div>
+
+                                    {{-- Notas de Personalización --}}
+                                    <div class="form-group mb-0">
+                                        <label class="font-weight-bold mb-1">
+                                            <i class="fas fa-sticky-note mr-1 text-secondary"></i> Notas / Instrucciones
+                                        </label>
+                                        <textarea id="modalCustomizationNotes" class="form-control" rows="2" maxlength="1000"
+                                            placeholder="Instrucciones especiales, diseño, colores..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Subtotal del ítem (solo lectura) --}}
+                            <div class="bg-light rounded p-2 text-right" id="itemSubtotalContainer" style="display: none;">
+                                <span class="text-muted">Subtotal ítem:</span>
+                                <strong class="text-success ml-2" id="itemSubtotalDisplay">$0.00</strong>
+                                <small class="text-muted d-block" id="itemSubtotalDetail"></small>
                             </div>
                         </div>
                     </div>
@@ -1057,103 +1074,203 @@
     </div>
 
     {{-- ============================================== --}}
-    {{-- MODAL: CAPTURAR MEDIDAS --}}
+    {{-- MODAL: CAPTURA DE MEDIDAS (MORADO) --}}
+    {{-- Se abre como overlay SIN cerrar el modal de producto --}}
     {{-- ============================================== --}}
-    <div class="modal fade" id="measurementsModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+    <div class="modal fade" id="measurementsModal" tabindex="-1" aria-hidden="true" data-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
-                <div class="modal-header" style="background: linear-gradient(135deg, #e100ff 0%, #7f00ff 100%);">
-                    <h5 class="modal-title text-white" style="font-size: 1.2rem;">
-                        <i class="fas fa-ruler-vertical mr-1"></i>
-                        <i class="fas fa-female mr-1"></i>
-                        Medidas (cm)
+                <div class="modal-header py-2" style="background: #6f42c1; color: white;">
+                    <h5 class="modal-title">
+                        <i class="fas fa-ruler-combined mr-2"></i>
+                        <span id="measurementsModalTitle">Capturar Medidas</span>
                     </h5>
-                    <button type="button" class="close text-white" data-dismiss="modal"
-                        style="font-size: 1.2rem;">&times;</button>
+                    <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <div class="medidas-grid">
-                        {{-- BUSTO --}}
-                        <div class="text-center">
-                            <label class="medida-label">BUSTO</label>
-                            <div class="medida-card">
-                                <img src="{{ asset('images/busto.png') }}" alt="Busto" class="medida-img">
-                                <input type="text" id="measure_busto"
-                                    class="form-control form-control-sm medida-input" placeholder="80.5" maxlength="6"
-                                    inputmode="decimal">
-                                <small class="medida-hint">30 - 200 cm</small>
-                            </div>
-                        </div>
-                        {{-- ALTO CINTURA --}}
-                        <div class="text-center">
-                            <label class="medida-label">ALTO CINT.</label>
-                            <div class="medida-card">
-                                <img src="{{ asset('images/alto_cintura.png') }}" alt="Alto Cintura" class="medida-img">
-                                <input type="text" id="measure_alto_cintura"
-                                    class="form-control form-control-sm medida-input" placeholder="40.5" maxlength="6"
-                                    inputmode="decimal">
-                                <small class="medida-hint">10 - 100 cm</small>
-                            </div>
-                        </div>
-                        {{-- CINTURA --}}
-                        <div class="text-center">
-                            <label class="medida-label">CINTURA</label>
-                            <div class="medida-card">
-                                <img src="{{ asset('images/cintura.png') }}" alt="Cintura" class="medida-img">
-                                <input type="text" id="measure_cintura"
-                                    class="form-control form-control-sm medida-input" placeholder="70.5" maxlength="6"
-                                    inputmode="decimal">
-                                <small class="medida-hint">30 - 200 cm</small>
-                            </div>
-                        </div>
-                        {{-- CADERA --}}
-                        <div class="text-center">
-                            <label class="medida-label">CADERA</label>
-                            <div class="medida-card">
-                                <img src="{{ asset('images/cadera.png') }}" alt="Cadera" class="medida-img">
-                                <input type="text" id="measure_cadera"
-                                    class="form-control form-control-sm medida-input" placeholder="95.5" maxlength="6"
-                                    inputmode="decimal">
-                                <small class="medida-hint">30 - 200 cm</small>
-                            </div>
-                        </div>
-                        {{-- LARGO BLUSA --}}
-                        <div class="text-center">
-                            <label class="medida-label">LARGO BL.</label>
-                            <div class="medida-card">
-                                <img src="{{ asset('images/largo.png') }}" alt="Largo Blusa" class="medida-img">
-                                <input type="text" id="measure_largo"
-                                    class="form-control form-control-sm medida-input" placeholder="60.5" maxlength="6"
-                                    inputmode="decimal">
-                                <small class="medida-hint">30 - 200 cm</small>
-                            </div>
-                        </div>
-                        {{-- LARGO VESTIDO --}}
-                        <div class="text-center">
-                            <label class="medida-label">LARGO VEST.</label>
-                            <div class="medida-card">
-                                <img src="{{ asset('images/largo_vestido.png') }}" alt="Largo Vestido"
-                                    class="medida-img">
-                                <input type="text" id="measure_largo_vestido"
-                                    class="form-control form-control-sm medida-input" placeholder="100.5" maxlength="6"
-                                    inputmode="decimal">
-                                <small class="medida-hint">30 - 200 cm</small>
-                            </div>
+                    {{-- Info del producto actual --}}
+                    <div class="alert alert-info py-2 mb-3" id="measurementsProductInfo">
+                        <i class="fas fa-box mr-1"></i>
+                        <strong>Producto:</strong> <span id="measurementsProductName">-</span>
+                    </div>
+
+                    {{-- Selector: usar medidas existentes o capturar nuevas --}}
+                    <div class="mb-3" id="measurementsSourceSelector">
+                        <label class="font-weight-bold mb-2">
+                            <i class="fas fa-clipboard-list mr-1"></i> Origen de las medidas:
+                        </label>
+                        <div class="btn-group btn-group-toggle w-100" data-toggle="buttons">
+                            <label class="btn btn-outline-primary active" id="lblNewMeasures">
+                                <input type="radio" name="measurementSource" value="new" checked>
+                                <i class="fas fa-plus-circle mr-1"></i> Capturar Nuevas
+                            </label>
+                            <label class="btn btn-outline-primary" id="lblExistingMeasures">
+                                <input type="radio" name="measurementSource" value="existing">
+                                <i class="fas fa-history mr-1"></i> Usar Existentes
+                            </label>
                         </div>
                     </div>
-                    <div class="d-flex align-items-center mt-3" style="gap: 10px;">
-                        <div class="flex-grow-1">
-                            <input type="text" id="measure_notes" class="form-control"
-                                placeholder="Notas / Observaciones..." maxlength="500" style="font-size: 0.85rem;">
+
+                    {{-- Panel: Capturar nuevas medidas con imágenes --}}
+                    <div id="newMeasurementsPanel">
+                        <div class="row">
+                            {{-- BUSTO --}}
+                            <div class="form-group col-md-4 col-6 text-center">
+                                <label class="medida-label">BUSTO</label>
+                                <div class="medida-card">
+                                    <img src="{{ asset('images/busto.png') }}" alt="Busto" class="img-fluid medida-img">
+                                    <input type="text" id="medBusto"
+                                        class="form-control form-control-sm medida-input"
+                                        placeholder="Ej: 80.5" maxlength="6"
+                                        inputmode="decimal" oninput="validateMedidaModal(this)">
+                                </div>
+                            </div>
+                            {{-- ALTO CINTURA --}}
+                            <div class="form-group col-md-4 col-6 text-center">
+                                <label class="medida-label">ALTO CINTURA</label>
+                                <div class="medida-card">
+                                    <img src="{{ asset('images/alto_cintura.png') }}" alt="Alto Cintura" class="img-fluid medida-img">
+                                    <input type="text" id="medAltoCintura"
+                                        class="form-control form-control-sm medida-input"
+                                        placeholder="Ej: 40.5" maxlength="6"
+                                        inputmode="decimal" oninput="validateMedidaModal(this)">
+                                </div>
+                            </div>
+                            {{-- CINTURA --}}
+                            <div class="form-group col-md-4 col-6 text-center">
+                                <label class="medida-label">CINTURA</label>
+                                <div class="medida-card">
+                                    <img src="{{ asset('images/cintura.png') }}" alt="Cintura" class="img-fluid medida-img">
+                                    <input type="text" id="medCintura"
+                                        class="form-control form-control-sm medida-input"
+                                        placeholder="Ej: 70.5" maxlength="6"
+                                        inputmode="decimal" oninput="validateMedidaModal(this)">
+                                </div>
+                            </div>
+                            {{-- CADERA --}}
+                            <div class="form-group col-md-4 col-6 text-center">
+                                <label class="medida-label">CADERA</label>
+                                <div class="medida-card">
+                                    <img src="{{ asset('images/cadera.png') }}" alt="Cadera" class="img-fluid medida-img">
+                                    <input type="text" id="medCadera"
+                                        class="form-control form-control-sm medida-input"
+                                        placeholder="Ej: 95.5" maxlength="6"
+                                        inputmode="decimal" oninput="validateMedidaModal(this)">
+                                </div>
+                            </div>
+                            {{-- LARGO BLUSA --}}
+                            <div class="form-group col-md-4 col-6 text-center">
+                                <label class="medida-label">LARGO BLUSA</label>
+                                <div class="medida-card">
+                                    <img src="{{ asset('images/largo.png') }}" alt="Largo Blusa" class="img-fluid medida-img">
+                                    <input type="text" id="medLargo"
+                                        class="form-control form-control-sm medida-input"
+                                        placeholder="Ej: 60.5" maxlength="6"
+                                        inputmode="decimal" oninput="validateMedidaModal(this)">
+                                </div>
+                            </div>
+                            {{-- LARGO VESTIDO --}}
+                            <div class="form-group col-md-4 col-6 text-center">
+                                <label class="medida-label">LARGO VESTIDO</label>
+                                <div class="medida-card">
+                                    <img src="{{ asset('images/largo_vestido.png') }}" alt="Largo Vestido" class="img-fluid medida-img">
+                                    <input type="text" id="medLargoVestido"
+                                        class="form-control form-control-sm medida-input"
+                                        placeholder="Ej: 120.5" maxlength="6"
+                                        inputmode="decimal" oninput="validateMedidaModal(this)">
+                                </div>
+                            </div>
                         </div>
+                        {{-- Checkbox guardar en cliente --}}
+                        <div class="custom-control custom-checkbox mt-2" id="saveToClientOption" style="display: none;">
+                            <input type="checkbox" class="custom-control-input" id="chkSaveMeasuresToClient">
+                            <label class="custom-control-label" for="chkSaveMeasuresToClient">
+                                Guardar estas medidas en el perfil del cliente
+                            </label>
+                        </div>
+                    </div>
+
+                    {{-- Panel: Seleccionar medidas existentes del cliente --}}
+                    <div id="existingMeasurementsPanel" style="display: none;">
+                        <div class="text-center py-3" id="existingMeasuresLoading">
+                            <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
+                            <p class="mt-2 mb-0 text-muted">Cargando medidas del cliente...</p>
+                        </div>
+                        <div id="existingMeasuresList">
+                            {{-- Se llena dinámicamente --}}
+                        </div>
+                        <div class="alert alert-warning py-2 mt-2" id="noExistingMeasuresAlert" style="display: none;">
+                            <i class="fas fa-exclamation-triangle mr-1"></i>
+                            Este cliente no tiene medidas registradas. Capture nuevas medidas.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    {{-- Footer para modo editable --}}
+                    <div id="measurementsEditFooter">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                            <i class="fas fa-times"></i>
+                            <i class="fas fa-times mr-1"></i> Cancelar
                         </button>
-                        <button type="button" class="btn" id="saveMeasurementsBtn"
-                            style="background: linear-gradient(135deg, #e100ff 0%, #7f00ff 100%); border: none; color: #fff;">
-                            <i class="fas fa-save mr-1"></i> Guardar
+                        <button type="button" class="btn text-white" id="btnConfirmMeasurements" style="background: #6f42c1;">
+                            <i class="fas fa-check mr-1"></i> Confirmar Medidas
                         </button>
                     </div>
+                    {{-- Footer para modo readonly --}}
+                    <div id="measurementsReadonlyFooter" style="display: none;">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                            <i class="fas fa-times mr-1"></i> Cerrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- ============================================== --}}
+    {{-- MODAL: SELECCIÓN DE EXTRAS --}}
+    {{-- ============================================== --}}
+    <div class="modal fade" id="extrasSelectionModal" tabindex="-1" aria-hidden="true" data-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white py-2">
+                    <h5 class="modal-title"><i class="fas fa-plus-circle mr-2"></i> Seleccionar Extras</h5>
+                    <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body p-0">
+                    {{-- Buscador de extras --}}
+                    <div class="p-3 border-bottom bg-light">
+                        <input type="text" id="extrasSearchInput" class="form-control" placeholder="Buscar extras...">
+                    </div>
+                    {{-- Tabla de extras disponibles --}}
+                    <div style="max-height: 350px; overflow-y: auto;">
+                        <table class="table table-hover table-sm mb-0" id="extrasTable">
+                            <thead class="thead-light" style="position: sticky; top: 0;">
+                                <tr>
+                                    <th style="width: 50px;" class="text-center">
+                                        <input type="checkbox" id="selectAllExtras" title="Seleccionar todos">
+                                    </th>
+                                    <th>Extra</th>
+                                    <th style="width: 120px;" class="text-right">Precio</th>
+                                </tr>
+                            </thead>
+                            <tbody id="extrasTableBody">
+                                {{-- Se llena dinámicamente --}}
+                            </tbody>
+                        </table>
+                    </div>
+                    {{-- Resumen de selección --}}
+                    <div class="p-3 border-top bg-light d-flex justify-content-between align-items-center">
+                        <span><strong id="extrasSelectedCount">0</strong> extras seleccionados</span>
+                        <span class="text-success font-weight-bold" style="font-size: 1.1rem;">
+                            Total: <span id="extrasSelectionTotal">$0.00</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-success" id="btnConfirmExtras">
+                        <i class="fas fa-check mr-1"></i> Confirmar Selección
+                    </button>
                 </div>
             </div>
         </div>
@@ -1172,10 +1289,12 @@
             let selectedProduct = null;
             let selectedClientData = null;
             let productLeadTimes = {};
-            let clientMeasurements = [];
-            let selectedMeasurementId = null;
-            let editingMeasurementId = null;
             let clientSearchTimeout = null;
+            // MEDIDAS DEL ITEM ACTUAL (pertenecen al item, no al cliente)
+            let currentItemMeasurements = null; // {busto, cintura, cadera, alto_cintura, largo, largo_vestido}
+            let clientMeasurementsCache = null; // Cache de medidas existentes del cliente
+            // FASE 4: Índice del item que se está editando (null si es CREATE)
+            let editingItemIndex = null;
 
             const urgencyMultipliers = {
                 'normal': 1.0,
@@ -1303,9 +1422,8 @@
                 `);
                 $('#btnSelectClient').addClass('has-client');
 
-                // Ocultar placeholder y mostrar sección de medidas
-                $('#medidasPlaceholder').hide();
-                loadClientMeasurements(id);
+                // Limpiar cache de medidas del cliente anterior
+                clearMeasurementsCache();
             }
 
             // Reset al abrir modal de búsqueda
@@ -1386,309 +1504,25 @@
             });
 
             // ==========================================
-            // GESTIÓN DE MEDIDAS
+            // GESTIÓN DE MEDIDAS — ELIMINADO (FASE 1)
+            // Las medidas ahora se capturan INLINE en el modal de producto.
+            // Funciones eliminadas:
+            // - loadClientMeasurements()
+            // - selectMeasurement()
+            // - buildMeasurementSummary()
+            // - renderMeasurementsHistory()
+            // - openMeasurementModal()
+            // - validateMedida()
+            // Handlers eliminados:
+            // - #btnShowAllMeasurements
+            // - .btn-use-measurement
+            // - .btn-edit-measurement
+            // - #btnEditActiveMeasurement
+            // - #btnCapturarMedidas, #btnCapturarNuevas
+            // - #saveMeasurementsBtn
+            // - #measurementsModal .medida-input
+            // - IIFE touch fix
             // ==========================================
-            function loadClientMeasurements(clienteId) {
-                clientMeasurements = [];
-                selectedMeasurementId = null;
-                editingMeasurementId = null;
-                $('#client_measurement_id').val('');
-
-                $('#clientMeasuresSection').show();
-                $('#measurementsLoading').show();
-                $('#measurementsEmpty').hide();
-                $('#measurementsList').hide();
-                $('#measurementsHistory').hide();
-
-                $.ajax({
-                    url: '{{ url('admin/client-measurements/cliente') }}/' + clienteId,
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json'
-                    },
-                    success: function(response) {
-                        $('#measurementsLoading').hide();
-                        clientMeasurements = response.measurements || [];
-
-                        if (clientMeasurements.length === 0) {
-                            $('#measurementsEmpty').show();
-                            $('#measurementsList').hide();
-                        } else {
-                            $('#measurementsEmpty').hide();
-                            $('#measurementsList').show();
-
-                            const primary = clientMeasurements.find(m => m.is_primary) ||
-                                clientMeasurements[0];
-                            selectMeasurement(primary.id);
-                            renderMeasurementsHistory();
-                        }
-                    },
-                    error: function() {
-                        $('#measurementsLoading').hide();
-                        $('#measurementsEmpty').show();
-                    }
-                });
-            }
-
-            function selectMeasurement(measurementId) {
-                selectedMeasurementId = measurementId;
-                $('#client_measurement_id').val(measurementId);
-
-                const measurement = clientMeasurements.find(m => m.id === measurementId);
-                if (!measurement) return;
-
-                $('#activeMeasurementDate').text(measurement.created_at_short || measurement.created_at);
-                $('#activeMeasurementSummary').html(buildMeasurementSummary(measurement));
-                renderMeasurementsHistory();
-            }
-
-            function buildMeasurementSummary(m) {
-                const fields = [{
-                        key: 'busto',
-                        label: 'Bu'
-                    },
-                    {
-                        key: 'alto_cintura',
-                        label: 'AC'
-                    },
-                    {
-                        key: 'cintura',
-                        label: 'Ci'
-                    },
-                    {
-                        key: 'cadera',
-                        label: 'Ca'
-                    },
-                    {
-                        key: 'largo',
-                        label: 'LB'
-                    },
-                    {
-                        key: 'largo_vestido',
-                        label: 'LV'
-                    }
-                ];
-                let parts = [];
-                fields.forEach(f => {
-                    if (m[f.key]) parts.push(`<strong>${f.label}:</strong>${m[f.key]}`);
-                });
-                return parts.join(' | ') || '<em class="text-muted">Sin medidas</em>';
-            }
-
-            function renderMeasurementsHistory() {
-                const $list = $('#measurementsHistoryList');
-                $list.empty();
-
-                clientMeasurements.forEach(m => {
-                    const isActive = m.id === selectedMeasurementId;
-                    const isPrimary = m.is_primary;
-
-                    let badges = '';
-                    if (isActive) badges += '<span class="badge badge-success mr-1">EN USO</span>';
-                    if (isPrimary && !isActive) badges +=
-                        '<span class="badge badge-info mr-1">PRINCIPAL</span>';
-
-                    $list.append(`
-                        <div class="measurement-history-item ${isActive ? 'active' : ''}" data-id="${m.id}">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    ${badges}
-                                    <small class="text-muted">${m.created_at_short || m.created_at}</small>
-                                </div>
-                                <div>
-                                    ${!isActive ? `<button type="button" class="btn btn-xs btn-outline-success btn-use-measurement mr-1" data-id="${m.id}"><i class="fas fa-check"></i></button>` : ''}
-                                    <button type="button" class="btn btn-xs btn-outline-primary btn-edit-measurement" data-id="${m.id}"><i class="fas fa-edit"></i></button>
-                                </div>
-                            </div>
-                            <div class="small mt-1">${buildMeasurementSummary(m)}</div>
-                        </div>
-                    `);
-                });
-            }
-
-            $('#btnShowAllMeasurements').on('click', function() {
-                $('#measurementsHistory').slideToggle(200);
-            });
-
-            $(document).on('click', '.btn-use-measurement', function() {
-                selectMeasurement($(this).data('id'));
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Medida seleccionada',
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 1500
-                });
-            });
-
-            $(document).on('click', '.btn-edit-measurement', function() {
-                openMeasurementModal($(this).data('id'));
-            });
-
-            $('#btnEditActiveMeasurement').on('click', function() {
-                if (selectedMeasurementId) openMeasurementModal(selectedMeasurementId);
-            });
-
-            $('#btnCapturarMedidas, #btnCapturarNuevas').on('click', function() {
-                openMeasurementModal(null);
-            });
-
-            function openMeasurementModal(measurementId = null) {
-                editingMeasurementId = measurementId;
-                $('#measurementsModal .medida-input').val('');
-                $('#measure_notes').val('');
-
-                if (measurementId) {
-                    const m = clientMeasurements.find(x => x.id === measurementId);
-                    if (m) {
-                        $('#measure_busto').val(m.busto || '');
-                        $('#measure_cintura').val(m.cintura || '');
-                        $('#measure_cadera').val(m.cadera || '');
-                        $('#measure_alto_cintura').val(m.alto_cintura || '');
-                        $('#measure_largo').val(m.largo || '');
-                        $('#measure_largo_vestido').val(m.largo_vestido || '');
-                        $('#measure_notes').val(m.notes || '');
-                    }
-                }
-
-                $('#measurementsModal').modal('show');
-            }
-
-            $('#saveMeasurementsBtn').on('click', function() {
-                const clienteId = $('#cliente_id').val();
-                if (!clienteId) return;
-
-                const $btn = $(this);
-                $btn.prop('disabled', true).html(
-                '<i class="fas fa-spinner fa-spin mr-1"></i> Guardando...');
-
-                const measureData = {
-                    busto: parseFloat($('#measure_busto').val().replace(',', '.')) || null,
-                    cintura: parseFloat($('#measure_cintura').val().replace(',', '.')) || null,
-                    cadera: parseFloat($('#measure_cadera').val().replace(',', '.')) || null,
-                    alto_cintura: parseFloat($('#measure_alto_cintura').val().replace(',', '.')) ||
-                        null,
-                    largo: parseFloat($('#measure_largo').val().replace(',', '.')) || null,
-                    largo_vestido: parseFloat($('#measure_largo_vestido').val().replace(',', '.')) ||
-                        null,
-                    notes: $('#measure_notes').val().trim() || null
-                };
-
-                const url = editingMeasurementId ?
-                    '{{ url('admin/client-measurements') }}/' + editingMeasurementId :
-                    '{{ route('admin.client-measurements.store') }}';
-
-                const method = editingMeasurementId ? 'PUT' : 'POST';
-
-                const data = editingMeasurementId ?
-                    {
-                        _token: '{{ csrf_token() }}',
-                        ...measureData
-                    } :
-                    {
-                        _token: '{{ csrf_token() }}',
-                        cliente_id: clienteId,
-                        is_primary: clientMeasurements.length === 0 ? 1 : 0,
-                        ...measureData
-                    };
-
-                $.ajax({
-                    url: url,
-                    method: method,
-                    data: data,
-                    headers: {
-                        'Accept': 'application/json'
-                    },
-                    success: function(response) {
-                        $('#measurementsModal').modal('hide');
-                        loadClientMeasurements(clienteId);
-                        Swal.fire({
-                            icon: 'success',
-                            title: editingMeasurementId ? 'Medidas actualizadas' :
-                                'Medidas guardadas',
-                            toast: true,
-                            position: 'top-end',
-                            showConfirmButton: false,
-                            timer: 2000
-                        });
-                    },
-                    error: function(xhr) {
-                        let errors = xhr.responseJSON?.errors ? Object.values(xhr.responseJSON
-                            .errors).flat() : [xhr.responseJSON?.message ||
-                            'Error al guardar'
-                        ];
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            html: '<ul style="text-align:left;margin:0;padding-left:20px;">' +
-                                errors.map(e => '<li>' + e + '</li>').join('') +
-                                '</ul>',
-                            confirmButtonColor: '#7f00ff'
-                        });
-                    },
-                    complete: function() {
-                        $btn.prop('disabled', false).html(
-                            '<i class="fas fa-save mr-1"></i> Guardar');
-                    }
-                });
-            });
-
-            // Validación de inputs de medidas
-            function validateMedida(input) {
-                let value = input.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
-                if (value === '.' || value === '0' || value === '0.' || value === '.0') {
-                    input.value = '';
-                    return;
-                }
-                const partialRegex = /^[1-9]\d{0,2}(\.\d{0,2})?$/;
-                if (value && !partialRegex.test(value)) {
-                    input.value = value.slice(0, -1);
-                    return;
-                }
-                input.value = value;
-            }
-
-            $('#measurementsModal .medida-input').on('input', function() {
-                validateMedida(this);
-            });
-
-            // Touch fix para medidas
-            (function() {
-                const cards = document.querySelectorAll('#measurementsModal .medida-card');
-                cards.forEach(function(card) {
-                    let lastTouchTime = 0;
-
-                    function focusInput(e) {
-                        if (e.target.tagName === 'INPUT') return;
-                        const input = card.querySelector('.medida-input');
-                        if (!input) return;
-                        e.preventDefault();
-                        e.stopPropagation();
-                        input.focus();
-                        requestAnimationFrame(function() {
-                            input.select();
-                        });
-                    }
-                    card.addEventListener('touchstart', function(e) {
-                        if (e.target.tagName === 'INPUT') return;
-                        lastTouchTime = Date.now();
-                    }, {
-                        passive: true
-                    });
-                    card.addEventListener('touchend', function(e) {
-                        if (e.target.tagName === 'INPUT') return;
-                        if (Date.now() - lastTouchTime < 300) focusInput(e);
-                    }, {
-                        passive: false
-                    });
-                    card.addEventListener('click', function(e) {
-                        if (e.target.tagName === 'INPUT') return;
-                        if (Date.now() - lastTouchTime < 500) return;
-                        focusInput(e);
-                    });
-                });
-            })();
 
             // ==========================================
             // SELECT2: PRODUCTO EN MODAL
@@ -1743,7 +1577,28 @@
                 $('#productPreviewSku').text(selectedProduct.sku || '-');
                 $('#productPreviewImage').attr('src', selectedProduct.image_url ||
                     '{{ asset('img/no-image.png') }}');
-                $('#modalPrice').val(selectedProduct.base_price);
+
+                // Guardar precio base y establecer precio
+                modalBasePrice = parseFloat(selectedProduct.base_price) || 0;
+                $('#modalPrice').val(modalBasePrice);
+
+                // Mostrar tipo de producto si existe
+                if (selectedProduct.product_type_name) {
+                    $('#productPreviewType')
+                        .html(`<span class="badge badge-secondary">${selectedProduct.product_type_name}</span>`)
+                        .show();
+                } else {
+                    $('#productPreviewType').hide();
+                }
+
+                // === MOSTRAR/OCULTAR SECCIÓN DE MEDIDAS ===
+                updateMeasurementsSectionVisibility();
+
+                // === CARGAR EXTRAS DEL PRODUCTO ===
+                loadProductExtras();
+
+                // === MOSTRAR COMPARACIÓN DE PRECIOS ===
+                updatePriceComparison();
 
                 const $variantSelect = $('#modalVariantSelect');
                 $variantSelect.empty().append('<option value="">-- Producto base --</option>');
@@ -1759,7 +1614,681 @@
                     $('#variantGroup').hide();
                 }
 
-                $('#addProductBtn').prop('disabled', false);
+                // Mostrar subtotal del ítem
+                $('#itemSubtotalContainer').show();
+                updateItemSubtotal();
+
+                // Habilitar botón solo si las condiciones se cumplen
+                updateAddButtonState();
+            }
+
+            // Array para trackear extras seleccionados
+            let selectedExtras = [];
+            // Array temporal para selección en modal de extras
+            let tempSelectedExtras = [];
+
+            // Mostrar sección de extras cuando hay producto seleccionado
+            // Los extras reales se cargan por AJAX al abrir el modal
+            function loadProductExtras() {
+                const $section = $('#productExtrasSection');
+                selectedExtras = [];
+
+                if (!selectedProduct) {
+                    $section.hide();
+                    return;
+                }
+
+                // Siempre mostrar la sección - los extras se cargan por AJAX al abrir el modal
+                $section.show();
+                renderSelectedExtrasList();
+            }
+
+            // Renderizar lista de extras seleccionados en el modal principal
+            function renderSelectedExtrasList() {
+                const $list = $('#selectedExtrasList');
+                const $noMsg = $('#noExtrasSelectedMsg');
+
+                $list.empty();
+
+                if (selectedExtras.length === 0) {
+                    $list.hide();
+                    $noMsg.show();
+                } else {
+                    $noMsg.hide();
+                    $list.show();
+
+                    selectedExtras.forEach(extra => {
+                        const itemHtml = `
+                            <div class="d-flex justify-content-between align-items-center px-2 py-1 border-bottom" data-extra-id="${extra.id}">
+                                <span class="small">${extra.name}</span>
+                                <div>
+                                    <span class="text-info small mr-2">+$${extra.price.toFixed(2)}</span>
+                                    <button type="button" class="btn btn-xs btn-outline-danger remove-extra-btn" data-id="${extra.id}" title="Quitar">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        $list.append(itemHtml);
+                    });
+                }
+
+                updateExtrasSubtotal();
+            }
+
+            // Handler para quitar extra de la lista
+            $(document).on('click', '.remove-extra-btn', function() {
+                const extraId = $(this).data('id');
+                selectedExtras = selectedExtras.filter(e => e.id !== extraId);
+                renderSelectedExtrasList();
+                recalculateFinalPrice();
+                updatePriceComparison();
+                updateItemSubtotal();
+            });
+
+            // Actualizar subtotal de extras
+            function updateExtrasSubtotal() {
+                const total = selectedExtras.reduce((sum, e) => sum + e.price, 0);
+                $('#extrasSubtotalDisplay').text('+$' + total.toFixed(2));
+            }
+
+            // ==========================================
+            // MODAL DE SELECCIÓN DE EXTRAS
+            // ==========================================
+
+            // Abrir modal de extras - CARGA POR AJAX
+            $('#btnOpenExtrasModal').on('click', function() {
+                if (!selectedProduct) {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Sin producto',
+                        text: 'Primero seleccione un producto.',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
+                    return;
+                }
+
+                // Mostrar loading en la tabla
+                $('#extrasTableBody').html(`
+                    <tr>
+                        <td colspan="3" class="text-center py-4">
+                            <i class="fas fa-spinner fa-spin fa-2x text-success"></i>
+                            <p class="mt-2 mb-0 text-muted">Cargando extras...</p>
+                        </td>
+                    </tr>
+                `);
+
+                // Abrir modal inmediatamente
+                $('#extrasSelectionModal').modal('show');
+
+                // Cargar extras por AJAX
+                $.ajax({
+                    url: `/admin/orders/ajax/product/${selectedProduct.id}/extras`,
+                    method: 'GET',
+                    dataType: 'json',
+                    success: function(response) {
+                        // Actualizar extras del producto con datos frescos de BD
+                        selectedProduct.extras = response.extras || [];
+
+                        if (selectedProduct.extras.length === 0) {
+                            $('#extrasTableBody').html(`
+                                <tr>
+                                    <td colspan="3" class="text-center py-4 text-muted">
+                                        <i class="fas fa-box-open fa-2x mb-2 d-block"></i>
+                                        Este producto no tiene extras configurados
+                                    </td>
+                                </tr>
+                            `);
+                            return;
+                        }
+
+                        // Copiar selección actual a temporal
+                        tempSelectedExtras = selectedExtras.map(e => ({...e}));
+
+                        // Llenar tabla de extras
+                        populateExtrasTable();
+                    },
+                    error: function() {
+                        $('#extrasTableBody').html(`
+                            <tr>
+                                <td colspan="3" class="text-center py-4 text-danger">
+                                    <i class="fas fa-exclamation-triangle fa-2x mb-2 d-block"></i>
+                                    Error al cargar extras
+                                </td>
+                            </tr>
+                        `);
+                    }
+                });
+            });
+
+            // Llenar tabla con extras del producto
+            function populateExtrasTable() {
+                const $tbody = $('#extrasTableBody');
+                $tbody.empty();
+
+                if (!selectedProduct || !selectedProduct.extras) return;
+
+                selectedProduct.extras.forEach(extra => {
+                    const isSelected = tempSelectedExtras.some(e => e.id === extra.id);
+                    const rowHtml = `
+                        <tr data-extra-id="${extra.id}" data-name="${extra.name}" data-price="${extra.price_addition}">
+                            <td class="text-center">
+                                <input type="checkbox" class="extra-table-checkbox" ${isSelected ? 'checked' : ''}>
+                            </td>
+                            <td>${extra.name}</td>
+                            <td class="text-right text-success font-weight-bold">+$${parseFloat(extra.price_addition).toFixed(2)}</td>
+                        </tr>
+                    `;
+                    $tbody.append(rowHtml);
+                });
+
+                updateExtrasModalSummary();
+            }
+
+            // Buscador de extras
+            $('#extrasSearchInput').on('input', function() {
+                const term = $(this).val().toLowerCase().trim();
+                $('#extrasTableBody tr').each(function() {
+                    const name = $(this).data('name').toLowerCase();
+                    $(this).toggle(name.includes(term));
+                });
+            });
+
+            // Checkbox en tabla de extras
+            $(document).on('change', '.extra-table-checkbox', function() {
+                const $row = $(this).closest('tr');
+                const extraId = $row.data('extra-id');
+                const extraName = $row.data('name');
+                const extraPrice = parseFloat($row.data('price')) || 0;
+
+                if ($(this).is(':checked')) {
+                    if (!tempSelectedExtras.some(e => e.id === extraId)) {
+                        tempSelectedExtras.push({ id: extraId, name: extraName, price: extraPrice });
+                    }
+                } else {
+                    tempSelectedExtras = tempSelectedExtras.filter(e => e.id !== extraId);
+                }
+
+                updateExtrasModalSummary();
+            });
+
+            // Seleccionar/deseleccionar todos
+            $('#selectAllExtras').on('change', function() {
+                const isChecked = $(this).is(':checked');
+                $('#extrasTableBody tr:visible').each(function() {
+                    const $checkbox = $(this).find('.extra-table-checkbox');
+                    if ($checkbox.prop('checked') !== isChecked) {
+                        $checkbox.prop('checked', isChecked).trigger('change');
+                    }
+                });
+            });
+
+            // Actualizar resumen en modal de extras
+            function updateExtrasModalSummary() {
+                const count = tempSelectedExtras.length;
+                const total = tempSelectedExtras.reduce((sum, e) => sum + e.price, 0);
+
+                $('#extrasSelectedCount').text(count);
+                $('#extrasSelectionTotal').text('$' + total.toFixed(2));
+            }
+
+            // Confirmar selección de extras
+            $('#btnConfirmExtras').on('click', function() {
+                // Guardar selección temporal como definitiva
+                selectedExtras = tempSelectedExtras.map(e => ({...e}));
+
+                // Actualizar UI
+                renderSelectedExtrasList();
+                recalculateFinalPrice();
+                updatePriceComparison();
+                updateItemSubtotal();
+
+                // Cerrar modal de extras
+                $('#extrasSelectionModal').modal('hide');
+            });
+
+            // Limpiar búsqueda al cerrar modal
+            $('#extrasSelectionModal').on('hidden.bs.modal', function() {
+                $('#extrasSearchInput').val('');
+                tempSelectedExtras = [];
+            });
+
+            // Recalcular precio final (base + extras + ajuste manual)
+            function recalculateFinalPrice() {
+                const extrasTotal = selectedExtras.reduce((sum, e) => sum + e.price, 0);
+                const manualAdjust = parseFloat($('#modalExtrasCost').val()) || 0;
+                const finalPrice = modalBasePrice + extrasTotal + manualAdjust;
+                $('#modalPrice').val(finalPrice.toFixed(2));
+            }
+
+            // Actualizar comparación de precios
+            function updatePriceComparison() {
+                if (!selectedProduct) {
+                    $('#priceComparisonContainer').hide();
+                    return;
+                }
+
+                const extrasTotal = selectedExtras.reduce((sum, e) => sum + e.price, 0);
+                const manualAdjust = parseFloat($('#modalExtrasCost').val()) || 0;
+                const finalPrice = parseFloat($('#modalPrice').val()) || 0;
+
+                $('#modalBasePriceDisplay').text('$' + modalBasePrice.toFixed(2));
+                $('#modalFinalPriceDisplay').text('$' + finalPrice.toFixed(2));
+
+                if (extrasTotal > 0 || manualAdjust > 0) {
+                    $('#extrasAdditionRow').show();
+                    $('#modalExtrasDisplay').text('$' + (extrasTotal + manualAdjust).toFixed(2));
+                } else {
+                    $('#extrasAdditionRow').hide();
+                }
+
+                $('#priceComparisonContainer').show();
+
+                // Mostrar alerta si precio fue modificado manualmente
+                const expectedPrice = modalBasePrice + extrasTotal + manualAdjust;
+                if (Math.abs(finalPrice - expectedPrice) > 0.01) {
+                    $('#priceModifiedAlert').show();
+                } else {
+                    $('#priceModifiedAlert').hide();
+                }
+            }
+
+            // Actualizar subtotal del ítem
+            function updateItemSubtotal() {
+                const qty = parseInt($('#modalQuantity').val()) || 1;
+                const price = parseFloat($('#modalPrice').val()) || 0;
+                const subtotal = qty * price;
+
+                $('#itemSubtotalDisplay').text('$' + subtotal.toFixed(2));
+                $('#itemSubtotalDetail').text(qty + ' × $' + price.toFixed(2));
+            }
+
+            // ==========================================
+            // GESTIÓN DE MEDIDAS DEL ITEM
+            // ==========================================
+
+            // Mostrar/ocultar sección de medidas según producto
+            function updateMeasurementsSectionVisibility() {
+                if (!selectedProduct) {
+                    $('#measurementsSection').hide();
+                    return;
+                }
+
+                if (selectedProduct.requires_measurements) {
+                    $('#measurementsSection').show();
+
+                    if (currentItemMeasurements) {
+                        // Hay medidas capturadas - mostrar como "Capturadas"
+                        $('#measurementsStatusBadge').text('Capturadas').removeClass('badge-light').addClass('badge-success');
+                        $('#btnMeasurementsText').text('Editar');
+                        // Mostrar resumen de medidas
+                        updateMeasurementsSummary(currentItemMeasurements);
+                        $('#measurementsSummaryBody').show();
+                    } else {
+                        // Sin medidas - mostrar como "Sin capturar"
+                        $('#measurementsStatusBadge').text('Sin capturar').removeClass('badge-success').addClass('badge-light');
+                        $('#btnMeasurementsText').text('Capturar');
+                        $('#measurementsSummaryBody').hide();
+                    }
+                } else {
+                    $('#measurementsSection').hide();
+                }
+            }
+
+            // Abrir modal de medidas (overlay, sin cerrar modal producto)
+            $('#btnOpenMeasurementsModal').on('click', function() {
+                if (!selectedProduct) return;
+
+                // Mostrar nombre del producto en el modal de medidas
+                $('#measurementsProductName').text(selectedProduct.name);
+
+                // Si hay medidas capturadas previamente, llenar los campos
+                if (currentItemMeasurements) {
+                    $('#medBusto').val(currentItemMeasurements.busto || '');
+                    $('#medCintura').val(currentItemMeasurements.cintura || '');
+                    $('#medCadera').val(currentItemMeasurements.cadera || '');
+                    $('#medAltoCintura').val(currentItemMeasurements.alto_cintura || '');
+                    $('#medLargo').val(currentItemMeasurements.largo || '');
+                    $('#medLargoVestido').val(currentItemMeasurements.largo_vestido || '');
+                } else {
+                    // Limpiar campos del modal de medidas
+                    $('#measurementsModal .medida-input').val('');
+                }
+
+                // Mostrar opción de guardar en cliente si hay cliente seleccionado
+                if (selectedClientData) {
+                    $('#saveToClientOption').show();
+                    // Rehidratar checkbox desde estado persistido
+                    const savedToClient = currentItemMeasurements?.save_to_client || false;
+                    $('#chkSaveMeasuresToClient').prop('checked', savedToClient);
+                } else {
+                    $('#saveToClientOption').hide();
+                }
+
+                // Reset selector de origen
+                $('input[name="measurementSource"][value="new"]').prop('checked', true);
+                $('#lblNewMeasures').addClass('active');
+                $('#lblExistingMeasures').removeClass('active');
+                $('#newMeasurementsPanel').show();
+                $('#existingMeasurementsPanel').hide();
+
+                // Abrir modal como overlay (NO cierra #addProductModal)
+                $('#measurementsModal').modal('show');
+            });
+
+            // Toggle entre capturar nuevas / usar existentes
+            $('input[name="measurementSource"]').on('change', function() {
+                const source = $(this).val();
+
+                if (source === 'new') {
+                    $('#newMeasurementsPanel').show();
+                    $('#existingMeasurementsPanel').hide();
+                } else {
+                    $('#newMeasurementsPanel').hide();
+                    $('#existingMeasurementsPanel').show();
+                    loadClientMeasurementsForSelection();
+                }
+            });
+
+            // Cargar medidas existentes del cliente
+            function loadClientMeasurementsForSelection() {
+                if (!selectedClientData) {
+                    $('#existingMeasuresLoading').hide();
+                    $('#existingMeasuresList').empty();
+                    $('#noExistingMeasuresAlert').show();
+                    return;
+                }
+
+                $('#existingMeasuresLoading').show();
+                $('#existingMeasuresList').empty();
+                $('#noExistingMeasuresAlert').hide();
+
+                // Usar cache si existe
+                if (clientMeasurementsCache !== null) {
+                    renderExistingMeasurements(clientMeasurementsCache);
+                    return;
+                }
+
+                // Cargar desde servidor
+                $.ajax({
+                    url: `/admin/orders/ajax/clientes/${selectedClientData.id}/measurements`,
+                    method: 'GET',
+                    dataType: 'json',
+                    success: function(measurements) {
+                        clientMeasurementsCache = measurements;
+                        renderExistingMeasurements(measurements);
+                    },
+                    error: function() {
+                        $('#existingMeasuresLoading').hide();
+                        $('#noExistingMeasuresAlert').show();
+                    }
+                });
+            }
+
+            // Renderizar lista de medidas existentes
+            function renderExistingMeasurements(measurements) {
+                $('#existingMeasuresLoading').hide();
+
+                if (!measurements || measurements.length === 0) {
+                    $('#noExistingMeasuresAlert').show();
+                    return;
+                }
+
+                const $list = $('#existingMeasuresList');
+                $list.empty();
+
+                measurements.forEach(m => {
+                    const summary = buildMeasurementSummaryText(m);
+                    const isPrimary = m.is_primary ? '<span class="badge badge-info ml-1">Principal</span>' : '';
+                    const label = m.label || 'Medidas registradas';
+
+                    const itemHtml = `
+                        <div class="card mb-2 measurement-option" data-measurement='${JSON.stringify(m)}' style="cursor: pointer;">
+                            <div class="card-body py-2 px-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>${label}</strong> ${isPrimary}
+                                        <div class="small text-muted">${summary}</div>
+                                    </div>
+                                    <i class="fas fa-chevron-right text-muted"></i>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    $list.append(itemHtml);
+                });
+            }
+
+            // Click en medida existente
+            $(document).on('click', '.measurement-option', function() {
+                const measurement = $(this).data('measurement');
+                if (!measurement) return;
+
+                // Llenar campos con medida seleccionada
+                $('#medBusto').val(measurement.busto || '');
+                $('#medCintura').val(measurement.cintura || '');
+                $('#medCadera').val(measurement.cadera || '');
+                $('#medAltoCintura').val(measurement.alto_cintura || '');
+                $('#medLargo').val(measurement.largo || '');
+                $('#medLargoVestido').val(measurement.largo_vestido || '');
+
+                // Cambiar a panel de captura para mostrar los valores
+                $('input[name="measurementSource"][value="new"]').prop('checked', true);
+                $('#lblNewMeasures').addClass('active');
+                $('#lblExistingMeasures').removeClass('active');
+                $('#newMeasurementsPanel').show();
+                $('#existingMeasurementsPanel').hide();
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Medidas cargadas',
+                    text: 'Puede ajustar los valores si es necesario.',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 2000
+                });
+            });
+
+            // Confirmar medidas
+            $('#btnConfirmMeasurements').on('click', function() {
+                // Recoger valores de los campos
+                const measurements = {
+                    busto: parseFloat($('#medBusto').val()) || null,
+                    cintura: parseFloat($('#medCintura').val()) || null,
+                    cadera: parseFloat($('#medCadera').val()) || null,
+                    alto_cintura: parseFloat($('#medAltoCintura').val()) || null,
+                    largo: parseFloat($('#medLargo').val()) || null,
+                    largo_vestido: parseFloat($('#medLargoVestido').val()) || null,
+                    // Persistir estado del checkbox POR ITEM
+                    save_to_client: $('#chkSaveMeasuresToClient').is(':checked')
+                };
+
+                // Verificar que al menos una medida tenga valor (excluir save_to_client)
+                const hasAnyMeasurement = ['busto', 'cintura', 'cadera', 'alto_cintura', 'largo', 'largo_vestido']
+                    .some(k => measurements[k] !== null && measurements[k] > 0);
+
+                if (!hasAnyMeasurement) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Sin medidas',
+                        text: 'Ingrese al menos una medida para continuar.',
+                        confirmButtonColor: '#6f42c1'
+                    });
+                    return;
+                }
+
+                // Guardar medidas en variable del item actual (flujo UNIFORME)
+                currentItemMeasurements = measurements;
+
+                // Actualizar UI del modal de producto
+                updateMeasurementsUIAfterCapture();
+
+                // Guardar en cliente si checkbox está marcado
+                if (measurements.save_to_client && selectedClientData) {
+                    saveMeasurementsToClient(measurements);
+                }
+
+                // Cerrar SOLO el modal de medidas (el de producto sigue abierto)
+                $('#measurementsModal').modal('hide');
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Medidas capturadas',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 2000
+                });
+            });
+
+            // Actualizar UI después de capturar medidas
+            function updateMeasurementsUIAfterCapture() {
+                if (!currentItemMeasurements) return;
+
+                // Cambiar badge a "Capturadas"
+                $('#measurementsStatusBadge')
+                    .text('Capturadas')
+                    .removeClass('badge-light')
+                    .addClass('badge-success');
+
+                $('#btnMeasurementsText').text('Editar');
+
+                // Mostrar resumen de medidas
+                const summaryHtml = buildMeasurementsSummaryHtml(currentItemMeasurements);
+                $('#measurementsSummaryContent').html(summaryHtml);
+                $('#measurementsSummaryBody').show();
+            }
+
+            // Construir texto resumen de medidas
+            function buildMeasurementSummaryText(m) {
+                const parts = [];
+                if (m.busto) parts.push(`B: ${m.busto}`);
+                if (m.cintura) parts.push(`Ci: ${m.cintura}`);
+                if (m.cadera) parts.push(`Ca: ${m.cadera}`);
+                if (m.alto_cintura) parts.push(`AC: ${m.alto_cintura}`);
+                if (m.largo) parts.push(`L: ${m.largo}`);
+                if (m.largo_vestido) parts.push(`LV: ${m.largo_vestido}`);
+                return parts.length > 0 ? parts.join(' | ') : 'Sin datos';
+            }
+
+            // Construir HTML de resumen para mostrar en el modal de producto
+            function buildMeasurementsSummaryHtml(m) {
+                let html = '';
+                const items = [
+                    { label: 'Busto', value: m.busto },
+                    { label: 'Cintura', value: m.cintura },
+                    { label: 'Cadera', value: m.cadera },
+                    { label: 'Alto Cintura', value: m.alto_cintura },
+                    { label: 'Largo', value: m.largo },
+                    { label: 'Largo Vestido', value: m.largo_vestido }
+                ];
+
+                items.forEach(item => {
+                    if (item.value) {
+                        html += `<div class="col-4 mb-1"><strong>${item.label}:</strong> ${item.value} cm</div>`;
+                    }
+                });
+
+                return html || '<div class="col-12 text-muted">Sin medidas</div>';
+            }
+
+            // Actualizar UI de resumen de medidas
+            function updateMeasurementsSummary(measurements) {
+                const summaryHtml = buildMeasurementsSummaryHtml(measurements);
+                $('#measurementsSummaryContent').html(summaryHtml);
+            }
+
+            // ══════════════════════════════════════════════════════════════
+            // FUTURA ACTIVACIÓN — MODELO DE CLIENTE NO CERRADO
+            // La persistencia real en cliente está DESACTIVADA hasta que:
+            // - Se defina modelo de versionado de medidas
+            // - Se implemente historial/rollback
+            // - Se cierre arquitectura de medidas en módulo clientes
+            // ══════════════════════════════════════════════════════════════
+            function saveMeasurementsToClient(measurements) {
+                if (!selectedClientData) return;
+
+                // NEUTRALIZADO: No se persiste en BD del cliente
+                // Las medidas SOLO quedan en el contexto del ítem (JS)
+
+                /* CÓDIGO ORIGINAL — REACTIVAR CUANDO MODELO ESTÉ CERRADO:
+                $.ajax({
+                    url: `/admin/orders/ajax/cliente/${selectedClientData.id}/measurements`,
+                    method: 'POST',
+                    data: {
+                        ...measurements,
+                        _token: '{{ csrf_token() }}'
+                    },
+                    success: function(response) {
+                        clientMeasurementsCache = null;
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Medidas guardadas',
+                            text: 'Las medidas se guardaron en el perfil del cliente',
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 3000
+                        });
+                    },
+                    error: function(xhr) {
+                        console.error('Error al guardar medidas en cliente:', xhr);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'No se pudieron guardar las medidas en el cliente',
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 3000
+                        });
+                    }
+                });
+                FIN CÓDIGO ORIGINAL */
+
+                // COMPORTAMIENTO TEMPORAL: Feedback informativo sin persistencia
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Medidas registradas',
+                    html: '<small>Las medidas se usarán para este pedido.<br>El guardado en cliente se habilitará próximamente.</small>',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 4000
+                });
+            }
+
+            // Limpiar cache de medidas cuando cambia el cliente
+            function clearMeasurementsCache() {
+                clientMeasurementsCache = null;
+                currentItemMeasurements = null;
+            }
+
+            // Habilitar/deshabilitar botón agregar
+            function updateAddButtonState() {
+                const $btn = $('#addProductBtn');
+
+                if (!selectedProduct) {
+                    $btn.prop('disabled', true);
+                    return;
+                }
+
+                const price = parseFloat($('#modalPrice').val()) || 0;
+
+                // Bloquear si precio es 0
+                if (price <= 0) {
+                    $btn.prop('disabled', true);
+                    return;
+                }
+
+                // VALIDACIÓN MEDIDAS LEGACY ELIMINADA (FASE 1)
+                // Las medidas se capturarán inline en FASE 2
+
+                $btn.prop('disabled', false);
             }
 
             function resetProductModal() {
@@ -1767,23 +2296,101 @@
                 $('#productPreviewName').text('-');
                 $('#productPreviewSku').text('-');
                 $('#productPreviewImage').attr('src', '{{ asset('img/no-image.png') }}');
+                $('#productPreviewType').hide();
+                // Reset medidas del item
+                currentItemMeasurements = null;
+                $('#measurementsSection').hide();
+                $('#measurementsStatusBadge').text('Sin capturar').removeClass('badge-success').addClass('badge-light');
+                $('#btnMeasurementsText').text('Capturar');
+                $('#measurementsSummaryBody').hide();
+                $('#measurementsSummaryContent').empty();
+                // Reset precio y comparación
                 $('#modalPrice').val('');
-                $('#modalQuantity').val(1);
+                $('#priceComparisonContainer').hide();
+                $('#priceModifiedAlert').hide();
+                $('#itemSubtotalContainer').hide();
+                // Reset personalización
+                $('#isCustomized').prop('checked', false);
+                $('#customizationBody').hide();
+                $('#customizationChevron').removeClass('fa-chevron-up').addClass('fa-chevron-down');
                 $('#modalEmbroideryText').val('');
+                $('#modalExtrasCost').val('0');
                 $('#modalCustomizationNotes').val('');
+                // Reset extras - Nueva estructura
+                $('#productExtrasSection').hide();
+                $('#selectedExtrasList').empty().hide();
+                $('#noExtrasSelectedMsg').show();
+                $('#extrasSubtotalDisplay').text('+$0.00');
+                selectedExtras = [];
+                tempSelectedExtras = [];
+                // Reset cantidad y variante
+                $('#modalQuantity').val(1);
                 $('#modalVariantSelect').empty().append('<option value="">-- Producto base --</option>');
                 $('#variantGroup').hide();
-                $('#addProductBtn').prop('disabled', true);
+                $('#addProductBtn').prop('disabled', true).text('Agregar al Pedido');
                 selectedProduct = null;
+                modalBasePrice = 0;
+                // Reset modo edición
+                editingItemIndex = null;
             }
+
+            // Variable para trackear precio base
+            let modalBasePrice = 0;
 
             $('#modalVariantSelect').on('change', function() {
                 const variantPrice = $(this).find('option:selected').data('price');
                 if (variantPrice) {
-                    $('#modalPrice').val(variantPrice);
+                    // Actualizar precio base con precio de variante
+                    modalBasePrice = parseFloat(variantPrice);
                 } else if (selectedProduct) {
-                    $('#modalPrice').val(selectedProduct.base_price);
+                    // Sin variante: usar precio base del producto
+                    modalBasePrice = parseFloat(selectedProduct.base_price) || 0;
                 }
+                // Recalcular precio final (base + extras + ajuste)
+                recalculateFinalPrice();
+                updatePriceComparison();
+                updateItemSubtotal();
+                updateAddButtonState();
+            });
+
+            // Actualizar estado del botón cuando cambia el precio
+            $('#modalPrice').on('input', function() {
+                updateAddButtonState();
+                updatePriceComparison();
+                updateItemSubtotal();
+            });
+
+            // Handler para checkbox de personalización
+            $('#isCustomized').on('change', function() {
+                const isChecked = $(this).is(':checked');
+                if (isChecked) {
+                    $('#customizationBody').slideDown(200);
+                    $('#customizationChevron').removeClass('fa-chevron-down').addClass('fa-chevron-up');
+                } else {
+                    $('#customizationBody').slideUp(200);
+                    $('#customizationChevron').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+                }
+            });
+
+            // Toggle por click en header de personalización
+            $('#customizationToggle').on('click', function(e) {
+                // Evitar toggle cuando se hace click directamente en el checkbox
+                if ($(e.target).is('#isCustomized') || $(e.target).closest('label').is('[for="isCustomized"]')) {
+                    return;
+                }
+                $('#isCustomized').prop('checked', !$('#isCustomized').is(':checked')).trigger('change');
+            });
+
+            // Handler para ajuste de precio manual
+            $('#modalExtrasCost').on('input', function() {
+                recalculateFinalPrice();
+                updatePriceComparison();
+                updateItemSubtotal();
+            });
+
+            // Handler para cambio de cantidad
+            $('#modalQuantity').on('input', function() {
+                updateItemSubtotal();
             });
 
             // ==========================================
@@ -1792,66 +2399,140 @@
             $('#addProductBtn').on('click', function() {
                 if (!selectedProduct) return;
 
+                // === VALIDACIÓN PREVIA: PRECIO ===
+                const price = parseFloat($('#modalPrice').val()) || 0;
+                if (price <= 0) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Precio requerido',
+                        text: 'Ingrese un precio válido mayor a $0',
+                        confirmButtonColor: '#7f00ff'
+                    });
+                    $('#modalPrice').focus();
+                    return;
+                }
+
+                // === VALIDACIÓN MEDIDAS LEGACY ELIMINADA (FASE 1) ===
+                // El flujo de medidas que cerraba el modal y abría otro fue eliminado.
+                // Las medidas se capturarán inline en FASE 2.
+
+                // Agregar producto directamente
+                addProductToOrder();
+            });
+
+            // Función separada para agregar/actualizar producto
+            function addProductToOrder() {
                 const variantId = $('#modalVariantSelect').val() || null;
                 const variantOption = $('#modalVariantSelect option:selected');
                 const newQuantity = parseInt($('#modalQuantity').val()) || 1;
+                const newPrice = parseFloat($('#modalPrice').val()) || 0;
 
-                // Buscar si ya existe el mismo producto/variante en la lista
-                const existingItem = orderItems.find(item =>
-                    item.product_id === selectedProduct.id &&
-                    item.product_variant_id === variantId
-                );
+                // Capturar datos de personalización
+                const isCustomized = $('#isCustomized').is(':checked');
+                const embroideryText = $('#modalEmbroideryText').val().trim();
+                const extrasCost = parseFloat($('#modalExtrasCost').val()) || 0;
+                const customizationNotes = $('#modalCustomizationNotes').val().trim();
 
-                if (existingItem) {
-                    // Ya existe: actualizar cantidad sumando la nueva
-                    existingItem.quantity += newQuantity;
+                // Clonar extras seleccionados para este ítem
+                const itemExtras = selectedExtras.map(e => ({
+                    id: e.id,
+                    name: e.name,
+                    price: e.price
+                }));
 
-                    // Actualizar precio si cambió
-                    const newPrice = parseFloat($('#modalPrice').val()) || 0;
-                    if (newPrice > 0) {
-                        existingItem.unit_price = newPrice;
+                // === MODO EDIT: Actualizar item existente ===
+                if (editingItemIndex !== null) {
+                    const editItem = orderItems.find(i => i.index === editingItemIndex);
+                    if (editItem) {
+                        // Actualizar TODOS los campos del item
+                        editItem.product_id = selectedProduct.id;
+                        editItem.product_variant_id = variantId;
+                        editItem.product_name = selectedProduct.name;
+                        editItem.variant_display = variantId ? (variantOption.text().split(' ($')[0] || editItem.variant_display) : null;
+                        editItem.variant_sku = variantId ? (variantOption.data('sku') || editItem.variant_sku) : null;
+                        editItem.image_url = selectedProduct.image_url;
+                        editItem.quantity = newQuantity;
+                        editItem.unit_price = newPrice;
+                        editItem.lead_time = selectedProduct.lead_time || 0;
+                        editItem.requires_measurements = selectedProduct.requires_measurements || false;
+                        editItem.product_type_name = selectedProduct.product_type_name || null;
+                        editItem.is_customized = isCustomized;
+                        editItem.embroidery_text = embroideryText;
+                        editItem.extras_cost = extrasCost;
+                        editItem.customization_notes = customizationNotes;
+                        editItem.selected_extras = itemExtras;
+                        editItem.measurements = currentItemMeasurements ? {...currentItemMeasurements} : null;
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Item actualizado',
+                            text: `${selectedProduct.name} ha sido modificado`,
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 2000
+                        });
                     }
-
-                    // Actualizar texto de bordado si se proporcionó uno nuevo
-                    const newEmbroideryText = $('#modalEmbroideryText').val().trim();
-                    if (newEmbroideryText) {
-                        existingItem.embroidery_text = newEmbroideryText;
-                    }
-
-                    // Actualizar notas de personalización si se proporcionaron nuevas
-                    const newCustomizationNotes = $('#modalCustomizationNotes').val().trim();
-                    if (newCustomizationNotes) {
-                        existingItem.customization_notes = newCustomizationNotes;
-                    }
-
-                    Swal.fire({
-                        icon: 'info',
-                        title: 'Cantidad actualizada',
-                        text: `${selectedProduct.name} ahora tiene ${existingItem.quantity} unidades`,
-                        toast: true,
-                        position: 'top-end',
-                        showConfirmButton: false,
-                        timer: 2500
-                    });
+                    // Reset modo edición
+                    editingItemIndex = null;
                 } else {
-                    // No existe: crear nuevo item
-                    const item = {
-                        index: itemIndex,
-                        product_id: selectedProduct.id,
-                        product_variant_id: variantId,
-                        product_name: selectedProduct.name,
-                        variant_display: variantId ? variantOption.text().split(' ($')[0] : null,
-                        variant_sku: variantId ? variantOption.data('sku') : null,
-                        image_url: selectedProduct.image_url,
-                        quantity: newQuantity,
-                        unit_price: parseFloat($('#modalPrice').val()) || 0,
-                        embroidery_text: $('#modalEmbroideryText').val().trim(),
-                        customization_notes: $('#modalCustomizationNotes').val().trim(),
-                        lead_time: selectedProduct.lead_time || 0
-                    };
+                    // === MODO CREATE ===
+                    // Buscar si ya existe el mismo producto/variante en la lista
+                    const existingItem = orderItems.find(item =>
+                        item.product_id === selectedProduct.id &&
+                        item.product_variant_id === variantId
+                    );
 
-                    orderItems.push(item);
-                    itemIndex++;
+                    if (existingItem) {
+                        // Ya existe: actualizar cantidad sumando la nueva
+                        existingItem.quantity += newQuantity;
+                        if (newPrice > 0) existingItem.unit_price = newPrice;
+                        if (isCustomized) {
+                            existingItem.is_customized = true;
+                            if (embroideryText) existingItem.embroidery_text = embroideryText;
+                            if (extrasCost > 0) existingItem.extras_cost = extrasCost;
+                            if (customizationNotes) existingItem.customization_notes = customizationNotes;
+                            if (itemExtras.length > 0) existingItem.selected_extras = itemExtras;
+                        }
+                        if (currentItemMeasurements) {
+                            existingItem.measurements = {...currentItemMeasurements};
+                        }
+
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Cantidad actualizada',
+                            text: `${selectedProduct.name} ahora tiene ${existingItem.quantity} unidades`,
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 2500
+                        });
+                    } else {
+                        // No existe: crear nuevo item
+                        const item = {
+                            index: itemIndex,
+                            product_id: selectedProduct.id,
+                            product_variant_id: variantId,
+                            product_name: selectedProduct.name,
+                            variant_display: variantId ? variantOption.text().split(' ($')[0] : null,
+                            variant_sku: variantId ? variantOption.data('sku') : null,
+                            image_url: selectedProduct.image_url,
+                            quantity: newQuantity,
+                            unit_price: newPrice,
+                            lead_time: selectedProduct.lead_time || 0,
+                            requires_measurements: selectedProduct.requires_measurements || false,
+                            product_type_name: selectedProduct.product_type_name || null,
+                            is_customized: isCustomized,
+                            embroidery_text: embroideryText,
+                            extras_cost: extrasCost,
+                            customization_notes: customizationNotes,
+                            selected_extras: itemExtras,
+                            measurements: currentItemMeasurements ? {...currentItemMeasurements} : null
+                        };
+
+                        orderItems.push(item);
+                        itemIndex++;
+                    }
                 }
 
                 productLeadTimes[selectedProduct.id] = selectedProduct.lead_time || 0;
@@ -1863,7 +2544,7 @@
 
                 $('#addProductModal').modal('hide');
                 resetProductModal();
-            });
+            }
 
             // ==========================================
             // RENDERIZAR TABLA DE ITEMS
@@ -1893,52 +2574,280 @@
 
                 orderItems.forEach((item) => {
                     const subtotal = item.quantity * item.unit_price;
+                    const leadTimeDays = item.lead_time || 0;
+
+                    // === CONSTRUCCIÓN DE BADGES POR FILAS ===
+                    // Variante
                     const variantText = item.variant_display ?
-                        `<br><small class="text-muted">${item.variant_display}</small>` : '';
-                    const embroideryBadge = item.embroidery_text ?
-                        `<br><span class="badge badge-info" title="Texto"><i class="fas fa-pen-fancy mr-1"></i>${item.embroidery_text}</span>` :
-                        '';
+                        `<small class="text-muted d-block">${item.variant_display}</small>` : '';
+
+                    // FILA 1: Personalizado + Medidas (2 por fila)
+                    let badgesRow1 = [];
+                    if (item.is_customized) {
+                        badgesRow1.push(`<span class="badge badge-purple" style="background: #7f00ff; color: #fff;"><i class="fas fa-magic mr-1"></i>Personal.</span>`);
+                    }
+                    if (item.requires_measurements) {
+                        if (item.measurements) {
+                            const measureSummary = buildMeasurementSummaryText(item.measurements);
+                            badgesRow1.push(`<span class="badge view-measurements-btn" style="background: #6f42c1; color: white; cursor: pointer;" data-index="${item.index}" title="Click para ver medidas: ${measureSummary}"><i class="fas fa-ruler-combined mr-1"></i>Medidas ✓</span>`);
+                        } else {
+                            badgesRow1.push(`<span class="badge badge-warning text-dark"><i class="fas fa-ruler mr-1"></i>Sin medidas</span>`);
+                        }
+                    }
+
+                    // FILA 2: Texto personalizado (embroidery_text)
+                    let embroideryRow = '';
+                    if (item.embroidery_text) {
+                        embroideryRow = `<div class="mt-1" style="font-size: 1.05rem;"><strong>Texto:</strong> ${item.embroidery_text}</div>`;
+                    }
+
+                    // FILA 3: Notas
+                    let notesRow = '';
+                    if (item.customization_notes) {
+                        notesRow = `<div class="mt-1" style="font-size: 1.05rem;"><strong>Notas:</strong> ${item.customization_notes}</div>`;
+                    }
+
+                    // Badge: Tiene extras (de BD)
+                    let extrasRow = '';
+                    if (item.selected_extras && item.selected_extras.length > 0) {
+                        const extrasNames = item.selected_extras.map(e => e.name).join(', ');
+                        const extrasTotal = item.selected_extras.reduce((sum, e) => sum + e.price, 0);
+                        extrasRow = `<div class="mt-1"><span class="badge badge-success" title="${extrasNames}"><i class="fas fa-plus-circle mr-1"></i>${item.selected_extras.length} extra${item.selected_extras.length > 1 ? 's' : ''} (+$${extrasTotal.toFixed(2)})</span></div>`;
+                    }
+
+                    // Construir HTML de badges
+                    const badgesRow1Html = badgesRow1.length > 0 ? `<div class="mt-1" style="line-height: 1.8;">${badgesRow1.join(' ')}</div>` : '';
+                    const badgesHtml = badgesRow1Html + embroideryRow + notesRow + extrasRow;
 
                     $tbody.append(`
                         <tr data-index="${item.index}">
                             <td><img src="${item.image_url || '{{ asset('img/no-image.png') }}'}" class="product-image-thumb" onerror="this.src='{{ asset('img/no-image.png') }}'"></td>
-                            <td><strong>${item.product_name}</strong>${variantText}${embroideryBadge}</td>
-                            <td><input type="number" class="form-control form-control-sm item-qty" value="${item.quantity}" min="1" max="999" data-index="${item.index}"></td>
                             <td>
-                                <div class="input-group input-group-sm">
-                                    <div class="input-group-prepend"><span class="input-group-text">$</span></div>
-                                    <input type="number" class="form-control item-price" value="${item.unit_price}" step="0.01" min="0" data-index="${item.index}">
-                                </div>
+                                <strong style="font-size: 1.05rem;">${item.product_name}</strong>
+                                ${variantText}
+                                ${badgesHtml}
                             </td>
-                            <td class="font-weight-bold text-success">$${subtotal.toFixed(2)}</td>
-                            <td><button type="button" class="btn btn-sm btn-outline-danger remove-item-btn" data-index="${item.index}"><i class="fas fa-trash"></i></button></td>
+                            <td><input type="number" class="form-control form-control-sm item-qty" value="${item.quantity}" min="1" max="999" data-index="${item.index}"></td>
+                            <td class="text-center">
+                                <span class="badge badge-secondary" style="font-size: 0.95rem;">${leadTimeDays} días</span>
+                            </td>
+                            <td class="font-weight-bold text-success" style="font-size: 1.05rem;">
+                                <div>$${subtotal.toFixed(2)}</div>
+                                <small class="text-muted">($${item.unit_price.toFixed(2)} c/u)</small>
+                            </td>
+                            <td class="text-nowrap">
+                                <button type="button" class="btn btn-sm btn-outline-primary edit-item-btn mr-1" data-index="${item.index}" title="Editar"><i class="fas fa-pencil-alt"></i></button>
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn" data-index="${item.index}" title="Eliminar"><i class="fas fa-trash"></i></button>
+                            </td>
                         </tr>
                     `);
                 });
             }
 
-            $(document).on('input', '.item-qty, .item-price', function() {
+            $(document).on('input', '.item-qty', function() {
                 const index = $(this).data('index');
                 const item = orderItems.find(i => i.index === index);
                 if (!item) return;
 
-                if ($(this).hasClass('item-qty')) {
-                    item.quantity = parseInt($(this).val()) || 1;
-                } else {
-                    item.unit_price = parseFloat($(this).val()) || 0;
-                }
+                item.quantity = parseInt($(this).val()) || 1;
+
+                // Actualizar solo el subtotal de esta fila (sin re-renderizar toda la tabla)
+                const subtotal = item.quantity * item.unit_price;
+                const $subtotalCell = $(this).closest('tr').find('td:nth-child(5)');
+                $subtotalCell.html(`<div>$${subtotal.toFixed(2)}</div><small class="text-muted">($${item.unit_price.toFixed(2)} c/u)</small>`);
+
+                // Actualizar contador de items
+                const totalQty = orderItems.reduce((sum, i) => sum + i.quantity, 0);
+                $('#itemsCounter').text(totalQty + ' item' + (totalQty !== 1 ? 's' : ''));
 
                 updateHiddenInputs();
                 calculateTotals();
-                renderItemsTable();
+                // NO llamar renderItemsTable() aquí - causa pérdida de foco
             });
 
             $(document).on('click', '.remove-item-btn', function() {
                 orderItems = orderItems.filter(i => i.index !== $(this).data('index'));
                 renderItemsTable();
+                // updateMeasurementsSectionVisibility(); // ELIMINADO (FASE 1)
                 updateHiddenInputs();
                 calculateTotals();
                 calculateMinimumDate();
+            });
+
+            // ==========================================
+            // VER MEDIDAS EN MODO READONLY (CLICK EN BADGE)
+            // ==========================================
+            $(document).on('click', '.view-measurements-btn', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const itemIdx = $(this).data('index');
+                const item = orderItems.find(i => i.index === itemIdx);
+                if (!item || !item.measurements) return;
+
+                // Configurar modal en modo READONLY
+                $('#measurementsModalTitle').text('Ver Medidas (Solo Lectura)');
+                $('#measurementsProductName').text(item.product_name);
+
+                // Ocultar selector de origen y panel existentes
+                $('#measurementsSourceSelector').hide();
+                $('#existingMeasurementsPanel').hide();
+                $('#saveToClientOption').hide();
+
+                // Mostrar panel de medidas con valores
+                $('#newMeasurementsPanel').show();
+
+                // Llenar campos con valores y deshabilitarlos
+                const m = item.measurements;
+                $('#medBusto').val(m.busto || '').prop('readonly', true);
+                $('#medAltoCintura').val(m.alto_cintura || '').prop('readonly', true);
+                $('#medCintura').val(m.cintura || '').prop('readonly', true);
+                $('#medCadera').val(m.cadera || '').prop('readonly', true);
+                $('#medLargo').val(m.largo || '').prop('readonly', true);
+                $('#medLargoVestido').val(m.largo_vestido || '').prop('readonly', true);
+
+                // Cambiar estilos a readonly
+                $('#measurementsModal .medida-input').css({
+                    'background-color': '#e9ecef',
+                    'cursor': 'not-allowed'
+                });
+
+                // Mostrar footer readonly, ocultar editable
+                $('#measurementsEditFooter').hide();
+                $('#measurementsReadonlyFooter').show();
+
+                // Marcar modal como readonly para reset posterior
+                $('#measurementsModal').data('readonly', true);
+
+                // Abrir modal
+                $('#measurementsModal').modal('show');
+            });
+
+            // Reset modal de medidas al cerrar
+            $('#measurementsModal').on('hidden.bs.modal', function() {
+                if ($(this).data('readonly')) {
+                    // Restaurar a modo editable para próximo uso
+                    $('#measurementsModalTitle').text('Capturar Medidas');
+                    $('#measurementsSourceSelector').show();
+                    $('#saveToClientOption').show();
+
+                    // Limpiar y habilitar campos
+                    $('#measurementsModal .medida-input')
+                        .val('')
+                        .prop('readonly', false)
+                        .css({
+                            'background-color': '',
+                            'cursor': ''
+                        });
+
+                    // Restaurar footers
+                    $('#measurementsEditFooter').show();
+                    $('#measurementsReadonlyFooter').hide();
+
+                    $(this).data('readonly', false);
+                }
+            });
+
+            // ==========================================
+            // EDITAR ITEM COMPLETO (UNIFORME)
+            // ==========================================
+            $(document).on('click', '.edit-item-btn', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const itemIdx = $(this).data('index');
+                const item = orderItems.find(i => i.index === itemIdx);
+                if (!item) return;
+
+                // Guardar índice del item que se está editando
+                editingItemIndex = itemIdx;
+
+                // Construir objeto selectedProduct desde los datos del item
+                selectedProduct = {
+                    id: item.product_id,
+                    name: item.product_name,
+                    base_price: item.unit_price,
+                    image_url: item.image_url,
+                    sku: item.variant_sku || null,
+                    requires_measurements: item.requires_measurements || false,
+                    product_type_name: item.product_type_name || null,
+                    lead_time: item.lead_time || 0,
+                    variants: [],
+                    extras: []
+                };
+
+                // Precargar precio base
+                modalBasePrice = item.unit_price;
+
+                // Precargar preview del producto
+                $('#productPreviewName').text(item.product_name);
+                $('#productPreviewSku').text(item.variant_sku || '-');
+                $('#productPreviewImage').attr('src', item.image_url || '{{ asset("img/no-image.png") }}');
+
+                if (item.product_type_name) {
+                    $('#productPreviewType')
+                        .html(`<span class="badge badge-secondary">${item.product_type_name}</span>`)
+                        .show();
+                } else {
+                    $('#productPreviewType').hide();
+                }
+
+                // Precargar Select2 con producto seleccionado
+                const optionText = `${item.product_name} - $${parseFloat(item.unit_price).toFixed(2)}`;
+                const newOption = new Option(optionText, item.product_id, true, true);
+                $('#modalProductSelect').append(newOption).trigger('change');
+
+                // Precargar cantidad
+                $('#modalQuantity').val(item.quantity);
+
+                // Precargar precio
+                $('#modalPrice').val(item.unit_price);
+
+                // Precargar variante (si existe)
+                if (item.product_variant_id) {
+                    const $variantSelect = $('#modalVariantSelect');
+                    $variantSelect.empty().append('<option value="">-- Producto base --</option>');
+                    $variantSelect.append(`<option value="${item.product_variant_id}" selected>${item.variant_display || item.variant_sku}</option>`);
+                    $('#variantGroup').show();
+                } else {
+                    $('#variantGroup').hide();
+                }
+
+                // Precargar personalización
+                if (item.is_customized) {
+                    $('#isCustomized').prop('checked', true);
+                    $('#customizationBody').show();
+                    $('#customizationChevron').removeClass('fa-chevron-down').addClass('fa-chevron-up');
+                } else {
+                    $('#isCustomized').prop('checked', false);
+                    $('#customizationBody').hide();
+                    $('#customizationChevron').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+                }
+                $('#modalEmbroideryText').val(item.embroidery_text || '');
+                $('#modalExtrasCost').val(item.extras_cost || 0);
+                $('#modalCustomizationNotes').val(item.customization_notes || '');
+
+                // Precargar extras seleccionados
+                selectedExtras = item.selected_extras ? [...item.selected_extras] : [];
+                renderSelectedExtrasList();
+                $('#productExtrasSection').show();
+
+                // Precargar medidas del item
+                currentItemMeasurements = item.measurements ? {...item.measurements} : null;
+
+                // Actualizar sección de medidas según tipo de producto
+                updateMeasurementsSectionVisibility();
+
+                // Mostrar subtotal
+                $('#itemSubtotalContainer').show();
+                updateItemSubtotal();
+                updatePriceComparison();
+
+                // Cambiar texto del botón a "Guardar Cambios"
+                $('#addProductBtn').text('Guardar Cambios').prop('disabled', false);
+
+                // Abrir modal de producto
+                $('#addProductModal').modal('show');
             });
 
             // ==========================================
@@ -1949,6 +2858,7 @@
                 $container.empty();
 
                 orderItems.forEach((item, idx) => {
+                    // Campos base del ítem
                     $container.append(`
                         <input type="hidden" name="items[${idx}][product_id]" value="${item.product_id}">
                         <input type="hidden" name="items[${idx}][product_variant_id]" value="${item.product_variant_id || ''}">
@@ -1956,7 +2866,33 @@
                         <input type="hidden" name="items[${idx}][unit_price]" value="${item.unit_price}">
                         <input type="hidden" name="items[${idx}][embroidery_text]" value="${item.embroidery_text || ''}">
                         <input type="hidden" name="items[${idx}][customization_notes]" value="${item.customization_notes || ''}">
+                        <input type="hidden" name="items[${idx}][extras_cost]" value="${item.extras_cost || 0}">
+                        <input type="hidden" name="items[${idx}][is_customized]" value="${item.is_customized ? 1 : 0}">
                     `);
+
+                    // Extras seleccionados (de BD)
+                    if (item.selected_extras && item.selected_extras.length > 0) {
+                        item.selected_extras.forEach((extra, extIdx) => {
+                            $container.append(`
+                                <input type="hidden" name="items[${idx}][extras][${extIdx}][id]" value="${extra.id}">
+                                <input type="hidden" name="items[${idx}][extras][${extIdx}][name]" value="${extra.name}">
+                                <input type="hidden" name="items[${idx}][extras][${extIdx}][price]" value="${extra.price}">
+                            `);
+                        });
+                    }
+
+                    // Medidas del item
+                    if (item.measurements) {
+                        $container.append(`
+                            <input type="hidden" name="items[${idx}][measurements][busto]" value="${item.measurements.busto || ''}">
+                            <input type="hidden" name="items[${idx}][measurements][cintura]" value="${item.measurements.cintura || ''}">
+                            <input type="hidden" name="items[${idx}][measurements][cadera]" value="${item.measurements.cadera || ''}">
+                            <input type="hidden" name="items[${idx}][measurements][alto_cintura]" value="${item.measurements.alto_cintura || ''}">
+                            <input type="hidden" name="items[${idx}][measurements][largo]" value="${item.measurements.largo || ''}">
+                            <input type="hidden" name="items[${idx}][measurements][largo_vestido]" value="${item.measurements.largo_vestido || ''}">
+                            <input type="hidden" name="items[${idx}][measurements][save_to_client]" value="${item.measurements.save_to_client ? '1' : '0'}">
+                        `);
+                    }
                 });
             }
 
@@ -2061,18 +2997,45 @@
             $('#promisedDate').on('change', validatePromisedDate);
 
             // ==========================================
+            // VALIDACIÓN: CLIENTE REQUERIDO PARA AGREGAR PRODUCTOS
+            // ==========================================
+            $('#btnAddProduct').on('click', function() {
+                if (!$('#cliente_id').val()) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Cliente requerido',
+                        text: 'Debe seleccionar un cliente antes de agregar productos',
+                        confirmButtonColor: '#7f00ff',
+                        confirmButtonText: 'Seleccionar cliente'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $('#clientSearchModal').modal('show');
+                        }
+                    });
+                    return;
+                }
+                $('#addProductModal').modal('show');
+            });
+
+            // ==========================================
             // MODALES - FOCUS Y RESET
             // ==========================================
             $('#addProductModal').on('show.bs.modal', function() {
-                resetProductModal();
+                // NO resetear si estamos editando un item existente
+                if (editingItemIndex === null) {
+                    resetProductModal();
+                }
             });
             $('#addProductModal').on('shown.bs.modal', function() {
-                setTimeout(function() {
-                    $('#modalProductSelect').select2('open');
+                // Solo abrir Select2 en modo CREATE (no en EDIT)
+                if (editingItemIndex === null) {
                     setTimeout(function() {
-                        document.querySelector('.select2-search__field')?.focus();
-                    }, 50);
-                }, 150);
+                        $('#modalProductSelect').select2('open');
+                        setTimeout(function() {
+                            document.querySelector('.select2-search__field')?.focus();
+                        }, 50);
+                    }, 150);
+                }
             });
 
             $('#quickClientModal').on('shown.bs.modal', function() {
@@ -2081,11 +3044,16 @@
                 }, 150);
             });
 
-            $('#measurementsModal').on('shown.bs.modal', function() {
-                setTimeout(function() {
-                    $('#measure_busto').focus();
-                }, 150);
-            });
+            // HANDLER #measurementsModal ELIMINADO (FASE 1) - Modal externo ya no existe
+            // HANDLER #btnGoToMeasures ELIMINADO (FASE 1) - Era el que cerraba el modal de producto
+
+            // ==========================================
+            // VISIBILIDAD SECCIÓN MEDIDAS — ELIMINADO (FASE 1)
+            // Funciones eliminadas:
+            // - hasProductsRequiringMeasurements()
+            // - updateMeasurementsSectionVisibility()
+            // El card global de medidas ya no existe.
+            // ==========================================
 
             // ==========================================
             // VALIDACIÓN AL ENVIAR
@@ -2103,17 +3071,23 @@
                     errors.push('<li><i class="fas fa-box mr-1"></i> Debe agregar al menos un producto</li>');
                 }
 
-                // 3. Validar método de pago
-                if (!$('#paymentMethod').val()) {
-                    errors.push('<li><i class="fas fa-dollar-sign mr-1"></i> Debe seleccionar un método de pago</li>');
+                // 3. VALIDACIÓN MEDIDAS LEGACY ELIMINADA (FASE 1)
+                // Las medidas se capturarán inline por ítem en FASE 2.
+                // Por ahora, no se bloquea el submit por medidas.
+
+                // 4. Validar método de pago (solo requerido si hay anticipo)
+                const initialPaymentVal = parseFloat($('#initialPayment').val()) || 0;
+                const payFullChecked = $('#payFull').is(':checked');
+                if ((initialPaymentVal > 0 || payFullChecked) && !$('#paymentMethod').val()) {
+                    errors.push('<li><i class="fas fa-dollar-sign mr-1"></i> Debe seleccionar un método de pago para registrar el anticipo</li>');
                 }
 
-                // 4. Validar fecha prometida
+                // 5. Validar fecha prometida
                 if (!$('#promisedDate').val()) {
                     errors.push('<li><i class="fas fa-calendar mr-1"></i> Debe indicar la fecha de entrega prometida</li>');
                 }
 
-                // 5. Validar que fecha prometida sea mayor o igual a la fecha mínima
+                // 6. Validar que fecha prometida sea mayor o igual a la fecha mínima
                 const promisedDate = $('#promisedDate').val();
                 const minDate = $('#promisedDate').attr('min');
                 if (promisedDate && minDate && promisedDate < minDate) {
@@ -2137,6 +3111,183 @@
                     return false;
                 }
             });
+
+            // ==========================================
+            // FASE 3: INICIALIZACIÓN MODO EDICIÓN
+            // ==========================================
+            @if(isset($isEdit) && isset($order) && isset($orderItems))
+            (function initEditMode() {
+                // Precargar cliente
+                const cliente = @json($order->cliente);
+                if (cliente) {
+                    selectedClientData = cliente;
+                    $('#cliente_id').val(cliente.id);
+                    $('.cliente-selector-btn').addClass('has-client')
+                        .html(`
+                            <div class="cliente-info">
+                                <span class="cliente-nombre">${cliente.nombre} ${cliente.apellidos || ''}</span>
+                                <span class="cliente-telefono">${cliente.telefono || ''}</span>
+                            </div>
+                            <i class="fas fa-check-circle text-success"></i>
+                        `);
+                    // Habilitar secciones
+                    $('#measurementSection').removeClass('section-disabled');
+                    $('#paymentSection').removeClass('section-disabled');
+                    $('#deliverySection').removeClass('section-disabled');
+                }
+
+                // Precargar items - CORREGIDO: usar 'index' en lugar de 'tempId'
+                const existingItems = @json($orderItems);
+                if (existingItems && existingItems.length > 0) {
+                    existingItems.forEach(function(item) {
+                        const newItem = {
+                            index: itemIndex, // CRÍTICO: debe ser 'index' no 'tempId'
+                            product_id: item.product_id,
+                            product_variant_id: item.product_variant_id,
+                            product_name: item.product_name,
+                            variant_sku: item.variant_sku,
+                            variant_display: item.variant_display || item.variant_sku,
+                            unit_price: parseFloat(item.unit_price) || 0,
+                            quantity: parseInt(item.quantity) || 1,
+                            lead_time: item.lead_time || 0,
+                            // Campos de tipo de producto
+                            requires_measurements: item.requires_measurements || false,
+                            product_type_name: item.product_type_name || null,
+                            // Campos de personalización (trim para evitar falsos negativos por espacios)
+                            is_customized: !!((item.embroidery_text || '').trim() || (item.customization_notes || '').trim()),
+                            embroidery_text: (item.embroidery_text || '').trim(),
+                            extras_cost: 0,
+                            customization_notes: (item.customization_notes || '').trim(),
+                            selected_extras: [],
+                            // Medidas del item
+                            measurements: item.measurements || null,
+                            // Imagen
+                            image_url: item.image_url || null
+                        };
+
+                        // Lead time en cache
+                        productLeadTimes[item.product_id] = item.lead_time || 0;
+
+                        orderItems.push(newItem);
+                        itemIndex++; // Incrementar DESPUÉS de asignar
+                    });
+
+                    // Renderizar tabla usando función correcta
+                    renderItemsTable();
+                    updateHiddenInputs();
+                    calculateTotals();
+                    calculateMinimumDate();
+                }
+
+                // Precargar valores del formulario
+                $('#urgency').val('{{ $order->urgency_level ?? "normal" }}').trigger('change');
+                $('#promisedDate').val('{{ $order->promised_date ? \Carbon\Carbon::parse($order->promised_date)->format("Y-m-d") : "" }}');
+                $('#discount').val('{{ $order->discount ?? 0 }}');
+                $('#notes').val(@json($order->notes ?? ''));
+                @if($order->requires_invoice)
+                $('#requiresInvoice').prop('checked', true).trigger('change');
+                @endif
+            })();
+            @endif
         });
+
+        // ==========================================
+        // VALIDACIÓN DE MEDIDAS (formato decimal)
+        // ==========================================
+        function validateMedidaModal(input) {
+            let value = input.value;
+
+            // 1. Eliminar todo excepto números y punto
+            value = value.replace(/[^0-9.]/g, '');
+
+            // 2. Evitar más de un punto
+            value = value.replace(/(\..*)\./g, '$1');
+
+            // Regex FINAL (igual al backend)
+            const finalRegex = /^[1-9]\d{0,2}(\.(?:[1-9]|\d[1-9]))?$/;
+
+            // Regex parcial permitida SOLO para escribir
+            const partialRegex = /^[1-9]\d{0,2}(\.\d{0,2})?$/;
+
+            // 3. Bloquear casos inválidos inmediatos
+            if (
+                value === '.' ||
+                value === '0' ||
+                value === '0.' ||
+                value === '.0'
+            ) {
+                input.value = '';
+                return;
+            }
+
+            // 4. Permitir escritura progresiva válida
+            if (value && !partialRegex.test(value)) {
+                input.value = value.slice(0, -1);
+                return;
+            }
+
+            // 5. Validación visual final
+            if (value && finalRegex.test(value)) {
+                input.classList.remove('is-invalid');
+            } else if (value) {
+                input.classList.add('is-invalid');
+            } else {
+                input.classList.remove('is-invalid');
+            }
+
+            input.value = value;
+        }
+
+        // ==========================================
+        // TOUCH FIX: Click/Touch en card enfoca input
+        // ==========================================
+        (function() {
+            // Esperar a que el modal exista en el DOM
+            $(document).on('shown.bs.modal', '#measurementsModal', function() {
+                const cards = document.querySelectorAll('#measurementsModal .medida-card');
+
+                cards.forEach(function(card) {
+                    let lastTouchTime = 0;
+
+                    function focusInput(e) {
+                        if (e.target.tagName === 'INPUT') return;
+
+                        const input = card.querySelector('.medida-input');
+                        if (!input) return;
+
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        input.focus();
+
+                        requestAnimationFrame(function() {
+                            input.select();
+                        });
+                    }
+
+                    card.addEventListener('touchstart', function(e) {
+                        if (e.target.tagName === 'INPUT') return;
+                        lastTouchTime = Date.now();
+                    }, { passive: true });
+
+                    card.addEventListener('touchend', function(e) {
+                        if (e.target.tagName === 'INPUT') return;
+
+                        const touchDuration = Date.now() - lastTouchTime;
+                        if (touchDuration < 300) {
+                            focusInput(e);
+                        }
+                    }, { passive: false });
+
+                    card.addEventListener('click', function(e) {
+                        if (e.target.tagName === 'INPUT') return;
+
+                        if (Date.now() - lastTouchTime < 500) return;
+
+                        focusInput(e);
+                    });
+                });
+            });
+        })();
     </script>
 @stop

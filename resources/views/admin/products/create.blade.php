@@ -2620,14 +2620,25 @@
 
                 // BOM: copiar materiales con cantidades y costos
                 $bomData = json_encode($cloneProduct->materials->map(function ($m) {
+                    $activeForVariants = $m->pivot->active_for_variants ?? null;
+                    $targets = [];
+                    $scope = 'global';
+                    if ($activeForVariants) {
+                        $decoded = is_string($activeForVariants) ? json_decode($activeForVariants, true) : $activeForVariants;
+                        if (is_array($decoded) && count($decoded) > 0) {
+                            $scope = 'specific';
+                            // Convertir IDs a formato temp_id para clone mode
+                            $targets = array_map(fn($id) => 'clone_' . $id, $decoded);
+                        }
+                    }
                     return [
                         'material_id' => $m->id, 'family_name' => $m->material?->name ?? '',
                         'variant_name' => $m->name ?? '',
                         'name' => ($m->material?->name ?? '').' - '.($m->name ?? ''),
                         'qty' => (float) $m->pivot->quantity, 'cost' => (float) $m->pivot->unit_cost,
                         'calculated_total' => (float) $m->pivot->total_cost,
-                        'unit' => $m->material?->baseUnit?->abbreviation ?? 'unid',
-                        'scope' => 'global', 'targets' => [],
+                        'unit' => $m->material?->consumptionUnit?->symbol ?? $m->material?->baseUnit?->symbol ?? 'unid',
+                        'scope' => $scope, 'targets' => $targets,
                     ];
                 })->values()->toArray());
 
@@ -2692,14 +2703,25 @@
                 })->values()->toArray());
 
                 $bomData = json_encode($product->materials->map(function ($m) {
+                    $activeForVariants = $m->pivot->active_for_variants ?? null;
+                    $targets = [];
+                    $scope = 'global';
+                    if ($activeForVariants) {
+                        $decoded = is_string($activeForVariants) ? json_decode($activeForVariants, true) : $activeForVariants;
+                        if (is_array($decoded) && count($decoded) > 0) {
+                            $scope = 'specific';
+                            // Convertir IDs a formato temp_id para edit mode: 'v_' + id
+                            $targets = array_map(fn($id) => 'v_' . $id, $decoded);
+                        }
+                    }
                     return [
                         'material_id' => $m->id, 'family_name' => $m->material?->name ?? '',
                         'variant_name' => $m->name ?? '',
                         'name' => ($m->material?->name ?? '').' - '.($m->name ?? ''),
                         'qty' => (float) $m->pivot->quantity, 'cost' => (float) $m->pivot->unit_cost,
                         'calculated_total' => (float) $m->pivot->total_cost,
-                        'unit' => $m->material?->baseUnit?->abbreviation ?? 'unid',
-                        'scope' => 'global', 'targets' => [],
+                        'unit' => $m->material?->consumptionUnit?->symbol ?? $m->material?->baseUnit?->symbol ?? 'unid',
+                        'scope' => $scope, 'targets' => $targets,
                     ];
                 })->values()->toArray());
 

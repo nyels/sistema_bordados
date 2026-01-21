@@ -4,12 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Str;
 use App\Traits\HasActivityLog;
 
 class MaterialVariant extends Model
 {
-    use HasActivityLog;
+    use HasActivityLog, HasFactory;
 
     protected $table = 'material_variants';
 
@@ -116,6 +117,32 @@ class MaterialVariant extends Model
     public function getIsLowStockAttribute(): bool
     {
         return $this->current_stock <= $this->min_stock_alert;
+    }
+
+    /**
+     * Stock reservado = SUM(reservations WHERE status = reserved)
+     */
+    public function getReservedStockAttribute(): float
+    {
+        return (float) \App\Models\InventoryReservation::where('material_variant_id', $this->id)
+            ->where('status', \App\Models\InventoryReservation::STATUS_RESERVED)
+            ->sum('quantity');
+    }
+
+    /**
+     * Stock disponible = stock_fisico - stock_reservado
+     */
+    public function getAvailableStockAttribute(): float
+    {
+        return max(0, $this->current_stock - $this->reserved_stock);
+    }
+
+    /**
+     * Verifica si el stock disponible está bajo el mínimo
+     */
+    public function getIsLowAvailableStockAttribute(): bool
+    {
+        return $this->available_stock <= $this->min_stock_alert;
     }
 
     /*

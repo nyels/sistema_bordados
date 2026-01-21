@@ -316,7 +316,49 @@
                     </div>
                 </div>
 
-                {{-- BILL OF MATERIALS (BOM) --}}
+                {{-- BILL OF MATERIALS (BOM) - AGRUPADO POR VARIANTE --}}
+                @php
+                    // Separar materiales globales vs específicos por variante
+                    $globalMaterials = collect();
+                    $materialsByVariant = [];
+
+                    // Inicializar arrays para cada variante
+                    foreach ($product->variants as $variant) {
+                        $materialsByVariant[$variant->id] = [
+                            'variant' => $variant,
+                            'materials' => collect(),
+                            'total' => 0,
+                        ];
+                    }
+
+                    foreach ($product->materials as $mat) {
+                        $activeForVariants = $mat->pivot->active_for_variants;
+
+                        // Decodificar JSON si es string
+                        if (is_string($activeForVariants)) {
+                            $activeForVariants = json_decode($activeForVariants, true);
+                        }
+
+                        // Si no hay variantes específicas o array vacío, es global
+                        if (empty($activeForVariants)) {
+                            $globalMaterials->push($mat);
+                        } else {
+                            // Asignar a cada variante específica
+                            foreach ($activeForVariants as $variantId) {
+                                if (isset($materialsByVariant[$variantId])) {
+                                    $materialsByVariant[$variantId]['materials']->push($mat);
+                                    $materialsByVariant[$variantId]['total'] += ($mat->pivot->quantity * $mat->pivot->unit_cost);
+                                }
+                            }
+                        }
+                    }
+
+                    // Calcular total global
+                    $globalTotal = $globalMaterials->sum(function($m) {
+                        return $m->pivot->quantity * $m->pivot->unit_cost;
+                    });
+                @endphp
+
                 <div class="card shadow-sm mb-4">
                     <div class="card-header border-0 bg-white">
                         <div class="d-flex justify-content-between align-items-center">
@@ -326,67 +368,125 @@
                             <span class="badge badge-light border">{{ $product->materials->count() }} Insumos</span>
                         </div>
                     </div>
-                    <div class="card-body p-0 table-responsive">
-                        <table class="table table-hover table-striped mb-0">
-                            <thead class="bg-light text-uppercase font-weight-bold text-dark">
-                                <tr>
-                                    <th class="pl-4">Material</th>
-                                    <th>Categoría</th>
-                                    <th class="text-center">Alcance</th>
-                                    <th class="text-center">Consumo</th>
-                                    <th class="text-right font-weight-bold">Costo Unitario</th>
-                                    <th class="text-right pr-4">Subtotal</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($product->materials->sortBy('material.category.name') as $mat)
-                                    <tr>
-                                        <td class="pl-4 align-middle">
-                                            <div class="font-weight-bold text-dark pb-0 mb-0" style="line-height:1.2;">
-                                                {{ $mat->material->name ?? 'N/A' }}
-                                                @if ($mat->color)
-                                                    <span class="text-dark">- {{ $mat->color }}</span>
-                                                @endif
-                                            </div>
-                                            @if ($mat->pivot->notes)
-                                                <div class="text-dark d-block"><i
-                                                        class="fas fa-info-circle mr-1"></i>{{ $mat->pivot->notes }}</div>
-                                            @endif
-                                        </td>
-                                        <td class="align-middle">
-                                            <span
-                                                class="badge badge-light border text-dark">{{ $mat->material->category->name ?? 'N/A' }}</span>
-                                        </td>
-                                        <td class="align-middle text-center">
-                                            @if ($mat->pivot->active_for_variants)
-                                                <span class="badge badge-info"
-                                                    title="Aplica solo a algunas variantes">Específico</span>
-                                            @else
-                                                <span class="badge badge-secondary"
-                                                    title="Aplica a todas las variantes">Global</span>
-                                            @endif
-                                        </td>
-                                        <td class="align-middle text-center font-weight-bold">
-                                            {{ floatval($mat->pivot->quantity) }}
-                                            <span
-                                                class="text-dark">{{ $mat->material->consumptionUnit->symbol ?? ($mat->material->baseUnit->symbol ?? 'unid') }}</span>
-                                        </td>
-                                        <td class="align-middle text-right font-weight-bold text-dark">
-                                            ${{ number_format($mat->pivot->unit_cost, 2) }}
-                                        </td>
-                                        <td class="align-middle text-right pr-4 font-weight-bold text-dark">
-                                            ${{ number_format($mat->pivot->quantity * $mat->pivot->unit_cost, 2) }}
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="6" class="text-center py-4 text-dark">
-                                            <i class="fas fa-box-open mr-2"></i>No hay materiales registrados en la receta.
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
+                    <div class="card-body p-0">
+
+                        {{-- MATERIALES GLOBALES (aplican a todas las variantes) --}}
+                        @if($globalMaterials->count() > 0)
+                            <div class="bg-secondary text-white px-4 py-2 font-weight-bold">
+                                <i class="fas fa-globe mr-2"></i>Materiales Comunes (Todas las Variantes)
+                                <span class="badge badge-light text-dark ml-2">{{ $globalMaterials->count() }} items</span>
+                                <span class="float-right">${{ number_format($globalTotal, 2) }}</span>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead class="bg-light text-uppercase small">
+                                        <tr>
+                                            <th class="pl-4">Material</th>
+                                            <th>Categoría</th>
+                                            <th class="text-center">Consumo</th>
+                                            <th class="text-right">Costo Unit.</th>
+                                            <th class="text-right pr-4">Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($globalMaterials->sortBy('material.category.name') as $mat)
+                                            <tr>
+                                                <td class="pl-4">
+                                                    <span class="font-weight-bold">{{ $mat->material->name ?? 'N/A' }}</span>
+                                                    @if ($mat->color)
+                                                        <span class="text-muted">- {{ $mat->color }}</span>
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    <span class="badge badge-light border small">{{ $mat->material->category->name ?? 'N/A' }}</span>
+                                                </td>
+                                                <td class="text-center font-weight-bold">
+                                                    {{ floatval($mat->pivot->quantity) }}
+                                                    <span class="text-muted">{{ $mat->material->consumptionUnit->symbol ?? ($mat->material->baseUnit->symbol ?? 'unid') }}</span>
+                                                </td>
+                                                <td class="text-right">${{ number_format($mat->pivot->unit_cost, 4) }}</td>
+                                                <td class="text-right pr-4 font-weight-bold">${{ number_format($mat->pivot->quantity * $mat->pivot->unit_cost, 2) }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @endif
+
+                        {{-- MATERIALES POR VARIANTE --}}
+                        @foreach($materialsByVariant as $variantId => $data)
+                            @if($data['materials']->count() > 0)
+                                @php
+                                    $variant = $data['variant'];
+                                    $attrDisplay = $variant->attributeValues->pluck('value')->join(' / ');
+                                @endphp
+                                <div class="bg-info text-white px-4 py-2 font-weight-bold" style="border-top: 2px solid #dee2e6;">
+                                    <i class="fas fa-tag mr-2"></i>Variante: {{ $attrDisplay ?: $variant->sku_variant }}
+                                    <span class="badge badge-light text-dark ml-2">{{ $data['materials']->count() }} items</span>
+                                    <span class="float-right">
+                                        @if($globalTotal > 0)
+                                            ${{ number_format($data['total'], 2) }} + ${{ number_format($globalTotal, 2) }} global = ${{ number_format($data['total'] + $globalTotal, 2) }}
+                                        @else
+                                            ${{ number_format($data['total'], 2) }}
+                                        @endif
+                                    </span>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover mb-0">
+                                        <thead class="bg-light text-uppercase small">
+                                            <tr>
+                                                <th class="pl-4">Material</th>
+                                                <th>Categoría</th>
+                                                <th class="text-center">Consumo</th>
+                                                <th class="text-right">Costo Unit.</th>
+                                                <th class="text-right pr-4">Subtotal</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($data['materials']->sortBy('material.category.name') as $mat)
+                                                <tr>
+                                                    <td class="pl-4">
+                                                        <span class="font-weight-bold">{{ $mat->material->name ?? 'N/A' }}</span>
+                                                        @if ($mat->color)
+                                                            <span class="text-muted">- {{ $mat->color }}</span>
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge badge-light border small">{{ $mat->material->category->name ?? 'N/A' }}</span>
+                                                    </td>
+                                                    <td class="text-center font-weight-bold">
+                                                        {{ floatval($mat->pivot->quantity) }}
+                                                        <span class="text-muted">{{ $mat->material->consumptionUnit->symbol ?? ($mat->material->baseUnit->symbol ?? 'unid') }}</span>
+                                                    </td>
+                                                    <td class="text-right">${{ number_format($mat->pivot->unit_cost, 4) }}</td>
+                                                    <td class="text-right pr-4 font-weight-bold">${{ number_format($mat->pivot->quantity * $mat->pivot->unit_cost, 2) }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @endif
+                        @endforeach
+
+                        {{-- SI NO HAY MATERIALES --}}
+                        @if($product->materials->count() === 0)
+                            <div class="text-center py-4 text-muted">
+                                <i class="fas fa-box-open fa-2x mb-2"></i>
+                                <p class="mb-0">No hay materiales registrados en la receta.</p>
+                            </div>
+                        @endif
+
+                        {{-- RESUMEN TOTAL BOM --}}
+                        @if($product->materials->count() > 0)
+                            <div class="bg-dark text-white px-4 py-3 d-flex justify-content-between align-items-center">
+                                <span class="font-weight-bold text-uppercase">
+                                    <i class="fas fa-calculator mr-2"></i>Total Receta de Materiales
+                                </span>
+                                <span class="h5 mb-0 font-weight-bold">
+                                    ${{ number_format($totalMaterialCost, 2) }}
+                                </span>
+                            </div>
+                        @endif
                     </div>
                 </div>
 
@@ -654,7 +754,15 @@
                                         <tr>
                                             <td class="pl-3 text-dark small font-weight-bold text-uppercase"
                                                 style="width:40%;">{{ $key }}</td>
-                                            <td class="small">{{ $value }}</td>
+                                            <td class="small">
+                                                @if(is_array($value))
+                                                    {{ json_encode($value, JSON_UNESCAPED_UNICODE) }}
+                                                @elseif(is_object($value))
+                                                    {{ json_encode($value, JSON_UNESCAPED_UNICODE) }}
+                                                @else
+                                                    {{ $value }}
+                                                @endif
+                                            </td>
                                         </tr>
                                     @endforeach
                                 </tbody>

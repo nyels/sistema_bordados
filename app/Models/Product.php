@@ -4,12 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 
 class Product extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, HasFactory;
 
     protected $table = 'products';
 
@@ -17,6 +18,7 @@ class Product extends Model
         'uuid',
         'tenant_id',
         'product_category_id',
+        'product_type_id',
         'name',
         'sku',
         'description',
@@ -37,6 +39,7 @@ class Product extends Model
     protected $casts = [
         'specifications' => 'array',
         'tenant_id' => 'integer',
+        'product_type_id' => 'integer',
         'base_price' => 'decimal:6',
         'production_cost' => 'decimal:6',
         'materials_cost' => 'decimal:6',
@@ -77,6 +80,11 @@ class Product extends Model
     public function category()
     {
         return $this->belongsTo(ProductCategory::class, 'product_category_id');
+    }
+
+    public function productType()
+    {
+        return $this->belongsTo(ProductType::class, 'product_type_id');
     }
 
     public function variants()
@@ -236,6 +244,30 @@ class Product extends Model
 
         $firstImage = $this->images->first();
         return $firstImage ? $firstImage->display_url : null;
+    }
+
+    /**
+     * Indica si este producto requiere medidas del cliente
+     */
+    public function getRequiresMeasurementsAttribute(): bool
+    {
+        return $this->productType?->requires_measurements ?? false;
+    }
+
+    /**
+     * Indica si el producto tiene tipo asignado
+     */
+    public function getHasProductTypeAttribute(): bool
+    {
+        return $this->product_type_id !== null;
+    }
+
+    /**
+     * Nombre del tipo de producto para display
+     */
+    public function getProductTypeNameAttribute(): ?string
+    {
+        return $this->productType?->display_name;
     }
 
     /*

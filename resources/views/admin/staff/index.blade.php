@@ -64,7 +64,10 @@
                                     <i class="fas fa-edit"></i>
                                 </a>
                                 <form action="{{ route('admin.staff.destroy', $person) }}" method="POST" class="d-inline"
-                                      onsubmit="return confirm('¿Eliminar este personal?')">
+                                      data-confirm="delete"
+                                      data-confirm-title="¿Eliminar a {{ $person->name }}?"
+                                      data-confirm-text="Se eliminará el registro de este personal."
+                                      data-confirm-impact="Si tiene usuario vinculado, el usuario también será desvinculado.">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-danger" title="Eliminar">

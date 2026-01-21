@@ -19,6 +19,11 @@ Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])
     ->name('home')
     ->middleware('auth');
 
+// Home Analytics (AJAX endpoint)
+Route::get('/home/analytics', [App\Http\Controllers\HomeController::class, 'analytics'])
+    ->name('home.analytics')
+    ->middleware('auth');
+
 /*
 |--------------------------------------------------------------------------
 | RUTAS DE DISEÑOS
@@ -109,6 +114,12 @@ Route::delete('admin/designs/{design}/variants/{variant}/images/{image}', [App\H
 
 // Módulo Producción (Principal)
 Route::group(['prefix' => 'admin/production', 'as' => 'admin.production.', 'middleware' => ['auth']], function () {
+    // Cola de produccion
+    Route::get('/queue', [App\Http\Controllers\ProductionQueueController::class, 'index'])->name('queue');
+    Route::get('/queue/{order}/materials', [App\Http\Controllers\ProductionQueueController::class, 'getMaterialsForOrder'])->name('queue.materials');
+    Route::patch('/queue/{order}/priority', [App\Http\Controllers\ProductionQueueController::class, 'updatePriority'])->name('queue.priority');
+    Route::post('/queue/{order}/start', [App\Http\Controllers\ProductionQueueController::class, 'startProduction'])->name('queue.start');
+
     Route::get('/', [App\Http\Controllers\ProduccionController::class, 'index'])->name('index');
     Route::get('/create', [App\Http\Controllers\ProduccionController::class, 'create'])->name('create');
     Route::post('/', [App\Http\Controllers\ProduccionController::class, 'store'])->name('store');
@@ -1156,16 +1167,21 @@ Route::prefix('admin/orders')->name('admin.orders.')->middleware('auth')->group(
     Route::get('create', [App\Http\Controllers\OrderController::class, 'create'])->name('create');
     Route::post('/', [App\Http\Controllers\OrderController::class, 'store'])->name('store');
     Route::get('{order}', [App\Http\Controllers\OrderController::class, 'show'])->name('show');
-    // NOTA: edit/update DESHABILITADOS - Los pedidos NO se editan (documento comercial)
-    // Flujo correcto: Crear → Ver → Gestionar pagos/estado
+    // FASE 3: Edición habilitada SOLO para pedidos en estado 'draft'
+    Route::get('{order}/edit', [App\Http\Controllers\OrderController::class, 'edit'])->name('edit');
+    Route::put('{order}', [App\Http\Controllers\OrderController::class, 'update'])->name('update');
     Route::patch('{order}/status', [App\Http\Controllers\OrderController::class, 'updateStatus'])->name('update-status');
     Route::patch('{order}/cancel', [App\Http\Controllers\OrderController::class, 'cancel'])->name('cancel');
     Route::post('{order}/payments', [App\Http\Controllers\OrderController::class, 'storePayment'])->name('payments.store');
+    Route::put('payments/{payment}', [App\Http\Controllers\OrderController::class, 'updatePayment'])->name('payments.update');
+    Route::delete('payments/{payment}', [App\Http\Controllers\OrderController::class, 'destroyPayment'])->name('payments.destroy');
 
     // AJAX
     Route::get('ajax/search-clientes', [App\Http\Controllers\OrderController::class, 'searchClientes'])->name('ajax.search-clientes');
     Route::get('ajax/search-products', [App\Http\Controllers\OrderController::class, 'searchProducts'])->name('ajax.search-products');
+    Route::get('ajax/product/{product}/extras', [App\Http\Controllers\OrderController::class, 'getProductExtras'])->name('ajax.product-extras');
     Route::get('ajax/cliente/{cliente}/measurements', [App\Http\Controllers\OrderController::class, 'getClientMeasurements'])->name('ajax.client-measurements');
+    Route::post('ajax/cliente/{cliente}/measurements', [App\Http\Controllers\OrderController::class, 'storeClientMeasurements'])->name('ajax.store-client-measurements');
     Route::get('ajax/{order}/check-annex-type', [App\Http\Controllers\OrderController::class, 'checkAnnexType'])->name('ajax.check-annex-type');
     Route::post('ajax/store-quick', [App\Http\Controllers\OrderController::class, 'storeQuick'])->name('ajax.store-quick');
 
@@ -1173,6 +1189,11 @@ Route::prefix('admin/orders')->name('admin.orders.')->middleware('auth')->group(
     Route::get('{order}/annex/create', [App\Http\Controllers\OrderController::class, 'createAnnex'])->name('create-annex');
     Route::post('{order}/annex', [App\Http\Controllers\OrderController::class, 'storeAnnex'])->name('store-annex');
     Route::post('{order}/annex-items', [App\Http\Controllers\OrderController::class, 'storeAnnexItems'])->name('store-annex-items');
+
+    // Mensajes operativos (comunicación en tiempo real)
+    Route::get('{order}/messages', [App\Http\Controllers\OrderMessageController::class, 'index'])->name('messages.index');
+    Route::post('{order}/messages', [App\Http\Controllers\OrderMessageController::class, 'store'])->name('messages.store');
+    Route::delete('{order}/messages/{message}', [App\Http\Controllers\OrderMessageController::class, 'destroy'])->name('messages.destroy');
 });
 
 /*
@@ -1189,3 +1210,54 @@ Route::prefix('admin/client-measurements')->name('admin.client-measurements.')->
     Route::patch('{measurement}/primary', [App\Http\Controllers\ClientMeasurementController::class, 'setPrimary'])->name('set-primary');
     Route::delete('{measurement}', [App\Http\Controllers\ClientMeasurementController::class, 'destroy'])->name('destroy');
 });
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE INVENTARIO OPERATIVO
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('admin/inventory')->name('admin.inventory.')->middleware('auth')->group(function () {
+    // Vista general de inventario
+    Route::get('/', [App\Http\Controllers\InventoryController::class, 'index'])->name('index');
+
+    // Kardex por variante de material
+    Route::get('kardex/{variant}', [App\Http\Controllers\InventoryController::class, 'kardex'])->name('kardex');
+
+    // Reservas activas
+    Route::get('reservations', [App\Http\Controllers\InventoryController::class, 'reservations'])->name('reservations');
+
+    // Historial de reservas (todas)
+    Route::get('reservations/history', [App\Http\Controllers\InventoryController::class, 'reservationsHistory'])->name('reservations.history');
+
+    // Ajustes manuales
+    Route::get('adjustment/{variant}', [App\Http\Controllers\InventoryController::class, 'adjustmentForm'])->name('adjustment');
+    Route::post('adjustment/{variant}', [App\Http\Controllers\InventoryController::class, 'storeAdjustment'])->name('adjustment.store');
+});
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE NOTIFICACIONES (Tiempo Real)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('admin/notifications')->name('admin.notifications.')->middleware('auth')->group(function () {
+    Route::get('recent', [App\Http\Controllers\NotificationController::class, 'getRecent'])->name('recent');
+    Route::get('count', [App\Http\Controllers\NotificationController::class, 'getCount'])->name('count');
+    Route::post('mark-read', [App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('mark-read');
+});
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE DISEÑO DE ITEMS (Personalización)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('admin/orders/{order}/items/{item}/design')->name('admin.orders.items.design.')->middleware('auth')->group(function () {
+    Route::post('upload', [App\Http\Controllers\OrderItemDesignController::class, 'upload'])->name('upload');
+    Route::post('send-review', [App\Http\Controllers\OrderItemDesignController::class, 'sendToReview'])->name('send-review');
+    Route::post('approve', [App\Http\Controllers\OrderItemDesignController::class, 'approve'])->name('approve');
+    Route::post('reject', [App\Http\Controllers\OrderItemDesignController::class, 'reject'])->name('reject');
+    Route::get('download', [App\Http\Controllers\OrderItemDesignController::class, 'download'])->name('download');
+});
+Route::get('admin/orders/{order}/designs/status', [App\Http\Controllers\OrderItemDesignController::class, 'status'])
+    ->name('admin.orders.designs.status')
+    ->middleware('auth');

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\OrderPayment;
+use App\Models\OrderEvent;
 use App\Models\Cliente;
 use App\Models\Product;
 use App\Models\ClientMeasurement;
@@ -24,6 +26,9 @@ class OrderController extends Controller
     // === LISTADO DE PEDIDOS ===
     public function index(Request $request)
     {
+        // ========================================
+        // QUERY CON FILTROS
+        // ========================================
         $query = Order::with(['cliente', 'items'])
             ->orderBy('created_at', 'desc');
 
@@ -33,10 +38,59 @@ class OrderController extends Controller
         if ($request->filled('payment_status')) {
             $query->where('payment_status', $request->payment_status);
         }
+        if ($request->filled('urgency')) {
+            $query->where('urgency_level', $request->urgency);
+        }
+        if ($request->boolean('blocked')) {
+            $query->where('status', Order::STATUS_CONFIRMED)
+                ->where(function ($q) {
+                    $q->whereHas('items', fn($i) => $i->where('has_pending_adjustments', true))
+                      ->orWhereHas('items', fn($i) => $i->where('personalization_type', OrderItem::PERSONALIZATION_DESIGN)
+                                                        ->where('design_approved', false));
+                });
+        }
+        if ($request->boolean('delayed')) {
+            $query->whereNotIn('status', [Order::STATUS_DELIVERED, Order::STATUS_CANCELLED])
+                ->whereDate('promised_date', '<', now());
+        }
 
         $orders = $query->paginate(20);
 
-        return view('admin.orders.index', compact('orders'));
+        // ========================================
+        // AJAX: Retornar solo la tabla
+        // ========================================
+        if ($request->ajax()) {
+            return view('admin.orders._table', compact('orders'));
+        }
+
+        // ========================================
+        // KPIs OPERATIVOS (solo para vista completa)
+        // ========================================
+        $kpis = [
+            'para_producir' => Order::where('status', Order::STATUS_CONFIRMED)
+                ->whereDoesntHave('items', fn($q) => $q->where('has_pending_adjustments', true))
+                ->whereDoesntHave('items', fn($q) => $q->where('personalization_type', OrderItem::PERSONALIZATION_DESIGN)
+                                                       ->where('design_approved', false))
+                ->count(),
+
+            'bloqueados' => Order::where('status', Order::STATUS_CONFIRMED)
+                ->where(function ($q) {
+                    $q->whereHas('items', fn($i) => $i->where('has_pending_adjustments', true))
+                      ->orWhereHas('items', fn($i) => $i->where('personalization_type', OrderItem::PERSONALIZATION_DESIGN)
+                                                        ->where('design_approved', false));
+                })
+                ->count(),
+
+            'en_produccion' => Order::where('status', Order::STATUS_IN_PRODUCTION)->count(),
+
+            'para_entregar' => Order::where('status', Order::STATUS_READY)->count(),
+
+            'retrasados' => Order::whereNotIn('status', [Order::STATUS_DELIVERED, Order::STATUS_CANCELLED])
+                ->whereDate('promised_date', '<', now())
+                ->count(),
+        ];
+
+        return view('admin.orders.index', compact('orders', 'kpis'));
     }
 
     // === FORMULARIO CREAR ===
@@ -64,6 +118,106 @@ class OrderController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()
                 ->with('error', 'Error al crear pedido: ' . $e->getMessage())
+                ->withInput();
+        }
+    }
+
+    // === FASE 3: EDITAR PEDIDO (SOLO DRAFT) ===
+    public function edit(Order $order)
+    {
+        // Bloquear si no está en draft
+        if ($order->status !== Order::STATUS_DRAFT) {
+            return redirect()->route('admin.orders.show', $order)
+                ->with('error', 'Solo se pueden editar pedidos en borrador.');
+        }
+
+        $order->load([
+            'cliente',
+            'items.product.primaryImage',
+            'items.product.productType',
+            'items.product.extras',
+            'items.variant.attributeValues',
+        ]);
+
+        $products = Product::where('status', 'active')
+            ->with(['variants', 'primaryImage', 'productType', 'extras'])
+            ->orderBy('name')
+            ->get();
+
+        // Preparar items para JS
+        $orderItems = $order->items->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'product_id' => $item->product_id,
+                'product_variant_id' => $item->product_variant_id,
+                'product_name' => $item->product_name,
+                'variant_sku' => $item->variant_sku,
+                'variant_display' => $item->variant?->attributes_display ?? $item->variant_sku,
+                'unit_price' => (float) $item->unit_price,
+                'quantity' => $item->quantity,
+                'subtotal' => (float) $item->subtotal,
+                'embroidery_text' => $item->embroidery_text,
+                'customization_notes' => $item->customization_notes,
+                'requires_measurements' => $item->requires_measurements,
+                'measurements' => $item->measurements,
+                'status' => $item->status,
+                'image_url' => $item->product?->primary_image_url,
+                'product_type_name' => $item->product?->productType?->display_name,
+                'lead_time' => $item->product?->production_lead_time ?? 0,
+                'extras' => $item->product?->extras->map(fn($e) => [
+                    'id' => $e->id,
+                    'name' => $e->name,
+                    'price_addition' => (float) $e->price_addition,
+                ]) ?? [],
+            ];
+        });
+
+        return view('admin.orders.create', [
+            'products' => $products,
+            'order' => $order,
+            'orderItems' => $orderItems,
+            'isEdit' => true,
+        ]);
+    }
+
+    // === FASE 3: ACTUALIZAR PEDIDO (SOLO DRAFT) ===
+    public function update(StoreOrderRequest $request, Order $order)
+    {
+        // Bloquear si no está en draft
+        if ($order->status !== Order::STATUS_DRAFT) {
+            return redirect()->route('admin.orders.show', $order)
+                ->with('error', 'Solo se pueden editar pedidos en borrador.');
+        }
+
+        $validated = $request->validated();
+
+        try {
+            // Eliminar items existentes y recrear
+            $order->items()->delete();
+
+            // Actualizar datos del pedido
+            $order->update([
+                'cliente_id' => $validated['cliente_id'],
+                'client_measurement_id' => $validated['client_measurement_id'] ?? null,
+                'urgency_level' => $validated['urgency_level'],
+                'promised_date' => $validated['promised_date'],
+                'notes' => $validated['notes'] ?? null,
+                'discount' => $validated['discount'] ?? 0,
+                'requires_invoice' => $validated['requires_invoice'] ?? false,
+                'updated_by' => Auth::id(),
+            ]);
+
+            // Recrear items (reutiliza lógica de syncOrderItems vía reflection o directamente)
+            $this->orderService->syncOrderItemsPublic($order, $validated['items']);
+
+            // Recalcular totales
+            $order->recalculateTotals();
+
+            return redirect()->route('admin.orders.show', $order)
+                ->with('success', "Pedido {$order->order_number} actualizado exitosamente.");
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Error al actualizar pedido: ' . $e->getMessage())
                 ->withInput();
         }
     }
@@ -144,11 +298,55 @@ class OrderController extends Controller
             'received_by' => Auth::id(),
         ]);
 
+        // === EVENTO: PAGO RECIBIDO ===
+        OrderEvent::logPayment($order->fresh(), $validated['amount'], $validated['payment_method']);
+
         return redirect()->route('admin.orders.show', $order)
             ->with('success', 'Pago registrado exitosamente.');
     }
 
-    // === CAMBIAR ESTADO (CON TRIGGER DE PRODUCCIÓN) ===
+    // === ACTUALIZAR PAGO ===
+    public function updatePayment(Request $request, OrderPayment $payment)
+    {
+        $order = $payment->order;
+
+        // Bloquear si pedido está en estado final
+        if (in_array($order->status, [Order::STATUS_DELIVERED, Order::STATUS_CANCELLED])) {
+            return redirect()->route('admin.orders.show', $order)
+                ->with('error', 'No se pueden modificar pagos de pedidos finalizados o cancelados.');
+        }
+
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'payment_method' => 'required|in:cash,transfer,card,other',
+            'reference' => 'nullable|string|max:100',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $payment->update($validated);
+
+        return redirect()->route('admin.orders.show', $order)
+            ->with('success', 'Pago actualizado exitosamente.');
+    }
+
+    // === ELIMINAR PAGO ===
+    public function destroyPayment(OrderPayment $payment)
+    {
+        $order = $payment->order;
+
+        // Bloquear si pedido está en estado final
+        if (in_array($order->status, [Order::STATUS_DELIVERED, Order::STATUS_CANCELLED])) {
+            return redirect()->route('admin.orders.show', $order)
+                ->with('error', 'No se pueden eliminar pagos de pedidos finalizados o cancelados.');
+        }
+
+        $payment->delete();
+
+        return redirect()->route('admin.orders.show', $order)
+            ->with('success', 'Pago eliminado exitosamente.');
+    }
+
+    // === CAMBIAR ESTADO (CON TRIGGERS DE INVENTARIO) ===
     public function updateStatus(Request $request, Order $order)
     {
         $request->validate([
@@ -157,44 +355,66 @@ class OrderController extends Controller
 
         $newStatus = $request->status;
 
-        // TRIGGER: Pasar a producción deduce inventario
+        // TRIGGER: Pasar a producción → RESERVA de inventario
         if ($newStatus === Order::STATUS_IN_PRODUCTION && $order->status === Order::STATUS_CONFIRMED) {
             try {
                 $this->orderService->triggerProduction($order);
                 return redirect()->route('admin.orders.show', $order)
-                    ->with('success', 'Pedido enviado a producción. Materiales deducidos del inventario.');
+                    ->with('success', 'Pedido enviado a producción. Materiales reservados.');
             } catch (\Exception $e) {
                 return redirect()->back()
                     ->with('error', 'Error al iniciar producción: ' . $e->getMessage());
             }
         }
 
-        // Cambio de estado normal
+        // TRIGGER: Entregar pedido → CONSUMO de inventario
+        if ($newStatus === Order::STATUS_DELIVERED && $order->status === Order::STATUS_READY) {
+            try {
+                $this->orderService->triggerDelivery($order);
+                return redirect()->route('admin.orders.show', $order)
+                    ->with('success', 'Pedido entregado. Materiales descontados del inventario.');
+            } catch (\Exception $e) {
+                return redirect()->back()
+                    ->with('error', 'Error al registrar entrega: ' . $e->getMessage());
+            }
+        }
+
+        // Cambio de estado normal (sin triggers de inventario)
+        $previousStatus = $order->status;
         $order->update([
             'status' => $newStatus,
-            'delivered_date' => $newStatus === Order::STATUS_DELIVERED ? now() : $order->delivered_date,
             'updated_by' => Auth::id(),
         ]);
+
+        // === EVENTO: CAMBIO DE ESTADO ===
+        if ($newStatus === Order::STATUS_CONFIRMED && $previousStatus === Order::STATUS_DRAFT) {
+            OrderEvent::logConfirmed($order);
+        } elseif ($newStatus === Order::STATUS_READY) {
+            OrderEvent::logReady($order);
+        } else {
+            OrderEvent::log(
+                $order,
+                OrderEvent::TYPE_STATUS_CHANGED,
+                "Estado cambiado de '{$previousStatus}' a '{$newStatus}'",
+                ['previous_status' => $previousStatus, 'new_status' => $newStatus]
+            );
+        }
 
         return redirect()->route('admin.orders.show', $order)
             ->with('success', 'Estado actualizado.');
     }
 
-    // === CANCELAR PEDIDO ===
+    // === CANCELAR PEDIDO (CON LIBERACIÓN DE RESERVAS) ===
     public function cancel(Order $order)
     {
-        if ($order->status === Order::STATUS_DELIVERED) {
+        try {
+            $this->orderService->cancelOrder($order);
+            return redirect()->route('admin.orders.show', $order)
+                ->with('success', 'Pedido cancelado. Reservas de inventario liberadas.');
+        } catch (\Exception $e) {
             return redirect()->back()
-                ->with('error', 'No se puede cancelar un pedido entregado.');
+                ->with('error', 'Error al cancelar: ' . $e->getMessage());
         }
-
-        $order->update([
-            'status' => Order::STATUS_CANCELLED,
-            'updated_by' => Auth::id(),
-        ]);
-
-        return redirect()->route('admin.orders.show', $order)
-            ->with('success', 'Pedido cancelado.');
     }
 
     // === AJAX: BUSCAR CLIENTES (formato Select2) ===
@@ -240,7 +460,7 @@ class OrderController extends Controller
                 $q->where('name', 'like', "%{$term}%")
                     ->orWhere('sku', 'like', "%{$term}%");
             })
-            ->with(['variants.attributeValues', 'primaryImage']);
+            ->with(['variants.attributeValues', 'primaryImage', 'productType', 'extras']);
 
         $total = $query->count();
         $products = $query->skip(($page - 1) * $perPage)
@@ -256,6 +476,15 @@ class OrderController extends Controller
                 'base_price' => $p->base_price,
                 'lead_time' => $p->production_lead_time ?? 0,
                 'image_url' => $p->primary_image_url,
+                // Campos para lógica de medidas por tipo de producto
+                'requires_measurements' => $p->productType?->requires_measurements ?? false,
+                'product_type_name' => $p->productType?->display_name ?? null,
+                // Extras del producto
+                'extras' => $p->extras->map(fn($e) => [
+                    'id' => $e->id,
+                    'name' => $e->name,
+                    'price_addition' => (float) $e->price_addition,
+                ]),
                 'variants' => $p->variants->map(function($v) use ($p) {
                     // Construir display de la variante
                     $display = $v->attributes_display;
@@ -313,6 +542,39 @@ class OrderController extends Controller
     {
         return $cliente->busto || $cliente->cintura || $cliente->cadera ||
                $cliente->alto_cintura || $cliente->largo || $cliente->largo_vestido;
+    }
+
+    // === AJAX: GUARDAR MEDIDAS EN CLIENTE ===
+    public function storeClientMeasurements(Request $request, Cliente $cliente)
+    {
+        // Actualizar medidas directamente en la tabla clientes
+        $cliente->update([
+            'busto' => $request->input('busto'),
+            'cintura' => $request->input('cintura'),
+            'cadera' => $request->input('cadera'),
+            'alto_cintura' => $request->input('alto_cintura'),
+            'largo' => $request->input('largo'),
+            'largo_vestido' => $request->input('largo_vestido'),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Medidas guardadas en el perfil del cliente',
+        ]);
+    }
+
+    // === AJAX: EXTRAS DE UN PRODUCTO ===
+    public function getProductExtras(Product $product)
+    {
+        $extras = $product->extras()->get();
+
+        return response()->json([
+            'extras' => $extras->map(fn($e) => [
+                'id' => $e->id,
+                'name' => $e->name,
+                'price_addition' => (float) $e->price_addition,
+            ]),
+        ]);
     }
 
     // === AJAX: VERIFICAR TIPO DE ANEXO PERMITIDO ===

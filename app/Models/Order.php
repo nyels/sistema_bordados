@@ -22,6 +22,7 @@ class Order extends Model
         'client_measurement_id',
         'status',
         'urgency_level',
+        'priority',
         'payment_status',
         'subtotal',
         'discount',
@@ -37,6 +38,12 @@ class Order extends Model
         'created_by',
         'updated_by',
     ];
+
+    // === CONSTANTES DE PRIORIDAD ===
+    public const PRIORITY_EXPRESS = 10;
+    public const PRIORITY_URGENT = 25;
+    public const PRIORITY_NORMAL = 50;
+    public const PRIORITY_LOW = 75;
 
     protected $casts = [
         'subtotal' => 'decimal:2',
@@ -153,6 +160,16 @@ class Order extends Model
         return $this->hasMany(Order::class, 'order_parent_id');
     }
 
+    public function events(): HasMany
+    {
+        return $this->hasMany(OrderEvent::class, 'order_id')->orderBy('created_at', 'desc');
+    }
+
+    public function messages(): HasMany
+    {
+        return $this->hasMany(OrderMessage::class, 'order_id')->orderBy('created_at', 'desc');
+    }
+
     // === SCOPES ===
 
     public function scopeStatus($query, string $status)
@@ -177,16 +194,22 @@ class Order extends Model
 
     public function recalculateTotals(): void
     {
+        // Subtotal base de items (sin ajustes)
         $this->subtotal = $this->items()->sum('subtotal');
 
-        // Calcular IVA si requiere factura
+        // Sumar costos extras de ajustes aprobados
+        $approvedExtras = $this->calculateApprovedExtras();
+
+        // Calcular IVA si requiere factura (sobre subtotal + extras - descuento)
+        $baseForIva = $this->subtotal + $approvedExtras - $this->discount;
         if ($this->requires_invoice) {
-            $this->iva_amount = ($this->subtotal - $this->discount) * self::IVA_RATE;
+            $this->iva_amount = $baseForIva * self::IVA_RATE;
         } else {
             $this->iva_amount = 0;
         }
 
-        $this->total = $this->subtotal - $this->discount + $this->iva_amount;
+        // Total = subtotal + extras aprobados - descuento + IVA
+        $this->total = $this->subtotal + $approvedExtras - $this->discount + $this->iva_amount;
         $this->amount_paid = $this->payments()->sum('amount');
         $this->balance = $this->total - $this->amount_paid;
 
@@ -199,7 +222,38 @@ class Order extends Model
             $this->payment_status = self::PAYMENT_PARTIAL;
         }
 
+        // Recalcular fechas (minimum_date basado en items)
+        $this->recalculateDates();
+
         $this->saveQuietly();
+    }
+
+    /**
+     * Calcula el total de costos extras de ajustes aprobados.
+     */
+    public function calculateApprovedExtras(): float
+    {
+        return (float) $this->items()
+            ->join('order_item_adjustments', 'order_items.id', '=', 'order_item_adjustments.order_item_id')
+            ->where('order_item_adjustments.status', 'approved')
+            ->sum('order_item_adjustments.real_cost');
+    }
+
+    /**
+     * Verifica si el pedido tiene ajustes pendientes de aprobación.
+     */
+    public function hasPendingAdjustments(): bool
+    {
+        return $this->items()->where('has_pending_adjustments', true)->exists();
+    }
+
+    /**
+     * Recalcula minimum_date basado en los items del pedido.
+     * BACKEND es la ÚNICA fuente de verdad para fechas.
+     */
+    public function recalculateDates(): void
+    {
+        $this->minimum_date = $this->calculateMinimumDate();
     }
 
     // Verificar si el pedido es editable (draft o confirmed)
@@ -218,23 +272,148 @@ class Order extends Model
         ]);
     }
 
+    /**
+     * Verifica si el pedido está en un estado que BLOQUEA mutaciones críticas.
+     * Estados bloqueados: in_production, ready, delivered
+     *
+     * Campos INMUTABLES post-producción:
+     * - items (no se pueden agregar/eliminar/modificar)
+     * - subtotal, discount, iva_amount, total (calculados)
+     * - requires_invoice (afecta IVA)
+     * - cliente_id (afecta facturación)
+     *
+     * Campos MUTABLES post-producción:
+     * - payment_status, amount_paid, balance (pagos siguen)
+     * - status (solo transiciones válidas)
+     * - notes (informativo)
+     * - delivered_date (al entregar)
+     */
+    public function isMutationBlocked(): bool
+    {
+        return $this->isInProduction();
+    }
+
+    /**
+     * Lista de campos que NO pueden modificarse post-producción.
+     */
+    public const IMMUTABLE_FIELDS_POST_PRODUCTION = [
+        'cliente_id',
+        'client_measurement_id',
+        'urgency_level',
+        'subtotal',
+        'discount',
+        'requires_invoice',
+        'iva_amount',
+        'total',
+        'promised_date',
+        'minimum_date',
+    ];
+
+    /**
+     * Valida que los cambios propuestos no violen reglas de inmutabilidad.
+     *
+     * @param array $changes Campos que se intentan modificar
+     * @throws \Exception Si se intenta modificar un campo inmutable
+     */
+    public function validateMutationAllowed(array $changes): void
+    {
+        if (!$this->isMutationBlocked()) {
+            return; // Mutaciones permitidas
+        }
+
+        $blockedChanges = array_intersect(
+            array_keys($changes),
+            self::IMMUTABLE_FIELDS_POST_PRODUCTION
+        );
+
+        if (!empty($blockedChanges)) {
+            $fieldList = implode(', ', $blockedChanges);
+            throw new \Exception(
+                "Mutación bloqueada: el pedido está en producción. " .
+                "Campos protegidos: {$fieldList}. " .
+                "Para modificar, primero revierta a estado 'confirmado' (requiere autorización)."
+            );
+        }
+    }
+
+    /**
+     * Verifica si se pueden agregar/eliminar items.
+     * REGLA: Post-producción NO se pueden modificar items directamente.
+     *        Se debe crear un pedido anexo.
+     */
+    public function canModifyItems(): bool
+    {
+        return !$this->isMutationBlocked();
+    }
+
+    /**
+     * Obtiene el motivo del bloqueo de mutación.
+     */
+    public function getMutationBlockReason(): ?string
+    {
+        if (!$this->isMutationBlocked()) {
+            return null;
+        }
+
+        return match($this->status) {
+            self::STATUS_IN_PRODUCTION => 'El pedido está en producción. Los materiales ya fueron reservados.',
+            self::STATUS_READY => 'El pedido está listo para entrega. La producción ha finalizado.',
+            self::STATUS_DELIVERED => 'El pedido ya fue entregado. Es un registro histórico.',
+            default => 'El pedido está en un estado que no permite modificaciones.',
+        };
+    }
+
     // Verificar si es pedido anexo
     public function isAnnex(): bool
     {
         return $this->order_parent_id !== null;
     }
 
-    // Calcular fecha mínima según productos y urgencia
+    /**
+     * Calcular fecha mínima según productos, personalización y urgencia.
+     * FÓRMULA: MAX(item.estimated_lead_time) × urgency_multiplier
+     * donde item.estimated_lead_time = product.lead_time × personalization_multiplier
+     */
     public function calculateMinimumDate(): ?\Carbon\Carbon
     {
-        $maxLeadTime = $this->items()
-            ->join('products', 'order_items.product_id', '=', 'products.id')
-            ->max('products.production_lead_time') ?? 0;
+        // Obtener el máximo tiempo estimado de los items
+        // Cada item ya tiene su estimated_lead_time calculado con su multiplicador
+        $maxLeadTime = $this->items()->max('estimated_lead_time');
 
-        $multiplier = self::URGENCY_MULTIPLIERS[$this->urgency_level ?? self::URGENCY_NORMAL];
-        $adjustedDays = (int) ceil($maxLeadTime * $multiplier);
+        // Si no hay items o no tienen estimated_lead_time, usar cálculo legacy
+        if (!$maxLeadTime) {
+            $maxLeadTime = $this->items()
+                ->join('products', 'order_items.product_id', '=', 'products.id')
+                ->max('products.production_lead_time') ?? 0;
+        }
+
+        // Aplicar multiplicador de urgencia
+        $urgencyMultiplier = self::URGENCY_MULTIPLIERS[$this->urgency_level ?? self::URGENCY_NORMAL];
+        $adjustedDays = (int) ceil($maxLeadTime * $urgencyMultiplier);
 
         return now()->addDays($adjustedDays);
+    }
+
+    /**
+     * Verifica si hay items con diseño pendiente de aprobación.
+     */
+    public function hasItemsPendingDesignApproval(): bool
+    {
+        return $this->items()
+            ->where('personalization_type', OrderItem::PERSONALIZATION_DESIGN)
+            ->where('design_approved', false)
+            ->exists();
+    }
+
+    /**
+     * Obtiene items que bloquean producción por diseño no aprobado.
+     */
+    public function getItemsBlockingForDesign(): \Illuminate\Support\Collection
+    {
+        return $this->items()
+            ->where('personalization_type', OrderItem::PERSONALIZATION_DESIGN)
+            ->where('design_approved', false)
+            ->get();
     }
 
     // === ACCESSORS ===

@@ -1,0 +1,198 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\MaterialVariant;
+use App\Models\InventoryMovement;
+use App\Models\InventoryReservation;
+use App\Models\Material;
+use App\Services\InventoryService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
+
+class InventoryController extends Controller
+{
+    public function __construct(
+        protected InventoryService $inventoryService
+    ) {
+        $this->middleware('auth');
+    }
+
+    // === VISTA 1: INVENTARIO GENERAL ===
+    public function index(Request $request)
+    {
+        $query = MaterialVariant::with(['material.category', 'material.baseUnit'])
+            ->where('activo', true);
+
+        // Filtro por categoría
+        if ($request->filled('category_id')) {
+            $query->whereHas('material', fn($q) => $q->where('material_category_id', $request->category_id));
+        }
+
+        // Filtro por estado de stock
+        if ($request->filled('stock_status')) {
+            if ($request->stock_status === 'low') {
+                $query->whereColumn('current_stock', '<=', 'min_stock_alert');
+            } elseif ($request->stock_status === 'ok') {
+                $query->whereColumn('current_stock', '>', 'min_stock_alert');
+            } elseif ($request->stock_status === 'zero') {
+                $query->where('current_stock', '<=', 0);
+            }
+        }
+
+        // Búsqueda
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('sku', 'like', "%{$search}%")
+                    ->orWhere('color', 'like', "%{$search}%")
+                    ->orWhereHas('material', fn($m) => $m->where('name', 'like', "%{$search}%"));
+            });
+        }
+
+        $variants = $query->orderBy('material_id')->paginate(25)->withQueryString();
+
+        // Totales para resumen
+        $totals = [
+            'total_value' => MaterialVariant::where('activo', true)->sum('current_value'),
+            'total_items' => MaterialVariant::where('activo', true)->count(),
+            'low_stock' => MaterialVariant::where('activo', true)->whereColumn('current_stock', '<=', 'min_stock_alert')->count(),
+            'total_reserved' => InventoryReservation::where('status', 'reserved')->sum('quantity'),
+        ];
+
+        $categories = \App\Models\MaterialCategory::orderBy('name')->get();
+
+        return view('admin.inventory.index', compact('variants', 'totals', 'categories'));
+    }
+
+    // === VISTA 2: KARDEX POR MATERIAL ===
+    public function kardex(Request $request, MaterialVariant $variant)
+    {
+        $query = InventoryMovement::where('material_variant_id', $variant->id)
+            ->with('creator')
+            ->orderBy('created_at', 'desc');
+
+        // Filtro por tipo
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        // Filtro por fecha
+        if ($request->filled('from')) {
+            $query->whereDate('created_at', '>=', $request->from);
+        }
+        if ($request->filled('to')) {
+            $query->whereDate('created_at', '<=', $request->to);
+        }
+
+        $movements = $query->paginate(50)->withQueryString();
+
+        // Resumen del material
+        $summary = [
+            'total_entries' => InventoryMovement::where('material_variant_id', $variant->id)->entries()->sum('quantity'),
+            'total_exits' => InventoryMovement::where('material_variant_id', $variant->id)->exits()->sum('quantity'),
+            'reserved' => $variant->reserved_stock,
+            'available' => $variant->available_stock,
+        ];
+
+        return view('admin.inventory.kardex', compact('variant', 'movements', 'summary'));
+    }
+
+    // === VISTA 3: RESERVAS ACTIVAS ===
+    public function reservations(Request $request)
+    {
+        $query = InventoryReservation::with(['order', 'orderItem', 'materialVariant.material'])
+            ->where('status', 'reserved')
+            ->orderBy('created_at', 'desc');
+
+        // Filtro por pedido
+        if ($request->filled('order_id')) {
+            $query->where('order_id', $request->order_id);
+        }
+
+        // Filtro por material
+        if ($request->filled('material_variant_id')) {
+            $query->where('material_variant_id', $request->material_variant_id);
+        }
+
+        $reservations = $query->paginate(50)->withQueryString();
+
+        // Totales
+        $totals = [
+            'total_reservations' => InventoryReservation::where('status', 'reserved')->count(),
+            'total_quantity' => InventoryReservation::where('status', 'reserved')->sum('quantity'),
+            'orders_with_reservations' => InventoryReservation::where('status', 'reserved')->distinct('order_id')->count('order_id'),
+        ];
+
+        return view('admin.inventory.reservations', compact('reservations', 'totals'));
+    }
+
+    // === AJUSTE MANUAL DE INVENTARIO ===
+    public function adjustmentForm(MaterialVariant $variant)
+    {
+        return view('admin.inventory.adjustment', compact('variant'));
+    }
+
+    public function storeAdjustment(Request $request, MaterialVariant $variant)
+    {
+        $request->validate([
+            'type' => 'required|in:positive,negative',
+            'quantity' => 'required|numeric|min:0.0001',
+            'unit_cost' => 'required_if:type,positive|numeric|min:0',
+            'notes' => 'required|string|min:10|max:500',
+        ], [
+            'notes.required' => 'El motivo del ajuste es obligatorio (mínimo 10 caracteres).',
+            'notes.min' => 'El motivo debe tener al menos 10 caracteres para auditoría.',
+        ]);
+
+        $isPositive = $request->type === 'positive';
+        $quantity = (float) $request->quantity;
+        $unitCost = $isPositive ? (float) $request->unit_cost : $variant->average_cost;
+
+        // Validar stock suficiente para ajuste negativo
+        if (!$isPositive && $variant->available_stock < $quantity) {
+            return back()->with('error', "Stock disponible insuficiente. Disponible: {$variant->available_stock}");
+        }
+
+        try {
+            $this->inventoryService->registerAdjustment(
+                variantId: $variant->id,
+                quantity: $quantity,
+                unitCost: $unitCost,
+                isPositive: $isPositive,
+                notes: "[AJUSTE MANUAL] {$request->notes}",
+                userId: Auth::id()
+            );
+
+            return redirect()->route('admin.inventory.kardex', $variant)
+                ->with('success', 'Ajuste registrado correctamente.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al registrar ajuste: ' . $e->getMessage());
+        }
+    }
+
+    // === HISTORIAL DE RESERVAS (TODAS) ===
+    public function reservationsHistory(Request $request)
+    {
+        $query = InventoryReservation::with(['order', 'orderItem', 'materialVariant.material', 'creator', 'consumer'])
+            ->orderBy('created_at', 'desc');
+
+        // Filtro por estado
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Filtro por fecha
+        if ($request->filled('from')) {
+            $query->whereDate('created_at', '>=', $request->from);
+        }
+        if ($request->filled('to')) {
+            $query->whereDate('created_at', '<=', $request->to);
+        }
+
+        $reservations = $query->paginate(50)->withQueryString();
+
+        return view('admin.inventory.reservations-history', compact('reservations'));
+    }
+}

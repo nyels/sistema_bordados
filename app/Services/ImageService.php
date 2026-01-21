@@ -107,22 +107,28 @@ class ImageService
                 $fileName = "{$designSlug}_{$timestamp}_{$hash}.{$correctExtension}";
             }
 
-            // Definir ruta basada en tipo de archivo
+            // Definir ruta basada en tipo de archivo y entidad
             $year = date('Y');
             $month = date('m');
             $detectedType = $request->input("_file_{$fieldName}_type", 'image');
 
-            switch ($detectedType) {
-                case 'vector':
-                    $path = "designs/vectors/{$year}/{$month}";
-                    break;
-                case 'embroidery':
-                    $path = "designs/embroidery/{$year}/{$month}";
-                    break;
-                case 'image':
-                default:
-                    $path = "designs/images/{$year}/{$month}";
-                    break;
+            // Si es un producto, usar directorio de productos
+            if ($imageableType === \App\Models\Product::class) {
+                $path = "products/{$year}/{$month}";
+            } else {
+                // Diseños y otros tipos
+                switch ($detectedType) {
+                    case 'vector':
+                        $path = "designs/vectors/{$year}/{$month}";
+                        break;
+                    case 'embroidery':
+                        $path = "designs/embroidery/{$year}/{$month}";
+                        break;
+                    case 'image':
+                    default:
+                        $path = "designs/images/{$year}/{$month}";
+                        break;
+                }
             }
 
             // Guardar original

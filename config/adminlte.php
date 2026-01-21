@@ -335,6 +335,14 @@ return [
         ['header' => 'DISEÑOS Y PRODUCCIÓN'],
 
         [
+            'text' => 'Cola de Producción',
+            'url' => 'admin/production/queue',
+            'icon' => 'fas fa-fw fa-industry',
+            'icon_color' => 'danger',
+            'active' => ['admin/production/queue*'],
+            'label_color' => 'warning',
+        ],
+        [
             'text' => 'Diseños',
             'url' => 'admin/designs',
             'icon' => 'fas fa-fw fa-pencil-ruler',
@@ -356,7 +364,7 @@ return [
                     'text' => 'Bordados / Exportaciones Técnicas',
                     'url' => 'admin/production',
                     'icon' => 'fas fa-fw fa-industry',
-                    'active' => ['admin/production*'],
+                    'active' => ['admin/production', 'admin/production/create*', 'admin/production/{id}*'],
                 ],
 
             ],
@@ -376,6 +384,31 @@ return [
         */
         ['header' => 'INVENTARIO Y COMPRAS'],
 
+        [
+            'text' => 'Inventario',
+            'icon' => 'fas fa-fw fa-warehouse',
+            'active' => ['admin/inventory*'],
+            'submenu' => [
+                [
+                    'text' => 'Vista General',
+                    'url' => 'admin/inventory',
+                    'icon' => 'fas fa-fw fa-th-list',
+                    'active' => ['admin/inventory'],
+                ],
+                [
+                    'text' => 'Reservas Activas',
+                    'url' => 'admin/inventory/reservations',
+                    'icon' => 'fas fa-fw fa-lock',
+                    'active' => ['admin/inventory/reservations'],
+                ],
+                [
+                    'text' => 'Historial Reservas',
+                    'url' => 'admin/inventory/reservations/history',
+                    'icon' => 'fas fa-fw fa-history',
+                    'active' => ['admin/inventory/reservations/history'],
+                ],
+            ],
+        ],
         [
             'text' => 'Materiales',
             'url' => 'admin/materials',
@@ -660,6 +693,26 @@ return [
                     'type' => 'css',
                     'asset' => true,
                     'location' => 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css',
+                ],
+            ],
+        ],
+        'Confirmations' => [
+            'active' => true,
+            'files' => [
+                [
+                    'type' => 'js',
+                    'asset' => true,
+                    'location' => 'js/confirmations.js',
+                ],
+            ],
+        ],
+        'Notifications' => [
+            'active' => true,
+            'files' => [
+                [
+                    'type' => 'js',
+                    'asset' => true,
+                    'location' => 'js/notifications.js',
                 ],
             ],
         ],

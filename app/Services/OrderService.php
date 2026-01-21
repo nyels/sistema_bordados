@@ -4,9 +4,14 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderItemAdjustment;
 use App\Models\OrderPayment;
+use App\Models\OrderEvent;
 use App\Models\Product;
 use App\Models\InventoryMovement;
+use App\Models\InventoryReservation;
+use App\Models\ClientMeasurementHistory;
+use App\Models\PersonalizationTimeMultiplier;
 use App\Enums\MovementType;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -34,9 +39,6 @@ class OrderService
             // Crear items con snapshots
             $this->syncOrderItems($order, $data['items']);
 
-            // Calcular y guardar fecha mínima
-            $this->calculateAndSetMinimumDate($order);
-
             // Registrar pago inicial si existe
             if ($this->shouldRecordPayment($data)) {
                 $this->recordInitialPayment($order, $data);
@@ -44,6 +46,9 @@ class OrderService
 
             // Recalcular totales
             $order->recalculateTotals();
+
+            // === EVENTO: PEDIDO CREADO ===
+            OrderEvent::logCreated($order);
 
             return $order->fresh();
         });
@@ -59,7 +64,17 @@ class OrderService
         $data['order_parent_id'] = $parentOrder->id;
         $data['cliente_id'] = $parentOrder->cliente_id;
 
-        return $this->createOrder($data);
+        $annexOrder = $this->createOrder($data);
+
+        // === EVENTO: ANEXO CREADO ===
+        OrderEvent::log(
+            $parentOrder,
+            OrderEvent::TYPE_ANNEX_CREATED,
+            "Pedido anexo {$annexOrder->order_number} creado",
+            ['annex_order_id' => $annexOrder->id, 'annex_order_number' => $annexOrder->order_number]
+        );
+
+        return $annexOrder;
     }
 
     // === DETERMINAR TIPO DE ANEXO PERMITIDO ===
@@ -88,6 +103,7 @@ class OrderService
     }
 
     // === AGREGAR ITEMS ANEXOS AL PEDIDO EXISTENTE ===
+    // Aplica la misma lógica de medidas por tipo de producto que syncOrderItems
     public function addAnnexItems(Order $order, array $items): array
     {
         $annexType = $this->determineAnnexType($order);
@@ -99,18 +115,29 @@ class OrderService
         return DB::transaction(function () use ($order, $items) {
             $createdItems = [];
 
+            // Obtener medidas del pedido para items que las requieran
+            $orderMeasurementId = $order->client_measurement_id;
+
             foreach ($items as $itemData) {
-                $product = Product::with('primaryImage')->find($itemData['product_id']);
+                $product = Product::with(['primaryImage', 'productType'])->find($itemData['product_id']);
                 $variant = isset($itemData['product_variant_id']) && $itemData['product_variant_id']
                     ? $product->variants->find($itemData['product_variant_id'])
                     : null;
 
                 $subtotal = $itemData['unit_price'] * $itemData['quantity'];
 
+                // LÓGICA DE MEDIDAS POR TIPO DE PRODUCTO
+                $requiresMeasurements = $product->productType?->requires_measurements ?? false;
+                $itemMeasurementId = $requiresMeasurements ? $orderMeasurementId : null;
+
                 $item = OrderItem::create([
                     'order_id' => $order->id,
                     'product_id' => $itemData['product_id'],
                     'product_variant_id' => $itemData['product_variant_id'] ?? null,
+                    // SNAPSHOT del tipo de producto
+                    'product_type_id' => $product->product_type_id,
+                    'requires_measurements' => $requiresMeasurements,
+                    'client_measurement_id' => $itemMeasurementId,
                     'product_name' => $product->name,
                     'variant_sku' => $variant?->sku_variant,
                     'unit_price' => $itemData['unit_price'],
@@ -128,11 +155,8 @@ class OrderService
                 $createdItems[] = $item;
             }
 
-            // Recalcular totales del pedido
+            // Recalcular totales del pedido (incluye fechas)
             $order->recalculateTotals();
-
-            // Recalcular fecha mínima
-            $this->calculateAndSetMinimumDate($order);
 
             return $createdItems;
         });
@@ -151,41 +175,357 @@ class OrderService
     }
 
     // === TRIGGER: PASAR A PRODUCCIÓN ===
+    // REGLAS DE PRODUCCIÓN (R1-R8):
+    // R1: Status debe ser 'confirmed'
+    // R2: No puede haber ajustes pendientes
+    // R3: Todos los items con diseño deben estar aprobados
+    // R4: Las medidas no pueden haber cambiado después de aprobación del diseño
+    // R5: Debe haber inventario disponible (físico - reservado) suficiente
+    // R6: La reserva de inventario debe ser atómica con locks
+    // R7: Debe ser concurrency-safe (SELECT FOR UPDATE)
+    // R8: La transición debe quedar registrada con usuario y timestamp
+    //
+    // FLUJO CORRECTO:
+    // - PRODUCCIÓN → RESERVA (no descuenta stock físico, bloquea disponibilidad)
+    // - ENTREGA → CONSUMO (descuenta stock físico)
+    // - CANCELACIÓN → LIBERA RESERVAS
     public function triggerProduction(Order $order): void
     {
+        // === R1: VALIDAR STATUS ===
         if ($order->status !== Order::STATUS_CONFIRMED) {
-            throw new \Exception('Solo pedidos confirmados pueden pasar a producción.');
+            throw new \Exception('R1: Solo pedidos confirmados pueden pasar a producción.');
         }
 
+        // === R2: VALIDAR AJUSTES PENDIENTES ===
+        if ($order->hasPendingAdjustments()) {
+            throw new \Exception('R2: No se puede pasar a producción: hay ajustes de precio pendientes de aprobación.');
+        }
+
+        // === R3: VALIDAR DISEÑOS APROBADOS ===
+        if ($order->hasItemsPendingDesignApproval()) {
+            $blockingItems = $order->getItemsBlockingForDesign();
+            $itemNames = $blockingItems->pluck('product_name')->implode(', ');
+            throw new \Exception("R3: No se puede pasar a producción: diseño pendiente de aprobación en: {$itemNames}");
+        }
+
+        // === R4: VALIDAR MEDIDAS POST-APROBACIÓN ===
+        $itemsWithChangedMeasurements = $order->items()
+            ->where('design_approved', true)
+            ->get()
+            ->filter(fn($item) => $item->hasMeasurementsChangedAfterApproval());
+
+        if ($itemsWithChangedMeasurements->isNotEmpty()) {
+            $itemNames = $itemsWithChangedMeasurements->pluck('product_name')->implode(', ');
+            throw new \Exception("R4: No se puede pasar a producción: medidas modificadas después de aprobación en: {$itemNames}. Requiere re-aprobación del diseño.");
+        }
+
+        // === R5, R6, R7: VALIDAR Y RESERVAR INVENTARIO CON LOCKS ===
         DB::transaction(function () use ($order) {
-            // Deducir materiales del inventario
+            // Calcular requerimientos totales de materiales
+            $materialRequirements = $this->calculateMaterialRequirements($order);
+
+            // Validar DISPONIBILIDAD (físico - reservado) y bloquear con SELECT FOR UPDATE
+            $this->validateAvailableInventory($materialRequirements);
+
+            // CREAR RESERVAS (NO descuenta stock físico)
             foreach ($order->items as $item) {
-                $this->deductMaterialsForItem($item);
+                $this->createReservationsForItem($item);
             }
 
-            // Actualizar estado
+            // === R8: REGISTRAR TRANSICIÓN ===
             $order->update([
                 'status' => Order::STATUS_IN_PRODUCTION,
                 'updated_by' => Auth::id(),
             ]);
+
+            // === EVENTO: PRODUCCIÓN INICIADA ===
+            $reservationsSummary = InventoryReservation::where('order_id', $order->id)
+                ->where('status', InventoryReservation::STATUS_RESERVED)
+                ->with('materialVariant.material')
+                ->get()
+                ->map(fn($r) => [
+                    'material' => $r->materialVariant->display_name ?? 'N/A',
+                    'quantity' => $r->quantity,
+                ])
+                ->toArray();
+
+            OrderEvent::logProductionStarted($order, $reservationsSummary);
         });
     }
 
+    // === TRIGGER: ENTREGAR PEDIDO ===
+    // Al entregar: Reservas → Consumidas, Stock físico → Descontado
+    public function triggerDelivery(Order $order): void
+    {
+        if ($order->status !== Order::STATUS_READY) {
+            throw new \Exception('Solo pedidos listos pueden ser entregados.');
+        }
+
+        DB::transaction(function () use ($order) {
+            // Obtener todas las reservas activas del pedido
+            $reservations = InventoryReservation::where('order_id', $order->id)
+                ->where('status', InventoryReservation::STATUS_RESERVED)
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($reservations as $reservation) {
+                // Bloquear variante para actualización
+                $variant = \App\Models\MaterialVariant::where('id', $reservation->material_variant_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                $stockBefore = $variant->current_stock;
+                $avgCostBefore = $variant->average_cost;
+                $valueBefore = $variant->current_value;
+
+                // Reducir stock físico
+                $variant->reduceStock($reservation->quantity);
+
+                // Crear movimiento de salida
+                InventoryMovement::create([
+                    'material_variant_id' => $variant->id,
+                    'type' => MovementType::EXIT,
+                    'quantity' => $reservation->quantity,
+                    'unit_cost' => $avgCostBefore,
+                    'total_cost' => $reservation->quantity * $avgCostBefore,
+                    'stock_before' => $stockBefore,
+                    'stock_after' => $variant->current_stock,
+                    'average_cost_before' => $avgCostBefore,
+                    'average_cost_after' => $variant->average_cost,
+                    'value_before' => $valueBefore,
+                    'value_after' => $variant->current_value,
+                    'reference_type' => 'order_delivery',
+                    'reference_id' => $order->id,
+                    'notes' => "Entrega pedido {$order->order_number}",
+                    'created_by' => Auth::id(),
+                ]);
+
+                // Marcar reserva como consumida
+                $reservation->markConsumed(Auth::id());
+            }
+
+            // Actualizar estado del pedido
+            $order->update([
+                'status' => Order::STATUS_DELIVERED,
+                'delivered_date' => now(),
+                'updated_by' => Auth::id(),
+            ]);
+
+            // === EVENTO: PEDIDO ENTREGADO ===
+            $consumedMaterials = $reservations->map(fn($r) => [
+                'material_variant_id' => $r->material_variant_id,
+                'quantity' => $r->quantity,
+            ])->toArray();
+
+            OrderEvent::logDelivered($order, $consumedMaterials);
+        });
+    }
+
+    // === CANCELAR PEDIDO CON LIBERACIÓN DE RESERVAS ===
+    public function cancelOrder(Order $order, ?string $reason = null): void
+    {
+        if ($order->status === Order::STATUS_DELIVERED) {
+            throw new \Exception('No se puede cancelar un pedido entregado.');
+        }
+
+        DB::transaction(function () use ($order, $reason) {
+            // Liberar todas las reservas activas
+            $reservations = InventoryReservation::where('order_id', $order->id)
+                ->where('status', InventoryReservation::STATUS_RESERVED)
+                ->get();
+
+            foreach ($reservations as $reservation) {
+                $reservation->markReleased();
+            }
+
+            // Actualizar estado del pedido
+            $order->update([
+                'status' => Order::STATUS_CANCELLED,
+                'notes' => $order->notes . ($reason ? "\n[Cancelado: {$reason}]" : ''),
+                'updated_by' => Auth::id(),
+            ]);
+
+            // === EVENTO: PEDIDO CANCELADO ===
+            OrderEvent::logCancelled($order, $reason);
+        });
+    }
+
+    /**
+     * Calcula los requerimientos totales de materiales para un pedido.
+     * @return array [material_variant_id => required_quantity]
+     */
+    protected function calculateMaterialRequirements(Order $order): array
+    {
+        $requirements = [];
+
+        foreach ($order->items as $item) {
+            $product = $item->product;
+
+            if (!$product->relationLoaded('materials')) {
+                $product->load('materials');
+            }
+
+            foreach ($product->materials as $materialVariant) {
+                $requiredQty = $materialVariant->pivot->quantity * $item->quantity;
+                $variantId = $materialVariant->id;
+
+                if (!isset($requirements[$variantId])) {
+                    $requirements[$variantId] = 0;
+                }
+                $requirements[$variantId] += $requiredQty;
+            }
+        }
+
+        return $requirements;
+    }
+
+    /**
+     * Valida DISPONIBILIDAD de inventario (físico - reservado) con lock FOR UPDATE.
+     * REGLA: TODO O NADA - si falta un material, NO se reserva nada.
+     *
+     * @throws \Exception Si el inventario disponible es insuficiente
+     */
+    protected function validateAvailableInventory(array $requirements): void
+    {
+        if (empty($requirements)) {
+            return;
+        }
+
+        // Cargar variantes con lock FOR UPDATE para evitar race conditions
+        $materialVariants = \App\Models\MaterialVariant::whereIn('id', array_keys($requirements))
+            ->lockForUpdate()
+            ->get()
+            ->keyBy('id');
+
+        // Obtener reservas activas por material
+        $activeReservations = InventoryReservation::whereIn('material_variant_id', array_keys($requirements))
+            ->where('status', InventoryReservation::STATUS_RESERVED)
+            ->selectRaw('material_variant_id, SUM(quantity) as total_reserved')
+            ->groupBy('material_variant_id')
+            ->pluck('total_reserved', 'material_variant_id');
+
+        $insufficientMaterials = [];
+
+        foreach ($requirements as $variantId => $requiredQty) {
+            $variant = $materialVariants->get($variantId);
+
+            if (!$variant) {
+                $insufficientMaterials[] = "Material ID {$variantId} no encontrado";
+                continue;
+            }
+
+            $reserved = $activeReservations->get($variantId, 0);
+            $available = $variant->current_stock - $reserved;
+
+            if ($available < $requiredQty) {
+                $insufficientMaterials[] = "{$variant->display_name}: necesita {$requiredQty}, disponible {$available} (físico: {$variant->current_stock}, reservado: {$reserved})";
+            }
+        }
+
+        if (!empty($insufficientMaterials)) {
+            throw new \Exception('Inventario insuficiente por reserva concurrente. ' . implode('; ', $insufficientMaterials));
+        }
+    }
+
+    /**
+     * Crea reservas de inventario para un item (NO descuenta stock físico).
+     */
+    protected function createReservationsForItem(OrderItem $item): void
+    {
+        $product = $item->product;
+
+        if (!$product->relationLoaded('materials')) {
+            $product->load('materials');
+        }
+
+        foreach ($product->materials as $materialVariant) {
+            $requiredQty = $materialVariant->pivot->quantity * $item->quantity;
+
+            if ($requiredQty <= 0) {
+                continue;
+            }
+
+            // Crear reserva (NO toca stock físico)
+            InventoryReservation::create([
+                'order_id' => $item->order_id,
+                'order_item_id' => $item->id,
+                'material_variant_id' => $materialVariant->id,
+                'quantity' => $requiredQty,
+                'status' => InventoryReservation::STATUS_RESERVED,
+                'created_by' => Auth::id(),
+            ]);
+        }
+    }
+
     // === SINCRONIZAR ITEMS CON SNAPSHOTS ===
+    // IMPORTANTE: Aquí se aplica la lógica de medidas por tipo de producto
+    // - Si product_type.requires_measurements = TRUE → asignar client_measurement_id del pedido
+    // - Si product_type.requires_measurements = FALSE → FORZAR client_measurement_id = NULL
+    // FASE 3: Expuesto como público para update de pedidos
+    public function syncOrderItemsPublic(Order $order, array $items): void
+    {
+        $this->syncOrderItems($order, $items);
+    }
+
     protected function syncOrderItems(Order $order, array $items): void
     {
+        // Obtener medidas del pedido para items que las requieran (legacy FK)
+        $orderMeasurementId = $order->client_measurement_id;
+
         foreach ($items as $itemData) {
-            $product = Product::with('primaryImage')->find($itemData['product_id']);
+            $product = Product::with(['primaryImage', 'productType'])->find($itemData['product_id']);
             $variant = isset($itemData['product_variant_id']) && $itemData['product_variant_id']
                 ? $product->variants->find($itemData['product_variant_id'])
                 : null;
 
             $subtotal = $itemData['unit_price'] * $itemData['quantity'];
 
-            OrderItem::create([
+            // LÓGICA DE MEDIDAS POR TIPO DE PRODUCTO
+            $requiresMeasurements = $product->productType?->requires_measurements ?? false;
+
+            // MEDIDAS INLINE (prioridad sobre FK)
+            // Si vienen medidas inline del frontend, usarlas
+            $inlineMeasurements = null;
+            if ($requiresMeasurements && !empty($itemData['measurements'])) {
+                $inlineMeasurements = $itemData['measurements'];
+            }
+
+            // FK a client_measurements (legacy/fallback)
+            // Solo usar si requiere medidas Y NO hay medidas inline
+            $itemMeasurementId = null;
+            if ($requiresMeasurements && empty($inlineMeasurements) && $orderMeasurementId) {
+                $itemMeasurementId = $orderMeasurementId;
+            }
+
+            // FASE 2: Calcular estado inicial basado en medidas
+            // REGLA: requires_measurements=true Y measurements=NULL → PENDING
+            //        Cualquier otro caso → PENDING (listo para producción)
+            $initialStatus = OrderItem::STATUS_PENDING;
+
+            // === CALCULAR TIPO DE PERSONALIZACIÓN Y TIEMPO ESTIMADO ===
+            $personalizationType = PersonalizationTimeMultiplier::determineType([
+                'embroidery_text' => $itemData['embroidery_text'] ?? null,
+                'measurements' => $inlineMeasurements,
+                'customization_notes' => $itemData['customization_notes'] ?? null,
+            ]);
+
+            $timeMultiplier = PersonalizationTimeMultiplier::getMultiplier($personalizationType);
+            $baseLeadTime = $product->production_lead_time ?? 0;
+            $estimatedLeadTime = (int) ceil($baseLeadTime * $timeMultiplier);
+
+            // Diseño requiere aprobación explícita
+            $designApproved = $personalizationType !== OrderItem::PERSONALIZATION_DESIGN;
+
+            $orderItem = OrderItem::create([
                 'order_id' => $order->id,
                 'product_id' => $itemData['product_id'],
                 'product_variant_id' => $itemData['product_variant_id'] ?? null,
+                // SNAPSHOT del tipo de producto para auditoría histórica
+                'product_type_id' => $product->product_type_id,
+                'requires_measurements' => $requiresMeasurements,
+                // Medidas: prioridad inline > FK
+                'client_measurement_id' => $itemMeasurementId,
+                'measurements' => $inlineMeasurements, // JSON inline (FASE 1)
                 'product_name' => $product->name,
                 'variant_sku' => $variant?->sku_variant,
                 'unit_price' => $itemData['unit_price'],
@@ -195,15 +535,54 @@ class OrderService
                 'total' => $subtotal,
                 'embroidery_text' => $itemData['embroidery_text'] ?? null,
                 'customization_notes' => $itemData['customization_notes'] ?? null,
+                'status' => $initialStatus,
+                // === CAMPOS DE PERSONALIZACIÓN Y TIEMPO ===
+                'personalization_type' => $personalizationType,
+                'design_approved' => $designApproved,
+                'time_multiplier_snapshot' => $timeMultiplier,
+                'estimated_lead_time' => $estimatedLeadTime,
             ]);
+
+            // === HISTORIAL DE MEDIDAS ===
+            // Si tiene medidas inline y el usuario solicitó guardar en perfil del cliente
+            $saveToClient = $inlineMeasurements['save_to_client'] ?? false;
+            if ($requiresMeasurements && !empty($inlineMeasurements) && $saveToClient) {
+                $measurementHistory = $this->saveMeasurementHistory(
+                    $order,
+                    $orderItem,
+                    $product,
+                    $inlineMeasurements
+                );
+                // Vincular el historial al item
+                $orderItem->update(['measurement_history_id' => $measurementHistory->id]);
+            }
         }
     }
 
-    // === CALCULAR Y GUARDAR FECHA MÍNIMA ===
-    protected function calculateAndSetMinimumDate(Order $order): void
-    {
-        $minimumDate = $order->calculateMinimumDate();
-        $order->update(['minimum_date' => $minimumDate]);
+    // === GUARDAR HISTORIAL DE MEDIDAS ===
+    protected function saveMeasurementHistory(
+        Order $order,
+        OrderItem $orderItem,
+        Product $product,
+        array $measurements
+    ): ClientMeasurementHistory {
+        // Limpiar campos que no son medidas
+        $cleanMeasurements = collect($measurements)
+            ->except(['save_to_client'])
+            ->filter(fn($value) => !empty($value) && $value !== '0')
+            ->toArray();
+
+        return ClientMeasurementHistory::create([
+            'cliente_id' => $order->cliente_id,
+            'order_id' => $order->id,
+            'order_item_id' => $orderItem->id,
+            'product_id' => $product->id,
+            'measurements' => $cleanMeasurements,
+            'source' => 'order',
+            'notes' => "Capturado en pedido {$order->order_number}",
+            'created_by' => Auth::id(),
+            'captured_at' => now(),
+        ]);
     }
 
     // === REGISTRAR PAGO INICIAL ===
@@ -283,5 +662,282 @@ class OrderService
         }
 
         return !empty($data['initial_payment']) || !empty($data['pay_full']);
+    }
+
+    // ========================================
+    // === GESTIÓN DE AJUSTES DE PRECIO ===
+    // ========================================
+
+    /**
+     * Crear un ajuste de precio para un item.
+     * Usado cuando se detecta diferencia entre costo estimado y real.
+     */
+    public function createAdjustment(
+        OrderItem $item,
+        string $type,
+        float $estimatedCost,
+        ?float $realCost = null,
+        ?string $reason = null,
+        ?int $designExportId = null
+    ): OrderItemAdjustment {
+        return DB::transaction(function () use ($item, $type, $estimatedCost, $realCost, $reason, $designExportId) {
+            $adjustment = OrderItemAdjustment::create([
+                'order_item_id' => $item->id,
+                'design_export_id' => $designExportId,
+                'type' => $type,
+                'estimated_cost' => $estimatedCost,
+                'real_cost' => $realCost,
+                'status' => OrderItemAdjustment::STATUS_PENDING,
+                'reason' => $reason,
+                'created_by' => Auth::id(),
+            ]);
+
+            // El flag se actualiza automáticamente via boot() del modelo
+
+            return $adjustment;
+        });
+    }
+
+    /**
+     * Aprobar un ajuste de precio.
+     * REGLA: Solo ajustes pendientes pueden ser aprobados.
+     */
+    public function approveAdjustment(OrderItemAdjustment $adjustment, ?float $realCost = null): OrderItemAdjustment
+    {
+        if (!$adjustment->isPending()) {
+            throw new \Exception('Solo se pueden aprobar ajustes pendientes.');
+        }
+
+        return DB::transaction(function () use ($adjustment, $realCost) {
+            // Si se proporciona un costo real, actualizarlo
+            if ($realCost !== null) {
+                $adjustment->real_cost = $realCost;
+            }
+
+            // Validar que tenga costo real para aprobar
+            if ($adjustment->real_cost === null) {
+                throw new \Exception('Debe especificar el costo real para aprobar el ajuste.');
+            }
+
+            $adjustment->status = OrderItemAdjustment::STATUS_APPROVED;
+            $adjustment->approved_by = Auth::id();
+            $adjustment->approved_at = now();
+            $adjustment->save();
+
+            // Recalcular costos del item
+            $adjustment->orderItem->recalculateRealExtrasCost();
+
+            // Recalcular totales del pedido
+            $adjustment->orderItem->order->recalculateTotals();
+
+            return $adjustment;
+        });
+    }
+
+    /**
+     * Rechazar un ajuste de precio.
+     * REGLA: Solo ajustes pendientes pueden ser rechazados.
+     */
+    public function rejectAdjustment(OrderItemAdjustment $adjustment, ?string $reason = null): OrderItemAdjustment
+    {
+        if (!$adjustment->isPending()) {
+            throw new \Exception('Solo se pueden rechazar ajustes pendientes.');
+        }
+
+        return DB::transaction(function () use ($adjustment, $reason) {
+            $adjustment->status = OrderItemAdjustment::STATUS_REJECTED;
+            $adjustment->rejection_reason = $reason;
+            $adjustment->approved_by = Auth::id();
+            $adjustment->approved_at = now();
+            $adjustment->save();
+
+            // Flag se actualiza automáticamente via boot()
+
+            return $adjustment;
+        });
+    }
+
+    /**
+     * Crear ajuste automático desde DesignExport aprobado.
+     * Llamado cuando se aprueba un diseño con costo diferente al estimado.
+     */
+    public function createAdjustmentFromDesignExport(
+        OrderItem $item,
+        int $designExportId,
+        float $estimatedCost,
+        float $realCost,
+        ?string $reason = null
+    ): OrderItemAdjustment {
+        // Solo crear ajuste si hay diferencia
+        if (abs($realCost - $estimatedCost) < 0.01) {
+            // No hay diferencia significativa, no crear ajuste
+            return $this->createAdjustment(
+                $item,
+                OrderItemAdjustment::TYPE_DESIGN,
+                $estimatedCost,
+                $realCost,
+                $reason ?? 'Diseño aprobado sin ajuste',
+                $designExportId
+            );
+        }
+
+        return $this->createAdjustment(
+            $item,
+            OrderItemAdjustment::TYPE_DESIGN,
+            $estimatedCost,
+            $realCost,
+            $reason ?? 'Ajuste por costo real de diseño',
+            $designExportId
+        );
+    }
+
+    /**
+     * Obtener resumen de ajustes de un pedido.
+     */
+    public function getAdjustmentsSummary(Order $order): array
+    {
+        $items = $order->items()->with(['adjustments'])->get();
+
+        $totalEstimated = 0;
+        $totalReal = 0;
+        $pendingCount = 0;
+        $approvedCount = 0;
+        $rejectedCount = 0;
+
+        foreach ($items as $item) {
+            foreach ($item->adjustments as $adj) {
+                $totalEstimated += (float) $adj->estimated_cost;
+
+                if ($adj->isApproved()) {
+                    $totalReal += (float) $adj->real_cost;
+                    $approvedCount++;
+                } elseif ($adj->isPending()) {
+                    $pendingCount++;
+                } else {
+                    $rejectedCount++;
+                }
+            }
+        }
+
+        return [
+            'total_estimated' => $totalEstimated,
+            'total_real' => $totalReal,
+            'difference' => $totalReal - $totalEstimated,
+            'pending_count' => $pendingCount,
+            'approved_count' => $approvedCount,
+            'rejected_count' => $rejectedCount,
+            'has_pending' => $pendingCount > 0,
+        ];
+    }
+
+    // ========================================
+    // === GESTIÓN DE APROBACIÓN DE DISEÑO ===
+    // ========================================
+
+    /**
+     * Aprobar diseño de un item.
+     * REGLA: Solo items con personalization_type='design' pueden ser aprobados.
+     * Al aprobar:
+     * - Guarda snapshot del hash de medidas (para detectar cambios post-aprobación)
+     * - Recalcula fechas del pedido
+     */
+    public function approveItemDesign(OrderItem $item): OrderItem
+    {
+        if (!$item->requiresDesignApproval()) {
+            throw new \Exception('Este item no requiere aprobación de diseño.');
+        }
+
+        if ($item->design_approved) {
+            throw new \Exception('El diseño ya está aprobado.');
+        }
+
+        return DB::transaction(function () use ($item) {
+            // Snapshot del hash de medidas para R4 validation
+            $item->snapshotMeasurementsForApproval();
+
+            $item->design_approved = true;
+            $item->design_approved_at = now();
+            $item->design_approved_by = Auth::id();
+            $item->saveQuietly();
+
+            // Recalcular fechas del pedido (puede cambiar minimum_date)
+            $item->order->recalculateDates();
+            $item->order->saveQuietly();
+
+            return $item->fresh();
+        });
+    }
+
+    /**
+     * Invalidar diseño de un item.
+     * REGLA: Cuando cambian medidas/texto/notas de personalización, el diseño debe re-aprobarse.
+     */
+    public function invalidateItemDesign(OrderItem $item, string $reason = null): OrderItem
+    {
+        if (!$item->requiresDesignApproval()) {
+            return $item; // No aplica
+        }
+
+        return DB::transaction(function () use ($item, $reason) {
+            $item->design_approved = false;
+            $item->design_approved_at = null;
+            $item->design_approved_by = null;
+
+            // Opcionalmente agregar nota sobre invalidación
+            if ($reason) {
+                $existingNotes = $item->customization_notes ?? '';
+                $item->customization_notes = trim($existingNotes . "\n[Diseño invalidado: {$reason}]");
+            }
+
+            $item->saveQuietly();
+
+            return $item->fresh();
+        });
+    }
+
+    /**
+     * Actualizar item con validación de diseño.
+     * Si cambian campos de personalización → invalidar diseño.
+     */
+    public function updateItemWithDesignValidation(
+        OrderItem $item,
+        array $data
+    ): OrderItem {
+        $changesRequireReapproval = false;
+        $changeReasons = [];
+
+        // Detectar cambios que invalidan diseño
+        if (isset($data['embroidery_text']) && $data['embroidery_text'] !== $item->embroidery_text) {
+            $changesRequireReapproval = true;
+            $changeReasons[] = 'texto modificado';
+        }
+
+        if (isset($data['measurements']) && $data['measurements'] !== $item->measurements) {
+            $changesRequireReapproval = true;
+            $changeReasons[] = 'medidas modificadas';
+        }
+
+        if (isset($data['customization_notes'])) {
+            // Solo invalidar si las notas cambian sustancialmente (no si solo se agrega info)
+            $oldNotes = $item->customization_notes ?? '';
+            $newNotes = $data['customization_notes'] ?? '';
+            if (strlen($newNotes) < strlen($oldNotes) || !str_contains($newNotes, $oldNotes)) {
+                $changesRequireReapproval = true;
+                $changeReasons[] = 'notas de personalización modificadas';
+            }
+        }
+
+        return DB::transaction(function () use ($item, $data, $changesRequireReapproval, $changeReasons) {
+            // Actualizar campos
+            $item->fill($data);
+            $item->save();
+
+            // Invalidar diseño si hubo cambios significativos
+            if ($changesRequireReapproval && $item->requiresDesignApproval()) {
+                $this->invalidateItemDesign($item, implode(', ', $changeReasons));
+            }
+
+            return $item->fresh();
+        });
     }
 }

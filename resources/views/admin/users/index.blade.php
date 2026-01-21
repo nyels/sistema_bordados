@@ -70,7 +70,10 @@
                                 </a>
                                 @if($user->id !== auth()->id())
                                     <form action="{{ route('admin.users.destroy', $user) }}" method="POST" class="d-inline"
-                                          onsubmit="return confirm('¿Eliminar este usuario?')">
+                                          data-confirm="delete"
+                                          data-confirm-title="¿Eliminar usuario {{ $user->name }}?"
+                                          data-confirm-text="El usuario perderá acceso al sistema."
+                                          data-confirm-impact="Esta acción no se puede deshacer.">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-sm btn-danger" title="Eliminar">

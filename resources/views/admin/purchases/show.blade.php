@@ -268,6 +268,9 @@
 
             <hr>
 
+            {{-- COMPARATIVA PEDIDO VS RECIBIDO --}}
+            @include('admin.purchases._comparison')
+
             {{-- TABS: ITEMS Y RECEPCIONES --}}
             <ul class="nav nav-tabs" id="purchaseTabs" role="tablist">
                 <li class="nav-item">
