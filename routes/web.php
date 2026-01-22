@@ -1180,6 +1180,7 @@ Route::prefix('admin/orders')->name('admin.orders.')->middleware('auth')->group(
     Route::get('ajax/search-clientes', [App\Http\Controllers\OrderController::class, 'searchClientes'])->name('ajax.search-clientes');
     Route::get('ajax/search-products', [App\Http\Controllers\OrderController::class, 'searchProducts'])->name('ajax.search-products');
     Route::get('ajax/product/{product}/extras', [App\Http\Controllers\OrderController::class, 'getProductExtras'])->name('ajax.product-extras');
+    Route::get('ajax/product/{product}', [App\Http\Controllers\OrderController::class, 'getProduct'])->name('ajax.get-product');
     Route::get('ajax/cliente/{cliente}/measurements', [App\Http\Controllers\OrderController::class, 'getClientMeasurements'])->name('ajax.client-measurements');
     Route::post('ajax/cliente/{cliente}/measurements', [App\Http\Controllers\OrderController::class, 'storeClientMeasurements'])->name('ajax.store-client-measurements');
     Route::get('ajax/{order}/check-annex-type', [App\Http\Controllers\OrderController::class, 'checkAnnexType'])->name('ajax.check-annex-type');
@@ -1194,6 +1195,15 @@ Route::prefix('admin/orders')->name('admin.orders.')->middleware('auth')->group(
     Route::get('{order}/messages', [App\Http\Controllers\OrderMessageController::class, 'index'])->name('messages.index');
     Route::post('{order}/messages', [App\Http\Controllers\OrderMessageController::class, 'store'])->name('messages.store');
     Route::delete('{order}/messages/{message}', [App\Http\Controllers\OrderMessageController::class, 'destroy'])->name('messages.destroy');
+
+    // Diseño técnico a nivel pedido (legacy)
+    Route::post('{order}/link-design', [App\Http\Controllers\OrderController::class, 'linkDesignExport'])->name('link-design');
+    Route::delete('{order}/unlink-design', [App\Http\Controllers\OrderController::class, 'unlinkDesignExport'])->name('unlink-design');
+
+    // Diseño técnico a nivel ITEM (múltiples diseños por producto)
+    Route::get('{order}/items/{item}/designs', [App\Http\Controllers\OrderController::class, 'getItemDesigns'])->name('items.designs');
+    Route::post('{order}/items/{item}/link-design', [App\Http\Controllers\OrderController::class, 'linkDesignToItem'])->name('items.link-design');
+    Route::delete('{order}/items/{item}/unlink-design/{designExportId}', [App\Http\Controllers\OrderController::class, 'unlinkDesignFromItem'])->name('items.unlink-design');
 });
 
 /*

@@ -125,6 +125,87 @@
                                 <small class="text-muted">Tiempo extra que agrega este servicio al proceso</small>
                             </div>
 
+                            {{-- ================================================================ --}}
+                            {{-- SECCIÓN DE INVENTARIO (EXTENSIÓN CONTROLADA) --}}
+                            {{-- ================================================================ --}}
+                            <div
+                                style="border-bottom: 3px solid #6c757d; padding-bottom: 8px; margin-bottom: 20px; margin-top: 30px;">
+                                <h5 style="color: #6c757d; font-weight: 600;">
+                                    <i class="fas fa-boxes"></i> Control de Inventario
+                                </h5>
+                            </div>
+
+                            {{-- Checkbox: Consume inventario --}}
+                            <div class="form-group">
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="consumes_inventory"
+                                        name="consumes_inventory" value="1"
+                                        {{ old('consumes_inventory') ? 'checked' : '' }}>
+                                    <label class="custom-control-label" for="consumes_inventory">
+                                        <strong>Este extra consume materiales</strong>
+                                    </label>
+                                </div>
+                                <small class="text-muted d-block mt-1">
+                                    Active si este servicio requiere materiales físicos (encaje, listón, moños, etc.)
+                                </small>
+                            </div>
+
+                            {{-- Sección de materiales (oculta por defecto) --}}
+                            <div id="materials-section" style="display: none;">
+                                <div class="p-3 rounded mb-3" style="background: #f8f9fa; border: 1px solid #dee2e6;">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <i class="fas fa-info-circle text-info mr-2"></i>
+                                        <small style="color: #495057;">
+                                            Este servicio descontará inventario al usarse en producción.
+                                        </small>
+                                    </div>
+
+                                    {{-- Fila 1: Select de material --}}
+                                    <div class="form-group mb-2">
+                                        <select id="material-select" class="form-control form-control-sm">
+                                            <option value="" data-unit="-" data-family="">-- Seleccione material
+                                                --</option>
+                                        </select>
+                                    </div>
+
+                                    {{-- Fila 2: Cantidad + Unidad + Botón Agregar --}}
+                                    <div class="d-flex align-items-center mb-3">
+                                        <label class="mr-2 mb-0" style="font-weight: 500;">Cantidad:</label>
+                                        <div class="input-group input-group-sm" style="max-width: 140px;">
+                                            <input type="number" id="material-quantity" class="form-control"
+                                                step="1" min="1" placeholder="0" value="">
+                                            <div class="input-group-append">
+                                                <span class="input-group-text" id="material-unit"
+                                                    style="min-width: 45px;">-</span>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-primary ml-2" id="btn-add-material">
+                                            <i class="fas fa-plus"></i> Agregar
+                                        </button>
+                                    </div>
+
+                                    {{-- Tabla de materiales agregados --}}
+                                    <div id="materials-table-container" style="display: none;">
+                                        <table class="table table-sm table-bordered mb-0" id="materials-table">
+                                            <thead class="thead-light">
+                                                <tr>
+                                                    <th>Material</th>
+                                                    <th style="width: 100px;" class="text-center">Cantidad</th>
+                                                    <th style="width: 50px;"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="materials-list">
+                                                {{-- Los materiales se agregan dinámicamente --}}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                @error('materials')
+                                    <div class="alert alert-danger py-2" style="font-size: 13px;">{{ $message }}</div>
+                                @enderror
+                            </div>
+
                             {{-- Botones --}}
                             <div class="d-flex justify-content-end align-items-center mt-4">
                                 <a href="{{ route('admin.product_extras.index') }}" class="btn btn-secondary mr-2">
@@ -147,10 +228,168 @@
     @section('js')
         <script>
             $(document).ready(function() {
+                // === DATOS DE MATERIALES DISPONIBLES ===
+                var materialVariants = @json($materialVariants ?? []);
+                var materialIndex = 0;
+                var addedMaterials = []; // Track de materiales agregados
+
+                // === FAMILIAS QUE PERMITEN DECIMALES ===
+                var decimalFamilies = ['linear'];
+
+                // === INICIALIZAR SELECT DE MATERIALES ===
+                function initMaterialSelect() {
+                    var $select = $('#material-select');
+                    $select.empty();
+                    $select.append('<option value="" data-unit="-" data-family="">-- Seleccione material --</option>');
+
+                    materialVariants.forEach(function(v) {
+                        // No mostrar materiales ya agregados
+                        if (addedMaterials.includes(v.id)) return;
+
+                        // Laravel usa camelCase para relaciones: consumptionUnit, baseUnit
+                        // Usar consumptionUnit, si no existe usar baseUnit como fallback
+                        var unit = null;
+                        if (v.material) {
+                            unit = v.material.consumptionUnit || v.material.consumption_unit
+                                || v.material.baseUnit || v.material.base_unit || null;
+                        }
+                        var unitSymbol = unit ? unit.symbol : '';
+                        var unitFamily = unit ? (unit.measurement_family || '') : '';
+                        var materialName = v.material ? v.material.name : 'Material #' + v.id;
+                        var colorName = v.color ? ' - ' + v.color : '';
+                        var label = materialName + colorName;
+
+                        $select.append('<option value="' + v.id + '" data-unit="' + unitSymbol +
+                            '" data-family="' + unitFamily + '" data-name="' + label + '">' + label +
+                            '</option>');
+                    });
+                }
+
+                // === ACTUALIZAR FORMATO DE CANTIDAD SEGÚN UNIDAD ===
+                function updateQuantityInput() {
+                    var $select = $('#material-select');
+                    var $input = $('#material-quantity');
+                    var $unit = $('#material-unit');
+
+                    var unit = $select.find('option:selected').data('unit') || '-';
+                    var family = $select.find('option:selected').data('family') || '';
+
+                    $unit.text(unit);
+                    $input.val('');
+
+                    var allowsDecimals = decimalFamilies.includes(family);
+                    if (allowsDecimals) {
+                        $input.attr('step', '0.01').attr('min', '0.01').attr('placeholder', '0.00');
+                    } else {
+                        $input.attr('step', '1').attr('min', '1').attr('placeholder', '0');
+                    }
+                }
+
+                // === TOGGLE SECCIÓN DE MATERIALES ===
+                $('#consumes_inventory').on('change', function() {
+                    if ($(this).is(':checked')) {
+                        $('#materials-section').slideDown(200);
+                        initMaterialSelect();
+                    } else {
+                        $('#materials-section').slideUp(200);
+                    }
+                });
+
+                // Inicializar estado
+                if ($('#consumes_inventory').is(':checked')) {
+                    $('#materials-section').show();
+                    initMaterialSelect();
+                }
+
+                // === CAMBIO EN SELECT DE MATERIAL ===
+                $('#material-select').on('change', function() {
+                    updateQuantityInput();
+                });
+
+                // === AGREGAR MATERIAL A LA TABLA ===
+                $('#btn-add-material').on('click', function() {
+                    var $select = $('#material-select');
+                    var $quantity = $('#material-quantity');
+                    var variantId = $select.val();
+                    var quantity = $quantity.val();
+                    var materialName = $select.find('option:selected').data('name');
+                    var unit = $select.find('option:selected').data('unit') || '';
+
+                    if (!variantId) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Seleccione un material',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                        return;
+                    }
+                    if (!quantity || parseFloat(quantity) <= 0) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Ingrese una cantidad válida',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                        return;
+                    }
+
+                    // Agregar a la tabla
+                    var html = '<tr data-index="' + materialIndex + '" data-variant-id="' + variantId + '">' +
+                        '<td>' + materialName +
+                        '<input type="hidden" name="materials[' + materialIndex + '][variant_id]" value="' +
+                        variantId + '">' +
+                        '</td>' +
+                        '<td class="text-center">' + quantity + ' ' + unit +
+                        '<input type="hidden" name="materials[' + materialIndex + '][quantity]" value="' +
+                        quantity + '">' +
+                        '</td>' +
+                        '<td class="text-center">' +
+                        '<button type="button" class="btn btn-sm btn-danger btn-remove-material" title="Eliminar">' +
+                        '<i class="fas fa-trash-alt"></i></button>' +
+                        '</td>' +
+                        '</tr>';
+
+                    $('#materials-list').append(html);
+                    $('#materials-table-container').show();
+                    materialIndex++;
+
+                    // Registrar material agregado
+                    addedMaterials.push(parseInt(variantId));
+
+                    // Resetear selector
+                    initMaterialSelect();
+                    $quantity.val('');
+                    $('#material-unit').text('-');
+                });
+
+                // === ELIMINAR MATERIAL DE LA TABLA ===
+                $(document).on('click', '.btn-remove-material', function() {
+                    var $row = $(this).closest('tr');
+                    var variantId = parseInt($row.data('variant-id'));
+
+                    // Quitar del track
+                    addedMaterials = addedMaterials.filter(function(id) {
+                        return id !== variantId;
+                    });
+
+                    $row.remove();
+
+                    // Ocultar tabla si está vacía
+                    if ($('#materials-list tr').length === 0) {
+                        $('#materials-table-container').hide();
+                    }
+
+                    // Actualizar select
+                    initMaterialSelect();
+                });
+
+                // === VALIDACIÓN DEL FORMULARIO ===
                 $('#formExtra').on('submit', function(e) {
                     var name = $('input[name="name"]').val().trim();
                     var cost = $('input[name="cost_addition"]').val();
                     var price = $('input[name="price_addition"]').val();
+                    var consumesInventory = $('#consumes_inventory').is(':checked');
 
                     var errors = [];
 
@@ -162,6 +401,13 @@
                     }
                     if (!price || price === '' || parseFloat(price) < 0) {
                         errors.push('El precio al cliente es obligatorio');
+                    }
+
+                    // Validar materiales si consume inventario
+                    if (consumesInventory) {
+                        if ($('#materials-list tr').length === 0) {
+                            errors.push('Debe agregar al menos un material si el extra consume inventario');
+                        }
                     }
 
                     if (errors.length > 0) {

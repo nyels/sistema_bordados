@@ -29,15 +29,47 @@ class HomeController extends Controller
     public function index()
     {
         // ========================================
-        // KPI 1: PEDIDOS ACTIVOS
+        // KPIs OPERATIVOS - FUENTE CANÓNICA
+        // Usa la misma lógica que OrderController@index
         // ========================================
-        $pedidosActivos = Order::whereIn('status', [
-            Order::STATUS_CONFIRMED,
-            Order::STATUS_IN_PRODUCTION
-        ])->count();
+        $confirmedOrders = Order::where('status', Order::STATUS_CONFIRMED)
+            ->with(['items'])
+            ->get();
+
+        $paraProducir = 0;
+        $bloqueados = 0;
+
+        foreach ($confirmedOrders as $order) {
+            // Pedido bloqueado si:
+            // 1. canStartProduction() === false (reglas R2-R5)
+            // 2. O hasProductionInventoryBlock() === true (inventario insuficiente)
+            $canStart = $order->canStartProduction();
+            $hasInventoryBlock = $order->hasProductionInventoryBlock();
+
+            if (!$canStart || $hasInventoryBlock) {
+                $bloqueados++;
+            } else {
+                $paraProducir++;
+            }
+        }
+
+        $enProduccion = Order::where('status', Order::STATUS_IN_PRODUCTION)->count();
+        $paraEntregar = Order::where('status', Order::STATUS_READY)->count();
+        $retrasados = Order::whereNotIn('status', [Order::STATUS_DELIVERED, Order::STATUS_CANCELLED])
+            ->whereDate('promised_date', '<', now())
+            ->count();
+
+        // KPIs operativos para la vista
+        $kpis = [
+            'para_producir' => $paraProducir,
+            'bloqueados' => $bloqueados,
+            'en_produccion' => $enProduccion,
+            'para_entregar' => $paraEntregar,
+            'retrasados' => $retrasados,
+        ];
 
         // ========================================
-        // KPI 2: VENTAS CONFIRMADAS DEL MES
+        // KPI: VENTAS CONFIRMADAS DEL MES
         // ========================================
         $mesActual = Carbon::now();
         $inicioMes = $mesActual->copy()->startOfMonth();
@@ -48,7 +80,7 @@ class HomeController extends Controller
             ->sum('total');
 
         // ========================================
-        // KPI 3: INSUMOS EN RIESGO
+        // KPI: INSUMOS EN RIESGO
         // ========================================
         $insumosEnRiesgo = MaterialVariant::where('activo', true)
             ->whereColumn('current_stock', '<=', 'min_stock_alert')
@@ -85,7 +117,7 @@ class HomeController extends Controller
         );
 
         return view('home', compact(
-            'pedidosActivos',
+            'kpis',
             'ventasDelMes',
             'insumosEnRiesgo',
             'nombreMes',

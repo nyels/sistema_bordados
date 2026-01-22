@@ -315,6 +315,14 @@ return [
             'label_color' => 'success',
         ],
         [
+            'text' => 'Cola de Producción',
+            'url' => 'admin/production/queue',
+            'icon' => 'fas fa-fw fa-industry',
+            'icon_color' => 'danger',
+            'active' => ['admin/production/queue*'],
+            'label_color' => 'warning',
+        ],
+        [
             'text' => 'Clientes',
             'url' => 'clientes',
             'icon' => 'fas fa-fw fa-users',
@@ -334,14 +342,7 @@ return [
         */
         ['header' => 'DISEÑOS Y PRODUCCIÓN'],
 
-        [
-            'text' => 'Cola de Producción',
-            'url' => 'admin/production/queue',
-            'icon' => 'fas fa-fw fa-industry',
-            'icon_color' => 'danger',
-            'active' => ['admin/production/queue*'],
-            'label_color' => 'warning',
-        ],
+
         [
             'text' => 'Diseños',
             'url' => 'admin/designs',

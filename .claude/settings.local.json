@@ -39,7 +39,9 @@
       "Bash(php sync_bom_costs.php:*)",
       "Bash(php verify_totals.php:*)",
       "Bash(php reset_hipil.php:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(dir storagelogs*.log)"
     ]
   }
 }

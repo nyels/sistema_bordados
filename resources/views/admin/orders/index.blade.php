@@ -26,12 +26,12 @@
     ======================================== --}}
     <div class="row">
         <div class="col-lg col-md-4 col-sm-6 col-12">
-            <div class="small-box bg-info">
+            <div class="small-box bg-info" title="Requisitos comerciales completos. El inventario se valida al iniciar producción.">
                 <div class="inner">
                     <h3>{{ $kpis['para_producir'] }}</h3>
-                    <p>Para Producir</p>
+                    <p>Confirmados</p>
                 </div>
-                <div class="icon"><i class="fas fa-play-circle"></i></div>
+                <div class="icon"><i class="fas fa-clipboard-check"></i></div>
                 <a href="javascript:;" class="small-box-footer kpi-filter" data-status="confirmed">
                     Ver confirmados <i class="fas fa-arrow-circle-right"></i>
                 </a>
@@ -98,6 +98,9 @@
     <div id="orders-table-container">
         @include('admin.orders._table')
     </div>
+
+    {{-- Modal de Pago (Reutilizado del show) --}}
+    @include('admin.orders._payment-modal')
 @stop
 
 @section('css')
@@ -303,7 +306,54 @@
                 loadTable(params);
             }
         });
+
+        // ========================================
+        // BOTÓN DE PAGO RÁPIDO (Delegación)
+        // ========================================
+        container.addEventListener('click', function(e) {
+            var btn = e.target.closest('.btn-quick-payment');
+            if (btn) {
+                e.preventDefault();
+                var orderId = btn.dataset.orderId;
+                var orderNumber = btn.dataset.orderNumber;
+                var balance = parseFloat(btn.dataset.balance);
+
+                initPaymentModal(orderId, orderNumber, balance);
+                $('#modalPayment').modal('show');
+            }
+        });
     });
+
+    // ========================================
+    // FUNCIÓN PARA INICIALIZAR MODAL DE PAGO
+    // ========================================
+    function initPaymentModal(orderId, orderNumber, balance) {
+        var form = document.getElementById('paymentForm');
+        var numberEl = document.getElementById('paymentOrderNumber');
+        var balanceEl = document.getElementById('paymentBalance');
+        var amountEl = document.getElementById('paymentAmount');
+        var referenceEl = document.getElementById('paymentReference');
+        var notesEl = document.getElementById('paymentNotes');
+        var methodEl = form ? form.querySelector('[name="payment_method"]') : null;
+
+        if (form) {
+            form.action = '/admin/orders/' + orderId + '/payments';
+        }
+        if (numberEl) {
+            numberEl.textContent = orderNumber;
+        }
+        if (balanceEl) {
+            balanceEl.textContent = '$' + balance.toFixed(2);
+        }
+        if (amountEl) {
+            amountEl.value = balance.toFixed(2);
+            amountEl.max = balance;
+        }
+        // Reset campos
+        if (referenceEl) referenceEl.value = '';
+        if (notesEl) notesEl.value = '';
+        if (methodEl) methodEl.value = 'cash';
+    }
 })();
 </script>
 @stop

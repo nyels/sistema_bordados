@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
@@ -154,6 +155,14 @@ class OrderItem extends Model
     }
 
     /**
+     * Reservas de inventario asociadas a este item
+     */
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(InventoryReservation::class, 'order_item_id');
+    }
+
+    /**
      * Ajustes de precio asociados a este item
      */
     public function adjustments(): HasMany
@@ -175,6 +184,19 @@ class OrderItem extends Model
     public function approvedAdjustments(): HasMany
     {
         return $this->adjustments()->where('status', OrderItemAdjustment::STATUS_APPROVED);
+    }
+
+    /**
+     * Diseños técnicos (DesignExport) vinculados a este item.
+     * Solo se permite vincular diseños con status = 'aprobado'.
+     * Un item personalizado puede tener múltiples diseños (logo + nombre, etc.)
+     */
+    public function designExports(): BelongsToMany
+    {
+        return $this->belongsToMany(DesignExport::class, 'order_item_design_exports')
+            ->withPivot(['application_type', 'position', 'notes', 'sort_order', 'created_by'])
+            ->withTimestamps()
+            ->orderBy('order_item_design_exports.sort_order');
     }
 
     // === MÉTODOS ===
@@ -333,6 +355,54 @@ class OrderItem extends Model
     public function snapshotMeasurementsForApproval(): void
     {
         $this->measurements_hash_at_approval = $this->getMeasurementsHash();
+    }
+
+    /**
+     * Verifica si el item requiere vinculación de diseños técnicos.
+     * REGLA: Solo items con personalization_type = 'design' o 'text' requieren diseños.
+     */
+    public function requiresTechnicalDesigns(): bool
+    {
+        return in_array($this->personalization_type, [
+            self::PERSONALIZATION_DESIGN,
+            self::PERSONALIZATION_TEXT,
+        ]);
+    }
+
+    /**
+     * Verifica si el item tiene al menos un diseño técnico vinculado.
+     */
+    public function hasTechnicalDesigns(): bool
+    {
+        return $this->designExports()->exists();
+    }
+
+    /**
+     * Obtiene el conteo de diseños técnicos vinculados.
+     */
+    public function getTechnicalDesignsCountAttribute(): int
+    {
+        return $this->designExports()->count();
+    }
+
+    /**
+     * Verifica si el item está listo para producción en términos de diseños.
+     * REGLA: Si requiere diseños técnicos, debe tener al menos uno vinculado.
+     */
+    public function hasRequiredTechnicalDesigns(): bool
+    {
+        if (!$this->requiresTechnicalDesigns()) {
+            return true; // No requiere diseños → OK
+        }
+        return $this->hasTechnicalDesigns();
+    }
+
+    /**
+     * Bloquea producción si requiere diseños técnicos y no los tiene.
+     */
+    public function blocksProductionForTechnicalDesigns(): bool
+    {
+        return $this->requiresTechnicalDesigns() && !$this->hasTechnicalDesigns();
     }
 
     /**

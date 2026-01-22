@@ -70,7 +70,7 @@
             <div class="col-lg-8">
                 {{-- PRODUCTOS --}}
                 <div class="card">
-                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background: #343a40; color: white;">
                         <h5 class="mb-0"><i class="fas fa-box mr-2"></i> Productos del Anexo</h5>
                         <button type="button" class="btn btn-light btn-sm" data-toggle="modal" data-target="#addProductModal">
                             <i class="fas fa-plus"></i> Agregar Producto
@@ -107,7 +107,7 @@
             <div class="col-lg-4">
                 {{-- RESUMEN --}}
                 <div class="card">
-                    <div class="card-header bg-success text-white">
+                    <div class="card-header" style="background: #343a40; color: white;">
                         <h5 class="mb-0"><i class="fas fa-calculator mr-2"></i> Resumen Anexo</h5>
                     </div>
                     <div class="card-body">
@@ -133,7 +133,7 @@
 
                 {{-- PAGO --}}
                 <div class="card">
-                    <div class="card-header bg-info text-white">
+                    <div class="card-header" style="background: #343a40; color: white;">
                         <h5 class="mb-0"><i class="fas fa-dollar-sign mr-2"></i> Pago</h5>
                     </div>
                     <div class="card-body">
@@ -197,7 +197,7 @@
     <div class="modal fade" id="addProductModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
+                <div class="modal-header" style="background: #343a40; color: white;">
                     <h5 class="modal-title"><i class="fas fa-box mr-2"></i> Agregar Producto</h5>
                     <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
                 </div>

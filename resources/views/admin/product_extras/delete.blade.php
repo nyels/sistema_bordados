@@ -42,6 +42,33 @@
                                         <th>Tiempo Adicional:</th>
                                         <td>{{ $extra->formatted_minutes }}</td>
                                     </tr>
+                                    <tr>
+                                        <th>Consume Inventario:</th>
+                                        <td>
+                                            @if($extra->consumes_inventory)
+                                                <span class="badge badge-info"><i class="fas fa-boxes"></i> Sí</span>
+                                            @else
+                                                <span class="badge badge-secondary">No</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                    @if($extra->consumes_inventory && $extra->materials->count() > 0)
+                                    <tr>
+                                        <th>Materiales:</th>
+                                        <td>
+                                            <ul class="list-unstyled mb-0">
+                                                @foreach($extra->materials as $material)
+                                                    <li>
+                                                        <i class="fas fa-cube text-muted"></i>
+                                                        {{ $material->material->name ?? 'Material' }}
+                                                        @if($material->color) - {{ $material->color }}@endif
+                                                        <span class="text-primary">({{ number_format($material->pivot->quantity_required, 2) }} {{ $material->material->consumptionUnit->symbol ?? '' }})</span>
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        </td>
+                                    </tr>
+                                    @endif
                                 </table>
                             </div>
                         </div>

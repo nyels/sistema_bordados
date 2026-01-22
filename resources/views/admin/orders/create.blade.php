@@ -416,7 +416,7 @@
 
         /* Badge requiere medidas (se mantiene para tabla de items) */
         .badge-requires-measurements {
-            background: linear-gradient(135deg, #e100ff 0%, #7f00ff 100%);
+            background: #343a40;
             color: #fff;
             font-size: 0.7rem;
             padding: 0.2em 0.5em;
@@ -459,6 +459,45 @@
             #addProductModal .modal-dialog {
                 max-width: 95vw;
             }
+            /* REQUISITOS DEL PRODUCTO - Mobile */
+            #measurementsSection .card-header {
+                padding: 10px 12px !important;
+            }
+            #measurementsSection .card-header strong {
+                font-size: 12px !important;
+            }
+            #measurementsSection .card-header small {
+                font-size: 10px !important;
+            }
+            #measurementsSection .card-body {
+                padding: 12px !important;
+            }
+            #measurementsSection #btnOpenMeasurementsModal {
+                width: 100% !important;
+                margin-top: 12px !important;
+                padding: 12px 16px !important;
+                font-size: 13px !important;
+            }
+            #measurementsStatusBadge {
+                display: block !important;
+                margin-top: 6px !important;
+                margin-left: 0 !important;
+            }
+            /* Separador semántico - Mobile */
+            #systemClientDivider span {
+                font-size: 10px !important;
+            }
+        }
+
+        @media (max-width: 576px) {
+            /* REQUISITOS - Extra small */
+            #measurementsSection .card-body > .d-flex {
+                flex-direction: column !important;
+                align-items: stretch !important;
+            }
+            #measurementsSection .card-body > .d-flex > div:first-child {
+                margin-bottom: 12px !important;
+            }
         }
 
         /* ================================================== */
@@ -479,7 +518,7 @@
 
         #measurementsModal .medida-card:hover {
             transform: translateY(-4px);
-            border-color: #6f42c1;
+            border-color: #dee2e6;
             box-shadow:
                 0 10px 22px rgba(0, 0, 0, 0.06),
                 0 4px 8px rgba(0, 0, 0, 0.04);
@@ -508,7 +547,7 @@
         }
 
         #measurementsModal .medida-input:focus {
-            border-color: #6f42c1;
+            border-color: #dee2e6;
             box-shadow: 0 0 0 3px rgba(111, 66, 193, 0.15);
         }
 
@@ -517,7 +556,7 @@
             letter-spacing: 0.5px;
             margin-bottom: 6px;
             display: block;
-            color: #6f42c1;
+            color: #212529;
             font-size: 0.75rem;
         }
 
@@ -554,7 +593,7 @@
 
             #measurementsModal .medida-card:active,
             #measurementsModal .medida-card:focus-within {
-                border-color: #6f42c1;
+                border-color: #dee2e6;
                 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
             }
 
@@ -593,7 +632,7 @@
 
                 {{-- 1. CLIENTE --}}
                 <div class="card card-erp order-mobile-1">
-                    <div class="card-header bg-primary text-white py-2">
+                    <div class="card-header py-2" style="background: #343a40; color: white;">
                         <h5 class="mb-0"><i class="fas fa-user mr-2"></i> 1. Cliente</h5>
                     </div>
                     <div class="card-body">
@@ -626,7 +665,7 @@
 
                 {{-- 3. PAGO --}}
                 <div class="card card-erp order-mobile-3">
-                    <div class="card-header bg-info text-white py-2">
+                    <div class="card-header py-2" style="background: #343a40; color: white;">
                         <h5 class="mb-0"><i class="fas fa-dollar-sign mr-2"></i> 3. Pago</h5>
                     </div>
                     <div class="card-body payment-section">
@@ -664,7 +703,7 @@
 
                 {{-- 4. ENTREGA --}}
                 <div class="card card-erp order-mobile-4">
-                    <div class="card-header bg-warning py-2">
+                    <div class="card-header py-2" style="background: #343a40; color: white;">
                         <h5 class="mb-0"><i class="fas fa-truck mr-2"></i> 4. Entrega</h5>
                     </div>
                     <div class="card-body">
@@ -708,7 +747,7 @@
 
                 {{-- 2. PRODUCTOS --}}
                 <div class="card card-erp order-mobile-2">
-                    <div class="card-header bg-primary text-white py-2 productos-header">
+                    <div class="card-header py-2 productos-header" style="background: #343a40; color: white;">
                         <h5 class="mb-0">
                             <i class="fas fa-box mr-2"></i> 2. Productos
                             <span id="itemsCounter" class="badge badge-light items-counter ml-2" style="display:none;">0</span>
@@ -745,7 +784,7 @@
 
                 {{-- 5. RESUMEN (con IVA integrado) --}}
                 <div class="card card-erp resumen-card order-mobile-5">
-                    <div class="card-header bg-success text-white py-2">
+                    <div class="card-header py-2" style="background: #343a40; color: white;">
                         <h5 class="mb-0"><i class="fas fa-calculator mr-2"></i> 5. Resumen</h5>
                     </div>
                     <div class="card-body">
@@ -814,7 +853,7 @@
     <div class="modal fade" id="clientSearchModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header bg-primary text-white py-2">
+                <div class="modal-header py-2" style="background: #343a40; color: white;">
                     <h5 class="modal-title"><i class="fas fa-search mr-2"></i> Buscar Cliente</h5>
                     <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
                 </div>
@@ -849,7 +888,7 @@
     <div class="modal fade" id="quickClientModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header bg-success text-white">
+                <div class="modal-header" style="background: #343a40; color: white;">
                     <h5 class="modal-title"><i class="fas fa-user-plus mr-2"></i> Cliente Rápido</h5>
                     <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
                 </div>
@@ -885,7 +924,7 @@
     <div class="modal fade" id="addProductModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
+                <div class="modal-header" style="background: #343a40; color: white;">
                     <h5 class="modal-title"><i class="fas fa-box mr-2"></i> Agregar Producto</h5>
                     <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
                 </div>
@@ -962,43 +1001,124 @@
                                 </div>
                             </div>
 
-                            {{-- ═══════════════════════════════════════════ --}}
-                            {{-- SECCIÓN MEDIDAS (solo si producto requiere) --}}
-                            {{-- ═══════════════════════════════════════════ --}}
-                            <div class="card mb-2" id="measurementsSection" style="display: none; border-color: #6f42c1;">
-                                <div class="card-header py-2 px-3" style="background: linear-gradient(135deg, #6f42c1 0%, #8b5cf6 100%); color: white;">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <i class="fas fa-ruler-combined mr-1"></i>
-                                            <strong>Medidas del Ítem</strong>
-                                            <span class="badge badge-light ml-2" id="measurementsStatusBadge">Sin capturar</span>
+                            {{-- ═══════════════════════════════════════════════════════════ --}}
+                            {{-- ESTADO DEL PRODUCTO (Indicador visual dominante)           --}}
+                            {{-- ═══════════════════════════════════════════════════════════ --}}
+                            <div id="productTypeIndicator" class="mb-3" style="display: none;">
+                                {{-- Producto estándar (sin medidas) --}}
+                                <div id="productTypeStandard" class="d-flex align-items-center p-3 rounded" style="display: none; background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border: 1px solid #a5d6a7;">
+                                    <i class="fas fa-box-open fa-2x mr-3" style="color: #2e7d32;"></i>
+                                    <div>
+                                        <span class="badge px-3 py-2" style="background: #2e7d32; color: white; font-size: 13px;">
+                                            <i class="fas fa-check-circle mr-1"></i> Producto Estándar
+                                        </span>
+                                        <div class="mt-1" style="color: #1b5e20; font-size: 12px;">
+                                            Este producto no requiere medidas — listo para agregar
                                         </div>
-                                        <button type="button" class="btn btn-sm btn-light" id="btnOpenMeasurementsModal">
-                                            <i class="fas fa-edit mr-1"></i> <span id="btnMeasurementsText">Capturar</span>
-                                        </button>
                                     </div>
                                 </div>
-                                <div class="card-body py-2 px-3" id="measurementsSummaryBody" style="display: none;">
-                                    {{-- Resumen de medidas capturadas --}}
-                                    <div class="row small" id="measurementsSummaryContent">
-                                        {{-- Se llena dinámicamente --}}
+                                {{-- Producto a medida --}}
+                                <div id="productTypeCustom" class="d-flex align-items-center p-3 rounded" style="display: none; background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border: 1px solid #90caf9;">
+                                    <i class="fas fa-ruler-combined fa-2x mr-3" style="color: #0d47a1;"></i>
+                                    <div>
+                                        <span class="badge px-3 py-2" style="background: #0d47a1; color: white; font-size: 13px;">
+                                            <i class="fas fa-ruler mr-1"></i> Producto a Medida
+                                        </span>
+                                        <div class="mt-1" style="color: #0d47a1; font-size: 12px;">
+                                            Requiere captura de medidas antes de agregar al pedido
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
+                            {{-- ═══════════════════════════════════════════════════════════ --}}
+                            {{-- REQUISITOS DEL PRODUCTO (Sistema) - OBLIGATORIO           --}}
+                            {{-- Solo visible si el producto requiere medidas              --}}
+                            {{-- ═══════════════════════════════════════════════════════════ --}}
+                            <div class="card mb-3" id="measurementsSection" style="display: none; border: 2px solid #0d47a1; border-radius: 8px; box-shadow: 0 2px 8px rgba(13,71,161,0.15);">
+                                {{-- Header: REQUISITOS DEL PRODUCTO (Autoritativo) --}}
+                                <div class="card-header py-2 px-3" style="background: linear-gradient(135deg, #0d47a1 0%, #1a237e 100%); color: white; border-radius: 6px 6px 0 0;">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                                        <div>
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-shield-alt mr-2" style="font-size: 16px;"></i>
+                                                <strong style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Requisitos del Producto</strong>
+                                            </div>
+                                            <small class="d-block mt-1" style="color: rgba(255,255,255,0.85); font-size: 11px; margin-left: 26px;">
+                                                <i class="fas fa-lock mr-1"></i> Requisito técnico obligatorio definido por el sistema
+                                            </small>
+                                        </div>
+                                        <span class="badge d-none d-sm-inline-block" style="background: rgba(255,255,255,0.2); color: white; font-size: 10px;">
+                                            <i class="fas fa-cog mr-1"></i> SISTEMA
+                                        </span>
+                                    </div>
+                                </div>
+                                {{-- Body: Medidas del Ítem --}}
+                                <div class="card-body py-3 px-3" style="background: linear-gradient(180deg, #e3f2fd 0%, #bbdefb 100%);">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                                        <div class="mb-2 mb-sm-0 flex-grow-1">
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-ruler-combined mr-2" style="color: #0d47a1; font-size: 20px;"></i>
+                                                <div>
+                                                    <strong style="color: #0d47a1; font-size: 15px;">Medidas del Ítem</strong>
+                                                    <span class="badge ml-2" id="measurementsStatusBadge" style="background: #e65100; color: white; font-size: 11px; padding: 4px 8px;">
+                                                        <i class="fas fa-exclamation-circle mr-1"></i>REQUISITO OBLIGATORIO
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="mt-2" style="margin-left: 28px; padding: 8px 12px; background: rgba(255,255,255,0.7); border-radius: 4px; border-left: 3px solid #0d47a1;">
+                                                <small style="color: #37474f; font-size: 12px;">
+                                                    <i class="fas fa-info-circle mr-1" style="color: #0d47a1;"></i>
+                                                    <strong>Este producto no puede fabricarse sin capturar las medidas requeridas.</strong>
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="mt-2 mt-sm-0 w-100 w-sm-auto" style="min-width: 220px;">
+                                            <button type="button" class="btn btn-block btn-sm" id="btnOpenMeasurementsModal" style="background: #0d47a1; color: white; font-weight: 600; padding: 10px 16px;">
+                                                <i class="fas fa-clipboard-check mr-1"></i>
+                                                <span id="btnMeasurementsText">Completar requisito: capturar medidas</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {{-- Resumen de medidas capturadas --}}
+                                    <div id="measurementsSummaryBody" style="display: none;" class="mt-3 pt-2 border-top">
+                                        <div class="row small" id="measurementsSummaryContent">
+                                            {{-- Se llena dinámicamente --}}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- ═══════════════════════════════════════════════════════════ --}}
+                            {{-- SEPARADOR SEMÁNTICO: SISTEMA vs CLIENTE                    --}}
+                            {{-- ═══════════════════════════════════════════════════════════ --}}
+                            <div id="systemClientDivider" class="my-3 text-center" style="display: none;">
+                                <div class="d-flex align-items-center">
+                                    <hr class="flex-grow-1" style="border-color: #bdbdbd;">
+                                    <span class="px-3 text-muted" style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; white-space: nowrap;">
+                                        <i class="fas fa-user mr-1"></i> Opciones del Cliente
+                                    </span>
+                                    <hr class="flex-grow-1" style="border-color: #bdbdbd;">
+                                </div>
+                            </div>
+
                             {{-- ═══════════════════════════════════════════ --}}
-                            {{-- SECCIÓN PERSONALIZACIÓN (EXPANDIBLE) --}}
+                            {{-- PERSONALIZACIÓN (Opcional - Cliente)       --}}
                             {{-- ═══════════════════════════════════════════ --}}
-                            <div class="card mb-2" id="customizationCard">
+                            <div class="card mb-2" id="customizationCard" style="border-color: #e0e0e0;">
                                 <div class="card-header py-2 px-3" style="background: #f8f9fa; cursor: pointer;" id="customizationToggle">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div>
                                             <div class="custom-control custom-checkbox d-inline-block">
                                                 <input type="checkbox" class="custom-control-input" id="isCustomized">
                                                 <label class="custom-control-label font-weight-bold" for="isCustomized">
-                                                    <i class="fas fa-magic mr-1 text-purple"></i> Personalizar producto
+                                                    <i class="fas fa-magic mr-1" style="color: #7b1fa2;"></i> Agregar personalización
+                                                    <span class="badge badge-light ml-1" style="font-weight: normal; font-size: 11px;">opcional</span>
                                                 </label>
                                             </div>
+                                            <small class="text-muted d-block mt-1 ml-4" style="font-size: 11px;">
+                                                Opciones estéticas solicitadas por el cliente.
+                                            </small>
                                         </div>
                                         <i class="fas fa-chevron-down text-muted" id="customizationChevron"></i>
                                     </div>
@@ -1065,7 +1185,8 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="addProductBtn" disabled>
+                    <button type="button" class="btn btn-primary" id="addProductBtn" disabled
+                            data-toggle="tooltip" data-placement="top" title="">
                         <i class="fas fa-plus mr-1"></i> Agregar al Pedido
                     </button>
                 </div>
@@ -1080,7 +1201,7 @@
     <div class="modal fade" id="measurementsModal" tabindex="-1" aria-hidden="true" data-backdrop="static">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
-                <div class="modal-header py-2" style="background: #6f42c1; color: white;">
+                <div class="modal-header py-2" style="background: #343a40; color: white;">
                     <h5 class="modal-title">
                         <i class="fas fa-ruler-combined mr-2"></i>
                         <span id="measurementsModalTitle">Capturar Medidas</span>
@@ -1232,7 +1353,7 @@
     <div class="modal fade" id="extrasSelectionModal" tabindex="-1" aria-hidden="true" data-backdrop="static">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
-                <div class="modal-header bg-success text-white py-2">
+                <div class="modal-header py-2" style="background: #343a40; color: white;">
                     <h5 class="modal-title"><i class="fas fa-plus-circle mr-2"></i> Seleccionar Extras</h5>
                     <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
                 </div>
@@ -1910,32 +2031,58 @@
             // GESTIÓN DE MEDIDAS DEL ITEM
             // ==========================================
 
-            // Mostrar/ocultar sección de medidas según producto
+            // ==========================================
+            // CONTROL DE VISIBILIDAD MEDIDAS + INDICADOR TIPO
+            // ==========================================
             function updateMeasurementsSectionVisibility() {
                 if (!selectedProduct) {
+                    // Sin producto: ocultar indicadores
+                    $('#productTypeIndicator').hide();
+                    $('#productTypeStandard').hide();
+                    $('#productTypeCustom').hide();
                     $('#measurementsSection').hide();
+                    $('#systemClientDivider').hide();
                     return;
                 }
 
+                // Mostrar indicador de tipo de producto
+                $('#productTypeIndicator').show();
+
                 if (selectedProduct.requires_measurements) {
+                    // PRODUCTO A MEDIDA
+                    $('#productTypeStandard').hide();
+                    $('#productTypeCustom').show();
                     $('#measurementsSection').show();
+                    $('#systemClientDivider').show();
 
                     if (currentItemMeasurements) {
-                        // Hay medidas capturadas - mostrar como "Capturadas"
-                        $('#measurementsStatusBadge').text('Capturadas').removeClass('badge-light').addClass('badge-success');
-                        $('#btnMeasurementsText').text('Editar');
-                        // Mostrar resumen de medidas
+                        // ✓ REQUISITO COMPLETADO
+                        $('#measurementsStatusBadge')
+                            .html('<i class="fas fa-check-circle mr-1"></i>REQUISITO COMPLETADO')
+                            .css({'background': '#2e7d32', 'color': 'white', 'font-size': '11px', 'padding': '4px 8px'});
+                        $('#btnMeasurementsText').text('Editar medidas (requisito completado)');
+                        $('#btnOpenMeasurementsModal').css({'background': '#2e7d32', 'border-color': '#2e7d32'});
                         updateMeasurementsSummary(currentItemMeasurements);
                         $('#measurementsSummaryBody').show();
                     } else {
-                        // Sin medidas - mostrar como "Sin capturar"
-                        $('#measurementsStatusBadge').text('Sin capturar').removeClass('badge-success').addClass('badge-light');
-                        $('#btnMeasurementsText').text('Capturar');
+                        // ⚠ REQUISITO OBLIGATORIO - Sin medidas
+                        $('#measurementsStatusBadge')
+                            .html('<i class="fas fa-exclamation-circle mr-1"></i>REQUISITO OBLIGATORIO')
+                            .css({'background': '#e65100', 'color': 'white', 'font-size': '11px', 'padding': '4px 8px'});
+                        $('#btnMeasurementsText').text('Completar requisito: capturar medidas');
+                        $('#btnOpenMeasurementsModal').css({'background': '#0d47a1', 'border-color': '#0d47a1'});
                         $('#measurementsSummaryBody').hide();
                     }
                 } else {
+                    // PRODUCTO ESTÁNDAR
+                    $('#productTypeStandard').show();
+                    $('#productTypeCustom').hide();
                     $('#measurementsSection').hide();
+                    $('#systemClientDivider').hide();
                 }
+
+                // Actualizar estado del botón guardar
+                updateAddButtonState();
             }
 
             // Abrir modal de medidas (overlay, sin cerrar modal producto)
@@ -2116,7 +2263,7 @@
                         icon: 'warning',
                         title: 'Sin medidas',
                         text: 'Ingrese al menos una medida para continuar.',
-                        confirmButtonColor: '#6f42c1'
+                        confirmButtonColor: '#343a40'
                     });
                     return;
                 }
@@ -2149,18 +2296,21 @@
             function updateMeasurementsUIAfterCapture() {
                 if (!currentItemMeasurements) return;
 
-                // Cambiar badge a "Capturadas"
+                // Cambiar badge a "✓ REQUISITO COMPLETADO"
                 $('#measurementsStatusBadge')
-                    .text('Capturadas')
-                    .removeClass('badge-light')
-                    .addClass('badge-success');
+                    .html('<i class="fas fa-check-circle mr-1"></i>REQUISITO COMPLETADO')
+                    .css({'background': '#2e7d32', 'color': 'white', 'font-size': '11px', 'padding': '4px 8px'});
 
-                $('#btnMeasurementsText').text('Editar');
+                $('#btnMeasurementsText').text('Editar medidas (requisito completado)');
+                $('#btnOpenMeasurementsModal').css({'background': '#2e7d32', 'border-color': '#2e7d32'});
 
                 // Mostrar resumen de medidas
                 const summaryHtml = buildMeasurementsSummaryHtml(currentItemMeasurements);
                 $('#measurementsSummaryContent').html(summaryHtml);
                 $('#measurementsSummaryBody').show();
+
+                // Actualizar estado del botón guardar
+                updateAddButtonState();
             }
 
             // Construir texto resumen de medidas
@@ -2273,7 +2423,7 @@
                 const $btn = $('#addProductBtn');
 
                 if (!selectedProduct) {
-                    $btn.prop('disabled', true);
+                    $btn.prop('disabled', true).attr('title', '').tooltip('dispose');
                     return;
                 }
 
@@ -2281,14 +2431,21 @@
 
                 // Bloquear si precio es 0
                 if (price <= 0) {
-                    $btn.prop('disabled', true);
+                    $btn.prop('disabled', true).attr('title', 'Ingrese un precio válido').tooltip('dispose').tooltip();
                     return;
                 }
 
-                // VALIDACIÓN MEDIDAS LEGACY ELIMINADA (FASE 1)
-                // Las medidas se capturarán inline en FASE 2
+                // VALIDACIÓN DE MEDIDAS: Si requiere medidas y no las tiene, bloquear
+                if (selectedProduct.requires_measurements && !currentItemMeasurements) {
+                    $btn.prop('disabled', true)
+                        .attr('title', 'Completa las medidas para continuar')
+                        .tooltip('dispose')
+                        .tooltip();
+                    return;
+                }
 
-                $btn.prop('disabled', false);
+                // Todo OK: habilitar botón
+                $btn.prop('disabled', false).attr('title', '').tooltip('dispose');
             }
 
             function resetProductModal() {
@@ -2297,11 +2454,19 @@
                 $('#productPreviewSku').text('-');
                 $('#productPreviewImage').attr('src', '{{ asset('img/no-image.png') }}');
                 $('#productPreviewType').hide();
+                // Reset indicador de tipo de producto
+                $('#productTypeIndicator').hide();
+                $('#productTypeStandard').hide();
+                $('#productTypeCustom').hide();
                 // Reset medidas del item
                 currentItemMeasurements = null;
                 $('#measurementsSection').hide();
-                $('#measurementsStatusBadge').text('Sin capturar').removeClass('badge-success').addClass('badge-light');
-                $('#btnMeasurementsText').text('Capturar');
+                $('#systemClientDivider').hide();
+                $('#measurementsStatusBadge')
+                    .html('<i class="fas fa-exclamation-circle mr-1"></i>REQUISITO OBLIGATORIO')
+                    .css({'background': '#e65100', 'color': 'white', 'font-size': '11px', 'padding': '4px 8px'});
+                $('#btnMeasurementsText').text('Completar requisito: capturar medidas');
+                $('#btnOpenMeasurementsModal').css({'background': '#0d47a1', 'border-color': '#0d47a1'});
                 $('#measurementsSummaryBody').hide();
                 $('#measurementsSummaryContent').empty();
                 // Reset precio y comparación
@@ -2589,7 +2754,7 @@
                     if (item.requires_measurements) {
                         if (item.measurements) {
                             const measureSummary = buildMeasurementSummaryText(item.measurements);
-                            badgesRow1.push(`<span class="badge view-measurements-btn" style="background: #6f42c1; color: white; cursor: pointer;" data-index="${item.index}" title="Click para ver medidas: ${measureSummary}"><i class="fas fa-ruler-combined mr-1"></i>Medidas ✓</span>`);
+                            badgesRow1.push(`<span class="badge view-measurements-btn" style="background: #495057; color: white; cursor: pointer;" data-index="${item.index}" title="Click para ver medidas: ${measureSummary}"><i class="fas fa-ruler-combined mr-1"></i>Medidas ✓</span>`);
                         } else {
                             badgesRow1.push(`<span class="badge badge-warning text-dark"><i class="fas fa-ruler mr-1"></i>Sin medidas</span>`);
                         }
@@ -2762,92 +2927,121 @@
                 // Guardar índice del item que se está editando
                 editingItemIndex = itemIdx;
 
-                // Construir objeto selectedProduct desde los datos del item
-                selectedProduct = {
-                    id: item.product_id,
-                    name: item.product_name,
-                    base_price: item.unit_price,
-                    image_url: item.image_url,
-                    sku: item.variant_sku || null,
-                    requires_measurements: item.requires_measurements || false,
-                    product_type_name: item.product_type_name || null,
-                    lead_time: item.lead_time || 0,
-                    variants: [],
-                    extras: []
-                };
+                // Fetch producto completo desde servidor (incluye variantes)
+                $.ajax({
+                    url: `{{ url('admin/orders/ajax/product') }}/${item.product_id}`,
+                    type: 'GET',
+                    dataType: 'json',
+                    beforeSend: function() {
+                        // Mostrar indicador de carga
+                        Swal.fire({
+                            title: 'Cargando...',
+                            text: 'Obteniendo información del producto',
+                            allowOutsideClick: false,
+                            didOpen: () => Swal.showLoading()
+                        });
+                    },
+                    success: function(product) {
+                        Swal.close();
 
-                // Precargar precio base
-                modalBasePrice = item.unit_price;
+                        // Construir objeto selectedProduct CON variantes del servidor
+                        selectedProduct = {
+                            id: product.id,
+                            name: product.name,
+                            base_price: product.base_price,
+                            image_url: product.image_url,
+                            sku: product.sku || null,
+                            requires_measurements: product.requires_measurements || false,
+                            product_type_name: product.product_type_name || null,
+                            lead_time: product.lead_time || 0,
+                            variants: product.variants || [],
+                            extras: product.extras || []
+                        };
 
-                // Precargar preview del producto
-                $('#productPreviewName').text(item.product_name);
-                $('#productPreviewSku').text(item.variant_sku || '-');
-                $('#productPreviewImage').attr('src', item.image_url || '{{ asset("img/no-image.png") }}');
+                        // Precargar precio base (del item, no del producto)
+                        modalBasePrice = item.unit_price;
 
-                if (item.product_type_name) {
-                    $('#productPreviewType')
-                        .html(`<span class="badge badge-secondary">${item.product_type_name}</span>`)
-                        .show();
-                } else {
-                    $('#productPreviewType').hide();
-                }
+                        // Precargar preview del producto
+                        $('#productPreviewName').text(item.product_name);
+                        $('#productPreviewSku').text(item.variant_sku || '-');
+                        $('#productPreviewImage').attr('src', item.image_url || '{{ asset("img/no-image.png") }}');
 
-                // Precargar Select2 con producto seleccionado
-                const optionText = `${item.product_name} - $${parseFloat(item.unit_price).toFixed(2)}`;
-                const newOption = new Option(optionText, item.product_id, true, true);
-                $('#modalProductSelect').append(newOption).trigger('change');
+                        if (item.product_type_name) {
+                            $('#productPreviewType')
+                                .html(`<span class="badge badge-secondary">${item.product_type_name}</span>`)
+                                .show();
+                        } else {
+                            $('#productPreviewType').hide();
+                        }
 
-                // Precargar cantidad
-                $('#modalQuantity').val(item.quantity);
+                        // Precargar Select2 con producto seleccionado
+                        const optionText = `${item.product_name} - $${parseFloat(item.unit_price).toFixed(2)}`;
+                        const newOption = new Option(optionText, item.product_id, true, true);
+                        $('#modalProductSelect').append(newOption).trigger('change');
 
-                // Precargar precio
-                $('#modalPrice').val(item.unit_price);
+                        // Precargar cantidad
+                        $('#modalQuantity').val(item.quantity);
 
-                // Precargar variante (si existe)
-                if (item.product_variant_id) {
-                    const $variantSelect = $('#modalVariantSelect');
-                    $variantSelect.empty().append('<option value="">-- Producto base --</option>');
-                    $variantSelect.append(`<option value="${item.product_variant_id}" selected>${item.variant_display || item.variant_sku}</option>`);
-                    $('#variantGroup').show();
-                } else {
-                    $('#variantGroup').hide();
-                }
+                        // Precargar precio
+                        $('#modalPrice').val(item.unit_price);
 
-                // Precargar personalización
-                if (item.is_customized) {
-                    $('#isCustomized').prop('checked', true);
-                    $('#customizationBody').show();
-                    $('#customizationChevron').removeClass('fa-chevron-down').addClass('fa-chevron-up');
-                } else {
-                    $('#isCustomized').prop('checked', false);
-                    $('#customizationBody').hide();
-                    $('#customizationChevron').removeClass('fa-chevron-up').addClass('fa-chevron-down');
-                }
-                $('#modalEmbroideryText').val(item.embroidery_text || '');
-                $('#modalExtrasCost').val(item.extras_cost || 0);
-                $('#modalCustomizationNotes').val(item.customization_notes || '');
+                        // Cargar TODAS las variantes y preseleccionar la actual
+                        const $variantSelect = $('#modalVariantSelect');
+                        $variantSelect.empty().append('<option value="">-- Producto base --</option>');
 
-                // Precargar extras seleccionados
-                selectedExtras = item.selected_extras ? [...item.selected_extras] : [];
-                renderSelectedExtrasList();
-                $('#productExtrasSection').show();
+                        if (selectedProduct.variants && selectedProduct.variants.length > 0) {
+                            selectedProduct.variants.forEach(v => {
+                                const isSelected = v.id == item.product_variant_id;
+                                $variantSelect.append(
+                                    `<option value="${v.id}" data-price="${v.price}" data-sku="${v.sku}" ${isSelected ? 'selected' : ''}>${v.display} ($${parseFloat(v.price).toFixed(2)})</option>`
+                                );
+                            });
+                            $('#variantGroup').show();
+                        } else {
+                            $('#variantGroup').hide();
+                        }
 
-                // Precargar medidas del item
-                currentItemMeasurements = item.measurements ? {...item.measurements} : null;
+                        // Precargar personalización
+                        if (item.is_customized) {
+                            $('#isCustomized').prop('checked', true);
+                            $('#customizationBody').show();
+                            $('#customizationChevron').removeClass('fa-chevron-down').addClass('fa-chevron-up');
+                        } else {
+                            $('#isCustomized').prop('checked', false);
+                            $('#customizationBody').hide();
+                            $('#customizationChevron').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+                        }
+                        $('#modalEmbroideryText').val(item.embroidery_text || '');
+                        $('#modalExtrasCost').val(item.extras_cost || 0);
+                        $('#modalCustomizationNotes').val(item.customization_notes || '');
 
-                // Actualizar sección de medidas según tipo de producto
-                updateMeasurementsSectionVisibility();
+                        // Precargar extras seleccionados
+                        selectedExtras = item.selected_extras ? [...item.selected_extras] : [];
+                        renderSelectedExtrasList();
+                        $('#productExtrasSection').show();
 
-                // Mostrar subtotal
-                $('#itemSubtotalContainer').show();
-                updateItemSubtotal();
-                updatePriceComparison();
+                        // Precargar medidas del item
+                        currentItemMeasurements = item.measurements ? {...item.measurements} : null;
 
-                // Cambiar texto del botón a "Guardar Cambios"
-                $('#addProductBtn').text('Guardar Cambios').prop('disabled', false);
+                        // Actualizar sección de medidas según tipo de producto
+                        updateMeasurementsSectionVisibility();
 
-                // Abrir modal de producto
-                $('#addProductModal').modal('show');
+                        // Mostrar subtotal
+                        $('#itemSubtotalContainer').show();
+                        updateItemSubtotal();
+                        updatePriceComparison();
+
+                        // Cambiar texto del botón a "Guardar Cambios"
+                        $('#addProductBtn').text('Guardar Cambios').prop('disabled', false);
+
+                        // Abrir modal de producto
+                        $('#addProductModal').modal('show');
+                    },
+                    error: function(xhr) {
+                        Swal.fire('Error', 'No se pudo cargar la información del producto', 'error');
+                        console.error('Error fetching product:', xhr);
+                    }
+                });
             });
 
             // ==========================================

@@ -20,6 +20,7 @@ class Order extends Model
         'order_parent_id',
         'cliente_id',
         'client_measurement_id',
+        'design_export_id',
         'status',
         'urgency_level',
         'priority',
@@ -31,6 +32,7 @@ class Order extends Model
         'total',
         'amount_paid',
         'balance',
+        'materials_cost_snapshot',
         'promised_date',
         'minimum_date',
         'delivered_date',
@@ -53,6 +55,7 @@ class Order extends Model
         'total' => 'decimal:2',
         'amount_paid' => 'decimal:2',
         'balance' => 'decimal:2',
+        'materials_cost_snapshot' => 'decimal:4',
         'promised_date' => 'date',
         'minimum_date' => 'date',
         'delivered_date' => 'date',
@@ -93,6 +96,34 @@ class Order extends Model
             }
             if (empty($model->order_number)) {
                 $model->order_number = self::generateOrderNumber();
+            }
+        });
+
+        // ================================================================
+        // AUDITORÍA: Validación de transiciones de estado en modelo
+        // Previene cambios directos vía Eloquent que puedan corromper inventario
+        // ================================================================
+        static::updating(function (self $model): void {
+            if ($model->isDirty('status')) {
+                $oldStatus = $model->getOriginal('status');
+                $newStatus = $model->status;
+
+                // Matriz de transiciones válidas
+                $allowed = [
+                    self::STATUS_DRAFT => [self::STATUS_CONFIRMED, self::STATUS_CANCELLED],
+                    self::STATUS_CONFIRMED => [self::STATUS_IN_PRODUCTION, self::STATUS_CANCELLED],
+                    self::STATUS_IN_PRODUCTION => [self::STATUS_READY, self::STATUS_CANCELLED],
+                    self::STATUS_READY => [self::STATUS_DELIVERED, self::STATUS_CANCELLED],
+                    self::STATUS_DELIVERED => [],
+                    self::STATUS_CANCELLED => [],
+                ];
+
+                if (!in_array($newStatus, $allowed[$oldStatus] ?? [])) {
+                    throw new \Exception(
+                        "Transición de estado no permitida: {$oldStatus} → {$newStatus}. " .
+                        "Use los métodos de OrderService para transiciones seguras."
+                    );
+                }
             }
         });
     }
@@ -168,6 +199,20 @@ class Order extends Model
     public function messages(): HasMany
     {
         return $this->hasMany(OrderMessage::class, 'order_id')->orderBy('created_at', 'desc');
+    }
+
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(InventoryReservation::class, 'order_id');
+    }
+
+    /**
+     * Relación con el archivo de producción (DesignExport) vinculado.
+     * Solo se permite vincular exports con status 'aprobado'.
+     */
+    public function designExport(): BelongsTo
+    {
+        return $this->belongsTo(DesignExport::class, 'design_export_id');
     }
 
     // === SCOPES ===
@@ -305,6 +350,7 @@ class Order extends Model
         'requires_invoice',
         'iva_amount',
         'total',
+        'materials_cost_snapshot',
         'promised_date',
         'minimum_date',
     ];
@@ -482,5 +528,263 @@ class Order extends Model
             self::URGENCY_EXPRESS => 'danger',
             default => 'secondary',
         };
+    }
+
+    /**
+     * Verifica si el pedido puede iniciar producción.
+     * Considera ajustes, diseños pendientes y diseños técnicos vinculados.
+     */
+    public function canStartProduction(): bool
+    {
+        if ($this->status !== self::STATUS_CONFIRMED) {
+            return false;
+        }
+
+        // R2: Bloqueo por ajustes pendientes
+        if ($this->hasPendingAdjustments()) {
+            return false;
+        }
+
+        // R3: Bloqueo por diseño no aprobado
+        if ($this->hasItemsPendingDesignApproval()) {
+            return false;
+        }
+
+        // R4: Verificar medidas cambiadas post-aprobación
+        $hasChangedMeasurements = $this->items()
+            ->where('design_approved', true)
+            ->get()
+            ->contains(fn($item) => $item->hasMeasurementsChangedAfterApproval());
+
+        if ($hasChangedMeasurements) {
+            return false;
+        }
+
+        // R5: Verificar que items personalizados tengan diseños técnicos vinculados
+        if ($this->hasItemsMissingTechnicalDesigns()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Verifica si hay items personalizados sin diseños técnicos vinculados.
+     * REGLA: Items con personalization_type = 'design' o 'text' DEBEN tener
+     * al menos un DesignExport vinculado antes de iniciar producción.
+     */
+    public function hasItemsMissingTechnicalDesigns(): bool
+    {
+        return $this->items()
+            ->whereIn('personalization_type', [
+                OrderItem::PERSONALIZATION_DESIGN,
+                OrderItem::PERSONALIZATION_TEXT,
+            ])
+            ->get()
+            ->contains(fn($item) => !$item->hasTechnicalDesigns());
+    }
+
+    /**
+     * Obtiene items que bloquean producción por falta de diseños técnicos.
+     */
+    public function getItemsMissingTechnicalDesigns(): \Illuminate\Support\Collection
+    {
+        return $this->items()
+            ->whereIn('personalization_type', [
+                OrderItem::PERSONALIZATION_DESIGN,
+                OrderItem::PERSONALIZATION_TEXT,
+            ])
+            ->get()
+            ->filter(fn($item) => !$item->hasTechnicalDesigns());
+    }
+
+    /**
+     * Obtiene todos los bloqueos de producción detallados.
+     */
+    public function getProductionBlockers(): array
+    {
+        $blockers = [];
+
+        if ($this->hasPendingAdjustments()) {
+            $blockers[] = [
+                'code' => 'R2',
+                'type' => 'adjustments',
+                'message' => 'Hay ajustes de precio pendientes de aprobación',
+            ];
+        }
+
+        if ($this->hasItemsPendingDesignApproval()) {
+            $items = $this->getItemsBlockingForDesign();
+            $blockers[] = [
+                'code' => 'R3',
+                'type' => 'design_approval',
+                'message' => 'Hay diseños pendientes de aprobación',
+                'items' => $items->pluck('product_name')->toArray(),
+            ];
+        }
+
+        $itemsWithChangedMeasurements = $this->items()
+            ->where('design_approved', true)
+            ->get()
+            ->filter(fn($item) => $item->hasMeasurementsChangedAfterApproval());
+
+        if ($itemsWithChangedMeasurements->isNotEmpty()) {
+            $blockers[] = [
+                'code' => 'R4',
+                'type' => 'measurements_changed',
+                'message' => 'Las medidas han cambiado después de aprobar el diseño',
+                'items' => $itemsWithChangedMeasurements->pluck('product_name')->toArray(),
+            ];
+        }
+
+        $itemsMissingDesigns = $this->getItemsMissingTechnicalDesigns();
+        if ($itemsMissingDesigns->isNotEmpty()) {
+            $blockers[] = [
+                'code' => 'R5',
+                'type' => 'missing_technical_designs',
+                'message' => 'Hay productos personalizados sin diseño técnico vinculado',
+                'items' => $itemsMissingDesigns->pluck('product_name')->toArray(),
+            ];
+        }
+
+        // === BLOQUEO POR INVENTARIO (PERSISTIDO) ===
+        if ($this->hasProductionInventoryBlock()) {
+            $lastBlock = $this->getLastProductionBlockEvent();
+            $blockers[] = [
+                'code' => 'R5_INV',
+                'type' => 'inventory_insufficient',
+                'message' => $lastBlock?->message ?? 'Inventario insuficiente (intento previo fallido)',
+                'blocked_at' => $lastBlock?->created_at?->toIso8601String(),
+            ];
+        }
+
+        return $blockers;
+    }
+
+    // =========================================================================
+    // === MÉTODOS DE LECTURA PARA BLOQUEO POR INVENTARIO (READ-ONLY) ===
+    // =========================================================================
+
+    /**
+     * Verifica si existe un bloqueo de producción por inventario NO resuelto.
+     * REGLA: Un bloqueo se considera resuelto si después de él existe un evento
+     * 'production_started' (producción iniciada exitosamente).
+     *
+     * @return bool TRUE si hay bloqueo activo por inventario
+     */
+    public function hasProductionInventoryBlock(): bool
+    {
+        // Solo aplica a pedidos confirmados
+        if ($this->status !== self::STATUS_CONFIRMED) {
+            return false;
+        }
+
+        // Buscar el último evento de bloqueo por inventario
+        $lastBlock = $this->getLastProductionBlockEvent();
+
+        if (!$lastBlock) {
+            return false;
+        }
+
+        // Verificar si después del bloqueo hubo un inicio de producción exitoso
+        $productionStartedAfter = $this->events()
+            ->where('event_type', OrderEvent::TYPE_PRODUCTION_STARTED)
+            ->where('created_at', '>', $lastBlock->created_at)
+            ->exists();
+
+        // Si hubo producción iniciada después del bloqueo, el bloqueo está resuelto
+        return !$productionStartedAfter;
+    }
+
+    /**
+     * Obtiene el motivo del último bloqueo de producción por inventario.
+     *
+     * @return string|null Mensaje del bloqueo o NULL si no hay bloqueo activo
+     */
+    public function getLastProductionBlockReason(): ?string
+    {
+        if (!$this->hasProductionInventoryBlock()) {
+            return null;
+        }
+
+        return $this->getLastProductionBlockEvent()?->message;
+    }
+
+    /**
+     * Obtiene el último evento de bloqueo de producción por inventario.
+     * MÉTODO INTERNO - Solo lee eventos, no recalcula inventario.
+     *
+     * @return OrderEvent|null
+     */
+    protected function getLastProductionBlockEvent(): ?OrderEvent
+    {
+        return $this->events()
+            ->where('event_type', OrderEvent::TYPE_PRODUCTION_BLOCKED)
+            ->whereJsonContains('metadata->reason', 'inventory_insufficient')
+            ->orderBy('created_at', 'desc')
+            ->first();
+    }
+
+    /**
+     * Obtiene los materiales faltantes del último bloqueo por inventario.
+     * Útil para mostrar detalles en la UI sin recalcular.
+     *
+     * @return array Lista de materiales faltantes del último bloqueo
+     */
+    public function getLastInventoryBlockDetails(): array
+    {
+        $lastBlock = $this->getLastProductionBlockEvent();
+
+        if (!$lastBlock || !$this->hasProductionInventoryBlock()) {
+            return [];
+        }
+
+        return [
+            'message' => $lastBlock->message,
+            'missing_materials' => $lastBlock->metadata['missing_materials'] ?? [],
+            'blocked_at' => $lastBlock->created_at,
+            'blocked_by' => $lastBlock->metadata['user_id'] ?? null,
+        ];
+    }
+
+    /**
+     * Obtiene todos los extras con inventario asociados a los productos del pedido.
+     * Útil para mostrar en la UI qué extras consumen materiales.
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    public function getExtrasWithInventory(): \Illuminate\Support\Collection
+    {
+        $extras = collect();
+
+        foreach ($this->items as $item) {
+            $product = $item->product;
+            if (!$product) {
+                continue;
+            }
+
+            // Cargar extras con materiales si no están cargados
+            if (!$product->relationLoaded('extras')) {
+                $product->load(['extras.materials.material.consumptionUnit']);
+            }
+
+            foreach ($product->extras as $extra) {
+                if ($extra->consumesInventory() && !$extras->contains('id', $extra->id)) {
+                    $extras->push($extra);
+                }
+            }
+        }
+
+        return $extras;
+    }
+
+    /**
+     * Verifica si el pedido tiene extras que consumen inventario.
+     *
+     * @return bool
+     */
+    public function hasExtrasWithInventory(): bool
+    {
+        return $this->getExtrasWithInventory()->isNotEmpty();
     }
 }

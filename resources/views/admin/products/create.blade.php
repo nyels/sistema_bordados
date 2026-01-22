@@ -952,6 +952,18 @@
                                     <input type="number" class="form-control" id="revFinalPrice" name="base_price" step="0.01" placeholder="Igual al sugerido" onchange="updateHeaderPrice()">
                                 </div>
                             </div>
+                            {{-- ================================================================ --}}
+                            {{-- REGLA UX SELLADA: PRECIO CONGELADO POST-ORDEN --}}
+                            {{-- ================================================================ --}}
+                            <div class="mt-3 p-2 rounded" style="background: #e3f2fd; border-left: 3px solid #1976d2;">
+                                <div class="d-flex align-items-start">
+                                    <i class="fas fa-lock mr-2 mt-1" style="color: #1976d2;"></i>
+                                    <div style="font-size: 12px; color: #0d47a1;">
+                                        <strong>Precio del producto</strong><br>
+                                        El precio final se define aquí. Una vez agregado a una orden, este precio <strong>NO se modifica</strong>, aunque existan pagos, producción o entregas.
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -10,24 +10,79 @@
 @stop
 
 @section('content')
-    {{-- KPIs --}}
+    {{-- KPIs OPERATIVOS - Panel de Control --}}
     <div class="row">
-        <div class="col-lg-4 col-md-6">
-            <div class="small-box bg-warning">
+        {{-- Fila 1: KPIs de Producción --}}
+        <div class="col-xl col-lg-4 col-md-6 col-sm-6">
+            <div class="small-box bg-info">
                 <div class="inner">
-                    <h3>{{ $pedidosActivos }}</h3>
-                    <p>Pedidos Activos</p>
+                    <h3>{{ $kpis['para_producir'] }}</h3>
+                    <p>Para Producir</p>
                 </div>
-                <div class="icon"><i class="fas fa-clipboard-list"></i></div>
-                <a href="{{ route('admin.orders.index') }}" class="small-box-footer">
-                    Ver pedidos <i class="fas fa-arrow-circle-right"></i>
+                <div class="icon"><i class="fas fa-play-circle"></i></div>
+                <a href="{{ route('admin.orders.index', ['status' => 'confirmed']) }}" class="small-box-footer">
+                    Ver listos <i class="fas fa-arrow-circle-right"></i>
                 </a>
             </div>
-            <p class="text-muted small mt-n2 mb-3 px-2">Confirmados + En producción</p>
         </div>
 
-        <div class="col-lg-4 col-md-6">
+        <div class="col-xl col-lg-4 col-md-6 col-sm-6">
+            <div class="small-box bg-warning">
+                <div class="inner">
+                    <h3>{{ $kpis['bloqueados'] }}</h3>
+                    <p>Bloqueados</p>
+                </div>
+                <div class="icon"><i class="fas fa-ban"></i></div>
+                <a href="{{ route('admin.orders.index', ['blocked' => 1]) }}" class="small-box-footer">
+                    Ver bloqueos <i class="fas fa-arrow-circle-right"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="col-xl col-lg-4 col-md-6 col-sm-6">
+            <div class="small-box bg-primary">
+                <div class="inner">
+                    <h3>{{ $kpis['en_produccion'] }}</h3>
+                    <p>En Producción</p>
+                </div>
+                <div class="icon"><i class="fas fa-cogs"></i></div>
+                <a href="{{ route('admin.orders.index', ['status' => 'in_production']) }}" class="small-box-footer">
+                    Ver producción <i class="fas fa-arrow-circle-right"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="col-xl col-lg-4 col-md-6 col-sm-6">
             <div class="small-box bg-success">
+                <div class="inner">
+                    <h3>{{ $kpis['para_entregar'] }}</h3>
+                    <p>Para Entregar</p>
+                </div>
+                <div class="icon"><i class="fas fa-truck"></i></div>
+                <a href="{{ route('admin.orders.index', ['status' => 'ready']) }}" class="small-box-footer">
+                    Ver listos <i class="fas fa-arrow-circle-right"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="col-xl col-lg-4 col-md-6 col-sm-6">
+            <div class="small-box {{ $kpis['retrasados'] > 0 ? 'bg-danger' : 'bg-secondary' }}">
+                <div class="inner">
+                    <h3>{{ $kpis['retrasados'] }}</h3>
+                    <p>Retrasados</p>
+                </div>
+                <div class="icon"><i class="fas fa-clock"></i></div>
+                <a href="{{ route('admin.orders.index', ['delayed' => 1]) }}" class="small-box-footer">
+                    Ver retrasados <i class="fas fa-arrow-circle-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {{-- KPIs Secundarios --}}
+    <div class="row">
+        <div class="col-lg-4 col-md-6">
+            <div class="small-box bg-gradient-olive">
                 <div class="inner">
                     <h3>${{ number_format($ventasDelMes, 0) }}</h3>
                     <p>Ventas {{ $nombreMes }}</p>
@@ -37,7 +92,6 @@
                     Ver entregados <i class="fas fa-arrow-circle-right"></i>
                 </a>
             </div>
-            <p class="text-muted small mt-n2 mb-3 px-2">Solo pedidos entregados</p>
         </div>
 
         <div class="col-lg-4 col-md-6">
@@ -51,7 +105,6 @@
                     Ver inventario <i class="fas fa-arrow-circle-right"></i>
                 </a>
             </div>
-            <p class="text-muted small mt-n2 mb-3 px-2">Stock &le; mínimo configurado</p>
         </div>
     </div>
 

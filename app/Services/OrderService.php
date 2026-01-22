@@ -13,6 +13,7 @@ use App\Models\InventoryReservation;
 use App\Models\ClientMeasurementHistory;
 use App\Models\PersonalizationTimeMultiplier;
 use App\Enums\MovementType;
+use App\Exceptions\InsufficientInventoryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 
@@ -220,45 +221,90 @@ class OrderService
         }
 
         // === R5, R6, R7: VALIDAR Y RESERVAR INVENTARIO CON LOCKS ===
-        DB::transaction(function () use ($order) {
-            // Calcular requerimientos totales de materiales
-            $materialRequirements = $this->calculateMaterialRequirements($order);
+        // NOTA: El bloqueo por inventario se registra FUERA de la transacción
+        // para que persista incluso si la transacción falla (rollback)
+        try {
+            DB::transaction(function () use ($order) {
+                // Calcular requerimientos totales de materiales
+                $materialRequirements = $this->calculateMaterialRequirements($order);
 
-            // Validar DISPONIBILIDAD (físico - reservado) y bloquear con SELECT FOR UPDATE
-            $this->validateAvailableInventory($materialRequirements);
+                // Validar DISPONIBILIDAD (físico - reservado) y bloquear con SELECT FOR UPDATE
+                // Las variantes quedan bloqueadas con lockForUpdate() dentro de este método
+                $this->validateAvailableInventory($materialRequirements);
 
-            // CREAR RESERVAS (NO descuenta stock físico)
-            foreach ($order->items as $item) {
-                $this->createReservationsForItem($item);
+                // === SNAPSHOT DE COSTO INTERNO (INMUTABLE) ===
+                // Calcular costo de materiales usando average_cost vigente
+                // Se registra ANTES de crear reservas para capturar el costo exacto
+                $materialsCostSnapshot = $this->calculateMaterialsCostSnapshot($materialRequirements);
+
+                // CREAR RESERVAS (NO descuenta stock físico)
+                foreach ($order->items as $item) {
+                    $this->createReservationsForItem($item);
+                }
+
+                // === R8: REGISTRAR TRANSICIÓN CON SNAPSHOT ===
+                $order->update([
+                    'status' => Order::STATUS_IN_PRODUCTION,
+                    'materials_cost_snapshot' => $materialsCostSnapshot,
+                    'updated_by' => Auth::id(),
+                ]);
+
+                // === EVENTO: PRODUCCIÓN INICIADA ===
+                $reservationsSummary = InventoryReservation::where('order_id', $order->id)
+                    ->where('status', InventoryReservation::STATUS_RESERVED)
+                    ->with('materialVariant.material')
+                    ->get()
+                    ->map(fn($r) => [
+                        'material' => $r->materialVariant->display_name ?? 'N/A',
+                        'quantity' => $r->quantity,
+                    ])
+                    ->toArray();
+
+                OrderEvent::logProductionStarted($order, $reservationsSummary);
+            });
+        } catch (\Exception $e) {
+            // === PERSISTENCIA DE BLOQUEO POR INVENTARIO (FUERA DE TRANSACCIÓN) ===
+            // El evento se guarda en una transacción separada (commit independiente)
+
+            if ($e instanceof InsufficientInventoryException) {
+                // Excepción tipada: incluir materiales faltantes en metadata
+                OrderEvent::log(
+                    $order,
+                    OrderEvent::TYPE_PRODUCTION_BLOCKED,
+                    $e->getMessage(),
+                    [
+                        'reason' => 'inventory_insufficient',
+                        'missing_materials' => $e->getMissingMaterials(),
+                        'blocked_at' => now()->toIso8601String(),
+                        'user_id' => Auth::id(),
+                    ]
+                );
+            } elseif (str_contains($e->getMessage(), 'Inventario insuficiente')) {
+                // Fallback para compatibilidad
+                OrderEvent::log(
+                    $order,
+                    OrderEvent::TYPE_PRODUCTION_BLOCKED,
+                    $e->getMessage(),
+                    [
+                        'reason' => 'inventory_insufficient',
+                        'blocked_at' => now()->toIso8601String(),
+                        'user_id' => Auth::id(),
+                    ]
+                );
             }
 
-            // === R8: REGISTRAR TRANSICIÓN ===
-            $order->update([
-                'status' => Order::STATUS_IN_PRODUCTION,
-                'updated_by' => Auth::id(),
-            ]);
-
-            // === EVENTO: PRODUCCIÓN INICIADA ===
-            $reservationsSummary = InventoryReservation::where('order_id', $order->id)
-                ->where('status', InventoryReservation::STATUS_RESERVED)
-                ->with('materialVariant.material')
-                ->get()
-                ->map(fn($r) => [
-                    'material' => $r->materialVariant->display_name ?? 'N/A',
-                    'quantity' => $r->quantity,
-                ])
-                ->toArray();
-
-            OrderEvent::logProductionStarted($order, $reservationsSummary);
-        });
+            // Re-lanzar la excepción para que el controlador la maneje
+            throw $e;
+        }
     }
 
-    // === TRIGGER: ENTREGAR PEDIDO ===
-    // Al entregar: Reservas → Consumidas, Stock físico → Descontado
-    public function triggerDelivery(Order $order): void
+    // === TRIGGER: MARCAR LISTO (in_production → ready) ===
+    // Al marcar listo: Reservas → Consumidas, Stock físico → Descontado
+    // REGLA CANÓNICA: El inventario se DESCUENTA al marcar READY (producción terminada)
+    public function triggerReady(Order $order): void
     {
-        if ($order->status !== Order::STATUS_READY) {
-            throw new \Exception('Solo pedidos listos pueden ser entregados.');
+        if ($order->status !== Order::STATUS_IN_PRODUCTION) {
+            throw new \Exception('Solo pedidos en producción pueden marcarse como listos.');
         }
 
         DB::transaction(function () use ($order) {
@@ -267,6 +313,8 @@ class OrderService
                 ->where('status', InventoryReservation::STATUS_RESERVED)
                 ->lockForUpdate()
                 ->get();
+
+            $consumedMaterials = [];
 
             foreach ($reservations as $reservation) {
                 // Bloquear variante para actualización
@@ -294,16 +342,49 @@ class OrderService
                     'average_cost_after' => $variant->average_cost,
                     'value_before' => $valueBefore,
                     'value_after' => $variant->current_value,
-                    'reference_type' => 'order_delivery',
+                    'reference_type' => 'order_ready',
                     'reference_id' => $order->id,
-                    'notes' => "Entrega pedido {$order->order_number}",
+                    'notes' => "Producción completada - Pedido {$order->order_number}",
                     'created_by' => Auth::id(),
                 ]);
 
                 // Marcar reserva como consumida
                 $reservation->markConsumed(Auth::id());
+
+                $consumedMaterials[] = [
+                    'material_variant_id' => $reservation->material_variant_id,
+                    'quantity' => $reservation->quantity,
+                    'material_name' => $variant->display_name,
+                    'source_type' => $reservation->source_type,
+                    'source_id' => $reservation->source_id,
+                ];
             }
 
+            // Actualizar estado del pedido
+            $order->update([
+                'status' => Order::STATUS_READY,
+                'updated_by' => Auth::id(),
+            ]);
+
+            // === EVENTO: PRODUCCIÓN COMPLETADA, INVENTARIO CONSUMIDO ===
+            OrderEvent::log(
+                $order,
+                OrderEvent::TYPE_READY,
+                "Producción completada. Materiales consumidos del inventario.",
+                ['consumed_materials' => $consumedMaterials]
+            );
+        });
+    }
+
+    // === TRIGGER: ENTREGAR PEDIDO (ready → delivered) ===
+    // Al entregar: Solo cambio de estado (inventario ya fue consumido en READY)
+    public function triggerDelivery(Order $order): void
+    {
+        if ($order->status !== Order::STATUS_READY) {
+            throw new \Exception('Solo pedidos listos pueden ser entregados.');
+        }
+
+        DB::transaction(function () use ($order) {
             // Actualizar estado del pedido
             $order->update([
                 'status' => Order::STATUS_DELIVERED,
@@ -312,46 +393,78 @@ class OrderService
             ]);
 
             // === EVENTO: PEDIDO ENTREGADO ===
-            $consumedMaterials = $reservations->map(fn($r) => [
-                'material_variant_id' => $r->material_variant_id,
-                'quantity' => $r->quantity,
-            ])->toArray();
-
-            OrderEvent::logDelivered($order, $consumedMaterials);
+            OrderEvent::logDelivered($order);
         });
     }
 
     // === CANCELAR PEDIDO CON LIBERACIÓN DE RESERVAS ===
+    // AUDITORÍA: Maneja correctamente todos los estados pre-entrega
+    // - DRAFT/CONFIRMED: Sin reservas, solo cambia estado
+    // - IN_PRODUCTION: Libera reservas activas (stock físico intacto)
+    // - READY: Stock ya consumido, NO se puede revertir automáticamente
     public function cancelOrder(Order $order, ?string $reason = null): void
     {
         if ($order->status === Order::STATUS_DELIVERED) {
             throw new \Exception('No se puede cancelar un pedido entregado.');
         }
 
-        DB::transaction(function () use ($order, $reason) {
-            // Liberar todas las reservas activas
+        // ================================================================
+        // ADVERTENCIA CRÍTICA: Cancelación desde READY
+        // El stock físico YA fue consumido en triggerReady().
+        // La cancelación NO revierte el stock automáticamente.
+        // Requiere ajuste de inventario manual si se necesita.
+        // ================================================================
+        $stockAlreadyConsumed = ($order->status === Order::STATUS_READY);
+
+        DB::transaction(function () use ($order, $reason, $stockAlreadyConsumed) {
+            // Liberar todas las reservas activas (solo aplica si están en 'reserved')
             $reservations = InventoryReservation::where('order_id', $order->id)
                 ->where('status', InventoryReservation::STATUS_RESERVED)
                 ->get();
 
+            $releasedCount = 0;
             foreach ($reservations as $reservation) {
                 $reservation->markReleased();
+                $releasedCount++;
             }
 
-            // Actualizar estado del pedido
-            $order->update([
-                'status' => Order::STATUS_CANCELLED,
-                'notes' => $order->notes . ($reason ? "\n[Cancelado: {$reason}]" : ''),
-                'updated_by' => Auth::id(),
-            ]);
+            // Construir nota de cancelación con contexto de inventario
+            $inventoryNote = '';
+            if ($stockAlreadyConsumed) {
+                $inventoryNote = "\n[ADVERTENCIA: Stock físico ya consumido. Requiere ajuste de inventario manual si aplica.]";
+            } elseif ($releasedCount > 0) {
+                $inventoryNote = "\n[Reservas liberadas: {$releasedCount}]";
+            }
+
+            // Actualizar estado del pedido (saveQuietly para evitar validación de transición)
+            $order->status = Order::STATUS_CANCELLED;
+            $order->notes = $order->notes . ($reason ? "\n[Cancelado: {$reason}]" : '') . $inventoryNote;
+            $order->updated_by = Auth::id();
+            $order->saveQuietly();
 
             // === EVENTO: PEDIDO CANCELADO ===
             OrderEvent::logCancelled($order, $reason);
+
+            // Log de auditoría adicional para casos de stock consumido
+            if ($stockAlreadyConsumed) {
+                OrderEvent::log(
+                    $order,
+                    OrderEvent::TYPE_STATUS_CHANGED,
+                    "ADVERTENCIA: Pedido cancelado después de consumo de stock. Materiales NO devueltos automáticamente.",
+                    [
+                        'previous_status' => Order::STATUS_READY,
+                        'stock_consumed' => true,
+                        'requires_manual_adjustment' => true,
+                    ]
+                );
+            }
         });
     }
 
     /**
      * Calcula los requerimientos totales de materiales para un pedido.
+     * INCLUYE: Materiales del producto base + Materiales de extras con inventario.
+     *
      * @return array [material_variant_id => required_quantity]
      */
     protected function calculateMaterialRequirements(Order $order): array
@@ -361,6 +474,7 @@ class OrderService
         foreach ($order->items as $item) {
             $product = $item->product;
 
+            // === MATERIALES DEL PRODUCTO BASE ===
             if (!$product->relationLoaded('materials')) {
                 $product->load('materials');
             }
@@ -369,6 +483,52 @@ class OrderService
                 $requiredQty = $materialVariant->pivot->quantity * $item->quantity;
                 $variantId = $materialVariant->id;
 
+                if (!isset($requirements[$variantId])) {
+                    $requirements[$variantId] = 0;
+                }
+                $requirements[$variantId] += $requiredQty;
+            }
+
+            // === MATERIALES DE EXTRAS CON INVENTARIO ===
+            $extraRequirements = $this->calculateExtraMaterialRequirements($item);
+            foreach ($extraRequirements as $variantId => $requiredQty) {
+                if (!isset($requirements[$variantId])) {
+                    $requirements[$variantId] = 0;
+                }
+                $requirements[$variantId] += $requiredQty;
+            }
+        }
+
+        return $requirements;
+    }
+
+    /**
+     * Calcula los requerimientos de materiales de extras para un item.
+     * Solo considera extras con consumes_inventory = true.
+     *
+     * @param OrderItem $item
+     * @return array [material_variant_id => required_quantity]
+     */
+    protected function calculateExtraMaterialRequirements(OrderItem $item): array
+    {
+        $requirements = [];
+        $product = $item->product;
+
+        // Cargar extras con sus materiales
+        if (!$product->relationLoaded('extras')) {
+            $product->load(['extras.materials']);
+        }
+
+        foreach ($product->extras as $extra) {
+            // Solo procesar extras que consumen inventario
+            if (!$extra->consumesInventory()) {
+                continue;
+            }
+
+            // Obtener requerimientos del extra multiplicados por cantidad del item
+            $extraReqs = $extra->getMaterialRequirements($item->quantity);
+
+            foreach ($extraReqs as $variantId => $requiredQty) {
                 if (!isset($requirements[$variantId])) {
                     $requirements[$variantId] = 0;
                 }
@@ -414,26 +574,62 @@ class OrderService
                 continue;
             }
 
-            $reserved = $activeReservations->get($variantId, 0);
+            $reserved = (float) $activeReservations->get($variantId, 0);
             $available = $variant->current_stock - $reserved;
 
             if ($available < $requiredQty) {
-                $insufficientMaterials[] = "{$variant->display_name}: necesita {$requiredQty}, disponible {$available} (físico: {$variant->current_stock}, reservado: {$reserved})";
+                $missing = round($requiredQty - $available, 2);
+                $unit = $variant->material?->category?->baseUnit?->symbol ?? '';
+                $insufficientMaterials[] = "{$variant->display_name}: faltan {$missing} {$unit}";
             }
         }
 
         if (!empty($insufficientMaterials)) {
-            throw new \Exception('Inventario insuficiente por reserva concurrente. ' . implode('; ', $insufficientMaterials));
+            throw new InsufficientInventoryException($insufficientMaterials);
         }
     }
 
     /**
+     * Calcula el costo total de materiales usando average_cost vigente.
+     * SNAPSHOT INMUTABLE: Se registra al iniciar producción y NO se recalcula.
+     *
+     * @param array $requirements [material_variant_id => required_quantity]
+     * @return float Costo total de materiales
+     */
+    protected function calculateMaterialsCostSnapshot(array $requirements): float
+    {
+        if (empty($requirements)) {
+            return 0.0;
+        }
+
+        // Las variantes ya están cargadas con lock en validateAvailableInventory()
+        // Pero las recargamos para obtener average_cost actualizado
+        $materialVariants = \App\Models\MaterialVariant::whereIn('id', array_keys($requirements))
+            ->get()
+            ->keyBy('id');
+
+        $totalCost = 0.0;
+
+        foreach ($requirements as $variantId => $requiredQty) {
+            $variant = $materialVariants->get($variantId);
+            if ($variant) {
+                $totalCost += (float) $requiredQty * (float) $variant->average_cost;
+            }
+        }
+
+        return round($totalCost, 4);
+    }
+
+    /**
      * Crea reservas de inventario para un item (NO descuenta stock físico).
+     * INCLUYE: Materiales del producto base + Materiales de extras con inventario.
+     * TRAZABILIDAD: Cada reserva indica su origen (source_type + source_id).
      */
     protected function createReservationsForItem(OrderItem $item): void
     {
         $product = $item->product;
 
+        // === RESERVAS DE MATERIALES DEL PRODUCTO BASE ===
         if (!$product->relationLoaded('materials')) {
             $product->load('materials');
         }
@@ -445,15 +641,50 @@ class OrderService
                 continue;
             }
 
-            // Crear reserva (NO toca stock físico)
+            // Crear reserva con trazabilidad: PRODUCTO
             InventoryReservation::create([
                 'order_id' => $item->order_id,
                 'order_item_id' => $item->id,
                 'material_variant_id' => $materialVariant->id,
+                'source_type' => InventoryReservation::SOURCE_PRODUCT,
+                'source_id' => $product->id,
                 'quantity' => $requiredQty,
                 'status' => InventoryReservation::STATUS_RESERVED,
                 'created_by' => Auth::id(),
             ]);
+        }
+
+        // === RESERVAS DE MATERIALES DE EXTRAS CON INVENTARIO ===
+        if (!$product->relationLoaded('extras')) {
+            $product->load(['extras.materials']);
+        }
+
+        foreach ($product->extras as $extra) {
+            // Solo procesar extras que consumen inventario
+            if (!$extra->consumesInventory()) {
+                continue;
+            }
+
+            // Obtener requerimientos del extra multiplicados por cantidad del item
+            $extraRequirements = $extra->getMaterialRequirements($item->quantity);
+
+            foreach ($extraRequirements as $variantId => $requiredQty) {
+                if ($requiredQty <= 0) {
+                    continue;
+                }
+
+                // Crear reserva con trazabilidad: EXTRA
+                InventoryReservation::create([
+                    'order_id' => $item->order_id,
+                    'order_item_id' => $item->id,
+                    'material_variant_id' => $variantId,
+                    'source_type' => InventoryReservation::SOURCE_EXTRA,
+                    'source_id' => $extra->id,
+                    'quantity' => $requiredQty,
+                    'status' => InventoryReservation::STATUS_RESERVED,
+                    'created_by' => Auth::id(),
+                ]);
+            }
         }
     }
 

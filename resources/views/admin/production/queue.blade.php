@@ -146,6 +146,8 @@
                             $isOverdue = $order->promised_date && $order->promised_date->lt(now()->startOfDay());
                             $isUrgent = in_array($order->urgency_level, ['urgente', 'express']);
                             $hasBlockers = $order->has_blockers;
+                            // === BLOQUEO POR INVENTARIO (PERSISTIDO) ===
+                            $hasInventoryBlock = $order->status === \App\Models\Order::STATUS_CONFIRMED && $order->hasProductionInventoryBlock();
                             $canStartProduction = $order->status === \App\Models\Order::STATUS_CONFIRMED && !$hasBlockers;
                         @endphp
                         <tr class="{{ $hasBlockers ? 'table-warning' : ($isOverdue ? 'table-danger' : ($isUrgent ? 'table-info' : '')) }}">
@@ -219,6 +221,12 @@
                                             title="Ver motivos de bloqueo">
                                         <i class="fas fa-ban"></i> {{ count($order->blocker_reasons) }}
                                     </button>
+                                @elseif($hasInventoryBlock)
+                                    {{-- BLOQUEO POR INVENTARIO (INTENTO PREVIO FALLIDO) --}}
+                                    <span class="badge badge-warning text-dark" style="cursor: help;"
+                                          title="{{ $order->getLastProductionBlockReason() }}">
+                                        <i class="fas fa-boxes"></i> Inventario
+                                    </span>
                                 @elseif($order->status === \App\Models\Order::STATUS_CONFIRMED)
                                     <span class="text-success" title="Listo para iniciar produccion">
                                         <i class="fas fa-check-circle"></i> OK
@@ -253,9 +261,9 @@
                                         </button>
                                     </form>
                                 @elseif($hasBlockers)
-                                    <a href="{{ route('admin.orders.show', $order) }}?from=queue" class="btn btn-sm btn-warning"
-                                       title="Resolver bloqueos">
-                                        <i class="fas fa-wrench"></i> Resolver
+                                    <a href="{{ route('admin.orders.show', $order) }}?from=queue#blockers-section" class="btn btn-sm btn-warning"
+                                       title="Ver motivos de bloqueo y acciones requeridas">
+                                        <i class="fas fa-search"></i> Ver Bloqueos
                                     </a>
                                 @endif
                                 <a href="{{ route('admin.orders.show', $order) }}?from=queue" class="btn btn-sm btn-info"
@@ -288,7 +296,7 @@
             <div class="modal fade" id="materialsModal{{ $order->id }}" tabindex="-1">
                 <div class="modal-dialog modal-lg">
                     <div class="modal-content">
-                        <div class="modal-header bg-info text-white">
+                        <div class="modal-header" style="background: #343a40; color: white;">
                             <h5 class="modal-title">
                                 <i class="fas fa-boxes mr-2"></i>
                                 Materiales Requeridos: {{ $order->order_number }}
@@ -365,7 +373,7 @@
             <div class="modal fade" id="blockersModal{{ $order->id }}" tabindex="-1">
                 <div class="modal-dialog">
                     <div class="modal-content">
-                        <div class="modal-header bg-danger text-white">
+                        <div class="modal-header" style="background: #343a40; color: white;">
                             <h5 class="modal-title">
                                 <i class="fas fa-ban mr-2"></i>
                                 Bloqueos: {{ $order->order_number }}
@@ -384,8 +392,8 @@
                             </ul>
                         </div>
                         <div class="modal-footer">
-                            <a href="{{ route('admin.orders.show', $order) }}?from=queue" class="btn btn-warning">
-                                <i class="fas fa-wrench mr-1"></i> Ir a Resolver
+                            <a href="{{ route('admin.orders.show', $order) }}?from=queue#blockers-section" class="btn btn-warning">
+                                <i class="fas fa-arrow-right mr-1"></i> Ver Detalle del Pedido
                             </a>
                             <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
                         </div>
