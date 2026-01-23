@@ -98,7 +98,7 @@
                         'variant_sku' => $variant->sku,
                         'display_name' => $variant->display_name,
                         'required_qty' => $requiredQty,
-                        'unit' => $variant->material?->category?->baseUnit?->symbol ?? '',
+                        'unit' => $variant->material?->consumptionUnit?->symbol ?? $variant->material?->baseUnit?->symbol ?? '',
                         'unit_cost' => $unitCost,
                         'line_cost' => $lineCost,
                         'status' => $status,

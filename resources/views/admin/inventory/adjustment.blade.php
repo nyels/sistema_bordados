@@ -57,7 +57,7 @@
                                     <input type="number" name="quantity" class="form-control @error('quantity') is-invalid @enderror"
                                            value="{{ old('quantity') }}" step="0.0001" min="0.0001" required>
                                     <div class="input-group-append">
-                                        <span class="input-group-text">{{ $variant->material?->baseUnit?->symbol ?? 'u' }}</span>
+                                        <span class="input-group-text">{{ $variant->material?->consumptionUnit?->symbol ?? $variant->material?->baseUnit?->symbol ?? 'u' }}</span>
                                     </div>
                                 </div>
                                 @error('quantity')

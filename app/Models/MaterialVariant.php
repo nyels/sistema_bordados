@@ -104,8 +104,10 @@ class MaterialVariant extends Model
 
     public function getFormattedStockAttribute(): string
     {
-        $unit = $this->material?->category?->baseUnit;
-        $symbol = $unit?->symbol ?? '';
+        // Stock se almacena en unidad de consumo (después de conversión)
+        $symbol = $this->material?->consumptionUnit?->symbol
+                ?? $this->material?->baseUnit?->symbol
+                ?? '';
         return number_format($this->current_stock, 2) . ' ' . $symbol;
     }
 

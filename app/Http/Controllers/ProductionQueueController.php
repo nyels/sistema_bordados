@@ -28,9 +28,10 @@ class ProductionQueueController extends Controller
     {
         // Pedidos en cola: Confirmados (listos para iniciar) + En Produccion (en progreso)
         $query = Order::with([
-                'cliente',
-                'items.product.materials',
-            ])
+            'cliente',
+            'items.product.materials.material.consumptionUnit',
+            'items.product.materials.material.baseUnit',
+        ])
             ->whereIn('status', [Order::STATUS_CONFIRMED, Order::STATUS_IN_PRODUCTION])
             ->orderBy('priority', 'asc')
             ->orderBy('promised_date', 'asc')
@@ -193,7 +194,7 @@ class ProductionQueueController extends Controller
             $product = $item->product;
 
             if (!$product || !$product->relationLoaded('materials')) {
-                $product?->load('materials');
+                $product?->load('materials.material.consumptionUnit', 'materials.material.baseUnit');
             }
 
             if (!$product) continue;
@@ -222,7 +223,9 @@ class ProductionQueueController extends Controller
                         'material_name' => $materialVariant->material->name ?? 'N/A',
                         'variant_color' => $materialVariant->color,
                         'variant_sku' => $materialVariant->sku,
-                        'unit' => $materialVariant->material->consumption_unit_symbol ?? 'u',
+                        'unit' => $materialVariant->material->consumptionUnit->symbol
+                            ?? $materialVariant->material->baseUnit->symbol
+                            ?? 'u',
                         'required' => 0,
                         'current_stock' => $currentStock,
                         'total_reserved' => $totalReserved,

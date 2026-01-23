@@ -84,7 +84,7 @@
                         </td>
                         <td class="text-right">
                             <strong>{{ number_format($res->quantity, 2) }}</strong>
-                            <small class="text-muted">{{ $res->materialVariant?->material?->baseUnit?->symbol }}</small>
+                            <small class="text-muted">{{ $res->materialVariant?->material?->consumptionUnit?->symbol ?? $res->materialVariant?->material?->baseUnit?->symbol }}</small>
                         </td>
                         <td>{{ $res->created_at->format('d/m/Y H:i') }}</td>
                         <td>
