@@ -46,6 +46,14 @@ class StoreOrderRequest extends FormRequest
                 'exists:client_measurements,id',
             ],
 
+            // POST-VENTA: Pedido relacionado (OPCIONAL)
+            // Solo acepta pedidos en READY o DELIVERED
+            'related_order_id' => [
+                'nullable',
+                'integer',
+                'exists:orders,id',
+            ],
+
             // URGENCIA (OBLIGATORIO)
             'urgency_level' => [
                 'required',
@@ -241,7 +249,84 @@ class StoreOrderRequest extends FormRequest
             $this->validateMeasurementsPerProductType($validator);
             $this->validatePromisedDateVsLeadTime($validator);
             $this->validatePaymentAmount($validator);
+            $this->validateRelatedOrderStatus($validator);
+            $this->validatePostSaleRules($validator);
         });
+    }
+
+    // === 7. VALIDAR ESTADO DEL PEDIDO RELACIONADO (POST-VENTA) ===
+    // V3: Solo acepta pedidos en READY o DELIVERED
+    protected function validateRelatedOrderStatus(Validator $validator): void
+    {
+        $relatedOrderId = $this->input('related_order_id');
+        if (!$relatedOrderId) return;
+
+        $relatedOrder = Order::find($relatedOrderId);
+        if (!$relatedOrder) {
+            $validator->errors()->add('related_order_id', 'El pedido relacionado no existe.');
+            return;
+        }
+
+        // V3: Solo aceptar pedidos en READY o DELIVERED
+        if (!$relatedOrder->canHavePostSale()) {
+            $validator->errors()->add(
+                'related_order_id',
+                'Solo se pueden crear pedidos post-venta de pedidos Listos o Entregados.'
+            );
+        }
+    }
+
+    // ================================================================
+    // === 8. VALIDACIONES POST-VENTA (REGLAS V1, V2, V4) ===
+    // CRÍTICO: Estas validaciones aseguran integridad del módulo post-venta
+    // ================================================================
+    protected function validatePostSaleRules(Validator $validator): void
+    {
+        $relatedOrderId = $this->input('related_order_id');
+        $orderParentId = $this->input('order_parent_id');
+        $clienteId = $this->input('cliente_id');
+
+        // ================================================================
+        // V1: EXCLUSIÓN MUTUA — Un pedido NO puede ser anexo Y post-venta
+        // order_parent_id = anexo (sub-pedido subordinado)
+        // related_order_id = post-venta (pedido independiente, referencia informativa)
+        // ================================================================
+        if ($relatedOrderId && $orderParentId) {
+            $validator->errors()->add(
+                'related_order_id',
+                'Un pedido no puede ser anexo y post-venta simultáneamente. Elija una opción.'
+            );
+            return; // Detener validación si hay conflicto fundamental
+        }
+
+        // Las siguientes validaciones solo aplican si hay related_order_id
+        if (!$relatedOrderId) return;
+
+        $relatedOrder = Order::find($relatedOrderId);
+        if (!$relatedOrder) return; // Ya validado en validateRelatedOrderStatus
+
+        // ================================================================
+        // V2: VALIDACIÓN DE CLIENTE — Mismo cliente obligatorio
+        // Post-venta SOLO puede crearse para el MISMO cliente del pedido original
+        // ================================================================
+        if ($clienteId && (int) $relatedOrder->cliente_id !== (int) $clienteId) {
+            $validator->errors()->add(
+                'related_order_id',
+                'El pedido post-venta debe ser para el mismo cliente del pedido original.'
+            );
+        }
+
+        // ================================================================
+        // V4: PROHIBICIÓN DE CADENA POST-VENTA
+        // DECISIÓN: OPCIÓN A — NO permitir post-venta desde un pedido que YA es post-venta
+        // Razón: Evitar cadenas infinitas y mantener trazabilidad clara (1 nivel máximo)
+        // ================================================================
+        if ($relatedOrder->isPostSale()) {
+            $validator->errors()->add(
+                'related_order_id',
+                'No se puede crear post-venta de un pedido que ya es post-venta. Use el pedido original.'
+            );
+        }
     }
 
     // === 1. VALIDAR QUE CLIENTE ESTÉ ACTIVO ===

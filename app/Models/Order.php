@@ -18,6 +18,7 @@ class Order extends Model
         'uuid',
         'order_number',
         'order_parent_id',
+        'related_order_id',
         'cliente_id',
         'client_measurement_id',
         'design_export_id',
@@ -33,6 +34,9 @@ class Order extends Model
         'amount_paid',
         'balance',
         'materials_cost_snapshot',
+        'total_stitches_snapshot',
+        'embroidery_cost_snapshot',
+        'cost_per_thousand_snapshot',
         'promised_date',
         'minimum_date',
         'delivered_date',
@@ -56,6 +60,9 @@ class Order extends Model
         'amount_paid' => 'decimal:2',
         'balance' => 'decimal:2',
         'materials_cost_snapshot' => 'decimal:4',
+        'total_stitches_snapshot' => 'integer',
+        'embroidery_cost_snapshot' => 'decimal:4',
+        'cost_per_thousand_snapshot' => 'decimal:4',
         'promised_date' => 'date',
         'minimum_date' => 'date',
         'delivered_date' => 'date',
@@ -189,6 +196,45 @@ class Order extends Model
     public function annexOrders(): HasMany
     {
         return $this->hasMany(Order::class, 'order_parent_id');
+    }
+
+    /**
+     * Relación: Pedido original relacionado (POST-VENTA).
+     * Se usa cuando un cliente solicita algo adicional DESPUÉS de que
+     * su pedido original fue entregado (READY/DELIVERED).
+     *
+     * DIFERENCIA con parentOrder:
+     * - parentOrder = anexo (pedido subordinado, antes de producción)
+     * - relatedOrder = post-venta (pedido independiente, referencia informativa)
+     */
+    public function relatedOrder(): BelongsTo
+    {
+        return $this->belongsTo(Order::class, 'related_order_id');
+    }
+
+    /**
+     * Relación inversa: Pedidos de post-venta derivados de este pedido.
+     */
+    public function postSaleOrders(): HasMany
+    {
+        return $this->hasMany(Order::class, 'related_order_id');
+    }
+
+    /**
+     * Verifica si este pedido es de post-venta (relacionado con otro cerrado).
+     */
+    public function isPostSale(): bool
+    {
+        return $this->related_order_id !== null;
+    }
+
+    /**
+     * Verifica si el pedido puede generar un pedido post-venta.
+     * Solo pedidos READY o DELIVERED pueden tener post-ventas.
+     */
+    public function canHavePostSale(): bool
+    {
+        return in_array($this->status, [self::STATUS_READY, self::STATUS_DELIVERED]);
     }
 
     public function events(): HasMany
@@ -351,6 +397,9 @@ class Order extends Model
         'iva_amount',
         'total',
         'materials_cost_snapshot',
+        'total_stitches_snapshot',
+        'embroidery_cost_snapshot',
+        'cost_per_thousand_snapshot',
         'promised_date',
         'minimum_date',
     ];
@@ -528,6 +577,540 @@ class Order extends Model
             self::URGENCY_EXPRESS => 'danger',
             default => 'secondary',
         };
+    }
+
+    // =========================================================================
+    // === FASE 3: COSTO BASE REAL DE FABRICACIÓN ===
+    // =========================================================================
+
+    /**
+     * FASE 3: Costo base real de fabricación (materiales BOM + extras).
+     *
+     * FUENTE CANÓNICA: materials_cost_snapshot
+     * - Calculado UNA VEZ al iniciar producción (CONFIRMED → IN_PRODUCTION)
+     * - Usa average_cost vigente de cada MaterialVariant al momento del cálculo
+     * - INMUTABLE post-producción (protegido en IMMUTABLE_FIELDS_POST_PRODUCTION)
+     *
+     * COMPOSICIÓN:
+     * - Σ (product_materials.quantity × material_variant.average_cost) por item
+     * - Σ (product_extra_materials.quantity_required × material_variant.average_cost) por extra con inventario
+     *
+     * NO INCLUYE (por diseño):
+     * - Costos de bordado/puntadas
+     * - Mano de obra
+     * - Márgenes comerciales
+     * - IVA
+     *
+     * @return float|null Costo en MXN o null si no calculado aún
+     */
+    public function getManufacturingCostAttribute(): ?float
+    {
+        return $this->materials_cost_snapshot !== null
+            ? (float) $this->materials_cost_snapshot
+            : null;
+    }
+
+    /**
+     * Indica si el costo de fabricación está disponible.
+     * REGLA: Solo disponible después de iniciar producción.
+     */
+    public function getHasManufacturingCostAttribute(): bool
+    {
+        return $this->materials_cost_snapshot !== null;
+    }
+
+    /**
+     * Costo de fabricación formateado para UI.
+     */
+    public function getFormattedManufacturingCostAttribute(): string
+    {
+        if ($this->materials_cost_snapshot === null) {
+            return 'No calculado';
+        }
+        return '$' . number_format($this->materials_cost_snapshot, 2);
+    }
+
+    // =========================================================================
+    // === FASE 4: PRECIO DE VENTA ASISTIDO (MARGEN ESTIMADO) ===
+    // =========================================================================
+
+    /**
+     * FASE 4: Margen bruto estimado = precio de venta - costo de materiales.
+     *
+     * IMPORTANTE: Este es un ESTIMADO basado únicamente en costo de materiales.
+     * NO incluye: mano de obra, tiempo de máquina, costos fijos, etc.
+     *
+     * REGLAS:
+     * - Solo disponible cuando existe materials_cost_snapshot (post-producción)
+     * - Se calcula en runtime, NO se persiste
+     * - Dato interno, NO visible al cliente
+     *
+     * @return float|null Margen en MXN o null si no calculado
+     */
+    public function getEstimatedMarginAttribute(): ?float
+    {
+        if ($this->materials_cost_snapshot === null) {
+            return null;
+        }
+        return (float) $this->total - (float) $this->materials_cost_snapshot;
+    }
+
+    /**
+     * FASE 4: Margen bruto como porcentaje del precio de venta.
+     *
+     * FÓRMULA: ((precio - costo) / precio) × 100
+     *
+     * INTERPRETACIÓN:
+     * - 100% = costo cero (imposible en práctica)
+     * - 50% = el costo es la mitad del precio
+     * - 0% = precio = costo (sin ganancia)
+     * - Negativo = pérdida (precio < costo)
+     *
+     * @return float|null Porcentaje de margen o null si no calculable
+     */
+    public function getEstimatedMarginPercentAttribute(): ?float
+    {
+        if ($this->total <= 0 || $this->materials_cost_snapshot === null) {
+            return null;
+        }
+        return (($this->total - $this->materials_cost_snapshot) / $this->total) * 100;
+    }
+
+    /**
+     * FASE 4: Indica si el pedido está en PÉRDIDA (precio < costo materiales).
+     *
+     * ALERTA CRÍTICA: Si retorna true, el operador debe revisar el precio.
+     *
+     * @return bool TRUE si el margen es negativo
+     */
+    public function getIsAtLossAttribute(): bool
+    {
+        $margin = $this->estimated_margin;
+        return $margin !== null && $margin < 0;
+    }
+
+    /**
+     * FASE 4: Nivel de alerta visual según el margen.
+     *
+     * UMBRALES (configurables a futuro):
+     * - danger: margen < 0% (pérdida)
+     * - warning: margen < 20% (bajo)
+     * - success: margen >= 20% (saludable)
+     * - secondary: sin datos
+     *
+     * @return string Clase Bootstrap para badge/alert
+     */
+    public function getMarginAlertLevelAttribute(): string
+    {
+        $pct = $this->estimated_margin_percent;
+
+        if ($pct === null) {
+            return 'secondary';
+        }
+
+        if ($pct < 0) {
+            return 'danger';
+        }
+
+        if ($pct < 20) {
+            return 'warning';
+        }
+
+        return 'success';
+    }
+
+    /**
+     * FASE 4: Etiqueta descriptiva del nivel de margen.
+     *
+     * @return string Texto descriptivo para UI
+     */
+    public function getMarginLevelLabelAttribute(): string
+    {
+        $pct = $this->estimated_margin_percent;
+
+        if ($pct === null) {
+            return 'Sin datos';
+        }
+
+        if ($pct < 0) {
+            return 'Pérdida';
+        }
+
+        if ($pct < 20) {
+            return 'Bajo';
+        }
+
+        if ($pct < 40) {
+            return 'Moderado';
+        }
+
+        return 'Saludable';
+    }
+
+    /**
+     * FASE 4: Margen formateado para UI.
+     */
+    public function getFormattedEstimatedMarginAttribute(): string
+    {
+        $margin = $this->estimated_margin;
+
+        if ($margin === null) {
+            return 'No calculado';
+        }
+
+        $prefix = $margin >= 0 ? '' : '-';
+        return $prefix . '$' . number_format(abs($margin), 2);
+    }
+
+    // =========================================================================
+    // === FASE 3.5: COSTO REAL DE BORDADO (PUNTADAS) ===
+    // =========================================================================
+
+    /**
+     * FASE 3.5: Calcula el total de puntadas del pedido.
+     * Suma todas las puntadas de los diseños vinculados a cada item × cantidad.
+     *
+     * FÓRMULA:
+     * total_stitches = Σ (item.designExports.stitches_count × item.quantity)
+     *
+     * @return int Total de puntadas
+     */
+    public function calculateTotalStitches(): int
+    {
+        $totalStitches = 0;
+
+        foreach ($this->items as $item) {
+            if (!$item->requiresTechnicalDesigns()) {
+                continue;
+            }
+
+            foreach ($item->designExports as $designExport) {
+                $stitches = $designExport->stitches_count ?? 0;
+                $totalStitches += $stitches * $item->quantity;
+            }
+        }
+
+        return $totalStitches;
+    }
+
+    /**
+     * FASE 3.5: Calcula el costo de bordado basado en puntadas.
+     *
+     * FÓRMULA CANÓNICA:
+     * costo_bordado = (total_puntadas / 1000) × costo_por_millar
+     *
+     * @param float|null $costPerThousand Tarifa por millar (null = usar configuración)
+     * @return float Costo de bordado en MXN
+     */
+    public function calculateEmbroideryCost(?float $costPerThousand = null): float
+    {
+        $totalStitches = $this->calculateTotalStitches();
+
+        if ($totalStitches <= 0) {
+            return 0.0;
+        }
+
+        // Obtener tarifa: parámetro > configuración > default
+        if ($costPerThousand === null) {
+            $costPerThousand = $this->getEmbroideryCostPerThousand();
+        }
+
+        return round(($totalStitches / 1000) * $costPerThousand, 4);
+    }
+
+    /**
+     * FASE 3.5: Obtiene el costo por millar de puntadas desde configuración.
+     *
+     * @return float Costo por millar en MXN (default: 1.50)
+     */
+    public function getEmbroideryCostPerThousand(): float
+    {
+        $value = SystemSetting::getValue('embroidery_cost_per_thousand', '1.50');
+        return (float) $value;
+    }
+
+    /**
+     * FASE 3.5: Costo de bordado persistido (snapshot).
+     * FUENTE CANÓNICA: embroidery_cost_snapshot
+     *
+     * @return float|null Costo en MXN o null si no calculado
+     */
+    public function getEmbroideryCostAttribute(): ?float
+    {
+        return $this->embroidery_cost_snapshot !== null
+            ? (float) $this->embroidery_cost_snapshot
+            : null;
+    }
+
+    /**
+     * FASE 3.5: Indica si el costo de bordado está disponible.
+     */
+    public function getHasEmbroideryCostAttribute(): bool
+    {
+        return $this->embroidery_cost_snapshot !== null;
+    }
+
+    /**
+     * FASE 3.5: Total de puntadas persistido (snapshot).
+     */
+    public function getTotalStitchesAttribute(): ?int
+    {
+        return $this->total_stitches_snapshot;
+    }
+
+    /**
+     * FASE 3.5: Puntadas formateadas para UI (con separador de miles).
+     */
+    public function getFormattedTotalStitchesAttribute(): string
+    {
+        if ($this->total_stitches_snapshot === null) {
+            return 'N/A';
+        }
+        return number_format($this->total_stitches_snapshot);
+    }
+
+    /**
+     * FASE 3.5: Costo de bordado formateado para UI.
+     */
+    public function getFormattedEmbroideryCostAttribute(): string
+    {
+        if ($this->embroidery_cost_snapshot === null) {
+            return 'No calculado';
+        }
+        return '$' . number_format($this->embroidery_cost_snapshot, 2);
+    }
+
+    /**
+     * FASE 3.5: Costo TOTAL de fabricación (materiales + bordado).
+     * Esta es la fuente canónica para calcular margen real.
+     *
+     * FÓRMULA:
+     * total_manufacturing_cost = materials_cost_snapshot + embroidery_cost_snapshot
+     *
+     * @return float|null Costo total en MXN o null si no calculado
+     */
+    public function getTotalManufacturingCostAttribute(): ?float
+    {
+        // Solo disponible si ambos snapshots existen
+        if ($this->materials_cost_snapshot === null) {
+            return null;
+        }
+
+        $materialsCost = (float) $this->materials_cost_snapshot;
+        $embroideryCost = (float) ($this->embroidery_cost_snapshot ?? 0);
+
+        return $materialsCost + $embroideryCost;
+    }
+
+    /**
+     * FASE 3.5: Indica si el costo total de fabricación está disponible.
+     */
+    public function getHasTotalManufacturingCostAttribute(): bool
+    {
+        return $this->materials_cost_snapshot !== null;
+    }
+
+    /**
+     * FASE 3.5: Costo total de fabricación formateado para UI.
+     */
+    public function getFormattedTotalManufacturingCostAttribute(): string
+    {
+        $cost = $this->total_manufacturing_cost;
+
+        if ($cost === null) {
+            return 'No calculado';
+        }
+        return '$' . number_format($cost, 2);
+    }
+
+    /**
+     * FASE 3.5: Margen REAL considerando materiales + bordado.
+     * Actualiza el cálculo de margen para incluir costo de bordado.
+     *
+     * FÓRMULA:
+     * margen_real = precio_venta - (costo_materiales + costo_bordado)
+     *
+     * @return float|null Margen en MXN o null si no calculable
+     */
+    public function getRealMarginAttribute(): ?float
+    {
+        $totalCost = $this->total_manufacturing_cost;
+
+        if ($totalCost === null) {
+            return null;
+        }
+
+        return (float) $this->total - $totalCost;
+    }
+
+    /**
+     * FASE 3.5: Margen real como porcentaje del precio de venta.
+     */
+    public function getRealMarginPercentAttribute(): ?float
+    {
+        if ($this->total <= 0 || $this->total_manufacturing_cost === null) {
+            return null;
+        }
+
+        return (($this->total - $this->total_manufacturing_cost) / $this->total) * 100;
+    }
+
+    /**
+     * FASE 3.5: Indica si el pedido está en PÉRDIDA considerando bordado.
+     */
+    public function getIsAtRealLossAttribute(): bool
+    {
+        $margin = $this->real_margin;
+        return $margin !== null && $margin < 0;
+    }
+
+    /**
+     * FASE 3.5: Nivel de alerta de margen considerando costo total.
+     */
+    public function getRealMarginAlertLevelAttribute(): string
+    {
+        $pct = $this->real_margin_percent;
+
+        if ($pct === null) {
+            return 'secondary';
+        }
+
+        if ($pct < 0) {
+            return 'danger';
+        }
+
+        if ($pct < 20) {
+            return 'warning';
+        }
+
+        return 'success';
+    }
+
+    /**
+     * FASE 3.5: Etiqueta descriptiva del margen real.
+     */
+    public function getRealMarginLabelAttribute(): string
+    {
+        $pct = $this->real_margin_percent;
+
+        if ($pct === null) {
+            return 'Sin datos';
+        }
+
+        if ($pct < 0) {
+            return 'Pérdida';
+        }
+
+        if ($pct < 20) {
+            return 'Bajo';
+        }
+
+        if ($pct < 40) {
+            return 'Moderado';
+        }
+
+        return 'Saludable';
+    }
+
+    /**
+     * FASE 3.5: Margen real formateado para UI.
+     */
+    public function getFormattedRealMarginAttribute(): string
+    {
+        $margin = $this->real_margin;
+
+        if ($margin === null) {
+            return 'No calculado';
+        }
+
+        $prefix = $margin >= 0 ? '' : '-';
+        return $prefix . '$' . number_format(abs($margin), 2);
+    }
+
+    /**
+     * Verifica si el pedido es PERSONALIZADO.
+     * REGLA: Un pedido es personalizado si AL MENOS UN item tiene
+     * personalization_type distinto de 'none'.
+     *
+     * Tipos de personalización:
+     * - 'design': Diseño cliente (logo, imagen)
+     * - 'text': Texto bordado (nombre, frase)
+     * - 'measurements': Medidas a la medida
+     * - 'none': Producto estándar sin personalización
+     *
+     * @return bool TRUE si el pedido tiene items personalizados
+     */
+    public function isCustomOrder(): bool
+    {
+        return $this->items()
+            ->where('personalization_type', '!=', OrderItem::PERSONALIZATION_NONE)
+            ->exists();
+    }
+
+    /**
+     * Obtiene la etiqueta de tipo de pedido para la UI.
+     */
+    public function getOrderTypeLabelAttribute(): string
+    {
+        return $this->isCustomOrder() ? 'Personalizado' : 'Estándar';
+    }
+
+    /**
+     * Obtiene el icono de tipo de pedido para la UI.
+     */
+    public function getOrderTypeIconAttribute(): string
+    {
+        return $this->isCustomOrder() ? 'fas fa-palette' : 'fas fa-box';
+    }
+
+    /**
+     * FASE 2: Verifica si TODOS los items del pedido están READY.
+     * FUENTE CANÓNICA para decisión de readiness a nivel de pedido.
+     *
+     * @return bool TRUE si todos los items pasan OrderItem::isReady()
+     */
+    public function allItemsReady(): bool
+    {
+        $items = $this->items;
+
+        if ($items->isEmpty()) {
+            return false; // Sin items = no ready
+        }
+
+        return $items->every(fn($item) => $item->isReady());
+    }
+
+    /**
+     * FASE 2: Obtiene los items que están PENDING (no ready).
+     *
+     * @return \Illuminate\Support\Collection Items pendientes
+     */
+    public function getPendingItems(): \Illuminate\Support\Collection
+    {
+        return $this->items->filter(fn($item) => !$item->isReady());
+    }
+
+    /**
+     * FASE 2: Obtiene resumen de pendientes agrupados por tipo.
+     * Útil para mostrar en UI de forma estructurada.
+     *
+     * @return array ['measurements' => [...], 'design' => [...], 'technical' => [...]]
+     */
+    public function getPendingItemsSummary(): array
+    {
+        $pending = $this->getPendingItems();
+
+        return [
+            'measurements' => $pending->filter(fn($i) =>
+                $i->requires_measurements && empty($i->measurements)
+            )->values(),
+            'design' => $pending->filter(fn($i) =>
+                $i->blocksProductionForDesign()
+            )->values(),
+            'technical' => $pending->filter(fn($i) =>
+                $i->blocksProductionForTechnicalDesigns()
+            )->values(),
+        ];
     }
 
     /**

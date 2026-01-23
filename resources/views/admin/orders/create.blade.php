@@ -1,17 +1,19 @@
 @extends('adminlte::page')
 
-@section('title', isset($isEdit) ? 'Editar Pedido' : (isset($relatedOrder) ? 'Post-Venta de ' . $relatedOrder->order_number : 'Nuevo Pedido'))
+@section('title', isset($isEdit) ? 'Editar Pedido' : (isset($relatedOrder) ? 'Post-Venta de ' .
+    $relatedOrder->order_number : 'Nuevo Pedido'))
 
 @section('content_header')
     <div class="d-flex justify-content-between align-items-center">
-        @if(isset($relatedOrder))
+        @if (isset($relatedOrder))
             <h1>
                 <i class="fas fa-redo mr-2" style="color: #6f42c1;"></i>
                 Nuevo Pedido Post-Venta
                 <small class="text-muted" style="font-size: 0.6em;">de {{ $relatedOrder->order_number }}</small>
             </h1>
         @else
-            <h1><i class="fas fa-clipboard-list mr-2"></i> {{ isset($isEdit) ? 'Editar Pedido #' . $order->order_number : 'Nuevo Pedido' }}</h1>
+            <h1><i class="fas fa-clipboard-list mr-2"></i>
+                {{ isset($isEdit) ? 'Editar Pedido #' . $order->order_number : 'Nuevo Pedido' }}</h1>
         @endif
         <a href="{{ route('admin.orders.index') }}" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i> Volver
@@ -312,13 +314,33 @@
             }
 
             /* Orden: 1.Cliente → 2.Productos → 3.Pago → 4.Entrega → 5.Resumen → 6.Notas → 7.Botón */
-            .order-mobile-1 { order: 1; }
-            .order-mobile-2 { order: 2; }
-            .order-mobile-3 { order: 3; }
-            .order-mobile-4 { order: 4; }
-            .order-mobile-5 { order: 5; }
-            .order-mobile-6 { order: 6; }
-            .order-mobile-7 { order: 7; }
+            .order-mobile-1 {
+                order: 1;
+            }
+
+            .order-mobile-2 {
+                order: 2;
+            }
+
+            .order-mobile-3 {
+                order: 3;
+            }
+
+            .order-mobile-4 {
+                order: 4;
+            }
+
+            .order-mobile-5 {
+                order: 5;
+            }
+
+            .order-mobile-6 {
+                order: 6;
+            }
+
+            .order-mobile-7 {
+                order: 7;
+            }
 
             /* Las columnas deben ser hijos directos para que order funcione */
             .main-column,
@@ -416,11 +438,11 @@
 
         /* ================================================== */
         /* === CSS MODAL MEDIDAS EXTERNO — ELIMINADO (FASE 1)
-             El modal #measurementsModal ya no existe.
-             Clases eliminadas: .medida-card, .medida-img,
-             .medida-input, .medida-label, .medida-hint, .medidas-grid,
-             .measurement-history-item
-             ================================================== */
+                                                                                                                         El modal #measurementsModal ya no existe.
+                                                                                                                         Clases eliminadas: .medida-card, .medida-img,
+                                                                                                                         .medida-input, .medida-label, .medida-hint, .medidas-grid,
+                                                                                                                         .measurement-history-item
+                                                                                                                         ================================================== */
 
         /* Badge requiere medidas (se mantiene para tabla de items) */
         .badge-requires-measurements {
@@ -453,10 +475,10 @@
         /* D6: SCROLL SEGURO - Modal nunca depende del body */
         #addProductModal .modal-body,
         #quickClientModal .modal-body {
-            max-height: calc(100vh - 200px); /* Espacio para header + footer */
+            max-height: calc(100vh - 200px);
             overflow-y: auto;
             overflow-x: hidden;
-            -webkit-overflow-scrolling: touch; /* Smooth scroll en iOS */
+            -webkit-overflow-scrolling: touch;
         }
 
         #addProductModal .modal-footer,
@@ -468,77 +490,59 @@
             z-index: 10;
         }
 
-        /* D6: Asegurar que el modal no afecte el scroll del body */
-        #addProductModal.modal {
-            overflow-y: auto !important;
-        }
-
-        #addProductModal .modal-dialog {
-            max-height: calc(100vh - 60px);
-            margin: 30px auto;
-        }
-
-        #addProductModal .modal-content {
-            max-height: calc(100vh - 60px);
-            display: flex;
-            flex-direction: column;
-        }
-
-        #addProductModal .modal-header {
-            flex-shrink: 0;
-        }
-
-        /* D2: Estilos para selector de intención */
+        /* Selector de intención */
         .intent-btn:hover {
             transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
         }
 
         .intent-btn:active {
             transform: translateY(-1px);
         }
 
+        /* Responsive para REQUISITOS DEL PRODUCTO */
         @media (max-width: 768px) {
-            #addProductModal .modal-dialog {
-                max-width: 95vw;
-            }
-            /* REQUISITOS DEL PRODUCTO - Mobile */
             #measurementsSection .card-header {
                 padding: 10px 12px !important;
             }
+
             #measurementsSection .card-header strong {
                 font-size: 12px !important;
             }
+
             #measurementsSection .card-header small {
                 font-size: 10px !important;
             }
+
             #measurementsSection .card-body {
                 padding: 12px !important;
             }
+
             #measurementsSection #btnOpenMeasurementsModal {
                 width: 100% !important;
                 margin-top: 12px !important;
                 padding: 12px 16px !important;
                 font-size: 13px !important;
             }
+
             #measurementsStatusBadge {
                 display: block !important;
                 margin-top: 6px !important;
                 margin-left: 0 !important;
             }
-            /* Separador semántico - Mobile */
+
             #systemClientDivider span {
                 font-size: 10px !important;
             }
         }
 
         @media (max-width: 576px) {
-            /* REQUISITOS - Extra small */
-            #measurementsSection .card-body > .d-flex {
+            #measurementsSection .card-body>.d-flex {
                 flex-direction: column !important;
                 align-items: stretch !important;
             }
-            #measurementsSection .card-body > .d-flex > div:first-child {
+
+            #measurementsSection .card-body>.d-flex>div:first-child {
                 margin-bottom: 12px !important;
             }
         }
@@ -649,9 +653,10 @@
 @stop
 
 @section('content')
-    <form action="{{ isset($isEdit) ? route('admin.orders.update', $order) : route('admin.orders.store') }}" method="POST" id="orderForm">
+    <form action="{{ isset($isEdit) ? route('admin.orders.update', $order) : route('admin.orders.store') }}" method="POST"
+        id="orderForm">
         @csrf
-        @if(isset($isEdit))
+        @if (isset($isEdit))
             @method('PUT')
         @endif
 
@@ -671,9 +676,10 @@
         {{-- BLOQUE POST-VENTA: Pedido relacionado         --}}
         {{-- UX REFINADO: Explicación clara del flujo      --}}
         {{-- ============================================== --}}
-        @if(isset($relatedOrder))
+        @if (isset($relatedOrder))
             <input type="hidden" name="related_order_id" value="{{ $relatedOrder->id }}">
-            <div class="alert mb-3" style="background: linear-gradient(135deg, #6f42c1 0%, #8969c7 100%); color: white; border: none; border-radius: 8px;">
+            <div class="alert mb-3"
+                style="background: linear-gradient(135deg, #6f42c1 0%, #8969c7 100%); color: white; border: none; border-radius: 8px;">
                 <div class="d-flex align-items-start">
                     <div class="mr-3 mt-1">
                         <i class="fas fa-redo fa-2x"></i>
@@ -703,10 +709,8 @@
                         </div>
                     </div>
                     <div class="ml-2">
-                        <a href="{{ route('admin.orders.show', $relatedOrder) }}"
-                           class="btn btn-sm btn-light"
-                           target="_blank"
-                           title="Ver pedido original">
+                        <a href="{{ route('admin.orders.show', $relatedOrder) }}" class="btn btn-sm btn-light"
+                            target="_blank" title="Ver pedido original">
                             <i class="fas fa-external-link-alt"></i> Ver Original
                         </a>
                     </div>
@@ -727,18 +731,21 @@
                     </div>
                     <div class="card-body">
                         {{-- POST-VENTA: Cliente prellenado y bloqueado --}}
-                        @if(isset($relatedOrder))
-                            <input type="hidden" name="cliente_id" id="cliente_id" value="{{ $relatedOrder->cliente_id }}" required>
+                        @if (isset($relatedOrder))
+                            <input type="hidden" name="cliente_id" id="cliente_id" value="{{ $relatedOrder->cliente_id }}"
+                                required>
 
                             {{-- Display bloqueado con estilo visual claro --}}
-                            <div class="cliente-selector-btn has-client" style="cursor: default; border-color: #6f42c1; background: #f8f5ff;">
+                            <div class="cliente-selector-btn has-client"
+                                style="cursor: default; border-color: #6f42c1; background: #f8f5ff;">
                                 <div class="cliente-info">
                                     <span class="cliente-nombre">
                                         <i class="fas fa-lock mr-1" style="color: #6f42c1; font-size: 12px;"></i>
                                         {{ $relatedOrder->cliente->nombre }} {{ $relatedOrder->cliente->apellidos }}
                                     </span>
                                     <span class="cliente-telefono">
-                                        <i class="fas fa-phone mr-1"></i>{{ $relatedOrder->cliente->telefono ?? 'Sin teléfono' }}
+                                        <i
+                                            class="fas fa-phone mr-1"></i>{{ $relatedOrder->cliente->telefono ?? 'Sin teléfono' }}
                                     </span>
                                 </div>
                                 <span class="badge" style="background: #6f42c1; color: white; font-size: 11px;">
@@ -751,7 +758,8 @@
                             </small>
                         @else
                             {{-- Modo normal: selector de cliente --}}
-                            <input type="hidden" name="cliente_id" id="cliente_id" value="{{ old('cliente_id') }}" required>
+                            <input type="hidden" name="cliente_id" id="cliente_id" value="{{ old('cliente_id') }}"
+                                required>
                             @error('cliente_id')
                                 <div class="alert alert-danger py-1 mb-2">{{ $message }}</div>
                             @enderror
@@ -759,7 +767,8 @@
                             <button type="button" class="cliente-selector-btn" id="btnSelectClient" data-toggle="modal"
                                 data-target="#clientSearchModal">
                                 <div class="cliente-info" id="clienteDisplay">
-                                    <span class="placeholder-text"><i class="fas fa-search mr-1"></i> Buscar cliente...</span>
+                                    <span class="placeholder-text"><i class="fas fa-search mr-1"></i> Buscar
+                                        cliente...</span>
                                 </div>
                                 <i class="fas fa-chevron-right text-muted"></i>
                             </button>
@@ -786,8 +795,9 @@
                     </div>
                     <div class="card-body payment-section">
                         {{-- POST-VENTA: Microcopy indicando que es editable --}}
-                        @if(isset($relatedOrder))
-                            <div class="mb-2 py-1 px-2 rounded" style="background: #e8f5e9; font-size: 12px; color: #2e7d32;">
+                        @if (isset($relatedOrder))
+                            <div class="mb-2 py-1 px-2 rounded"
+                                style="background: #e8f5e9; font-size: 12px; color: #2e7d32;">
                                 <i class="fas fa-edit mr-1"></i>
                                 Configura el pago para este nuevo pedido
                             </div>
@@ -796,10 +806,14 @@
                             <label class="font-weight-bold mb-1">Método de Pago</label>
                             <select name="payment_method" id="paymentMethod" class="form-control form-control-sm">
                                 <option value="">-- Sin pago inicial --</option>
-                                <option value="cash" {{ old('payment_method') == 'cash' ? 'selected' : '' }}>Efectivo</option>
-                                <option value="transfer" {{ old('payment_method') == 'transfer' ? 'selected' : '' }}>Transferencia</option>
-                                <option value="card" {{ old('payment_method') == 'card' ? 'selected' : '' }}>Tarjeta</option>
-                                <option value="other" {{ old('payment_method') == 'other' ? 'selected' : '' }}>Otro</option>
+                                <option value="cash" {{ old('payment_method') == 'cash' ? 'selected' : '' }}>Efectivo
+                                </option>
+                                <option value="transfer" {{ old('payment_method') == 'transfer' ? 'selected' : '' }}>
+                                    Transferencia</option>
+                                <option value="card" {{ old('payment_method') == 'card' ? 'selected' : '' }}>Tarjeta
+                                </option>
+                                <option value="other" {{ old('payment_method') == 'other' ? 'selected' : '' }}>Otro
+                                </option>
                             </select>
                         </div>
 
@@ -831,8 +845,9 @@
                     </div>
                     <div class="card-body">
                         {{-- POST-VENTA: Microcopy indicando que es editable --}}
-                        @if(isset($relatedOrder))
-                            <div class="mb-2 py-1 px-2 rounded" style="background: #e8f5e9; font-size: 12px; color: #2e7d32;">
+                        @if (isset($relatedOrder))
+                            <div class="mb-2 py-1 px-2 rounded"
+                                style="background: #e8f5e9; font-size: 12px; color: #2e7d32;">
                                 <i class="fas fa-edit mr-1"></i>
                                 Define la urgencia y fecha para este pedido
                             </div>
@@ -840,9 +855,12 @@
                         <div class="form-group mb-2">
                             <label class="font-weight-bold mb-1">Nivel de Urgencia</label>
                             <select name="urgency_level" id="urgencyLevel" class="form-control form-control-sm">
-                                <option value="normal" {{ old('urgency_level', 'normal') == 'normal' ? 'selected' : '' }}>Normal (100% tiempo)</option>
-                                <option value="urgente" {{ old('urgency_level') == 'urgente' ? 'selected' : '' }}>Urgente (70% tiempo)</option>
-                                <option value="express" {{ old('urgency_level') == 'express' ? 'selected' : '' }}>Express (50% tiempo)</option>
+                                <option value="normal" {{ old('urgency_level', 'normal') == 'normal' ? 'selected' : '' }}>
+                                    Normal (100% tiempo)</option>
+                                <option value="urgente" {{ old('urgency_level') == 'urgente' ? 'selected' : '' }}>Urgente
+                                    (70% tiempo)</option>
+                                <option value="express" {{ old('urgency_level') == 'express' ? 'selected' : '' }}>Express
+                                    (50% tiempo)</option>
                             </select>
                         </div>
 
@@ -880,15 +898,17 @@
                     <div class="card-header py-2 productos-header" style="background: #343a40; color: white;">
                         <h5 class="mb-0">
                             <i class="fas fa-box mr-2"></i> 2. Productos
-                            <span id="itemsCounter" class="badge badge-light items-counter ml-2" style="display:none;">0</span>
+                            <span id="itemsCounter" class="badge badge-light items-counter ml-2"
+                                style="display:none;">0</span>
                         </h5>
                         <button type="button" class="btn btn-light btn-sm" id="btnAddProduct">
                             <i class="fas fa-plus"></i> Agregar
                         </button>
                     </div>
                     {{-- POST-VENTA: Microcopy indicando que productos son nuevos --}}
-                    @if(isset($relatedOrder))
-                        <div class="px-3 py-2 border-bottom" style="background: #fff8e1; font-size: 12px; color: #f57c00;">
+                    @if (isset($relatedOrder))
+                        <div class="px-3 py-2 border-bottom"
+                            style="background: #fff8e1; font-size: 12px; color: #f57c00;">
                             <i class="fas fa-lightbulb mr-1"></i>
                             <strong>Agrega los productos nuevos</strong> que el cliente necesita.
                             Los productos del pedido original NO se copian.
@@ -944,7 +964,8 @@
                             <div class="resumen-row iva-row-resumen">
                                 <div class="custom-control custom-checkbox">
                                     <input type="checkbox" class="custom-control-input" id="requiresInvoice"
-                                        name="requires_invoice" value="1" {{ old('requires_invoice') ? 'checked' : '' }}>
+                                        name="requires_invoice" value="1"
+                                        {{ old('requires_invoice') ? 'checked' : '' }}>
                                     <label class="custom-control-label" for="requiresInvoice">
                                         IVA 16% <small class="text-muted">(Requiere Factura)</small>
                                     </label>
@@ -979,10 +1000,10 @@
 
                 {{-- 7. BOTÓN CREAR PEDIDO --}}
                 <div class="order-mobile-7">
-                    @if(isset($relatedOrder))
+                    @if (isset($relatedOrder))
                         {{-- POST-VENTA: Botón con contexto claro --}}
                         <button type="submit" class="btn btn-lg btn-block" id="submitBtn"
-                                style="background: linear-gradient(135deg, #6f42c1 0%, #8969c7 100%); color: white; border: none;">
+                            style="background: linear-gradient(135deg, #6f42c1 0%, #8969c7 100%); color: white; border: none;">
                             <i class="fas fa-redo mr-2"></i> Crear Pedido Post-Venta
                         </button>
                         <small class="text-muted d-block text-center mt-1" style="font-size: 11px;">
@@ -1077,13 +1098,13 @@
     {{-- MODAL: AGREGAR PRODUCTO --}}
     {{-- ============================================== --}}
     <div class="modal fade" id="addProductModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-xl">
             <div class="modal-content">
                 <div class="modal-header" style="background: #343a40; color: white;">
                     <h5 class="modal-title"><i class="fas fa-box mr-2"></i> Agregar Producto</h5>
                     <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body" style="padding: 1.5rem;">
                     {{-- ═══════════════════════════════════════════════════════════ --}}
                     {{-- D2: SELECTOR DE INTENCIÓN (Solo visible en post-venta)      --}}
                     {{-- ═══════════════════════════════════════════════════════════ --}}
@@ -1096,16 +1117,18 @@
                             </div>
                             <div class="row justify-content-center">
                                 <div class="col-md-5 mb-3 mb-md-0">
-                                    <button type="button" class="btn btn-lg btn-block py-4 intent-btn" id="btnIntentProduct"
-                                            style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 12px; transition: transform 0.2s, box-shadow 0.2s;">
+                                    <button type="button" class="btn btn-lg btn-block py-4 intent-btn"
+                                        id="btnIntentProduct"
+                                        style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 12px; transition: transform 0.2s, box-shadow 0.2s;">
                                         <i class="fas fa-box fa-2x mb-2 d-block"></i>
                                         <strong style="font-size: 16px;">Producto</strong>
                                         <small class="d-block mt-1" style="opacity: 0.9;">Con o sin extras</small>
                                     </button>
                                 </div>
                                 <div class="col-md-5">
-                                    <button type="button" class="btn btn-lg btn-block py-4 intent-btn" id="btnIntentExtrasOnly"
-                                            style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border: none; border-radius: 12px; transition: transform 0.2s, box-shadow 0.2s;">
+                                    <button type="button" class="btn btn-lg btn-block py-4 intent-btn"
+                                        id="btnIntentExtrasOnly"
+                                        style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border: none; border-radius: 12px; transition: transform 0.2s, box-shadow 0.2s;">
                                         <i class="fas fa-plus-circle fa-2x mb-2 d-block"></i>
                                         <strong style="font-size: 16px;">Solo Extras</strong>
                                         <small class="d-block mt-1" style="opacity: 0.9;">Servicios adicionales</small>
@@ -1121,261 +1144,294 @@
 
                     {{-- ═══════════════════════════════════════════════════════════ --}}
                     {{-- SECCIÓN: AGREGAR PRODUCTO (flujo normal)                    --}}
+                    {{-- Layout: Split View (Col Izq fija + Col Der con scroll)      --}}
                     {{-- ═══════════════════════════════════════════════════════════ --}}
                     <div id="modalProductSection">
-                    <div class="row">
-                        {{-- COLUMNA IZQUIERDA: Preview + Estados --}}
-                        <div class="col-md-4 text-center">
-                            <img id="productPreviewImage" src="{{ asset('img/no-image.png') }}"
-                                class="img-fluid rounded mb-2" style="max-height: 150px;">
-                            <div id="productPreviewName" class="font-weight-bold">-</div>
-                            <div id="productPreviewSku" class="text-muted small">-</div>
-                            <div id="productPreviewType" class="small mt-1" style="display: none;"></div>
+                        <div class="row" style="min-height: 480px;">
+                            {{-- ══════════════════════════════════════════════════════════════════ --}}
+                            {{-- COLUMNA IZQUIERDA: Contexto Visual (1/3, Fija)                    --}}
+                            {{-- ══════════════════════════════════════════════════════════════════ --}}
+                            <div class="col-md-4 d-flex flex-column"
+                                style="background: #f8f9fa; border-right: 1px solid #dee2e6;">
+                                <div class="p-3 d-flex flex-column h-100">
+                                    {{-- Imagen del Producto --}}
+                                    <div class="text-center mb-3">
+                                        <img id="productPreviewImage" src="{{ asset('img/no-image.png') }}"
+                                            class="img-fluid rounded" style="max-height: 150px;">
+                                    </div>
 
-                            {{-- Precio base vs precio final --}}
-                            <div id="priceComparisonContainer" class="mt-2 p-2 rounded" style="display: none; background: #f8f9fa; font-size: 0.85rem;">
-                                <div class="d-flex justify-content-between">
-                                    <span class="text-muted">Base:</span>
-                                    <span id="modalBasePriceDisplay">$0.00</span>
+                                    {{-- Nombre y SKU --}}
+                                    <div id="productPreviewName" class="font-weight-bold text-center"
+                                        style="font-size:20px;">-</div>
+                                    <div id="productPreviewSku" class="text-muted small text-center">-</div>
+                                    {{-- <div id="productPreviewType" class="small mt-2 text-center" style="display: none;">
+                                    </div> --}}
+
+                                    {{-- Resumen de Precios (mt-auto = se pega abajo) --}}
+                                    <div id="priceComparisonContainer"
+                                        style="display: none; background: #fff; font-size: 0.85rem; border: 1px solid #e9ecef;">
+                                        <div class="d-flex justify-content-between">
+                                            <span class="text-muted">Base:</span>
+                                            <span id="modalBasePriceDisplay">$0.00</span>
+                                        </div>
+                                        <div id="extrasAdditionRow" class="d-flex justify-content-between text-info"
+                                            style="display: none;">
+                                            <span>+ Extras:</span>
+                                            <span id="modalExtrasDisplay">$0.00</span>
+                                        </div>
+                                        <hr class="my-1">
+                                        <div class="d-flex justify-content-between font-weight-bold">
+                                            <span>TOTAL:</span>
+                                            <span id="modalFinalPriceDisplay" class="text-success">$0.00</span>
+                                        </div>
+                                    </div>
+
+                                    {{-- Alerta de precio modificado 
+                                    <div id="priceModifiedAlert" class="alert alert-info py-1 px-2 mt-2 mb-0"
+                                        style="display: none; font-size: 0.75rem;">
+                                        <i class="fas fa-info-circle mr-1"></i> Precio ajustado manualmente
+                                    </div> --}}
                                 </div>
-                                <div id="extrasAdditionRow" class="d-flex justify-content-between text-info" style="display: none;">
-                                    <span>+ Extras:</span>
-                                    <span id="modalExtrasDisplay">$0.00</span>
-                                </div>
-                                <hr class="my-1">
-                                <div class="d-flex justify-content-between font-weight-bold">
-                                    <span>Final:</span>
-                                    <span id="modalFinalPriceDisplay" class="text-success">$0.00</span>
-                                </div>
                             </div>
 
-                            {{-- ESTADOS MEDIDAS LEGACY — ELIMINADO (FASE 1)
-                                 Ahora las medidas se capturan inline en el modal --}}
+                            {{-- ══════════════════════════════════════════════════════════════════ --}}
+                            {{-- COLUMNA DERECHA: Configuración (2/3, Con scroll)                  --}}
+                            {{-- ══════════════════════════════════════════════════════════════════ --}}
+                            <div class="col-md-8 p-0">
+                                <div class="p-3" style="max-height: 480px; overflow-y: auto;">
 
-                            {{-- Alerta de precio modificado --}}
-                            <div id="priceModifiedAlert" class="alert alert-info py-1 px-2 mt-2 mb-0" style="display: none; font-size: 0.75rem;">
-                                <i class="fas fa-info-circle mr-1"></i> Precio ajustado manualmente
-                            </div>
-                        </div>
-
-                        {{-- COLUMNA DERECHA: Formulario --}}
-                        <div class="col-md-8">
-                            {{-- Buscar Producto --}}
-                            <div class="form-group">
-                                <label class="font-weight-bold">Buscar Producto</label>
-                                <select id="modalProductSelect" class="form-control" style="width: 100%;">
-                                    <option value="">Escriba para buscar...</option>
-                                </select>
-                            </div>
-
-                            {{-- Variante (condicional) --}}
-                            <div class="form-group" id="variantGroup" style="display: none;">
-                                <label class="font-weight-bold">Variante</label>
-                                <select id="modalVariantSelect" class="form-control">
-                                    <option value="">-- Producto base --</option>
-                                </select>
-                            </div>
-
-                            {{-- Cantidad y Precio --}}
-                            <div class="row">
-                                <div class="col-6">
+                                    {{-- Buscar Producto --}}
                                     <div class="form-group">
-                                        <label class="font-weight-bold">Cantidad *</label>
-                                        <input type="number" id="modalQuantity" class="form-control" value="1" min="1" max="999">
+                                        <label class="font-weight-bold">Buscar Producto</label>
+                                        <select id="modalProductSelect" class="form-control" style="width: 100%;">
+                                            <option value="">Escriba para buscar...</option>
+                                        </select>
                                     </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="form-group">
-                                        <label class="font-weight-bold">Precio Unit. *</label>
-                                        <div class="input-group">
-                                            <div class="input-group-prepend"><span class="input-group-text">$</span></div>
-                                            <input type="number" id="modalPrice" class="form-control" step="0.01" min="0">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- ═══════════════════════════════════════════════════════════ --}}
-                            {{-- ESTADO DEL PRODUCTO (Indicador visual dominante)           --}}
-                            {{-- ═══════════════════════════════════════════════════════════ --}}
-                            <div id="productTypeIndicator" class="mb-3" style="display: none;">
-                                {{-- Producto estándar (sin medidas) --}}
-                                <div id="productTypeStandard" class="d-flex align-items-center p-3 rounded" style="display: none; background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border: 1px solid #a5d6a7;">
-                                    <i class="fas fa-box-open fa-2x mr-3" style="color: #2e7d32;"></i>
-                                    <div>
-                                        <span class="badge px-3 py-2" style="background: #2e7d32; color: white; font-size: 13px;">
-                                            <i class="fas fa-check-circle mr-1"></i> Producto Estándar
-                                        </span>
-                                        <div class="mt-1" style="color: #1b5e20; font-size: 12px;">
-                                            Este producto no requiere medidas — listo para agregar
-                                        </div>
-                                    </div>
-                                </div>
-                                {{-- Producto a medida --}}
-                                <div id="productTypeCustom" class="d-flex align-items-center p-3 rounded" style="display: none; background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border: 1px solid #90caf9;">
-                                    <i class="fas fa-ruler-combined fa-2x mr-3" style="color: #0d47a1;"></i>
-                                    <div>
-                                        <span class="badge px-3 py-2" style="background: #0d47a1; color: white; font-size: 13px;">
-                                            <i class="fas fa-ruler mr-1"></i> Producto a Medida
-                                        </span>
-                                        <div class="mt-1" style="color: #0d47a1; font-size: 12px;">
-                                            Requiere captura de medidas antes de agregar al pedido
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- ═══════════════════════════════════════════════════════════ --}}
-                            {{-- REQUISITOS DEL PRODUCTO (Sistema) - OBLIGATORIO           --}}
-                            {{-- Solo visible si el producto requiere medidas              --}}
-                            {{-- ═══════════════════════════════════════════════════════════ --}}
-                            <div class="card mb-3" id="measurementsSection" style="display: none; border: 2px solid #0d47a1; border-radius: 8px; box-shadow: 0 2px 8px rgba(13,71,161,0.15);">
-                                {{-- Header: REQUISITOS DEL PRODUCTO (Autoritativo) --}}
-                                <div class="card-header py-2 px-3" style="background: linear-gradient(135deg, #0d47a1 0%, #1a237e 100%); color: white; border-radius: 6px 6px 0 0;">
-                                    <div class="d-flex justify-content-between align-items-center flex-wrap">
-                                        <div>
-                                            <div class="d-flex align-items-center">
-                                                <i class="fas fa-shield-alt mr-2" style="font-size: 16px;"></i>
-                                                <strong style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Requisitos del Producto</strong>
+                                    <div class="row">
+                                        {{-- Variante (condicional) --}}
+                                        <div class="col-6">
+                                            <div class="form-group" id="variantGroup">
+                                                <label class="font-weight-bold">Variante</label>
+                                                <select id="modalVariantSelect" class="form-control">
+                                                    <option value="">-- Producto base --</option>
+                                                </select>
                                             </div>
-                                            <small class="d-block mt-1" style="color: rgba(255,255,255,0.85); font-size: 11px; margin-left: 26px;">
-                                                <i class="fas fa-lock mr-1"></i> Requisito técnico obligatorio definido por el sistema
-                                            </small>
+
                                         </div>
-                                        <span class="badge d-none d-sm-inline-block" style="background: rgba(255,255,255,0.2); color: white; font-size: 10px;">
-                                            <i class="fas fa-cog mr-1"></i> SISTEMA
-                                        </span>
-                                    </div>
-                                </div>
-                                {{-- Body: Medidas del Ítem --}}
-                                <div class="card-body py-3 px-3" style="background: linear-gradient(180deg, #e3f2fd 0%, #bbdefb 100%);">
-                                    <div class="d-flex justify-content-between align-items-center flex-wrap">
-                                        <div class="mb-2 mb-sm-0 flex-grow-1">
-                                            <div class="d-flex align-items-center">
-                                                <i class="fas fa-ruler-combined mr-2" style="color: #0d47a1; font-size: 20px;"></i>
-                                                <div>
-                                                    <strong style="color: #0d47a1; font-size: 15px;">Medidas del Ítem</strong>
-                                                    <span class="badge ml-2" id="measurementsStatusBadge" style="background: #e65100; color: white; font-size: 11px; padding: 4px 8px;">
-                                                        <i class="fas fa-exclamation-circle mr-1"></i>REQUISITO OBLIGATORIO
-                                                    </span>
+
+                                        {{-- Cantidad y Precio --}}
+
+                                        <div class="col-3">
+                                            <div class="form-group">
+                                                <label class="font-weight-bold">Cantidad *</label>
+                                                <input type="number" id="modalQuantity" class="form-control"
+                                                    value="1" min="1" max="999">
+                                            </div>
+                                        </div>
+                                        <div class="col-3">
+                                            <div class="form-group">
+                                                <label class="font-weight-bold">Precio Unit. *</label>
+                                                <div class="input-group">
+                                                    <div class="input-group-prepend"><span
+                                                            class="input-group-text">$</span></div>
+                                                    <input type="number" id="modalPrice" class="form-control"
+                                                        step="0.01" min="0">
                                                 </div>
                                             </div>
-                                            <div class="mt-2" style="margin-left: 28px; padding: 8px 12px; background: rgba(255,255,255,0.7); border-radius: 4px; border-left: 3px solid #0d47a1;">
-                                                <small style="color: #37474f; font-size: 12px;">
-                                                    <i class="fas fa-info-circle mr-1" style="color: #0d47a1;"></i>
-                                                    <strong>Este producto no puede fabricarse sin capturar las medidas requeridas.</strong>
-                                                </small>
+                                        </div>
+                                    </div>
+
+                                    {{-- ESTADO DEL PRODUCTO --}}
+                                    <div id="productTypeIndicator" class="mb-3" style="display: none;">
+                                        <div id="productTypeStandard" class="d-none align-items-center p-3 rounded"
+                                            style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border: 1px solid #a5d6a7;">
+                                            <i class="fas fa-box-open fa-2x mr-3" style="color: #2e7d32;"></i>
+                                            <div>
+                                                <span class="badge px-3 py-2"
+                                                    style="background: #2e7d32; color: white; font-size: 13px;">
+                                                    <i class="fas fa-check-circle mr-1"></i> Producto Estándar
+                                                </span>
+                                                <div class="mt-1" style="color: #1b5e20; font-size: 12px;">
+                                                    Este producto no requiere medidas — listo para agregar
+                                                </div>
                                             </div>
                                         </div>
-                                        <div class="mt-2 mt-sm-0 w-100 w-sm-auto" style="min-width: 220px;">
-                                            <button type="button" class="btn btn-block btn-sm" id="btnOpenMeasurementsModal" style="background: #0d47a1; color: white; font-weight: 600; padding: 10px 16px;">
-                                                <i class="fas fa-clipboard-check mr-1"></i>
-                                                <span id="btnMeasurementsText">Completar requisito: capturar medidas</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    {{-- Resumen de medidas capturadas --}}
-                                    <div id="measurementsSummaryBody" style="display: none;" class="mt-3 pt-2 border-top">
-                                        <div class="row small" id="measurementsSummaryContent">
-                                            {{-- Se llena dinámicamente --}}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- ═══════════════════════════════════════════════════════════ --}}
-                            {{-- SEPARADOR SEMÁNTICO: SISTEMA vs CLIENTE                    --}}
-                            {{-- ═══════════════════════════════════════════════════════════ --}}
-                            <div id="systemClientDivider" class="my-3 text-center" style="display: none;">
-                                <div class="d-flex align-items-center">
-                                    <hr class="flex-grow-1" style="border-color: #bdbdbd;">
-                                    <span class="px-3 text-muted" style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; white-space: nowrap;">
-                                        <i class="fas fa-user mr-1"></i> Opciones del Cliente
-                                    </span>
-                                    <hr class="flex-grow-1" style="border-color: #bdbdbd;">
-                                </div>
-                            </div>
-
-                            {{-- ═══════════════════════════════════════════ --}}
-                            {{-- PERSONALIZACIÓN (Opcional - Cliente)       --}}
-                            {{-- ═══════════════════════════════════════════ --}}
-                            <div class="card mb-2" id="customizationCard" style="border-color: #e0e0e0;">
-                                <div class="card-header py-2 px-3" style="background: #f8f9fa; cursor: pointer;" id="customizationToggle">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <div class="custom-control custom-checkbox d-inline-block">
-                                                <input type="checkbox" class="custom-control-input" id="isCustomized">
-                                                <label class="custom-control-label font-weight-bold" for="isCustomized">
-                                                    <i class="fas fa-magic mr-1" style="color: #7b1fa2;"></i> Agregar personalización
-                                                    <span class="badge badge-light ml-1" style="font-weight: normal; font-size: 11px;">opcional</span>
-                                                </label>
+                                        <div id="productTypeCustom" class="d-none align-items-center p-3 rounded"
+                                            style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border: 1px solid #90caf9;">
+                                            <i class="fas fa-ruler-combined fa-2x mr-3" style="color: #0d47a1;"></i>
+                                            <div>
+                                                <span class="badge px-3 py-2"
+                                                    style="background: #0d47a1; color: white; font-size: 13px;">
+                                                    <i class="fas fa-ruler mr-1"></i> Producto a Medida
+                                                </span>
+                                                <div class="mt-1" style="color: #0d47a1; font-size: 12px;">
+                                                    Requiere captura de medidas antes de agregar al pedido
+                                                </div>
                                             </div>
-                                            <small class="text-muted d-block mt-1 ml-4" style="font-size: 11px;">
-                                                Opciones estéticas solicitadas por el cliente.
-                                            </small>
                                         </div>
-                                        <i class="fas fa-chevron-down text-muted" id="customizationChevron"></i>
                                     </div>
-                                </div>
-                                <div class="card-body py-3 px-3" id="customizationBody" style="display: none;">
+
+                                    {{-- REQUISITOS DEL PRODUCTO (Medidas) --}}
+                                    <div class="card mb-3" id="measurementsSection"
+                                        style="display: none; border: 2px solid #0d47a1; border-radius: 8px; box-shadow: 0 2px 8px rgba(13,71,161,0.15);">
+                                        <div class="card-header py-2 px-3"
+                                            style="background: linear-gradient(135deg, #0d47a1 0%, #1a237e 100%); color: white; border-radius: 6px 6px 0 0;">
+                                            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                                                <div>
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="fas fa-shield-alt mr-2" style="font-size: 16px;"></i>
+                                                        <strong
+                                                            style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Requisitos
+                                                            del Producto</strong>
+                                                    </div>
+                                                    <small class="d-block mt-1"
+                                                        style="color: rgba(255,255,255,0.85); font-size: 11px; margin-left: 26px;">
+                                                        <i class="fas fa-lock mr-1"></i> Requisito técnico obligatorio
+                                                        definido por el sistema
+                                                    </small>
+                                                </div>
+                                                <span class="badge d-none d-sm-inline-block"
+                                                    style="background: rgba(255,255,255,0.2); color: white; font-size: 10px;">
+                                                    <i class="fas fa-cog mr-1"></i> SISTEMA
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="card-body py-3 px-3"
+                                            style="background: linear-gradient(180deg, #e3f2fd 0%, #bbdefb 100%);">
+                                            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                                                <div class="mb-2 mb-sm-0 flex-grow-1">
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="fas fa-ruler-combined mr-2"
+                                                            style="color: #0d47a1; font-size: 20px;"></i>
+                                                        <div>
+                                                            <strong style="color: #0d47a1; font-size: 15px;">Medidas del
+                                                                Ítem</strong>
+                                                            <span class="badge ml-2" id="measurementsStatusBadge"
+                                                                style="background: #e65100; color: white; font-size: 11px; padding: 4px 8px;">
+                                                                <i class="fas fa-exclamation-circle mr-1"></i>REQUISITO
+                                                                OBLIGATORIO
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="mt-2"
+                                                        style="margin-left: 28px; padding: 8px 12px; background: rgba(255,255,255,0.7); border-radius: 4px; border-left: 3px solid #0d47a1;">
+                                                        <small style="color: #37474f; font-size: 12px;">
+                                                            <i class="fas fa-info-circle mr-1"
+                                                                style="color: #0d47a1;"></i>
+                                                            <strong>Este producto no puede fabricarse sin capturar las
+                                                                medidas requeridas.</strong>
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                                <div class="mt-2 mt-sm-0 w-100 w-sm-auto" style="min-width: 220px;">
+                                                    <button type="button" class="btn btn-block btn-sm"
+                                                        id="btnOpenMeasurementsModal"
+                                                        style="background: #0d47a1; color: white; font-weight: 600; padding: 10px 16px;">
+                                                        <i class="fas fa-clipboard-check mr-1"></i>
+                                                        <span id="btnMeasurementsText">Completar requisito: capturar
+                                                            medidas</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div id="measurementsSummaryBody" style="display: none;"
+                                                class="mt-3 pt-2 border-top">
+                                                <div class="row small" id="measurementsSummaryContent"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {{-- SEPARADOR: Opciones del Cliente --}}
+                                    <div id="systemClientDivider" class="my-3 text-center" style="display: none;">
+                                        <div class="d-flex align-items-center">
+                                            <hr class="flex-grow-1" style="border-color: #bdbdbd;">
+                                            <span class="px-3 text-muted"
+                                                style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; white-space: nowrap;">
+                                                <i class="fas fa-user mr-1"></i> Opciones del Cliente
+                                            </span>
+                                            <hr class="flex-grow-1" style="border-color: #bdbdbd;">
+                                        </div>
+                                    </div>
+
                                     {{-- Texto a Bordar --}}
-                                    <div class="form-group mb-3">
-                                        <label class="font-weight-bold mb-1">
-                                            <i class="fas fa-pen-fancy mr-1 text-info"></i> Texto a Bordar
-                                        </label>
-                                        <input type="text" id="modalEmbroideryText" class="form-control" maxlength="255"
-                                            placeholder="Nombre, frase, iniciales...">
+
+
+                                    {{-- Contenedor 2 columnas: Extras | Ajuste+Notas+Subtotal --}}
+                                    <div class="row">
+                                        {{-- Columna Izquierda: Extras --}}
+                                        <div class="col-md-6 mb-3 mb-md-0">
+                                            <div class="form-group mb-0">
+                                                <label class="font-weight-bold mb-1">
+                                                    <i class="fas fa-pen-fancy mr-1 text-info"></i> Texto a Bordar
+                                                </label>
+                                                <input type="text" id="modalEmbroideryText" class="form-control"
+                                                    maxlength="255" placeholder="Nombre, frase, iniciales...">
+                                            </div>
+
+                                            <div class="form-group mb-0" id="productExtrasSection"
+                                                style="display: none;">
+                                                <label class="font-weight-bold mb-1">
+                                                    <i class="fas fa-plus-circle mr-1 text-success"></i> Extras
+                                                </label>
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <button type="button" class="btn btn-outline-success btn-sm"
+                                                        id="btnOpenExtrasModal">
+                                                        <i class="fas fa-list-ul mr-1"></i> Seleccionar Extras
+                                                    </button>
+                                                    <span class="ml-2 text-info font-weight-bold"
+                                                        id="extrasSubtotalDisplay">+$0.00</span>
+                                                </div>
+                                                <div id="selectedExtrasList" class="border rounded"
+                                                    style="display: none; max-height: 150px; overflow-y: auto;">
+                                                    {{-- Se llena dinámicamente con JS --}}
+                                                </div>
+                                                <small class="text-muted" id="noExtrasSelectedMsg">Sin extras
+                                                    seleccionados</small>
+                                            </div>
+
+                                        </div>
+
+                                        {{-- Columna Derecha: Ajuste + Notas + Subtotal --}}
+                                        <div class="col-md-6">
+                                            {{-- Ajuste de precio --}}
+                                            <div class="form-group mb-3">
+                                                <label class="font-weight-bold mb-1">
+                                                    <i class="fas fa-dollar-sign mr-1 text-warning"></i> Ajuste de precio
+                                                    adicional
+                                                </label>
+                                                <div class="input-group">
+                                                    <div class="input-group-prepend"><span
+                                                            class="input-group-text">+$</span></div>
+                                                    <input type="number" id="modalExtrasCost" class="form-control"
+                                                        step="0.01" min="0" value="0">
+                                                </div>
+                                                <small class="text-muted">Ajuste manual por medidas especiales o trabajos
+                                                    adicionales</small>
+                                            </div>
+
+                                            {{-- Notas --}}
+                                            <div class="form-group mb-3">
+                                                <label class="font-weight-bold mb-1">
+                                                    <i class="fas fa-sticky-note mr-1 text-secondary"></i> Notas /
+                                                    Instrucciones
+                                                </label>
+                                                <textarea id="modalCustomizationNotes" class="form-control" rows="2" maxlength="1000"
+                                                    placeholder="Instrucciones especiales, diseño, colores..."></textarea>
+                                            </div>
+
+
+                                        </div>
                                     </div>
 
-                                    {{-- EXTRAS: Botón + Lista de seleccionados --}}
-                                    <div class="form-group mb-3" id="productExtrasSection" style="display: none;">
-                                        <label class="font-weight-bold mb-1">
-                                            <i class="fas fa-plus-circle mr-1 text-success"></i> Extras
-                                        </label>
-                                        <div class="d-flex align-items-center mb-2">
-                                            <button type="button" class="btn btn-outline-success btn-sm" id="btnOpenExtrasModal">
-                                                <i class="fas fa-list-ul mr-1"></i> Seleccionar Extras
-                                            </button>
-                                            <span class="ml-2 text-info font-weight-bold" id="extrasSubtotalDisplay">+$0.00</span>
-                                        </div>
-                                        {{-- Lista de extras seleccionados --}}
-                                        <div id="selectedExtrasList" class="border rounded" style="display: none; max-height: 120px; overflow-y: auto;">
-                                            {{-- Se llena dinámicamente con JS --}}
-                                        </div>
-                                        <small class="text-muted" id="noExtrasSelectedMsg">Sin extras seleccionados</small>
-                                    </div>
+                                    {{-- Elementos ocultos para compatibilidad --}}
+                                    <div id="customizationCard" style="display: none;"></div>
+                                    <div id="customizationToggle" style="display: none;"></div>
+                                    <div id="customizationBody" style="display: none;"></div>
+                                    <div id="customizationChevron" style="display: none;"></div>
+                                    <input type="checkbox" id="isCustomized" style="display: none;" checked>
 
-                                    {{-- Ajuste de precio adicional (temporal - para futuro cálculo por medidas) --}}
-                                    <div class="form-group mb-3">
-                                        <label class="font-weight-bold mb-1">
-                                            <i class="fas fa-dollar-sign mr-1 text-warning"></i> Ajuste de precio adicional
-                                        </label>
-                                        <div class="input-group">
-                                            <div class="input-group-prepend"><span class="input-group-text">+$</span></div>
-                                            <input type="number" id="modalExtrasCost" class="form-control" step="0.01" min="0" value="0">
-                                        </div>
-                                        <small class="text-muted">Ajuste manual por medidas especiales o trabajos adicionales</small>
-                                    </div>
-
-                                    {{-- Notas de Personalización --}}
-                                    <div class="form-group mb-0">
-                                        <label class="font-weight-bold mb-1">
-                                            <i class="fas fa-sticky-note mr-1 text-secondary"></i> Notas / Instrucciones
-                                        </label>
-                                        <textarea id="modalCustomizationNotes" class="form-control" rows="2" maxlength="1000"
-                                            placeholder="Instrucciones especiales, diseño, colores..."></textarea>
-                                    </div>
                                 </div>
-                            </div>
-
-                            {{-- Subtotal del ítem (solo lectura) --}}
-                            <div class="bg-light rounded p-2 text-right" id="itemSubtotalContainer" style="display: none;">
-                                <span class="text-muted">Subtotal ítem:</span>
-                                <strong class="text-success ml-2" id="itemSubtotalDisplay">$0.00</strong>
-                                <small class="text-muted d-block" id="itemSubtotalDetail"></small>
                             </div>
                         </div>
-                    </div>
                     </div>{{-- Fin #modalProductSection --}}
 
                     {{-- ═══════════════════════════════════════════════════════════ --}}
@@ -1385,14 +1441,17 @@
                         <div class="row">
                             <div class="col-12">
                                 {{-- Botón volver a selección de intención --}}
-                                <button type="button" class="btn btn-sm btn-outline-secondary mb-3" id="btnBackToIntent">
+                                <button type="button" class="btn btn-sm btn-outline-secondary mb-3"
+                                    id="btnBackToIntent">
                                     <i class="fas fa-arrow-left mr-1"></i> Volver
                                 </button>
 
                                 {{-- Info contextual --}}
-                                <div class="alert py-2 mb-3" style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border: 1px solid #a5d6a7;">
+                                <div class="alert py-2 mb-3"
+                                    style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border: 1px solid #a5d6a7;">
                                     <div class="d-flex align-items-center">
-                                        <i class="fas fa-concierge-bell mr-2" style="color: #2e7d32; font-size: 20px;"></i>
+                                        <i class="fas fa-concierge-bell mr-2"
+                                            style="color: #2e7d32; font-size: 20px;"></i>
                                         <div>
                                             <strong style="color: #1b5e20;">Servicios Adicionales</strong>
                                             <div class="small" style="color: #388e3c;">
@@ -1407,7 +1466,8 @@
                                     <label class="font-weight-bold">
                                         <i class="fas fa-search mr-1 text-muted"></i> Buscar Extras
                                     </label>
-                                    <input type="text" id="extrasOnlySearchInput" class="form-control" placeholder="Escriba para filtrar extras...">
+                                    <input type="text" id="extrasOnlySearchInput" class="form-control"
+                                        placeholder="Escriba para filtrar extras...">
                                 </div>
 
                                 {{-- Tabla de extras disponibles --}}
@@ -1416,7 +1476,8 @@
                                         <thead class="thead-light" style="position: sticky; top: 0; z-index: 1;">
                                             <tr>
                                                 <th style="width: 50px;" class="text-center">
-                                                    <input type="checkbox" id="selectAllExtrasOnly" title="Seleccionar todos">
+                                                    <input type="checkbox" id="selectAllExtrasOnly"
+                                                        title="Seleccionar todos">
                                                 </th>
                                                 <th>Extra</th>
                                                 <th style="width: 120px;" class="text-right">Precio</th>
@@ -1434,7 +1495,8 @@
                                 </div>
 
                                 {{-- Resumen de selección --}}
-                                <div class="mt-3 p-3 rounded d-flex justify-content-between align-items-center" style="background: #f8f9fa;">
+                                <div class="mt-3 p-3 rounded d-flex justify-content-between align-items-center"
+                                    style="background: #f8f9fa;">
                                     <span><strong id="extrasOnlySelectedCount">0</strong> extras seleccionados</span>
                                     <span class="text-success font-weight-bold" style="font-size: 1.2rem;">
                                         Total: <span id="extrasOnlyTotal">$0.00</span>
@@ -1447,16 +1509,25 @@
                                         <i class="fas fa-sticky-note mr-1 text-muted"></i> Notas (opcional)
                                     </label>
                                     <textarea id="extrasOnlyNotes" class="form-control" rows="2" maxlength="500"
-                                              placeholder="Instrucciones especiales para estos extras..."></textarea>
+                                        placeholder="Instrucciones especiales para estos extras..."></textarea>
                                 </div>
                             </div>
                         </div>
                     </div>{{-- Fin #modalExtrasOnlySection --}}
                 </div>
                 <div class="modal-footer">
+                    {{-- Subtotal del ítem --}}
+                    <div class="bg-light rounded p-2 text-right" id="itemSubtotalContainer" style="display: none;">
+                        <small class="text-muted d-block" style="font-weight: bold;font-size:18px;color:black"
+                            id="itemSubtotalDetail"></small>
+                        <span class="text-muted" style="font-weight: bold;font-size:18px;color:black">Total:</span>
+                        <strong class="text-success ml-2" id="itemSubtotalDisplay" style="font-size:18px;">$0.00</strong>
+
+                    </div>
+                    {{-- aqui termina subtotal --}}
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="addProductBtn" disabled
-                            data-toggle="tooltip" data-placement="top" title="">
+                    <button type="button" class="btn btn-primary" id="addProductBtn" disabled data-toggle="tooltip"
+                        data-placement="top" title="">
                         <i class="fas fa-plus mr-1"></i> Agregar al Pedido
                     </button>
                 </div>
@@ -1509,66 +1580,66 @@
                             <div class="form-group col-md-4 col-6 text-center">
                                 <label class="medida-label">BUSTO</label>
                                 <div class="medida-card">
-                                    <img src="{{ asset('images/busto.png') }}" alt="Busto" class="img-fluid medida-img">
+                                    <img src="{{ asset('images/busto.png') }}" alt="Busto"
+                                        class="img-fluid medida-img">
                                     <input type="text" id="medBusto"
-                                        class="form-control form-control-sm medida-input"
-                                        placeholder="Ej: 80.5" maxlength="6"
-                                        inputmode="decimal" oninput="validateMedidaModal(this)">
+                                        class="form-control form-control-sm medida-input" placeholder="Ej: 80.5"
+                                        maxlength="6" inputmode="decimal" oninput="validateMedidaModal(this)">
                                 </div>
                             </div>
                             {{-- ALTO CINTURA --}}
                             <div class="form-group col-md-4 col-6 text-center">
                                 <label class="medida-label">ALTO CINTURA</label>
                                 <div class="medida-card">
-                                    <img src="{{ asset('images/alto_cintura.png') }}" alt="Alto Cintura" class="img-fluid medida-img">
+                                    <img src="{{ asset('images/alto_cintura.png') }}" alt="Alto Cintura"
+                                        class="img-fluid medida-img">
                                     <input type="text" id="medAltoCintura"
-                                        class="form-control form-control-sm medida-input"
-                                        placeholder="Ej: 40.5" maxlength="6"
-                                        inputmode="decimal" oninput="validateMedidaModal(this)">
+                                        class="form-control form-control-sm medida-input" placeholder="Ej: 40.5"
+                                        maxlength="6" inputmode="decimal" oninput="validateMedidaModal(this)">
                                 </div>
                             </div>
                             {{-- CINTURA --}}
                             <div class="form-group col-md-4 col-6 text-center">
                                 <label class="medida-label">CINTURA</label>
                                 <div class="medida-card">
-                                    <img src="{{ asset('images/cintura.png') }}" alt="Cintura" class="img-fluid medida-img">
+                                    <img src="{{ asset('images/cintura.png') }}" alt="Cintura"
+                                        class="img-fluid medida-img">
                                     <input type="text" id="medCintura"
-                                        class="form-control form-control-sm medida-input"
-                                        placeholder="Ej: 70.5" maxlength="6"
-                                        inputmode="decimal" oninput="validateMedidaModal(this)">
+                                        class="form-control form-control-sm medida-input" placeholder="Ej: 70.5"
+                                        maxlength="6" inputmode="decimal" oninput="validateMedidaModal(this)">
                                 </div>
                             </div>
                             {{-- CADERA --}}
                             <div class="form-group col-md-4 col-6 text-center">
                                 <label class="medida-label">CADERA</label>
                                 <div class="medida-card">
-                                    <img src="{{ asset('images/cadera.png') }}" alt="Cadera" class="img-fluid medida-img">
+                                    <img src="{{ asset('images/cadera.png') }}" alt="Cadera"
+                                        class="img-fluid medida-img">
                                     <input type="text" id="medCadera"
-                                        class="form-control form-control-sm medida-input"
-                                        placeholder="Ej: 95.5" maxlength="6"
-                                        inputmode="decimal" oninput="validateMedidaModal(this)">
+                                        class="form-control form-control-sm medida-input" placeholder="Ej: 95.5"
+                                        maxlength="6" inputmode="decimal" oninput="validateMedidaModal(this)">
                                 </div>
                             </div>
                             {{-- LARGO BLUSA --}}
                             <div class="form-group col-md-4 col-6 text-center">
                                 <label class="medida-label">LARGO BLUSA</label>
                                 <div class="medida-card">
-                                    <img src="{{ asset('images/largo.png') }}" alt="Largo Blusa" class="img-fluid medida-img">
+                                    <img src="{{ asset('images/largo.png') }}" alt="Largo Blusa"
+                                        class="img-fluid medida-img">
                                     <input type="text" id="medLargo"
-                                        class="form-control form-control-sm medida-input"
-                                        placeholder="Ej: 60.5" maxlength="6"
-                                        inputmode="decimal" oninput="validateMedidaModal(this)">
+                                        class="form-control form-control-sm medida-input" placeholder="Ej: 60.5"
+                                        maxlength="6" inputmode="decimal" oninput="validateMedidaModal(this)">
                                 </div>
                             </div>
                             {{-- LARGO VESTIDO --}}
                             <div class="form-group col-md-4 col-6 text-center">
                                 <label class="medida-label">LARGO VESTIDO</label>
                                 <div class="medida-card">
-                                    <img src="{{ asset('images/largo_vestido.png') }}" alt="Largo Vestido" class="img-fluid medida-img">
+                                    <img src="{{ asset('images/largo_vestido.png') }}" alt="Largo Vestido"
+                                        class="img-fluid medida-img">
                                     <input type="text" id="medLargoVestido"
-                                        class="form-control form-control-sm medida-input"
-                                        placeholder="Ej: 120.5" maxlength="6"
-                                        inputmode="decimal" oninput="validateMedidaModal(this)">
+                                        class="form-control form-control-sm medida-input" placeholder="Ej: 120.5"
+                                        maxlength="6" inputmode="decimal" oninput="validateMedidaModal(this)">
                                 </div>
                             </div>
                         </div>
@@ -1602,7 +1673,8 @@
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">
                             <i class="fas fa-times mr-1"></i> Cancelar
                         </button>
-                        <button type="button" class="btn text-white" id="btnConfirmMeasurements" style="background: #6f42c1;">
+                        <button type="button" class="btn text-white" id="btnConfirmMeasurements"
+                            style="background: #6f42c1;">
                             <i class="fas fa-check mr-1"></i> Confirmar Medidas
                         </button>
                     </div>
@@ -1630,7 +1702,8 @@
                 <div class="modal-body p-0">
                     {{-- Buscador de extras --}}
                     <div class="p-3 border-bottom bg-light">
-                        <input type="text" id="extrasSearchInput" class="form-control" placeholder="Buscar extras...">
+                        <input type="text" id="extrasSearchInput" class="form-control"
+                            placeholder="Buscar extras...">
                     </div>
                     {{-- Tabla de extras disponibles --}}
                     <div style="max-height: 350px; overflow-y: auto;">
@@ -1695,24 +1768,25 @@
 
             // D3: Estados explícitos del modal
             const MODAL_STATES = {
-                IDLE: 'idle',                      // Modal cerrado o recién abierto (sin selección)
+                IDLE: 'idle', // Modal cerrado o recién abierto (sin selección)
                 INTENT_SELECTION: 'intent_selection', // Esperando que el operador elija intención
-                ADDING_PRODUCT: 'adding_product',  // Agregando producto (con o sin extras)
+                ADDING_PRODUCT: 'adding_product', // Agregando producto (con o sin extras)
                 ADDING_EXTRAS_ONLY: 'adding_extras_only', // Solo extras (sin producto nuevo)
-                EDITING: 'editing'                 // Editando item existente
+                EDITING: 'editing' // Editando item existente
             };
 
             // Estado actual del modal (D3)
             let modalState = {
                 current: MODAL_STATES.IDLE,
-                context: ORDER_CONTEXT,            // 'normal' o 'post_sale'
-                intent: null,                      // 'product' o 'extras_only'
-                previousState: null                // Para navegación hacia atrás
+                context: ORDER_CONTEXT, // 'normal' o 'post_sale'
+                intent: null, // 'product' o 'extras_only'
+                previousState: null // Para navegación hacia atrás
             };
 
             // D3: Función para cambiar estado del modal con logging
             function setModalState(newState, intent = null) {
-                console.log(`[Modal State] ${modalState.current} → ${newState}`, intent ? `(intent: ${intent})` : '');
+                console.log(`[Modal State] ${modalState.current} → ${newState}`, intent ? `(intent: ${intent})` :
+                    '');
                 modalState.previousState = modalState.current;
                 modalState.current = newState;
                 if (intent !== null) {
@@ -1751,14 +1825,15 @@
                     case MODAL_STATES.ADDING_PRODUCT:
                     case MODAL_STATES.EDITING:
                         $productSection.show();
-                        $modalTitle.html(editingItemIndex !== null
-                            ? '<i class="fas fa-edit mr-2"></i> Editar Producto'
-                            : '<i class="fas fa-box mr-2"></i> Agregar Producto');
+                        $modalTitle.html(editingItemIndex !== null ?
+                            '<i class="fas fa-edit mr-2"></i> Editar Producto' :
+                            '<i class="fas fa-box mr-2"></i> Agregar Producto');
                         break;
 
                     case MODAL_STATES.ADDING_EXTRAS_ONLY:
                         $extrasOnlySection.show();
-                        $modalTitle.html('<i class="fas fa-concierge-bell mr-2"></i> Agregar Servicios Adicionales');
+                        $modalTitle.html(
+                            '<i class="fas fa-concierge-bell mr-2"></i> Agregar Servicios Adicionales');
                         break;
                 }
 
@@ -2064,7 +2139,9 @@
                 // Mostrar tipo de producto si existe
                 if (selectedProduct.product_type_name) {
                     $('#productPreviewType')
-                        .html(`<span class="badge badge-secondary">${selectedProduct.product_type_name}</span>`)
+                        .html(
+                            `<span class="badge badge-secondary" style="font-size:14px;">${selectedProduct.product_type_name}</span>`
+                        )
                         .show();
                 } else {
                     $('#productPreviewType').hide();
@@ -2086,11 +2163,11 @@
                     selectedProduct.variants.forEach(v => {
                         $variantSelect.append(
                             `<option value="${v.id}" data-price="${v.price}" data-sku="${v.sku}">${v.display} ($${parseFloat(v.price).toFixed(2)})</option>`
-                            );
+                        );
                     });
-                    $('#variantGroup').show();
+
                 } else {
-                    $('#variantGroup').hide();
+
                 }
 
                 // Mostrar subtotal del ítem
@@ -2225,7 +2302,9 @@
                         }
 
                         // Copiar selección actual a temporal
-                        tempSelectedExtras = selectedExtras.map(e => ({...e}));
+                        tempSelectedExtras = selectedExtras.map(e => ({
+                            ...e
+                        }));
 
                         // Llenar tabla de extras
                         populateExtrasTable();
@@ -2285,7 +2364,11 @@
 
                 if ($(this).is(':checked')) {
                     if (!tempSelectedExtras.some(e => e.id === extraId)) {
-                        tempSelectedExtras.push({ id: extraId, name: extraName, price: extraPrice });
+                        tempSelectedExtras.push({
+                            id: extraId,
+                            name: extraName,
+                            price: extraPrice
+                        });
                     }
                 } else {
                     tempSelectedExtras = tempSelectedExtras.filter(e => e.id !== extraId);
@@ -2317,7 +2400,9 @@
             // Confirmar selección de extras
             $('#btnConfirmExtras').on('click', function() {
                 // Guardar selección temporal como definitiva
-                selectedExtras = tempSelectedExtras.map(e => ({...e}));
+                selectedExtras = tempSelectedExtras.map(e => ({
+                    ...e
+                }));
 
                 // Actualizar UI
                 renderSelectedExtrasList();
@@ -2364,14 +2449,14 @@
                     $('#extrasAdditionRow').hide();
                 }
 
-                $('#priceComparisonContainer').show();
+                //                $('#priceComparisonContainer').show();
 
                 // Mostrar alerta si precio fue modificado manualmente
                 const expectedPrice = modalBasePrice + extrasTotal + manualAdjust;
                 if (Math.abs(finalPrice - expectedPrice) > 0.01) {
-                    $('#priceModifiedAlert').show();
+                    //  $('#priceModifiedAlert').show();
                 } else {
-                    $('#priceModifiedAlert').hide();
+                    //   $('#priceModifiedAlert').hide();
                 }
             }
 
@@ -2396,8 +2481,8 @@
                 if (!selectedProduct) {
                     // Sin producto: ocultar indicadores
                     $('#productTypeIndicator').hide();
-                    $('#productTypeStandard').hide();
-                    $('#productTypeCustom').hide();
+                    $('#productTypeStandard').addClass('d-none').removeClass('d-flex');
+                    $('#productTypeCustom').addClass('d-none').removeClass('d-flex');
                     $('#measurementsSection').hide();
                     $('#systemClientDivider').hide();
                     return;
@@ -2406,10 +2491,13 @@
                 // Mostrar indicador de tipo de producto
                 $('#productTypeIndicator').show();
 
+                console.log('[DEBUG] Producto:', selectedProduct.name, '| requires_measurements:', selectedProduct
+                    .requires_measurements);
+
                 if (selectedProduct.requires_measurements) {
                     // PRODUCTO A MEDIDA
-                    $('#productTypeStandard').hide();
-                    $('#productTypeCustom').show();
+                    $('#productTypeStandard').addClass('d-none').removeClass('d-flex');
+                    $('#productTypeCustom').removeClass('d-none').addClass('d-flex');
                     $('#measurementsSection').show();
                     $('#systemClientDivider').show();
 
@@ -2417,24 +2505,40 @@
                         // ✓ REQUISITO COMPLETADO
                         $('#measurementsStatusBadge')
                             .html('<i class="fas fa-check-circle mr-1"></i>REQUISITO COMPLETADO')
-                            .css({'background': '#2e7d32', 'color': 'white', 'font-size': '11px', 'padding': '4px 8px'});
+                            .css({
+                                'background': '#2e7d32',
+                                'color': 'white',
+                                'font-size': '11px',
+                                'padding': '4px 8px'
+                            });
                         $('#btnMeasurementsText').text('Editar medidas (requisito completado)');
-                        $('#btnOpenMeasurementsModal').css({'background': '#2e7d32', 'border-color': '#2e7d32'});
+                        $('#btnOpenMeasurementsModal').css({
+                            'background': '#2e7d32',
+                            'border-color': '#2e7d32'
+                        });
                         updateMeasurementsSummary(currentItemMeasurements);
                         $('#measurementsSummaryBody').show();
                     } else {
                         // ⚠ REQUISITO OBLIGATORIO - Sin medidas
                         $('#measurementsStatusBadge')
                             .html('<i class="fas fa-exclamation-circle mr-1"></i>REQUISITO OBLIGATORIO')
-                            .css({'background': '#e65100', 'color': 'white', 'font-size': '11px', 'padding': '4px 8px'});
+                            .css({
+                                'background': '#e65100',
+                                'color': 'white',
+                                'font-size': '11px',
+                                'padding': '4px 8px'
+                            });
                         $('#btnMeasurementsText').text('Completar requisito: capturar medidas');
-                        $('#btnOpenMeasurementsModal').css({'background': '#0d47a1', 'border-color': '#0d47a1'});
+                        $('#btnOpenMeasurementsModal').css({
+                            'background': '#0d47a1',
+                            'border-color': '#0d47a1'
+                        });
                         $('#measurementsSummaryBody').hide();
                     }
                 } else {
                     // PRODUCTO ESTÁNDAR
-                    $('#productTypeStandard').show();
-                    $('#productTypeCustom').hide();
+                    $('#productTypeStandard').removeClass('d-none').addClass('d-flex');
+                    $('#productTypeCustom').addClass('d-none').removeClass('d-flex');
                     $('#measurementsSection').hide();
                     $('#systemClientDivider').hide();
                 }
@@ -2547,7 +2651,8 @@
 
                 measurements.forEach(m => {
                     const summary = buildMeasurementSummaryText(m);
-                    const isPrimary = m.is_primary ? '<span class="badge badge-info ml-1">Principal</span>' : '';
+                    const isPrimary = m.is_primary ?
+                        '<span class="badge badge-info ml-1">Principal</span>' : '';
                     const label = m.label || 'Medidas registradas';
 
                     const itemHtml = `
@@ -2613,7 +2718,9 @@
                 };
 
                 // Verificar que al menos una medida tenga valor (excluir save_to_client)
-                const hasAnyMeasurement = ['busto', 'cintura', 'cadera', 'alto_cintura', 'largo', 'largo_vestido']
+                const hasAnyMeasurement = ['busto', 'cintura', 'cadera', 'alto_cintura', 'largo',
+                        'largo_vestido'
+                    ]
                     .some(k => measurements[k] !== null && measurements[k] > 0);
 
                 if (!hasAnyMeasurement) {
@@ -2657,10 +2764,18 @@
                 // Cambiar badge a "✓ REQUISITO COMPLETADO"
                 $('#measurementsStatusBadge')
                     .html('<i class="fas fa-check-circle mr-1"></i>REQUISITO COMPLETADO')
-                    .css({'background': '#2e7d32', 'color': 'white', 'font-size': '11px', 'padding': '4px 8px'});
+                    .css({
+                        'background': '#2e7d32',
+                        'color': 'white',
+                        'font-size': '11px',
+                        'padding': '4px 8px'
+                    });
 
                 $('#btnMeasurementsText').text('Editar medidas (requisito completado)');
-                $('#btnOpenMeasurementsModal').css({'background': '#2e7d32', 'border-color': '#2e7d32'});
+                $('#btnOpenMeasurementsModal').css({
+                    'background': '#2e7d32',
+                    'border-color': '#2e7d32'
+                });
 
                 // Mostrar resumen de medidas
                 const summaryHtml = buildMeasurementsSummaryHtml(currentItemMeasurements);
@@ -2686,18 +2801,36 @@
             // Construir HTML de resumen para mostrar en el modal de producto
             function buildMeasurementsSummaryHtml(m) {
                 let html = '';
-                const items = [
-                    { label: 'Busto', value: m.busto },
-                    { label: 'Cintura', value: m.cintura },
-                    { label: 'Cadera', value: m.cadera },
-                    { label: 'Alto Cintura', value: m.alto_cintura },
-                    { label: 'Largo', value: m.largo },
-                    { label: 'Largo Vestido', value: m.largo_vestido }
+                const items = [{
+                        label: 'Busto',
+                        value: m.busto
+                    },
+                    {
+                        label: 'Cintura',
+                        value: m.cintura
+                    },
+                    {
+                        label: 'Cadera',
+                        value: m.cadera
+                    },
+                    {
+                        label: 'Alto Cintura',
+                        value: m.alto_cintura
+                    },
+                    {
+                        label: 'Largo',
+                        value: m.largo
+                    },
+                    {
+                        label: 'Largo Vestido',
+                        value: m.largo_vestido
+                    }
                 ];
 
                 items.forEach(item => {
                     if (item.value) {
-                        html += `<div class="col-4 mb-1"><strong>${item.label}:</strong> ${item.value} cm</div>`;
+                        html +=
+                            `<div class="col-4 mb-1"><strong>${item.label}:</strong> ${item.value} cm</div>`;
                     }
                 });
 
@@ -2818,7 +2951,8 @@
 
                 // Bloquear si precio es 0
                 if (price <= 0) {
-                    $btn.prop('disabled', true).attr('title', 'Ingrese un precio válido').tooltip('dispose').tooltip();
+                    $btn.prop('disabled', true).attr('title', 'Ingrese un precio válido').tooltip('dispose')
+                        .tooltip();
                     return;
                 }
 
@@ -2833,9 +2967,9 @@
 
                 // Todo OK: habilitar botón
                 $btn.prop('disabled', false).attr('title', '').tooltip('dispose');
-                $btn.html(editingItemIndex !== null
-                    ? '<i class="fas fa-save mr-1"></i> Guardar Cambios'
-                    : '<i class="fas fa-plus mr-1"></i> Agregar al Pedido');
+                $btn.html(editingItemIndex !== null ?
+                    '<i class="fas fa-save mr-1"></i> Guardar Cambios' :
+                    '<i class="fas fa-plus mr-1"></i> Agregar al Pedido');
             }
 
             // ==========================================
@@ -2849,6 +2983,13 @@
                 $('#measurementsSummaryBody').hide();
                 $('#measurementsSummaryContent').empty();
 
+                // 1.1 Ocultar secciones de medidas y tipo (se reevalúan con el nuevo producto)
+                $('#measurementsSection').hide();
+                $('#systemClientDivider').hide();
+                $('#productTypeIndicator').hide();
+                $('#productTypeStandard').addClass('d-none').removeClass('d-flex');
+                $('#productTypeCustom').addClass('d-none').removeClass('d-flex');
+
                 // 2. Extras seleccionados del producto anterior
                 selectedExtras = [];
                 tempSelectedExtras = [];
@@ -2860,9 +3001,17 @@
                 // 4. Reset visual de estado de medidas (se reconfigura en updateProductPreview)
                 $('#measurementsStatusBadge')
                     .html('<i class="fas fa-exclamation-circle mr-1"></i>REQUISITO OBLIGATORIO')
-                    .css({'background': '#e65100', 'color': 'white', 'font-size': '11px', 'padding': '4px 8px'});
+                    .css({
+                        'background': '#e65100',
+                        'color': 'white',
+                        'font-size': '11px',
+                        'padding': '4px 8px'
+                    });
                 $('#btnMeasurementsText').text('Completar requisito: capturar medidas');
-                $('#btnOpenMeasurementsModal').css({'background': '#0d47a1', 'border-color': '#0d47a1'});
+                $('#btnOpenMeasurementsModal').css({
+                    'background': '#0d47a1',
+                    'border-color': '#0d47a1'
+                });
             }
 
             // D4: RESET TOTAL DE ESTADO DEL MODAL
@@ -2877,23 +3026,31 @@
                 $('#productPreviewType').hide();
                 // Reset indicador de tipo de producto
                 $('#productTypeIndicator').hide();
-                $('#productTypeStandard').hide();
-                $('#productTypeCustom').hide();
+                $('#productTypeStandard').addClass('d-none').removeClass('d-flex');
+                $('#productTypeCustom').addClass('d-none').removeClass('d-flex');
                 // Reset medidas del item
                 currentItemMeasurements = null;
                 $('#measurementsSection').hide();
                 $('#systemClientDivider').hide();
                 $('#measurementsStatusBadge')
                     .html('<i class="fas fa-exclamation-circle mr-1"></i>REQUISITO OBLIGATORIO')
-                    .css({'background': '#e65100', 'color': 'white', 'font-size': '11px', 'padding': '4px 8px'});
+                    .css({
+                        'background': '#e65100',
+                        'color': 'white',
+                        'font-size': '11px',
+                        'padding': '4px 8px'
+                    });
                 $('#btnMeasurementsText').text('Completar requisito: capturar medidas');
-                $('#btnOpenMeasurementsModal').css({'background': '#0d47a1', 'border-color': '#0d47a1'});
+                $('#btnOpenMeasurementsModal').css({
+                    'background': '#0d47a1',
+                    'border-color': '#0d47a1'
+                });
                 $('#measurementsSummaryBody').hide();
                 $('#measurementsSummaryContent').empty();
                 // Reset precio y comparación
                 $('#modalPrice').val('');
                 $('#priceComparisonContainer').hide();
-                $('#priceModifiedAlert').hide();
+                // $('#priceModifiedAlert').hide();
                 $('#itemSubtotalContainer').hide();
                 // Reset personalización
                 $('#isCustomized').prop('checked', false);
@@ -2912,7 +3069,7 @@
                 // Reset cantidad y variante
                 $('#modalQuantity').val(1);
                 $('#modalVariantSelect').empty().append('<option value="">-- Producto base --</option>');
-                $('#variantGroup').hide();
+
 
                 // === D4: RESET VARIABLES DE ESTADO ===
                 selectedProduct = null;
@@ -2936,7 +3093,8 @@
                 modalState.previousState = null;
 
                 // Reset botón
-                $('#addProductBtn').prop('disabled', true).html('<i class="fas fa-plus mr-1"></i> Agregar al Pedido');
+                $('#addProductBtn').prop('disabled', true).html(
+                    '<i class="fas fa-plus mr-1"></i> Agregar al Pedido');
             }
 
             // Variable para trackear precio base
@@ -2980,7 +3138,8 @@
             // Toggle por click en header de personalización
             $('#customizationToggle').on('click', function(e) {
                 // Evitar toggle cuando se hace click directamente en el checkbox
-                if ($(e.target).is('#isCustomized') || $(e.target).closest('label').is('[for="isCustomized"]')) {
+                if ($(e.target).is('#isCustomized') || $(e.target).closest('label').is(
+                        '[for="isCustomized"]')) {
                     return;
                 }
                 $('#isCustomized').prop('checked', !$('#isCustomized').is(':checked')).trigger('change');
@@ -3050,7 +3209,7 @@
                 // Crear item especial de tipo "extras_only"
                 const newItem = {
                     index: itemIndex++,
-                    product_id: null,              // Sin producto
+                    product_id: null, // Sin producto
                     product_variant_id: null,
                     product_name: 'Extras Adicionales',
                     variant_display: null,
@@ -3058,7 +3217,7 @@
                     image_url: null,
                     quantity: 1,
                     unit_price: totalExtras,
-                    is_customized: true,           // Marcar como personalizado
+                    is_customized: true, // Marcar como personalizado
                     embroidery_text: '',
                     extras_cost: 0,
                     customization_notes: notes,
@@ -3068,7 +3227,7 @@
                         price: e.price
                     })),
                     measurements: null,
-                    item_type: 'extras_only'       // Tipo especial para identificar
+                    item_type: 'extras_only' // Tipo especial para identificar
                 };
 
                 orderItems.push(newItem);
@@ -3121,8 +3280,10 @@
                         editItem.product_id = selectedProduct.id;
                         editItem.product_variant_id = variantId;
                         editItem.product_name = selectedProduct.name;
-                        editItem.variant_display = variantId ? (variantOption.text().split(' ($')[0] || editItem.variant_display) : null;
-                        editItem.variant_sku = variantId ? (variantOption.data('sku') || editItem.variant_sku) : null;
+                        editItem.variant_display = variantId ? (variantOption.text().split(' ($')[0] || editItem
+                            .variant_display) : null;
+                        editItem.variant_sku = variantId ? (variantOption.data('sku') || editItem.variant_sku) :
+                            null;
                         editItem.image_url = selectedProduct.image_url;
                         editItem.quantity = newQuantity;
                         editItem.unit_price = newPrice;
@@ -3134,7 +3295,9 @@
                         editItem.extras_cost = extrasCost;
                         editItem.customization_notes = customizationNotes;
                         editItem.selected_extras = itemExtras;
-                        editItem.measurements = currentItemMeasurements ? {...currentItemMeasurements} : null;
+                        editItem.measurements = currentItemMeasurements ? {
+                            ...currentItemMeasurements
+                        } : null;
 
                         Swal.fire({
                             icon: 'success',
@@ -3168,7 +3331,9 @@
                             if (itemExtras.length > 0) existingItem.selected_extras = itemExtras;
                         }
                         if (currentItemMeasurements) {
-                            existingItem.measurements = {...currentItemMeasurements};
+                            existingItem.measurements = {
+                                ...currentItemMeasurements
+                            };
                         }
 
                         Swal.fire({
@@ -3200,7 +3365,9 @@
                             extras_cost: extrasCost,
                             customization_notes: customizationNotes,
                             selected_extras: itemExtras,
-                            measurements: currentItemMeasurements ? {...currentItemMeasurements} : null
+                            measurements: currentItemMeasurements ? {
+                                ...currentItemMeasurements
+                            } : null
                         };
 
                         orderItems.push(item);
@@ -3255,14 +3422,17 @@
                         // Construir lista de extras
                         let extrasListHtml = '';
                         if (item.extras && item.extras.length > 0) {
-                            const extrasList = item.extras.map(e => `<li>${e.name} (+$${e.price.toFixed(2)})</li>`).join('');
-                            extrasListHtml = `<ul class="mb-0 mt-1 pl-3" style="font-size: 0.9rem;">${extrasList}</ul>`;
+                            const extrasList = item.extras.map(e =>
+                                `<li>${e.name} (+$${e.price.toFixed(2)})</li>`).join('');
+                            extrasListHtml =
+                                `<ul class="mb-0 mt-1 pl-3" style="font-size: 0.9rem;">${extrasList}</ul>`;
                         }
 
                         // Notas
                         let notesRow = '';
                         if (item.customization_notes) {
-                            notesRow = `<div class="mt-1" style="font-size: 0.95rem;"><strong>Notas:</strong> ${item.customization_notes}</div>`;
+                            notesRow =
+                                `<div class="mt-1" style="font-size: 0.95rem;"><strong>Notas:</strong> ${item.customization_notes}</div>`;
                         }
 
                         $tbody.append(`
@@ -3301,27 +3471,35 @@
                     // FILA 1: Personalizado + Medidas (2 por fila)
                     let badgesRow1 = [];
                     if (item.is_customized) {
-                        badgesRow1.push(`<span class="badge badge-purple" style="background: #7f00ff; color: #fff;"><i class="fas fa-magic mr-1"></i>Personal.</span>`);
+                        badgesRow1.push(
+                            `<span class="badge badge-purple" style="background: #7f00ff; color: #fff;"><i class="fas fa-magic mr-1"></i>Personal.</span>`
+                        );
                     }
                     if (item.requires_measurements) {
                         if (item.measurements) {
                             const measureSummary = buildMeasurementSummaryText(item.measurements);
-                            badgesRow1.push(`<span class="badge view-measurements-btn" style="background: #495057; color: white; cursor: pointer;" data-index="${item.index}" title="Click para ver medidas: ${measureSummary}"><i class="fas fa-ruler-combined mr-1"></i>Medidas ✓</span>`);
+                            badgesRow1.push(
+                                `<span class="badge view-measurements-btn" style="background: #495057; color: white; cursor: pointer;" data-index="${item.index}" title="Click para ver medidas: ${measureSummary}"><i class="fas fa-ruler-combined mr-1"></i>Medidas ✓</span>`
+                            );
                         } else {
-                            badgesRow1.push(`<span class="badge badge-warning text-dark"><i class="fas fa-ruler mr-1"></i>Sin medidas</span>`);
+                            badgesRow1.push(
+                                `<span class="badge badge-warning text-dark"><i class="fas fa-ruler mr-1"></i>Sin medidas</span>`
+                            );
                         }
                     }
 
                     // FILA 2: Texto personalizado (embroidery_text)
                     let embroideryRow = '';
                     if (item.embroidery_text) {
-                        embroideryRow = `<div class="mt-1" style="font-size: 1.05rem;"><strong>Texto:</strong> ${item.embroidery_text}</div>`;
+                        embroideryRow =
+                            `<div class="mt-1" style="font-size: 1.05rem;"><strong>Texto:</strong> ${item.embroidery_text}</div>`;
                     }
 
                     // FILA 3: Notas
                     let notesRow = '';
                     if (item.customization_notes) {
-                        notesRow = `<div class="mt-1" style="font-size: 1.05rem;"><strong>Notas:</strong> ${item.customization_notes}</div>`;
+                        notesRow =
+                            `<div class="mt-1" style="font-size: 1.05rem;"><strong>Notas:</strong> ${item.customization_notes}</div>`;
                     }
 
                     // Badge: Tiene extras (de BD)
@@ -3329,11 +3507,13 @@
                     if (item.selected_extras && item.selected_extras.length > 0) {
                         const extrasNames = item.selected_extras.map(e => e.name).join(', ');
                         const extrasTotal = item.selected_extras.reduce((sum, e) => sum + e.price, 0);
-                        extrasRow = `<div class="mt-1"><span class="badge badge-success" title="${extrasNames}"><i class="fas fa-plus-circle mr-1"></i>${item.selected_extras.length} extra${item.selected_extras.length > 1 ? 's' : ''} (+$${extrasTotal.toFixed(2)})</span></div>`;
+                        extrasRow =
+                            `<div class="mt-1"><span class="badge badge-success" title="${extrasNames}"><i class="fas fa-plus-circle mr-1"></i>${item.selected_extras.length} extra${item.selected_extras.length > 1 ? 's' : ''} (+$${extrasTotal.toFixed(2)})</span></div>`;
                     }
 
                     // Construir HTML de badges
-                    const badgesRow1Html = badgesRow1.length > 0 ? `<div class="mt-1" style="line-height: 1.8;">${badgesRow1.join(' ')}</div>` : '';
+                    const badgesRow1Html = badgesRow1.length > 0 ?
+                        `<div class="mt-1" style="line-height: 1.8;">${badgesRow1.join(' ')}</div>` : '';
                     const badgesHtml = badgesRow1Html + embroideryRow + notesRow + extrasRow;
 
                     $tbody.append(`
@@ -3346,7 +3526,7 @@
                             </td>
                             <td><input type="number" class="form-control form-control-sm item-qty" value="${item.quantity}" min="1" max="999" data-index="${item.index}"></td>
                             <td class="text-center">
-                                <span class="badge badge-secondary" style="font-size: 0.95rem;">${leadTimeDays} días</span>
+                                <span class="badge badge-secondary" style="font-size: 1rem;">${leadTimeDays} días</span>
                             </td>
                             <td class="font-weight-bold text-success" style="font-size: 1.05rem;">
                                 <div>$${subtotal.toFixed(2)}</div>
@@ -3371,7 +3551,9 @@
                 // Actualizar solo el subtotal de esta fila (sin re-renderizar toda la tabla)
                 const subtotal = item.quantity * item.unit_price;
                 const $subtotalCell = $(this).closest('tr').find('td:nth-child(5)');
-                $subtotalCell.html(`<div>$${subtotal.toFixed(2)}</div><small class="text-muted">($${item.unit_price.toFixed(2)} c/u)</small>`);
+                $subtotalCell.html(
+                    `<div>$${subtotal.toFixed(2)}</div><small class="text-muted">($${item.unit_price.toFixed(2)} c/u)</small>`
+                );
 
                 // Actualizar contador de items
                 const totalQty = orderItems.reduce((sum, i) => sum + i.quantity, 0);
@@ -3517,18 +3699,22 @@
                         // Precargar preview del producto
                         $('#productPreviewName').text(item.product_name);
                         $('#productPreviewSku').text(item.variant_sku || '-');
-                        $('#productPreviewImage').attr('src', item.image_url || '{{ asset("img/no-image.png") }}');
+                        $('#productPreviewImage').attr('src', item.image_url ||
+                            '{{ asset('img/no-image.png') }}');
 
                         if (item.product_type_name) {
                             $('#productPreviewType')
-                                .html(`<span class="badge badge-secondary">${item.product_type_name}</span>`)
+                                .html(
+                                    `<span class="badge badge-secondary">${item.product_type_name}</span>`
+                                )
                                 .show();
                         } else {
                             $('#productPreviewType').hide();
                         }
 
                         // Precargar Select2 con producto seleccionado
-                        const optionText = `${item.product_name} - $${parseFloat(item.unit_price).toFixed(2)}`;
+                        const optionText =
+                            `${item.product_name} - $${parseFloat(item.unit_price).toFixed(2)}`;
                         const newOption = new Option(optionText, item.product_id, true, true);
                         $('#modalProductSelect').append(newOption).trigger('change');
 
@@ -3540,7 +3726,8 @@
 
                         // Cargar TODAS las variantes y preseleccionar la actual
                         const $variantSelect = $('#modalVariantSelect');
-                        $variantSelect.empty().append('<option value="">-- Producto base --</option>');
+                        $variantSelect.empty().append(
+                            '<option value="">-- Producto base --</option>');
 
                         if (selectedProduct.variants && selectedProduct.variants.length > 0) {
                             selectedProduct.variants.forEach(v => {
@@ -3549,20 +3736,22 @@
                                     `<option value="${v.id}" data-price="${v.price}" data-sku="${v.sku}" ${isSelected ? 'selected' : ''}>${v.display} ($${parseFloat(v.price).toFixed(2)})</option>`
                                 );
                             });
-                            $('#variantGroup').show();
+
                         } else {
-                            $('#variantGroup').hide();
+
                         }
 
                         // Precargar personalización
                         if (item.is_customized) {
                             $('#isCustomized').prop('checked', true);
                             $('#customizationBody').show();
-                            $('#customizationChevron').removeClass('fa-chevron-down').addClass('fa-chevron-up');
+                            $('#customizationChevron').removeClass('fa-chevron-down').addClass(
+                                'fa-chevron-up');
                         } else {
                             $('#isCustomized').prop('checked', false);
                             $('#customizationBody').hide();
-                            $('#customizationChevron').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+                            $('#customizationChevron').removeClass('fa-chevron-up').addClass(
+                                'fa-chevron-down');
                         }
                         $('#modalEmbroideryText').val(item.embroidery_text || '');
                         $('#modalExtrasCost').val(item.extras_cost || 0);
@@ -3574,7 +3763,9 @@
                         $('#productExtrasSection').show();
 
                         // Precargar medidas del item
-                        currentItemMeasurements = item.measurements ? {...item.measurements} : null;
+                        currentItemMeasurements = item.measurements ? {
+                            ...item.measurements
+                        } : null;
 
                         // Actualizar sección de medidas según tipo de producto
                         updateMeasurementsSectionVisibility();
@@ -3591,7 +3782,8 @@
                         $('#addProductModal').modal('show');
                     },
                     error: function(xhr) {
-                        Swal.fire('Error', 'No se pudo cargar la información del producto', 'error');
+                        Swal.fire('Error', 'No se pudo cargar la información del producto',
+                            'error');
                         console.error('Error fetching product:', xhr);
                     }
                 });
@@ -3946,7 +4138,7 @@
                 `);
 
                 $.ajax({
-                    url: '{{ route("admin.product-extras.all-active") }}',
+                    url: '{{ route('admin.product-extras.all-active') }}',
                     method: 'GET',
                     dataType: 'json',
                     success: function(response) {
@@ -3999,7 +4191,11 @@
 
                 if ($(this).is(':checked')) {
                     if (!extrasOnlySelected.some(e => e.id === extraId)) {
-                        extrasOnlySelected.push({ id: extraId, name: extraName, price: extraPrice });
+                        extrasOnlySelected.push({
+                            id: extraId,
+                            name: extraName,
+                            price: extraPrice
+                        });
                     }
                 } else {
                     extrasOnlySelected = extrasOnlySelected.filter(e => e.id !== extraId);
@@ -4076,7 +4272,8 @@
 
                 // 2. Validar al menos un producto
                 if (orderItems.length === 0) {
-                    errors.push('<li><i class="fas fa-box mr-1"></i> Debe agregar al menos un producto</li>');
+                    errors.push(
+                        '<li><i class="fas fa-box mr-1"></i> Debe agregar al menos un producto</li>');
                 }
 
                 // 3. VALIDACIÓN MEDIDAS LEGACY ELIMINADA (FASE 1)
@@ -4087,12 +4284,16 @@
                 const initialPaymentVal = parseFloat($('#initialPayment').val()) || 0;
                 const payFullChecked = $('#payFull').is(':checked');
                 if ((initialPaymentVal > 0 || payFullChecked) && !$('#paymentMethod').val()) {
-                    errors.push('<li><i class="fas fa-dollar-sign mr-1"></i> Debe seleccionar un método de pago para registrar el anticipo</li>');
+                    errors.push(
+                        '<li><i class="fas fa-dollar-sign mr-1"></i> Debe seleccionar un método de pago para registrar el anticipo</li>'
+                    );
                 }
 
                 // 5. Validar fecha prometida
                 if (!$('#promisedDate').val()) {
-                    errors.push('<li><i class="fas fa-calendar mr-1"></i> Debe indicar la fecha de entrega prometida</li>');
+                    errors.push(
+                        '<li><i class="fas fa-calendar mr-1"></i> Debe indicar la fecha de entrega prometida</li>'
+                    );
                 }
 
                 // 6. Validar que fecha prometida sea mayor o igual a la fecha mínima
@@ -4104,7 +4305,9 @@
                         month: 'short',
                         year: 'numeric'
                     });
-                    errors.push('<li><i class="fas fa-exclamation-triangle mr-1"></i> La fecha de entrega debe ser posterior o igual a ' + minDateFormatted + '</li>');
+                    errors.push(
+                        '<li><i class="fas fa-exclamation-triangle mr-1"></i> La fecha de entrega debe ser posterior o igual a ' +
+                        minDateFormatted + '</li>');
                 }
 
                 // Si hay errores, mostrar SweetAlert y cancelar envío
@@ -4113,7 +4316,8 @@
                     Swal.fire({
                         icon: 'warning',
                         title: 'Campos requeridos',
-                        html: '<ul style="text-align:left;margin:0;padding-left:10px;list-style:none;">' + errors.join('') + '</ul>',
+                        html: '<ul style="text-align:left;margin:0;padding-left:10px;list-style:none;">' +
+                            errors.join('') + '</ul>',
                         confirmButtonColor: '#7f00ff'
                     });
                     return false;
@@ -4123,79 +4327,82 @@
             // ==========================================
             // FASE 3: INICIALIZACIÓN MODO EDICIÓN
             // ==========================================
-            @if(isset($isEdit) && isset($order) && isset($orderItems))
-            (function initEditMode() {
-                // Precargar cliente
-                const cliente = @json($order->cliente);
-                if (cliente) {
-                    selectedClientData = cliente;
-                    $('#cliente_id').val(cliente.id);
-                    $('.cliente-selector-btn').addClass('has-client')
-                        .html(`
+            @if (isset($isEdit) && isset($order) && isset($orderItems))
+                (function initEditMode() {
+                    // Precargar cliente
+                    const cliente = @json($order->cliente);
+                    if (cliente) {
+                        selectedClientData = cliente;
+                        $('#cliente_id').val(cliente.id);
+                        $('.cliente-selector-btn').addClass('has-client')
+                            .html(`
                             <div class="cliente-info">
                                 <span class="cliente-nombre">${cliente.nombre} ${cliente.apellidos || ''}</span>
                                 <span class="cliente-telefono">${cliente.telefono || ''}</span>
                             </div>
                             <i class="fas fa-check-circle text-success"></i>
                         `);
-                    // Habilitar secciones
-                    $('#measurementSection').removeClass('section-disabled');
-                    $('#paymentSection').removeClass('section-disabled');
-                    $('#deliverySection').removeClass('section-disabled');
-                }
+                        // Habilitar secciones
+                        $('#measurementSection').removeClass('section-disabled');
+                        $('#paymentSection').removeClass('section-disabled');
+                        $('#deliverySection').removeClass('section-disabled');
+                    }
 
-                // Precargar items - CORREGIDO: usar 'index' en lugar de 'tempId'
-                const existingItems = @json($orderItems);
-                if (existingItems && existingItems.length > 0) {
-                    existingItems.forEach(function(item) {
-                        const newItem = {
-                            index: itemIndex, // CRÍTICO: debe ser 'index' no 'tempId'
-                            product_id: item.product_id,
-                            product_variant_id: item.product_variant_id,
-                            product_name: item.product_name,
-                            variant_sku: item.variant_sku,
-                            variant_display: item.variant_display || item.variant_sku,
-                            unit_price: parseFloat(item.unit_price) || 0,
-                            quantity: parseInt(item.quantity) || 1,
-                            lead_time: item.lead_time || 0,
-                            // Campos de tipo de producto
-                            requires_measurements: item.requires_measurements || false,
-                            product_type_name: item.product_type_name || null,
-                            // Campos de personalización (trim para evitar falsos negativos por espacios)
-                            is_customized: !!((item.embroidery_text || '').trim() || (item.customization_notes || '').trim()),
-                            embroidery_text: (item.embroidery_text || '').trim(),
-                            extras_cost: 0,
-                            customization_notes: (item.customization_notes || '').trim(),
-                            selected_extras: [],
-                            // Medidas del item
-                            measurements: item.measurements || null,
-                            // Imagen
-                            image_url: item.image_url || null
-                        };
+                    // Precargar items - CORREGIDO: usar 'index' en lugar de 'tempId'
+                    const existingItems = @json($orderItems);
+                    if (existingItems && existingItems.length > 0) {
+                        existingItems.forEach(function(item) {
+                            const newItem = {
+                                index: itemIndex, // CRÍTICO: debe ser 'index' no 'tempId'
+                                product_id: item.product_id,
+                                product_variant_id: item.product_variant_id,
+                                product_name: item.product_name,
+                                variant_sku: item.variant_sku,
+                                variant_display: item.variant_display || item.variant_sku,
+                                unit_price: parseFloat(item.unit_price) || 0,
+                                quantity: parseInt(item.quantity) || 1,
+                                lead_time: item.lead_time || 0,
+                                // Campos de tipo de producto
+                                requires_measurements: item.requires_measurements || false,
+                                product_type_name: item.product_type_name || null,
+                                // Campos de personalización (trim para evitar falsos negativos por espacios)
+                                is_customized: !!((item.embroidery_text || '').trim() || (item
+                                    .customization_notes || '').trim()),
+                                embroidery_text: (item.embroidery_text || '').trim(),
+                                extras_cost: 0,
+                                customization_notes: (item.customization_notes || '').trim(),
+                                selected_extras: [],
+                                // Medidas del item
+                                measurements: item.measurements || null,
+                                // Imagen
+                                image_url: item.image_url || null
+                            };
 
-                        // Lead time en cache
-                        productLeadTimes[item.product_id] = item.lead_time || 0;
+                            // Lead time en cache
+                            productLeadTimes[item.product_id] = item.lead_time || 0;
 
-                        orderItems.push(newItem);
-                        itemIndex++; // Incrementar DESPUÉS de asignar
-                    });
+                            orderItems.push(newItem);
+                            itemIndex++; // Incrementar DESPUÉS de asignar
+                        });
 
-                    // Renderizar tabla usando función correcta
-                    renderItemsTable();
-                    updateHiddenInputs();
-                    calculateTotals();
-                    calculateMinimumDate();
-                }
+                        // Renderizar tabla usando función correcta
+                        renderItemsTable();
+                        updateHiddenInputs();
+                        calculateTotals();
+                        calculateMinimumDate();
+                    }
 
-                // Precargar valores del formulario
-                $('#urgency').val('{{ $order->urgency_level ?? "normal" }}').trigger('change');
-                $('#promisedDate').val('{{ $order->promised_date ? \Carbon\Carbon::parse($order->promised_date)->format("Y-m-d") : "" }}');
-                $('#discount').val('{{ $order->discount ?? 0 }}');
-                $('#notes').val(@json($order->notes ?? ''));
-                @if($order->requires_invoice)
-                $('#requiresInvoice').prop('checked', true).trigger('change');
-                @endif
-            })();
+                    // Precargar valores del formulario
+                    $('#urgency').val('{{ $order->urgency_level ?? 'normal' }}').trigger('change');
+                    $('#promisedDate').val(
+                        '{{ $order->promised_date ? \Carbon\Carbon::parse($order->promised_date)->format('Y-m-d') : '' }}'
+                    );
+                    $('#discount').val('{{ $order->discount ?? 0 }}');
+                    $('#notes').val(@json($order->notes ?? ''));
+                    @if ($order->requires_invoice)
+                        $('#requiresInvoice').prop('checked', true).trigger('change');
+                    @endif
+                })();
             @endif
         });
 
@@ -4276,7 +4483,9 @@
                     card.addEventListener('touchstart', function(e) {
                         if (e.target.tagName === 'INPUT') return;
                         lastTouchTime = Date.now();
-                    }, { passive: true });
+                    }, {
+                        passive: true
+                    });
 
                     card.addEventListener('touchend', function(e) {
                         if (e.target.tagName === 'INPUT') return;
@@ -4285,7 +4494,9 @@
                         if (touchDuration < 300) {
                             focusInput(e);
                         }
-                    }, { passive: false });
+                    }, {
+                        passive: false
+                    });
 
                     card.addEventListener('click', function(e) {
                         if (e.target.tagName === 'INPUT') return;

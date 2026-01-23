@@ -96,6 +96,17 @@ class SystemSettingsSeeder extends Seeder
                 'description' => 'Porcentaje de IVA predeterminado',
                 'options' => null,
             ],
+
+            // --- GRUPO: PRODUCCIÓN ---
+            [
+                'key' => 'embroidery_cost_per_thousand',
+                'value' => '1.50',
+                'type' => 'decimal',
+                'group' => 'produccion',
+                'label' => 'Costo por Millar de Puntadas',
+                'description' => 'Costo en MXN por cada 1,000 puntadas de bordado. Se usa para calcular el costo real de producción.',
+                'options' => null,
+            ],
         ];
 
         foreach ($settings as $data) {

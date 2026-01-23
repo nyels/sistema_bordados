@@ -171,4 +171,41 @@ class ProductExtraController extends Controller
                 ->with('error', 'Error al eliminar el extra');
         }
     }
+
+    /**
+     * D5: Obtener todos los extras activos para el modo "solo extras" en post-venta.
+     * Esta ruta permite agregar extras sin necesidad de seleccionar un producto.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function allActive()
+    {
+        try {
+            $extras = ProductExtra::orderBy('name')
+                ->select('id', 'name', 'price_addition', 'cost_addition', 'minutes_addition', 'consumes_inventory')
+                ->get()
+                ->map(function ($extra) {
+                    return [
+                        'id' => $extra->id,
+                        'name' => $extra->name,
+                        'price_addition' => (float) $extra->price_addition,
+                        'cost_addition' => (float) $extra->cost_addition,
+                        'minutes_addition' => $extra->minutes_addition,
+                        'consumes_inventory' => $extra->consumes_inventory,
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'extras' => $extras,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('[ProductExtra@allActive] Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al cargar extras',
+                'extras' => [],
+            ], 500);
+        }
+    }
 }

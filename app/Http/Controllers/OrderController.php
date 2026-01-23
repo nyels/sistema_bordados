@@ -113,7 +113,7 @@ class OrderController extends Controller
     }
 
     // === FORMULARIO CREAR ===
-    public function create()
+    public function create(Request $request)
     {
         // Productos se cargan para el modal, clientes vía AJAX
         $products = Product::where('status', 'active')
@@ -121,7 +121,22 @@ class OrderController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('admin.orders.create', compact('products'));
+        // POST-VENTA: Si viene con ?related_to=PED-XXXX, cargar pedido relacionado
+        $relatedOrder = null;
+        if ($request->has('related_to')) {
+            $relatedOrder = Order::where('order_number', $request->get('related_to'))
+                ->whereIn('status', [Order::STATUS_READY, Order::STATUS_DELIVERED])
+                ->with('cliente')
+                ->first();
+
+            // Si el pedido no existe o no está en estado válido, ignorar
+            if (!$relatedOrder) {
+                return redirect()->route('admin.orders.create')
+                    ->with('error', 'El pedido relacionado no existe o no está en estado válido para post-venta.');
+            }
+        }
+
+        return view('admin.orders.create', compact('products', 'relatedOrder'));
     }
 
     // === GUARDAR NUEVO PEDIDO ===
@@ -262,11 +277,35 @@ class OrderController extends Controller
     }
 
     // === FORMULARIO CREAR ANEXO ===
+    // REGLA R4 (v2): Anexos SOLO permitidos en CONFIRMED
+    // PROHIBIDOS en IN_PRODUCTION, READY, DELIVERED, CANCELLED, DRAFT
+    // Un anexo NUNCA existe si el pedido >= IN_PRODUCTION
     public function createAnnex(Order $order)
     {
-        if (!$order->isInProduction()) {
+        // Guard estricto: SOLO en CONFIRMED
+        if ($order->status !== Order::STATUS_CONFIRMED) {
+            $message = match($order->status) {
+                Order::STATUS_DRAFT =>
+                    'El pedido está en borrador. Confírmelo primero para crear anexos.',
+                Order::STATUS_IN_PRODUCTION =>
+                    'El pedido ya está en producción. No se permiten anexos una vez iniciada la producción.',
+                Order::STATUS_READY =>
+                    'El pedido ya está listo para entrega. No se permiten anexos.',
+                Order::STATUS_DELIVERED =>
+                    'El pedido ya fue entregado. Los anexos no son posibles.',
+                Order::STATUS_CANCELLED =>
+                    'El pedido está cancelado.',
+                default => 'No se pueden crear anexos en este estado.'
+            };
+
             return redirect()->route('admin.orders.show', $order)
-                ->with('error', 'Solo se pueden crear anexos para pedidos en producción o posterior.');
+                ->with('error', $message);
+        }
+
+        // No permitir anexos de anexos
+        if ($order->isAnnex()) {
+            return redirect()->route('admin.orders.show', $order)
+                ->with('error', 'No se pueden crear anexos de un pedido anexo.');
         }
 
         $order->load('cliente');
@@ -280,8 +319,20 @@ class OrderController extends Controller
     }
 
     // === GUARDAR ANEXO ===
+    // REGLA R4 (v2): Guard autoritario - SOLO CONFIRMED
+    // Un anexo NUNCA existe si el pedido >= IN_PRODUCTION
     public function storeAnnex(StoreOrderRequest $request, Order $order)
     {
+        // Guard estricto: SOLO en CONFIRMED
+        if ($order->status !== Order::STATUS_CONFIRMED) {
+            abort(403, 'Solo se permiten anexos en pedidos confirmados. Una vez iniciada la producción, no se pueden crear anexos.');
+        }
+
+        // No permitir anexos de anexos
+        if ($order->isAnnex()) {
+            abort(403, 'No se pueden crear anexos de un pedido anexo.');
+        }
+
         $validated = $request->validated();
 
         try {

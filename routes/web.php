@@ -1126,6 +1126,11 @@ Route::delete('/product_extras/delete/{id}', [App\Http\Controllers\ProductExtraC
     ->name('admin.product_extras.destroy')
     ->middleware('auth');
 
+// D5: Ruta AJAX para obtener todos los extras activos (para modo solo-extras en post-venta)
+Route::get('/product_extras/ajax/all-active', [App\Http\Controllers\ProductExtraController::class, 'allActive'])
+    ->name('admin.product-extras.all-active')
+    ->middleware('auth');
+
 /*
 |--------------------------------------------------------------------------
 | RUTAS DE PERSONAL (STAFF)

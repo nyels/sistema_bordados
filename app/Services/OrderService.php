@@ -26,6 +26,7 @@ class OrderService
             // Crear pedido base
             $order = Order::create([
                 'order_parent_id' => $data['order_parent_id'] ?? null,
+                'related_order_id' => $data['related_order_id'] ?? null, // POST-VENTA
                 'cliente_id' => $data['cliente_id'],
                 'client_measurement_id' => $data['client_measurement_id'] ?? null,
                 'urgency_level' => $data['urgency_level'] ?? Order::URGENCY_NORMAL,
@@ -237,15 +238,24 @@ class OrderService
                 // Se registra ANTES de crear reservas para capturar el costo exacto
                 $materialsCostSnapshot = $this->calculateMaterialsCostSnapshot($materialRequirements);
 
+                // === FASE 3.5: SNAPSHOT DE COSTO DE BORDADO (PUNTADAS) ===
+                // Calcular puntadas totales y costo de bordado usando tarifa vigente
+                $totalStitches = $order->calculateTotalStitches();
+                $costPerThousand = $order->getEmbroideryCostPerThousand();
+                $embroideryCost = $order->calculateEmbroideryCost($costPerThousand);
+
                 // CREAR RESERVAS (NO descuenta stock físico)
                 foreach ($order->items as $item) {
                     $this->createReservationsForItem($item);
                 }
 
-                // === R8: REGISTRAR TRANSICIÓN CON SNAPSHOT ===
+                // === R8: REGISTRAR TRANSICIÓN CON SNAPSHOTS ===
                 $order->update([
                     'status' => Order::STATUS_IN_PRODUCTION,
                     'materials_cost_snapshot' => $materialsCostSnapshot,
+                    'total_stitches_snapshot' => $totalStitches,
+                    'embroidery_cost_snapshot' => $embroideryCost,
+                    'cost_per_thousand_snapshot' => $costPerThousand,
                     'updated_by' => Auth::id(),
                 ]);
 

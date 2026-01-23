@@ -130,7 +130,8 @@
                             {{-- ================================================================ --}}
                             {{-- SECCIÓN DE INVENTARIO (EXTENSIÓN CONTROLADA) --}}
                             {{-- ================================================================ --}}
-                            <div style="border-bottom: 3px solid #6c757d; padding-bottom: 8px; margin-bottom: 20px; margin-top: 30px;">
+                            <div
+                                style="border-bottom: 3px solid #6c757d; padding-bottom: 8px; margin-bottom: 20px; margin-top: 30px;">
                                 <h5 style="color: #6c757d; font-weight: 600;">
                                     <i class="fas fa-boxes"></i> Control de Inventario
                                 </h5>
@@ -152,30 +153,32 @@
                             </div>
 
                             {{-- Sección de materiales --}}
-                            <div id="materials-section" style="{{ old('consumes_inventory', $extra->consumes_inventory) ? '' : 'display: none;' }}">
+                            <div id="materials-section"
+                                style="{{ old('consumes_inventory', $extra->consumes_inventory) ? '' : 'display: none;' }}">
                                 <div class="p-3 rounded mb-3" style="background: #f8f9fa; border: 1px solid #dee2e6;">
                                     <div class="d-flex align-items-center mb-3">
                                         <i class="fas fa-info-circle text-info mr-2"></i>
                                         <small style="color: #495057;">
                                             Este servicio descontará inventario al usarse en producción.
                                         </small>
-                                    </div>
-
+                                    </div>f
                                     {{-- Fila 1: Select de material --}}
                                     <div class="form-group mb-2">
                                         <select id="material-select" class="form-control form-control-sm">
-                                            <option value="" data-unit="-" data-family="">-- Seleccione material --</option>
+                                            <option value="" data-unit="-" data-family="">-- Seleccione material
+                                                --</option>
                                         </select>
                                     </div>
 
                                     {{-- Fila 2: Cantidad + Unidad + Botón Agregar --}}
                                     <div class="d-flex align-items-center mb-3">
-                                        <label class="mr-2 mb-0" style="font-weight: 500;">Cantidad:</label>
-                                        <div class="input-group input-group-sm" style="max-width: 140px;">
-                                            <input type="number" id="material-quantity" class="form-control"
-                                                step="1" min="1" placeholder="0" value="">
+                                        <div class="input-group input-group-sm" style="max-width: 165px;">
+                                            <span>Cantidad</span> <input type="number" id="material-quantity"
+                                                class="form-control" step="1" min="1" placeholder="0"
+                                                value="">
                                             <div class="input-group-append">
-                                                <span class="input-group-text" id="material-unit" style="min-width: 45px;">-</span>
+                                                <span class="input-group-text" id="material-unit"
+                                                    style="min-width: 45px;">-</span>
                                             </div>
                                         </div>
                                         <button type="button" class="btn btn-sm btn-primary ml-2" id="btn-add-material">
@@ -246,12 +249,10 @@
                         // No mostrar materiales ya agregados
                         if (addedMaterials.includes(v.id)) return;
 
-                        // Laravel usa camelCase para relaciones: consumptionUnit, baseUnit
-                        // Usar consumptionUnit, si no existe usar baseUnit como fallback
+                        // Laravel usa camelCase para relaciones: consumptionUnit (no consumption_unit)
                         var unit = null;
                         if (v.material) {
-                            unit = v.material.consumptionUnit || v.material.consumption_unit
-                                || v.material.baseUnit || v.material.base_unit || null;
+                            unit = v.material.consumptionUnit || v.material.consumption_unit || null;
                         }
                         var unitSymbol = unit ? unit.symbol : '';
                         var unitFamily = unit ? (unit.measurement_family || '') : '';
@@ -259,7 +260,9 @@
                         var colorName = v.color ? ' - ' + v.color : '';
                         var label = materialName + colorName;
 
-                        $select.append('<option value="' + v.id + '" data-unit="' + unitSymbol + '" data-family="' + unitFamily + '" data-name="' + label + '">' + label + '</option>');
+                        $select.append('<option value="' + v.id + '" data-unit="' + unitSymbol +
+                            '" data-family="' + unitFamily + '" data-name="' + label + '">' + label +
+                            '</option>');
                     });
                 }
 
@@ -287,10 +290,12 @@
                 function addMaterialToTable(variantId, quantity, materialName, unit) {
                     var html = '<tr data-index="' + materialIndex + '" data-variant-id="' + variantId + '">' +
                         '<td>' + materialName +
-                        '<input type="hidden" name="materials[' + materialIndex + '][variant_id]" value="' + variantId + '">' +
+                        '<input type="hidden" name="materials[' + materialIndex + '][variant_id]" value="' + variantId +
+                        '">' +
                         '</td>' +
                         '<td class="text-center">' + quantity + ' ' + unit +
-                        '<input type="hidden" name="materials[' + materialIndex + '][quantity]" value="' + quantity + '">' +
+                        '<input type="hidden" name="materials[' + materialIndex + '][quantity]" value="' + quantity +
+                        '">' +
                         '</td>' +
                         '<td class="text-center">' +
                         '<button type="button" class="btn btn-sm btn-danger btn-remove-material" title="Eliminar">' +
@@ -317,21 +322,17 @@
                 // === CARGAR MATERIALES EXISTENTES ===
                 if (existingMaterials && existingMaterials.length > 0) {
                     existingMaterials.forEach(function(m) {
-                        var variant = materialVariants.find(function(v) { return v.id == m.id; });
+                        var variant = materialVariants.find(function(v) {
+                            return v.id == m.id;
+                        });
                         var materialName = 'Material #' + m.id;
                         var unit = '';
 
                         if (variant) {
                             materialName = variant.material ? variant.material.name : materialName;
                             if (variant.color) materialName += ' - ' + variant.color;
-                            // Laravel usa camelCase: consumptionUnit, baseUnit (fallback)
-                            var consUnit = null;
-                            if (variant.material) {
-                                consUnit = variant.material.consumptionUnit || variant.material.consumption_unit
-                                    || variant.material.baseUnit || variant.material.base_unit || null;
-                            }
-                            if (consUnit) {
-                                unit = consUnit.symbol || '';
+                            if (variant.material && variant.material.consumption_unit) {
+                                unit = variant.material.consumption_unit.symbol || '';
                             }
                         }
 
@@ -357,11 +358,21 @@
                     var unit = $select.find('option:selected').data('unit') || '';
 
                     if (!variantId) {
-                        Swal.fire({ icon: 'warning', title: 'Seleccione un material', timer: 1500, showConfirmButton: false });
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Seleccione un material',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
                         return;
                     }
                     if (!quantity || parseFloat(quantity) <= 0) {
-                        Swal.fire({ icon: 'warning', title: 'Ingrese una cantidad válida', timer: 1500, showConfirmButton: false });
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Ingrese una cantidad válida',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
                         return;
                     }
 
@@ -379,7 +390,9 @@
                     var variantId = parseInt($row.data('variant-id'));
 
                     // Quitar del track
-                    addedMaterials = addedMaterials.filter(function(id) { return id !== variantId; });
+                    addedMaterials = addedMaterials.filter(function(id) {
+                        return id !== variantId;
+                    });
 
                     $row.remove();
 

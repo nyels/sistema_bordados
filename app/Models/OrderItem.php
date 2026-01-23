@@ -202,16 +202,86 @@ class OrderItem extends Model
     // === MÉTODOS ===
 
     /**
-     * FASE 2: Determina si el ítem está READY para producción.
-     * REGLA: requires_measurements=true Y measurements=NULL → false (PENDING)
-     *        Cualquier otro caso → true (READY)
+     * FASE 2: Determina si el ítem tiene información completa para CAPTURA.
+     *
+     * ALCANCE: Este método verifica readiness para CONFIRMACIÓN del pedido,
+     * NO es el gate de PRODUCCIÓN. Para validar inicio de producción,
+     * usar exclusivamente Order::canStartProduction().
+     *
+     * REGLAS DE CAPTURA:
+     * R1: requires_measurements=true Y measurements=NULL → PENDING
+     * R2: personalization_type='design' Y design_approved=false → PENDING
+     * R3: personalization_type IN ('design','text') Y sin diseños técnicos → PENDING
+     *
+     * NOTA: Bloqueos adicionales de producción (ajustes pendientes, medidas
+     * cambiadas post-aprobación, inventario) se validan en Order::canStartProduction().
+     *
+     * @return bool TRUE si el item tiene información completa para confirmar
      */
     public function isReady(): bool
     {
+        // R1: Requiere medidas y no las tiene
         if ($this->requires_measurements && empty($this->measurements)) {
             return false;
         }
+
+        // R2: Requiere diseño aprobado y no lo tiene
+        if ($this->blocksProductionForDesign()) {
+            return false;
+        }
+
+        // R3: Requiere diseños técnicos y no los tiene
+        if ($this->blocksProductionForTechnicalDesigns()) {
+            return false;
+        }
+
         return true;
+    }
+
+    /**
+     * Obtiene el motivo por el cual el ítem está PENDING.
+     * Retorna NULL si el item está READY.
+     *
+     * @return string|null Descripción del pendiente
+     */
+    public function getPendingReason(): ?string
+    {
+        if ($this->requires_measurements && empty($this->measurements)) {
+            return 'Medidas del cliente pendientes';
+        }
+
+        if ($this->blocksProductionForDesign()) {
+            return 'Diseño pendiente de aprobación';
+        }
+
+        if ($this->blocksProductionForTechnicalDesigns()) {
+            return 'Diseño técnico sin vincular';
+        }
+
+        return null; // READY
+    }
+
+    /**
+     * Obtiene el código de la regla que bloquea el item.
+     * Útil para badges en UI (R1, R2, R3).
+     *
+     * @return string|null Código de regla o NULL si READY
+     */
+    public function getPendingRuleCode(): ?string
+    {
+        if ($this->requires_measurements && empty($this->measurements)) {
+            return 'R1';
+        }
+
+        if ($this->blocksProductionForDesign()) {
+            return 'R2';
+        }
+
+        if ($this->blocksProductionForTechnicalDesigns()) {
+            return 'R3';
+        }
+
+        return null;
     }
 
     public function calculateTotals(): void
