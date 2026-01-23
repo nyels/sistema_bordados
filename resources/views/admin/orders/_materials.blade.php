@@ -89,7 +89,7 @@
                         <i class="fas fa-layer-group mr-2"></i>
                     @endif
                     {{ $sectionTitle }}
-                    <small class="ml-2 font-weight-normal" style="opacity: 0.85;">(agregado)</small>
+                    <span class="ml-2 font-weight-normal" style="font-size: 14px;">(agregado)</span>
                 </h6>
                 @if($hasConsumptions)
                     <span class="badge badge-light text-success">Consumidos</span>
@@ -107,7 +107,7 @@
                     <span style="color: #0d47a1;">{{ $stateExplanation }}</span>
                 </div>
             @endif
-            <table class="table table-sm mb-0" style="font-size: 14px;">
+            <table class="table table-sm mb-0" style="font-size: 15px;">
                 <thead style="background: #e9ecef;">
                     <tr>
                         <th style="color: #212529;">Material</th>
@@ -154,7 +154,7 @@
                 </tbody>
             </table>
         </div>
-        <div class="card-footer py-2" style="font-size: 13px; background: #f8f9fa;">
+        <div class="card-footer py-2" style="font-size: 14px; background: #f8f9fa;">
             <i class="fas fa-layer-group mr-1" style="color: #495057;"></i>
             <span style="color: #495057;">
                 Este es un resumen agregado. El detalle por producto y variante esta en "Inventario del Pedido".

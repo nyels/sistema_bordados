@@ -6,6 +6,7 @@
                 <tr>
                     <th style="color: white;">Pedido</th>
                     <th style="color: white;">Cliente</th>
+                    <th class="text-center" style="color: white;">Tipo</th>
                     <th style="color: white;">Items</th>
                     <th class="text-right" style="color: white;">Total</th>
                     <th class="text-center" style="color: white;">Estado</th>
@@ -41,8 +42,14 @@
                                 {{ $order->order_number }}
                             </a>
                             @if($order->isAnnex())
-                                <span class="badge badge-info ml-1" title="Pedido Anexo">
-                                    <i class="fas fa-link"></i>
+                                <span class="badge badge-info ml-1" title="Pedido Anexo de {{ $order->parentOrder?->order_number }}">
+                                    <i class="fas fa-link"></i> Anexo
+                                </span>
+                            @endif
+                            @if($order->isPostSale())
+                                <span class="badge badge-purple ml-1" style="background: #6f42c1; color: white;"
+                                      title="Post-venta de {{ $order->relatedOrder?->order_number }}">
+                                    <i class="fas fa-redo"></i> {{ $order->relatedOrder?->order_number }}
                                 </span>
                             @endif
                             @if($order->urgency_level !== 'normal')
@@ -52,6 +59,17 @@
                             @endif
                         </td>
                         <td style="color: #212529;">{{ $order->cliente->nombre }} {{ $order->cliente->apellidos }}</td>
+                        <td class="text-center">
+                            @if($order->isCustomOrder())
+                                <span class="badge badge-info" title="Pedido con personalización (diseño, texto o medidas)">
+                                    <i class="fas fa-palette"></i> Personalizado
+                                </span>
+                            @else
+                                <span class="badge badge-light" style="color: #495057;" title="Producto estándar sin personalización">
+                                    <i class="fas fa-box"></i> Estándar
+                                </span>
+                            @endif
+                        </td>
                         <td style="color: #212529;">{{ $order->items->count() }}</td>
                         <td class="text-right font-weight-bold" style="font-size: 16px;">${{ number_format($order->total, 2) }}</td>
                         <td class="text-center">
@@ -125,6 +143,15 @@
                                     <i class="fas fa-edit"></i>
                                 </a>
                             @endif
+                            {{-- POST-VENTA: Solo en READY o DELIVERED --}}
+                            @if($order->canHavePostSale())
+                                <a href="{{ route('admin.orders.create', ['related_to' => $order->order_number]) }}"
+                                   class="btn btn-sm btn-outline-purple"
+                                   style="border-color: #6f42c1; color: #6f42c1;"
+                                   title="Crear pedido post-venta relacionado con {{ $order->order_number }}">
+                                    <i class="fas fa-plus"></i> Post-venta
+                                </a>
+                            @endif
                             {{-- ACCIÓN CONTEXTUAL --}}
                             @if($isBlocked)
                                 <a href="{{ route('admin.orders.show', $order) }}#blockers-section"
@@ -147,7 +174,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" class="text-center py-4" style="color: #495057; font-size: 15px;">
+                        <td colspan="9" class="text-center py-4" style="color: #495057; font-size: 15px;">
                             No hay pedidos que coincidan con los filtros.
                         </td>
                     </tr>
@@ -162,25 +189,39 @@
     @endif
     {{-- LEYENDA VISUAL --}}
     <div class="card-footer py-2 border-top" style="background: #f8f9fa;">
-        <div class="d-flex flex-wrap align-items-center" style="gap: 20px; font-size: 13px;">
-            <span class="text-muted"><strong>Leyenda:</strong></span>
+        <div class="d-flex flex-wrap align-items-center" style="gap: 20px; font-size: 15px;">
+            <span style="color: #212529;"><strong>Leyenda:</strong></span>
             <span>
-                <span class="badge badge-success" style="font-size: 11px;">Confirmado <i class="fas fa-check"></i></span>
+                <span class="badge badge-info" style="font-size: 14px;"><i class="fas fa-palette"></i></span>
+                Personalizado
+            </span>
+            <span>
+                <span class="badge badge-light" style="font-size: 14px; color: #212529;"><i class="fas fa-box"></i></span>
+                Estándar
+            </span>
+            <span style="color: #495057;">|</span>
+            <span>
+                <span class="badge badge-success" style="font-size: 14px;">Confirmado <i class="fas fa-check"></i></span>
                 Listo para producir
             </span>
             <span>
-                <span class="badge badge-danger" style="font-size: 11px;">Confirmado <i class="fas fa-ban"></i></span>
-                Bloqueado (ver detalle)
+                <span class="badge badge-danger" style="font-size: 14px;">Confirmado <i class="fas fa-ban"></i></span>
+                Bloqueado
             </span>
             <span>
-                <span class="badge badge-warning text-dark" style="font-size: 11px;">Confirmado <i class="fas fa-boxes"></i></span>
-                Inventario insuficiente
+                <span class="badge badge-warning text-dark" style="font-size: 14px;">Confirmado <i class="fas fa-boxes"></i></span>
+                Sin inventario
             </span>
+            <span style="color: #495057;">|</span>
             <span>
                 <i class="fas fa-square text-warning mr-1"></i> Fila bloqueada
             </span>
             <span>
                 <i class="fas fa-square text-danger mr-1"></i> Fila retrasada
+            </span>
+            <span>
+                <span class="badge" style="background: #6f42c1; color: white; font-size: 14px;"><i class="fas fa-redo"></i></span>
+                Post-venta
             </span>
         </div>
     </div>

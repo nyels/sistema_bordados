@@ -198,7 +198,7 @@
     border-radius: 4px;
 }
 .inventory-product-cost {
-    font-size: 13px;
+    font-size: 14px;
     color: #155724;
     background: #d4edda;
     padding: 2px 8px;
@@ -283,7 +283,7 @@
     font-weight: 500;
 }
 .inventory-info {
-    font-size: 13px;
+    font-size: 14px;
     color: #495057;
 }
 .inventory-info-warning {
@@ -296,7 +296,7 @@
     color: #0d47a1;
 }
 .inventory-legend {
-    font-size: 13px;
+    font-size: 14px;
 }
 .inventory-summary {
     font-size: 14px;
@@ -305,7 +305,7 @@
 .variant-note {
     background: #fff8e1;
     border-left: 3px solid #ffc107;
-    font-size: 13px;
+    font-size: 14px;
     color: #5d4037;
 }
 </style>
@@ -315,7 +315,7 @@
     <div class="card-header d-flex justify-content-between align-items-center py-2">
         <h5 class="mb-0" style="font-size: 16px;">
             <i class="fas fa-boxes mr-2"></i> Inventario del Pedido
-            <span class="ml-2 font-weight-normal" style="font-size: 13px; opacity: 0.9;">(detalle por producto)</span>
+            <span class="ml-2 font-weight-normal" style="font-size: 14px;">(detalle por producto)</span>
         </h5>
         <div>
             <button type="button" class="btn btn-sm btn-light px-2" id="btn-expand-all" title="Expandir todo">

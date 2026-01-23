@@ -6,7 +6,7 @@
     <div class="d-flex justify-content-between align-items-center">
         <div>
             <h1><i class="fas fa-plus-circle mr-2"></i> Nuevo Pedido Anexo</h1>
-            <small class="text-muted">Para el pedido principal: <strong>{{ $order->order_number }}</strong></small>
+            <span style="font-size: 14px; color: #495057;">Para el pedido principal: <strong>{{ $order->order_number }}</strong></span>
         </div>
         <a href="{{ route('admin.orders.show', $order) }}" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i> Volver al Pedido
@@ -56,11 +56,26 @@
                     <strong><i class="fas fa-user mr-1"></i> Cliente:</strong>
                     {{ $order->cliente->nombre }} {{ $order->cliente->apellidos }}
                     <br>
-                    <small class="text-muted"><i class="fas fa-phone mr-1"></i> {{ $order->cliente->telefono }}</small>
+                    <span style="font-size: 14px; color: #495057;"><i class="fas fa-phone mr-1"></i> {{ $order->cliente->telefono }}</span>
                 </div>
                 <div class="col-md-6 text-md-right">
                     <strong>Pedido Original:</strong> {{ $order->order_number }}<br>
                     <span class="badge badge-{{ $order->status_color }}">{{ $order->status_label }}</span>
+                </div>
+            </div>
+        </div>
+
+        {{-- REGLA R4 (v2): Información de anexos - Solo en CONFIRMED --}}
+        <div class="alert alert-info">
+            <div class="d-flex align-items-start">
+                <i class="fas fa-info-circle mr-3 mt-1" style="font-size: 24px;"></i>
+                <div>
+                    <strong style="font-size: 15px;">Información del Anexo (Pedido Confirmado)</strong>
+                    <ul class="mb-0 mt-2" style="font-size: 14px;">
+                        <li>Este anexo se agregará al pedido <strong>antes de iniciar producción</strong></li>
+                        <li>Los productos del anexo se procesarán junto con el pedido principal</li>
+                        <li>Una vez iniciada la producción, <strong>NO</strong> se permiten más anexos</li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -91,7 +106,7 @@
                                 </thead>
                                 <tbody id="itemsTableBody">
                                     <tr id="noItemsRow">
-                                        <td colspan="6" class="text-center text-muted py-4">
+                                        <td colspan="6" class="text-center py-4" style="color: #495057;">
                                             <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
                                             No hay productos. Haga clic en "Agregar Producto"
                                         </td>
@@ -242,16 +257,11 @@
                                 </div>
                             </div>
 
-                            <div class="form-group">
-                                <label>Texto a Bordar</label>
-                                <input type="text" id="modalEmbroideryText" class="form-control" maxlength="255"
-                                       placeholder="Nombre, frase, iniciales...">
-                            </div>
-
-                            <div class="form-group mb-0">
-                                <label>Notas de Personalizacion</label>
-                                <textarea id="modalCustomizationNotes" class="form-control" rows="2" maxlength="1000"
-                                          placeholder="Instrucciones especiales..."></textarea>
+                            {{-- REGLA R4 (v2): Info de productos anexos --}}
+                            <div class="alert alert-info py-2 mb-0" style="font-size: 13px;">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                <strong>Nota:</strong>
+                                El producto se agregará al pedido y se procesará junto con los demás items en producción.
                             </div>
                         </div>
                     </div>
@@ -342,8 +352,6 @@ $(document).ready(function() {
         $('#productPreviewImage').attr('src', '{{ asset("img/no-image.png") }}');
         $('#modalPrice').val('');
         $('#modalQuantity').val(1);
-        $('#modalEmbroideryText').val('');
-        $('#modalCustomizationNotes').val('');
         $('#modalVariantSelect').empty().append('<option value="">-- Producto base --</option>');
         $('#variantGroup').hide();
         $('#addProductBtn').prop('disabled', true);
@@ -362,6 +370,7 @@ $(document).ready(function() {
 
     // ==========================================
     // AGREGAR PRODUCTO AL ANEXO
+    // REGLA R4 (v2): Anexos solo en CONFIRMED
     // ==========================================
     $('#addProductBtn').on('click', function() {
         if (!selectedProduct) return;
@@ -370,9 +379,8 @@ $(document).ready(function() {
         const variantOption = $('#modalVariantSelect option:selected');
         const quantity = parseInt($('#modalQuantity').val()) || 1;
         const price = parseFloat($('#modalPrice').val()) || 0;
-        const embroideryText = $('#modalEmbroideryText').val().trim();
-        const customizationNotes = $('#modalCustomizationNotes').val().trim();
 
+        // REGLA R4: Anexos NO tienen personalizaciones
         const item = {
             index: itemIndex,
             product_id: selectedProduct.id,
@@ -383,8 +391,8 @@ $(document).ready(function() {
             image_url: selectedProduct.image_url,
             quantity: quantity,
             unit_price: price,
-            embroidery_text: embroideryText,
-            customization_notes: customizationNotes
+            embroidery_text: '',           // Siempre vacío en anexos
+            customization_notes: ''        // Siempre vacío en anexos
         };
 
         orderItems.push(item);
@@ -421,7 +429,6 @@ $(document).ready(function() {
         orderItems.forEach((item, idx) => {
             const subtotal = item.quantity * item.unit_price;
             const variantText = item.variant_display ? `<br><small class="text-muted">${item.variant_display}</small>` : '';
-            const embroideryBadge = item.embroidery_text ? `<br><span class="badge badge-info">${item.embroidery_text}</span>` : '';
 
             $tbody.append(`
                 <tr data-index="${item.index}">
@@ -431,7 +438,7 @@ $(document).ready(function() {
                     <td>
                         <strong>${item.product_name}</strong>
                         ${variantText}
-                        ${embroideryBadge}
+                        <br><span class="badge badge-info" style="font-size: 10px;"><i class="fas fa-plus-circle mr-1"></i>Anexo</span>
                     </td>
                     <td>
                         <input type="number" class="form-control form-control-sm item-qty"

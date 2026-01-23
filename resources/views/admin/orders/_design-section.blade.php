@@ -21,7 +21,7 @@
                 <div>
                     <i class="fas fa-folder-open mr-2" style="color: #7b1fa2;"></i>
                     <strong style="color: #4a148c;">Repositorio de Diseños Personalizados</strong>
-                    <p class="mb-0 mt-1" style="font-size: 13px; color: #6a1b9a;">
+                    <p class="mb-0 mt-1" style="font-size: 14px; color: #6a1b9a;">
                         Reutilice diseños de pedidos anteriores o cree uno nuevo para guardar.
                     </p>
                 </div>
@@ -56,7 +56,7 @@
                     <td>
                         <strong>{{ $item->product_name }}</strong>
                         @if($item->design_notes)
-                            <br><small class="text-muted">{{ Str::limit($item->design_notes, 50) }}</small>
+                            <br><span style="font-size: 14px; color: #495057;">{{ Str::limit($item->design_notes, 50) }}</span>
                         @endif
                     </td>
                     <td>
@@ -65,7 +65,7 @@
                         @elseif($item->embroidery_text)
                             <span class="badge badge-light">{{ $item->embroidery_text }}</span>
                         @else
-                            <span class="text-muted">-</span>
+                            <span style="color: #495057;">-</span>
                         @endif
                     </td>
                     <td>

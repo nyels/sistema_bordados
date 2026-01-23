@@ -96,18 +96,18 @@
                             {{-- Nombre y variante --}}
                             <strong style="font-size: 15px; color: #212529;">{{ $item->product_name }}</strong>
                             @if ($variantDisplay)
-                                <span style="background: #e7f3ff; color: #0056b3; padding: 2px 6px; border-radius: 3px; font-size: 12px; margin-left: 6px; font-weight: 600;">
+                                <span style="background: #e7f3ff; color: #0056b3; padding: 2px 6px; border-radius: 3px; font-size: 14px; margin-left: 6px; font-weight: 600;">
                                     {{ $variantDisplay }}
                                 </span>
                             @endif
                             @if ($item->is_annex)
-                                <span class="badge badge-warning ml-1" style="font-size: 11px;">ANEXO</span>
+                                <span class="badge badge-warning ml-1" style="font-size: 14px;">ANEXO</span>
                             @endif
 
                             {{-- Personalización inline --}}
                             @if ($item->embroidery_text)
                                 <div class="mt-1">
-                                    <span style="background: #e3f2fd; color: #1565c0; padding: 4px 8px; border-radius: 4px; font-size: 13px; display: inline-block;">
+                                    <span style="background: #e3f2fd; color: #1565c0; padding: 4px 8px; border-radius: 4px; font-size: 15px; display: inline-block;">
                                         <i class="fas fa-pen-fancy mr-1"></i>{{ $item->embroidery_text }}
                                     </span>
                                 </div>
@@ -115,7 +115,7 @@
 
                             @if ($item->customization_notes)
                                 <div class="mt-1">
-                                    <span style="background: #fff3e0; color: #e65100; padding: 4px 8px; border-radius: 4px; font-size: 13px; display: inline-block;">
+                                    <span style="background: #fff3e0; color: #e65100; padding: 4px 8px; border-radius: 4px; font-size: 15px; display: inline-block;">
                                         <i class="fas fa-sticky-note mr-1"></i>{{ Str::limit($item->customization_notes, 50) }}
                                     </span>
                                 </div>
@@ -125,7 +125,7 @@
                             <div class="mt-2 d-flex flex-wrap align-items-center" style="gap: 6px;">
                                 @if ($hasMeasurements)
                                     <button type="button" class="btn btn-sm py-1 px-2"
-                                            style="background: #6f42c1; color: white; font-size: 12px;"
+                                            style="background: #6f42c1; color: white; font-size: 14px;"
                                             data-toggle="modal" data-target="#measurementsModal{{ $item->id }}">
                                         <i class="fas fa-ruler-combined mr-1"></i>{{ $measurementCount }} medidas
                                     </button>
@@ -136,26 +136,26 @@
                                     @if($hasLinkedDesigns)
                                         {{-- Diseños vinculados: línea compacta con toggle --}}
                                         <div class="d-inline-flex align-items-center" style="background: #e8f5e9; border-radius: 4px; padding: 4px 8px; border: 1px solid #a5d6a7;">
-                                            <i class="fas fa-check-circle mr-1" style="color: #2e7d32; font-size: 12px;"></i>
-                                            <span style="font-size: 12px; color: #1b5e20; font-weight: 600;">
+                                            <i class="fas fa-check-circle mr-1" style="color: #2e7d32; font-size: 14px;"></i>
+                                            <span style="font-size: 14px; color: #1b5e20; font-weight: 600;">
                                                 {{ $linkedDesigns->count() }} diseño(s)
                                             </span>
-                                            <span style="font-size: 11px; color: #388e3c; margin-left: 4px;">
+                                            <span style="font-size: 14px; color: #388e3c; margin-left: 4px;">
                                                 · {{ number_format($itemPuntadas) }} pts
                                             </span>
                                             @if($order->status === \App\Models\Order::STATUS_CONFIRMED)
-                                                <span style="font-size: 11px; color: #7b1fa2; margin-left: 4px; font-weight: 600;">
+                                                <span style="font-size: 14px; color: #7b1fa2; margin-left: 4px; font-weight: 600;">
                                                     · Est. ${{ number_format($itemEstimado, 2) }}
                                                 </span>
                                             @endif
                                             <button type="button" class="btn btn-sm btn-link p-0 ml-2"
-                                                    style="font-size: 11px; color: #1565c0;"
+                                                    style="font-size: 14px; color: #1565c0;"
                                                     data-toggle="collapse" data-target="#designDetails{{ $item->id }}">
                                                 <i class="fas fa-chevron-down"></i>
                                             </button>
                                             @if(in_array($order->status, [\App\Models\Order::STATUS_DRAFT, \App\Models\Order::STATUS_CONFIRMED]))
                                                 <button type="button" class="btn btn-sm btn-link p-0 ml-1"
-                                                        style="font-size: 11px; color: #1565c0;"
+                                                        style="font-size: 14px; color: #1565c0;"
                                                         onclick="openDesignSelectorForItem({{ $item->id }}, '{{ addslashes($item->product_name) }}')">
                                                     <i class="fas fa-plus"></i>
                                                 </button>
@@ -164,11 +164,11 @@
                                     @else
                                         {{-- Sin diseños: alerta compacta --}}
                                         <div class="d-inline-flex align-items-center" style="background: #fff3cd; border-radius: 4px; padding: 4px 8px; border: 1px solid #ffc107;">
-                                            <i class="fas fa-exclamation-triangle mr-1" style="color: #856404; font-size: 12px;"></i>
-                                            <span style="font-size: 12px; color: #856404; font-weight: 500;">Sin diseño</span>
+                                            <i class="fas fa-exclamation-triangle mr-1" style="color: #856404; font-size: 14px;"></i>
+                                            <span style="font-size: 14px; color: #856404; font-weight: 500;">Sin diseño</span>
                                             @if(in_array($order->status, [\App\Models\Order::STATUS_DRAFT, \App\Models\Order::STATUS_CONFIRMED]))
                                                 <button type="button" class="btn btn-sm btn-link p-0 ml-2"
-                                                        style="font-size: 11px; color: #1565c0;"
+                                                        style="font-size: 14px; color: #1565c0;"
                                                         onclick="openDesignSelectorForItem({{ $item->id }}, '{{ addslashes($item->product_name) }}')">
                                                     <i class="fas fa-link mr-1"></i>Vincular
                                                 </button>
@@ -195,11 +195,11 @@
                                                         </div>
                                                     @endif
                                                     <div>
-                                                        <span style="font-size: 12px; color: #212529; font-weight: 500;">
+                                                        <span style="font-size: 14px; color: #212529; font-weight: 500;">
                                                             {{ $design->application_label ?? $design->export_name ?? 'Diseño #'.$design->id }}
                                                         </span>
                                                         <br>
-                                                        <span style="font-size: 10px; color: #757575;">
+                                                        <span style="font-size: 14px; color: #495057;">
                                                             @if($design->stitches_count){{ number_format($design->stitches_count) }} pts @endif
                                                             @if($design->width_mm)• {{ $design->width_mm }}×{{ $design->height_mm }}mm @endif
                                                         </span>
@@ -207,13 +207,13 @@
                                                 </div>
                                                 <div>
                                                     <button type="button" class="btn btn-sm btn-link p-1"
-                                                            style="color: #1565c0; font-size: 11px;" title="Ver"
+                                                            style="color: #1565c0; font-size: 14px;" title="Ver"
                                                             onclick="showDesignPreview({{ $design->id }}, {{ $item->id }})">
                                                         <i class="fas fa-eye"></i>
                                                     </button>
                                                     @if(in_array($order->status, [\App\Models\Order::STATUS_DRAFT, \App\Models\Order::STATUS_CONFIRMED]))
                                                         <button type="button" class="btn btn-sm btn-link p-1"
-                                                                style="color: #c62828; font-size: 11px;" title="Quitar"
+                                                                style="color: #c62828; font-size: 14px;" title="Quitar"
                                                                 onclick="unlinkDesignFromItem({{ $order->id }}, {{ $item->id }}, {{ $design->id }}, '{{ addslashes($design->application_label ?? $design->export_name) }}')">
                                                             <i class="fas fa-unlink"></i>
                                                         </button>
@@ -225,10 +225,10 @@
                                         {{-- Estimado técnico inline (solo en CONFIRMED) --}}
                                         @if($order->status === \App\Models\Order::STATUS_CONFIRMED)
                                             <div class="mt-2 pt-2" style="border-top: 1px dashed #bdbdbd;">
-                                                <div class="d-flex justify-content-between align-items-center" style="font-size: 11px;">
+                                                <div class="d-flex justify-content-between align-items-center" style="font-size: 14px;">
                                                     <span style="color: #7b1fa2;">
                                                         <i class="fas fa-calculator mr-1"></i>
-                                                        {{ number_format($itemPuntadas) }} pts × ${{ number_format($costoPorMillarGlobal, 2) }}/millar × {{ $item->quantity }} uds
+                                                        {{ number_format($itemPuntadas) }} pts × ${{ number_format($costoPorMillarGlobal, 2) }}/millar × {{ $item->quantity }} pz
                                                     </span>
                                                     <strong style="color: #7b1fa2;">Est. ${{ number_format($itemEstimado, 2) }}</strong>
                                                 </div>
@@ -240,9 +240,9 @@
 
                             {{-- Extras compactos --}}
                             @if (count($extras) > 0)
-                                <div class="mt-1" style="font-size: 12px;">
+                                <div class="mt-1" style="font-size: 14px;">
                                     @foreach ($extras as $extra)
-                                        <span class="badge mr-1" style="background: #0277bd; color: white; font-size: 11px;">{{ $extra['name'] ?? 'Extra' }} +${{ number_format($extra['price'] ?? 0, 2) }}</span>
+                                        <span class="badge mr-1" style="background: #0277bd; color: white; font-size: 14px;">{{ $extra['name'] ?? 'Extra' }} +${{ number_format($extra['price'] ?? 0, 2) }}</span>
                                     @endforeach
                                 </div>
                             @endif
@@ -252,13 +252,13 @@
                             {{-- Bloqueos R2-R5: Solo en CONFIRMED --}}
                             @if($order->status === \App\Models\Order::STATUS_CONFIRMED)
                                 @if($blocksR2)
-                                    <span class="badge badge-danger" style="font-size: 11px;" title="Ajuste de precio pendiente">R2</span>
+                                    <span class="badge badge-danger" style="font-size: 14px;" title="Ajuste de precio pendiente">R2</span>
                                 @elseif($blocksR3)
-                                    <span class="badge badge-danger" style="font-size: 11px;" title="Diseño no aprobado">R3</span>
+                                    <span class="badge badge-danger" style="font-size: 14px;" title="Diseño no aprobado">R3</span>
                                 @elseif($blocksR4)
-                                    <span class="badge badge-danger" style="font-size: 11px;" title="Medidas modificadas">R4</span>
+                                    <span class="badge badge-danger" style="font-size: 14px;" title="Medidas modificadas">R4</span>
                                 @elseif($blocksR5)
-                                    <span class="badge badge-danger" style="font-size: 11px;" title="Sin diseño técnico">R5</span>
+                                    <span class="badge badge-danger" style="font-size: 14px;" title="Sin diseño técnico">R5</span>
                                 @else
                                     <span style="color: #28a745; font-size: 16px;"><i class="fas fa-check"></i></span>
                                 @endif
@@ -270,7 +270,7 @@
                         <td class="text-right align-middle">
                             <strong style="font-size: 15px; color: #212529;">${{ number_format($itemTotal, 2) }}</strong>
                             @if($extrasSubtotal > 0)
-                                <br><small style="color: #0277bd; font-size: 11px;">+${{ number_format($extrasSubtotal, 2) }}</small>
+                                <br><span style="color: #0277bd; font-size: 14px; font-weight: 500;">+${{ number_format($extrasSubtotal, 2) }}</span>
                             @endif
                         </td>
                     </tr>
@@ -307,10 +307,10 @@
     <div class="card mt-3" style="border: 1px solid #7b1fa2;">
         <div class="card-header py-2" style="background: linear-gradient(135deg, #7b1fa2 0%, #6a1b9a 100%); color: white;">
             <div class="d-flex justify-content-between align-items-center">
-                <h6 class="mb-0" style="font-size: 14px;">
+                <h6 class="mb-0" style="font-size: 16px;">
                     <i class="fas fa-calculator mr-2"></i> Resumen Técnico del Pedido (Pre-producción)
                 </h6>
-                <span class="badge" style="background: {{ $complejidadBg }}; color: {{ $complejidadColor }}; font-size: 11px;">
+                <span class="badge" style="background: {{ $complejidadBg }}; color: {{ $complejidadColor }}; font-size: 14px;">
                     Complejidad: {{ $complejidadTotal }}
                 </span>
             </div>
@@ -318,23 +318,23 @@
         <div class="card-body py-2">
             <div class="row text-center">
                 <div class="col-3">
-                    <div style="font-size: 11px; color: #757575; text-transform: uppercase; letter-spacing: 0.5px;">Items c/diseño</div>
+                    <div style="font-size: 14px; color: #495057; text-transform: uppercase; letter-spacing: 0.5px;">Items c/diseño</div>
                     <div style="font-size: 20px; font-weight: 700; color: #1565c0;">{{ $itemsConDisenos }}</div>
                 </div>
                 <div class="col-3">
-                    <div style="font-size: 11px; color: #757575; text-transform: uppercase; letter-spacing: 0.5px;">Total diseños</div>
+                    <div style="font-size: 14px; color: #495057; text-transform: uppercase; letter-spacing: 0.5px;">Total diseños</div>
                     <div style="font-size: 20px; font-weight: 700; color: #2e7d32;">{{ $totalDisenosGlobal }}</div>
                 </div>
                 <div class="col-3">
-                    <div style="font-size: 11px; color: #757575; text-transform: uppercase; letter-spacing: 0.5px;">Puntadas</div>
-                    <div style="font-size: 20px; font-weight: 700; color: #e65100;">{{ number_format($totalPuntadasGlobal) }}</div>
+                    <div style="font-size: 14px; color: #495057; text-transform: uppercase; letter-spacing: 0.5px;">Puntadas</div>
+                    <div style="font-size: 20px; font-weight: 700; color: #e65100;">{{ number_format($totalPuntadasGlobal) }} pts</div>
                 </div>
                 <div class="col-3">
-                    <div style="font-size: 11px; color: #757575; text-transform: uppercase; letter-spacing: 0.5px;">Est. Técnico</div>
+                    <div style="font-size: 14px; color: #495057; text-transform: uppercase; letter-spacing: 0.5px;">Est. Técnico</div>
                     <div style="font-size: 20px; font-weight: 700; color: #7b1fa2;">${{ number_format($totalEstimadoGlobal, 2) }}</div>
                 </div>
             </div>
-            <div class="mt-2 py-2 px-3 rounded" style="background: #fff3e0; border: 1px solid #ffcc80; font-size: 11px; color: #e65100;">
+            <div class="mt-2 py-2 px-3 rounded" style="background: #fff3e0; border: 1px solid #ffcc80; font-size: 14px; color: #e65100;">
                 <i class="fas fa-info-circle mr-1"></i>
                 <strong>Estimado técnico pre-producción.</strong> El costo real se calcula según consumo de tiempo de máquina e hilos durante la producción.
             </div>
@@ -423,8 +423,8 @@
 }
 .medida-label-show {
     font-weight: 600;
-    font-size: 12px;
-    color: #6c757d;
+    font-size: 14px;
+    color: #495057;
     letter-spacing: 0.5px;
     margin-bottom: 5px;
 }

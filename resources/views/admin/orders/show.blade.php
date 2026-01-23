@@ -16,7 +16,7 @@
                     <span class="badge badge-info ml-2">ANEXO</span>
                 @endif
             </h1>
-            <small class="text-muted">Creado: {{ $order->created_at->format('d/m/Y H:i') }}</small>
+            <span style="font-size: 14px; color: #495057;">Creado: {{ $order->created_at->format('d/m/Y H:i') }}</span>
         </div>
         <div>
             @if ($status === Order::STATUS_DRAFT)
@@ -78,6 +78,58 @@
         </div>
     @endif
 
+    {{-- ================================================================ --}}
+    {{-- V5: TRAZABILIDAD POST-VENTA (READ-ONLY) --}}
+    {{-- ================================================================ --}}
+    @if ($order->isPostSale() && $order->relatedOrder)
+        <div class="alert mb-3" style="background: #e3f2fd; border: 1px solid #90caf9; border-left: 4px solid #1976d2;">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-link mr-2" style="color: #1976d2; font-size: 18px;"></i>
+                <div>
+                    <strong style="color: #0d47a1;">Pedido Post-Venta</strong>
+                    <br>
+                    <span style="color: #1565c0; font-size: 15px;">
+                        Creado como seguimiento de
+                        <a href="{{ route('admin.orders.show', $order->relatedOrder) }}"
+                           class="font-weight-bold" style="color: #0d47a1; text-decoration: underline;">
+                            {{ $order->relatedOrder->order_number }}
+                        </a>
+                        <span class="badge badge-{{ $order->relatedOrder->status_color }} ml-1" style="font-size: 14px;">
+                            {{ $order->relatedOrder->status_label }}
+                        </span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- V5: Pedidos post-venta derivados de este pedido --}}
+    @if ($order->postSaleOrders->count() > 0)
+        <div class="alert mb-3" style="background: #f3e5f5; border: 1px solid #ce93d8; border-left: 4px solid #7b1fa2;">
+            <div class="d-flex align-items-start">
+                <i class="fas fa-project-diagram mr-2 mt-1" style="color: #7b1fa2; font-size: 18px;"></i>
+                <div style="flex: 1;">
+                    <strong style="color: #4a148c;">Pedidos Post-Venta Derivados</strong>
+                    <span class="badge badge-secondary ml-1">{{ $order->postSaleOrders->count() }}</span>
+                    <div class="mt-2">
+                        @foreach ($order->postSaleOrders as $postSale)
+                            <div class="d-inline-block mr-3 mb-1">
+                                <a href="{{ route('admin.orders.show', $postSale) }}"
+                                   style="color: #6a1b9a; text-decoration: none;">
+                                    <i class="fas fa-file-alt mr-1"></i>
+                                    <strong>{{ $postSale->order_number }}</strong>
+                                </a>
+                                <span class="badge badge-{{ $postSale->status_color }}" style="font-size: 14px;">
+                                    {{ $postSale->status_label }}
+                                </span>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
     {{-- ESTILO UNIFICADO ERP INDUSTRIAL --}}
     <style>
         .card-section-cliente .card-header,
@@ -115,7 +167,12 @@
             {{-- 2. PRODUCTOS: Siempre visible (solo lectura post-draft) --}}
             @include('admin.orders._items-table')
 
-            {{-- 2.5 BLOCKERS: Solo en CONFIRMED, DESPUÉS de productos --}}
+            {{-- 2.5A ESTADO OPERATIVO: Solo en DRAFT (antes de confirmar) --}}
+            @if($status === Order::STATUS_DRAFT)
+                @include('admin.orders._order-readiness')
+            @endif
+
+            {{-- 2.5B BLOCKERS: Solo en CONFIRMED, DESPUÉS de productos --}}
             {{-- El operador primero ve QUÉ tiene el pedido, luego QUÉ falta resolver --}}
             @if($status === Order::STATUS_CONFIRMED)
                 @include('admin.orders._blockers')
@@ -134,20 +191,20 @@
                              style="background: #343a40; color: white; cursor: pointer;"
                              data-toggle="collapse" data-target="#collapseDesignSection"
                              aria-expanded="false" aria-controls="collapseDesignSection">
-                            <h5 class="mb-0" style="font-size: 15px;">
+                            <h5 class="mb-0" style="font-size: 16px;">
                                 <i class="fas fa-palette mr-2"></i>
                                 Diseño / Personalización
-                                <small class="ml-2 font-weight-normal" style="opacity: 0.85;">
+                                <span class="ml-2 font-weight-normal" style="font-size: 14px;">
                                     ({{ $designItems->count() }} {{ $designItems->count() === 1 ? 'item' : 'items' }})
-                                </small>
+                                </span>
                             </h5>
                             <div class="d-flex align-items-center">
                                 @if($allDesignsApproved)
-                                    <span class="badge badge-success mr-2" style="font-size: 12px;">
+                                    <span class="badge badge-success mr-2" style="font-size: 14px;">
                                         <i class="fas fa-check"></i> Aprobados
                                     </span>
                                 @else
-                                    <span class="badge badge-warning mr-2" style="font-size: 12px;">
+                                    <span class="badge badge-warning mr-2" style="font-size: 14px;">
                                         <i class="fas fa-clock"></i> Pendientes
                                     </span>
                                 @endif
@@ -172,13 +229,13 @@
                             <i class="fas fa-info-circle mr-2"></i> Sobre el Costo del Pedido
                         </h5>
                     </div>
-                    <div class="card-body" style="font-size: 14px;">
+                    <div class="card-body" style="font-size: 15px;">
                         <div class="p-3 rounded" style="background: #fff8e1; border-left: 4px solid #ffc107;">
                             <div style="color: #5d4037;">
                                 <i class="fas fa-info-circle mr-1" style="color: #f57c00;"></i>
                                 <strong>Los precios mostrados son estimaciones comerciales.</strong>
                             </div>
-                            <p class="mb-0 mt-2" style="color: #495057; font-size: 13px;">
+                            <p class="mb-0 mt-2" style="color: #495057; font-size: 14px;">
                                 El costo real se determina al iniciar producción, con base en diseño final, medidas definitivas y consumo real de materiales.
                             </p>
                         </div>
@@ -205,9 +262,201 @@
                             <strong>Pedido congelado técnicamente.</strong>
                             El costeo real se calcula a partir del consumo y tiempo real de producción.
                         </div>
-                        <div class="mt-3" style="font-size: 13px; color: #495057;">
+                        <div class="mt-3" style="font-size: 14px; color: #495057;">
                             <i class="fas fa-info-circle mr-1"></i>
                             Los materiales reservados y el tiempo de máquina se reflejarán en el costo final al marcar como listo.
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            {{-- ================================================================ --}}
+            {{-- FASE 3.5: COSTO REAL DE FABRICACIÓN (MATERIALES + BORDADO) --}}
+            {{-- Visible en: IN_PRODUCTION, READY, DELIVERED (post-producción) --}}
+            {{-- DATO INTERNO: No visible al cliente, solo para auditoría/análisis --}}
+            {{-- ================================================================ --}}
+            @if($order->has_manufacturing_cost && in_array($status, [Order::STATUS_IN_PRODUCTION, Order::STATUS_READY, Order::STATUS_DELIVERED]))
+                @php
+                    $isAtRealLoss = $order->is_at_real_loss;
+                    $realMarginPct = $order->real_margin_percent;
+                @endphp
+                <div class="card" style="border: 2px solid {{ $isAtRealLoss ? '#c62828' : '#1565c0' }};">
+                    <div class="card-header py-2" style="background: {{ $isAtRealLoss ? '#c62828' : '#1565c0' }}; color: white;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0" style="font-size: 16px;">
+                                <i class="fas fa-chart-line mr-2"></i> Análisis de Rentabilidad
+                            </h5>
+                            <div>
+                                @if($isAtRealLoss)
+                                    <span class="badge badge-danger" style="font-size: 12px;">
+                                        <i class="fas fa-exclamation-triangle mr-1"></i> PÉRDIDA
+                                    </span>
+                                @else
+                                    <span class="badge badge-light" style="font-size: 12px; color: #1565c0;">
+                                        <i class="fas fa-lock mr-1"></i> Snapshot Inmutable
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {{-- ================================================================ --}}
+                        {{-- FASE 3.5: CUATRO COLUMNAS - MATERIALES / BORDADO / PRECIO / MARGEN --}}
+                        {{-- ================================================================ --}}
+                        <div class="row text-center">
+                            {{-- COLUMNA 1: COSTO DE MATERIALES --}}
+                            <div class="col-6 col-md-3 mb-3">
+                                <div class="p-3 rounded h-100" style="background: #e3f2fd; border: 1px solid #90caf9;">
+                                    <p class="mb-1" style="font-size: 14px; color: #1565c0; text-transform: uppercase; letter-spacing: 0.5px;">
+                                        <i class="fas fa-layer-group mr-1"></i> Materiales
+                                    </p>
+                                    <h4 class="mb-1" style="color: #0d47a1; font-weight: 700; font-size: 20px;">
+                                        {{ $order->formatted_manufacturing_cost }}
+                                    </h4>
+                                    <span style="color: #1976d2; font-size: 14px;">BOM + Extras</span>
+                                </div>
+                            </div>
+
+                            {{-- COLUMNA 2: COSTO DE BORDADO --}}
+                            <div class="col-6 col-md-3 mb-3">
+                                <div class="p-3 rounded h-100" style="background: #f3e5f5; border: 1px solid #ce93d8;">
+                                    <p class="mb-1" style="font-size: 14px; color: #7b1fa2; text-transform: uppercase; letter-spacing: 0.5px;">
+                                        <i class="fas fa-pencil-ruler mr-1"></i> Bordado
+                                    </p>
+                                    <h4 class="mb-1" style="color: #6a1b9a; font-weight: 700; font-size: 20px;">
+                                        {{ $order->formatted_embroidery_cost }}
+                                    </h4>
+                                    <span style="color: #8e24aa; font-size: 14px;">
+                                        {{ $order->formatted_total_stitches }} pts
+                                    </span>
+                                </div>
+                            </div>
+
+                            {{-- COLUMNA 3: PRECIO DE VENTA --}}
+                            <div class="col-6 col-md-3 mb-3">
+                                <div class="p-3 rounded h-100" style="background: #f5f5f5; border: 1px solid #e0e0e0;">
+                                    <p class="mb-1" style="font-size: 14px; color: #495057; text-transform: uppercase; letter-spacing: 0.5px;">
+                                        <i class="fas fa-tag mr-1"></i> Precio Venta
+                                    </p>
+                                    <h4 class="mb-1" style="color: #212529; font-weight: 700; font-size: 20px;">
+                                        ${{ number_format($order->total, 2) }}
+                                    </h4>
+                                    <span style="color: #495057; font-size: 14px;">
+                                        @if($order->requires_invoice)
+                                            Incluye IVA
+                                        @else
+                                            Sin IVA
+                                        @endif
+                                    </span>
+                                </div>
+                            </div>
+
+                            {{-- COLUMNA 4: MARGEN REAL --}}
+                            <div class="col-6 col-md-3 mb-3">
+                                @php
+                                    $marginBg = $isAtRealLoss ? '#ffebee' : ($realMarginPct < 20 ? '#fff8e1' : '#e8f5e9');
+                                    $marginBorder = $isAtRealLoss ? '#ef9a9a' : ($realMarginPct < 20 ? '#ffe082' : '#a5d6a7');
+                                    $marginColor = $isAtRealLoss ? '#c62828' : ($realMarginPct < 20 ? '#e65100' : '#2e7d32');
+                                @endphp
+                                <div class="p-3 rounded h-100" style="background: {{ $marginBg }}; border: 1px solid {{ $marginBorder }};">
+                                    <p class="mb-1" style="font-size: 14px; color: {{ $marginColor }}; text-transform: uppercase; letter-spacing: 0.5px;">
+                                        <i class="fas fa-percentage mr-1"></i> Margen Real
+                                    </p>
+                                    <h4 class="mb-1" style="color: {{ $marginColor }}; font-weight: 700; font-size: 20px;">
+                                        {{ $order->formatted_real_margin }}
+                                    </h4>
+                                    <span class="badge badge-{{ $order->real_margin_alert_level }}" style="font-size: 14px;">
+                                        {{ number_format($realMarginPct ?? 0, 1) }}%
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- RESUMEN: COSTO TOTAL DE FABRICACIÓN --}}
+                        <div class="mt-2 p-3 rounded" style="background: #263238; color: white;">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-industry mr-2" style="font-size: 20px; color: #90caf9;"></i>
+                                        <div>
+                                            <span style="font-size: 14px; color: #b0bec5; text-transform: uppercase;">Costo Total Fabricación</span>
+                                            <h4 class="mb-0" style="font-weight: 700; font-size: 22px;">
+                                                {{ $order->formatted_total_manufacturing_cost }}
+                                            </h4>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 text-md-right mt-2 mt-md-0">
+                                    <span style="font-size: 14px; color: #b0bec5;">
+                                        = Materiales ({{ $order->formatted_manufacturing_cost }})
+                                        + Bordado ({{ $order->formatted_embroidery_cost }})
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- ================================================================ --}}
+                        {{-- ALERTAS DE MARGEN REAL --}}
+                        {{-- ================================================================ --}}
+                        @if($isAtRealLoss)
+                            <div class="alert alert-danger mt-3 mb-0 d-flex align-items-center" style="border-left: 4px solid #c62828;">
+                                <i class="fas fa-exclamation-triangle fa-2x mr-3"></i>
+                                <div>
+                                    <strong style="font-size: 15px;">ALERTA: Precio por debajo del costo de fabricación</strong>
+                                    <p class="mb-0 mt-1" style="font-size: 14px;">
+                                        Este pedido genera una pérdida de <strong>{{ $order->formatted_real_margin }}</strong> considerando materiales y bordado.
+                                        Revise el precio acordado con el cliente.
+                                    </p>
+                                </div>
+                            </div>
+                        @elseif($realMarginPct !== null && $realMarginPct < 20)
+                            <div class="alert alert-warning mt-3 mb-0 d-flex align-items-center" style="border-left: 4px solid #f57c00;">
+                                <i class="fas fa-exclamation-circle fa-2x mr-3" style="color: #e65100;"></i>
+                                <div>
+                                    <strong style="font-size: 15px; color: #e65100;">Margen bajo ({{ number_format($realMarginPct, 1) }}%)</strong>
+                                    <p class="mb-0 mt-1" style="font-size: 14px; color: #5d4037;">
+                                        El margen sobre costo de fabricación es menor al 20%. Considere que aún faltan costos de mano de obra y operación.
+                                    </p>
+                                </div>
+                            </div>
+                        @endif
+
+                        {{-- Detalle informativo (colapsable) --}}
+                        <div class="mt-3 pt-3 border-top">
+                            <a data-toggle="collapse" href="#costDetailCollapse" role="button" aria-expanded="false" style="color: #495057; text-decoration: none; font-size: 14px;">
+                                <i class="fas fa-info-circle mr-1"></i> Ver detalles del cálculo
+                                <i class="fas fa-chevron-down ml-1" style="font-size: 14px;"></i>
+                            </a>
+                            <div class="collapse mt-2" id="costDetailCollapse">
+                                <div class="row" style="font-size: 14px; color: #495057;">
+                                    <div class="col-md-6">
+                                        <i class="fas fa-cube mr-1"></i> <strong>Costo de fabricación incluye:</strong>
+                                        <ul class="mb-0 pl-3 mt-1">
+                                            <li>Materiales del BOM (ficha técnica)</li>
+                                            <li>Materiales de extras con inventario</li>
+                                            <li><strong style="color: #7b1fa2;">Costo de bordado ({{ $order->formatted_total_stitches }} pts)</strong></li>
+                                        </ul>
+                                        @if($order->cost_per_thousand_snapshot)
+                                            <div class="mt-2 p-2 rounded" style="background: #f3e5f5; font-size: 14px; color: #6a1b9a;">
+                                                <i class="fas fa-calculator mr-1"></i>
+                                                Tarifa: ${{ number_format($order->cost_per_thousand_snapshot, 2) }}/millar
+                                            </div>
+                                        @endif
+                                    </div>
+                                    <div class="col-md-6">
+                                        <i class="fas fa-ban mr-1"></i> <strong>No incluye:</strong>
+                                        <ul class="mb-0 pl-3 mt-1">
+                                            <li>Mano de obra directa</li>
+                                            <li>Costos fijos de operación</li>
+                                            <li>Depreciación de maquinaria</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="mt-2 p-2 rounded" style="background: #e8f5e9; font-size: 14px; color: #2e7d32;">
+                                    <i class="fas fa-shield-alt mr-1"></i>
+                                    <strong>Dato interno:</strong> Snapshot inmutable capturado al iniciar producción. No se muestra al cliente.
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -229,34 +478,31 @@
             @endif
 
             {{-- ================================================================ --}}
-            {{-- REGLA UX SELLADA: EXTRAS POST-PRODUCCIÓN = SERVICIOS/ANEXOS --}}
-            {{-- Solo visible en READY y DELIVERED --}}
+            {{-- REGLA UX SELLADA: POST-PRODUCCIÓN = PEDIDO CERRADO --}}
+            {{-- En READY y DELIVERED: Solo informativo, SIN botones de anexo --}}
+            {{-- REGLA R4: Anexos NO permitidos después de IN_PRODUCTION --}}
             {{-- ================================================================ --}}
             @if(in_array($status, [Order::STATUS_READY, Order::STATUS_DELIVERED]))
-                <div class="card" style="border: 2px solid #7b1fa2;">
-                    <div class="card-header py-2" style="background: #7b1fa2; color: white;">
+                <div class="card" style="border: 2px solid #6c757d;">
+                    <div class="card-header py-2" style="background: #6c757d; color: white;">
                         <h5 class="mb-0" style="font-size: 15px;">
-                            <i class="fas fa-plus-circle mr-2"></i> Solicitudes adicionales del cliente
+                            <i class="fas fa-lock mr-2"></i> Pedido Cerrado
                         </h5>
                     </div>
-                    <div class="card-body" style="background: #f3e5f5;">
+                    <div class="card-body" style="background: #f8f9fa;">
                         <div class="d-flex align-items-start">
-                            <i class="fas fa-info-circle mr-3 mt-1" style="color: #7b1fa2; font-size: 20px;"></i>
+                            <i class="fas fa-info-circle mr-3 mt-1" style="color: #6c757d; font-size: 20px;"></i>
                             <div>
-                                <p class="mb-2" style="color: #4a148c; font-size: 14px;">
-                                    Cualquier bordado, moño, ajuste o trabajo adicional solicitado
-                                    <strong>DESPUÉS</strong> de producción debe registrarse como un
-                                    <strong>SERVICIO ADICIONAL</strong> o como un <strong>PEDIDO ANEXO</strong>.
+                                <p class="mb-2" style="color: #495057; font-size: 15px;">
+                                    <strong>Este pedido ya completó su ciclo de producción.</strong>
                                 </p>
-                                <p class="mb-3" style="color: #6a1b9a; font-size: 13px;">
-                                    <i class="fas fa-lock mr-1"></i>
-                                    El producto original y su precio permanecen intactos.
+                                <p class="mb-0" style="color: #495057; font-size: 14px;">
+                                    <i class="fas fa-ban mr-1"></i>
+                                    No se permiten modificaciones, anexos ni adiciones.
+                                    <br>
+                                    <i class="fas fa-clipboard-list mr-1"></i>
+                                    Para trabajos adicionales, cree un <strong>nuevo pedido</strong> para el cliente.
                                 </p>
-                                @if(!$order->isAnnex())
-                                    <a href="{{ route('admin.orders.create-annex', $order) }}" class="btn btn-sm" style="background: #7b1fa2; color: white; font-size: 13px;">
-                                        <i class="fas fa-plus-circle mr-1"></i> Registrar Servicio Adicional / Anexo
-                                    </a>
-                                @endif
                             </div>
                         </div>
                     </div>
@@ -313,7 +559,7 @@
                 {{-- ================================================================ --}}
                 {{-- REGLA UX SELLADA: PAGOS SON ADELANTOS, NO MODIFICAN PRECIO --}}
                 {{-- ================================================================ --}}
-                <div class="px-3 py-2 border-bottom" style="background: #e8eaf6; font-size: 13px;">
+                <div class="px-3 py-2 border-bottom" style="background: #e8eaf6; font-size: 14px;">
                     <i class="fas fa-lightbulb mr-1" style="color: #5c6bc0;"></i>
                     <span style="color: #3949ab;">
                         <strong>Pagos y Adelantos:</strong>
@@ -434,11 +680,11 @@
 
             {{-- ANEXOS: --}}
             {{-- DRAFT: Ocultar --}}
-            {{-- CONFIRMED: Ocultar --}}
-            {{-- IN_PRODUCTION: Mostrar --}}
+            {{-- CONFIRMED: Mostrar (anexos creados antes de producción) --}}
+            {{-- IN_PRODUCTION: Mostrar (solo lectura) --}}
             {{-- READY: Ocultar --}}
             {{-- DELIVERED: Ocultar --}}
-            @if ($status === Order::STATUS_IN_PRODUCTION && $order->annexOrders->count() > 0)
+            @if (in_array($status, [Order::STATUS_CONFIRMED, Order::STATUS_IN_PRODUCTION]) && $order->annexOrders->count() > 0)
                 <div class="card">
                     <div class="card-header" style="background: #343a40; color: white;">
                         <h5 class="mb-0"><i class="fas fa-project-diagram mr-2"></i> Pedidos Anexos ({{ $order->annexOrders->count() }})</h5>
@@ -520,7 +766,7 @@
                         <p class="mb-2" style="color: #212529;">
                             <strong>Prometido:</strong> {{ $order->promised_date->format('d/m/Y') }}
                             @if ($order->promised_date < now() && !in_array($status, [Order::STATUS_DELIVERED, Order::STATUS_CANCELLED]))
-                                <span class="badge badge-danger" style="font-size: 13px;">VENCIDO</span>
+                                <span class="badge badge-danger" style="font-size: 14px;">VENCIDO</span>
                             @endif
                         </p>
                     @endif
@@ -541,14 +787,26 @@
                 </div>
             @endif
 
-            {{-- BOTON ANEXO: Solo en IN_PRODUCTION --}}
-            @if (!$order->isAnnex() && $status === Order::STATUS_IN_PRODUCTION)
+            {{-- BOTON ANEXO: SOLO en CONFIRMED (REGLA R4 v2) --}}
+            {{-- Un anexo NUNCA existe si el pedido >= IN_PRODUCTION --}}
+            @if (!$order->isAnnex() && $status === Order::STATUS_CONFIRMED)
                 <div class="card border-info">
-                    <div class="card-body text-center">
-                        <p class="mb-2" style="font-size: 14px; color: #212529;">
+                    <div class="card-header py-2" style="background: #17a2b8; color: white;">
+                        <h6 class="mb-0"><i class="fas fa-plus-circle mr-1"></i> Anexo</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-2" style="font-size: 14px; color: #495057;">
                             <i class="fas fa-info-circle text-info mr-1"></i>
-                            El pedido está en producción. Puede crear un anexo para agregar productos adicionales.
+                            Agregue productos adicionales al pedido <strong>antes de iniciar producción</strong>.
                         </p>
+                        <div class="alert alert-warning py-2 mb-2" style="font-size: 14px;">
+                            <i class="fas fa-exclamation-triangle mr-1"></i>
+                            <strong>Importante:</strong>
+                            <ul class="mb-0 pl-3 mt-1">
+                                <li>El anexo se procesará junto con el pedido principal</li>
+                                <li>Una vez en producción, NO se permiten anexos</li>
+                            </ul>
+                        </div>
                         <a href="{{ route('admin.orders.create-annex', $order) }}" class="btn btn-info btn-block">
                             <i class="fas fa-plus-circle mr-1"></i> Crear Anexo
                         </a>

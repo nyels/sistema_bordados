@@ -110,7 +110,7 @@
         font-weight: bold;
     }
     .small-box .inner p {
-        font-size: 0.9rem;
+        font-size: 15px;
     }
     #orders-table-container {
         position: relative;

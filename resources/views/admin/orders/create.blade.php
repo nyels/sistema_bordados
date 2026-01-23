@@ -1,10 +1,18 @@
 @extends('adminlte::page')
 
-@section('title', isset($isEdit) ? 'Editar Pedido' : 'Nuevo Pedido')
+@section('title', isset($isEdit) ? 'Editar Pedido' : (isset($relatedOrder) ? 'Post-Venta de ' . $relatedOrder->order_number : 'Nuevo Pedido'))
 
 @section('content_header')
     <div class="d-flex justify-content-between align-items-center">
-        <h1><i class="fas fa-clipboard-list mr-2"></i> {{ isset($isEdit) ? 'Editar Pedido #' . $order->order_number : 'Nuevo Pedido' }}</h1>
+        @if(isset($relatedOrder))
+            <h1>
+                <i class="fas fa-redo mr-2" style="color: #6f42c1;"></i>
+                Nuevo Pedido Post-Venta
+                <small class="text-muted" style="font-size: 0.6em;">de {{ $relatedOrder->order_number }}</small>
+            </h1>
+        @else
+            <h1><i class="fas fa-clipboard-list mr-2"></i> {{ isset($isEdit) ? 'Editar Pedido #' . $order->order_number : 'Nuevo Pedido' }}</h1>
+        @endif
         <a href="{{ route('admin.orders.index') }}" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i> Volver
         </a>
@@ -442,10 +450,13 @@
             z-index: 9999 !important;
         }
 
+        /* D6: SCROLL SEGURO - Modal nunca depende del body */
         #addProductModal .modal-body,
         #quickClientModal .modal-body {
-            max-height: 65vh;
+            max-height: calc(100vh - 200px); /* Espacio para header + footer */
             overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch; /* Smooth scroll en iOS */
         }
 
         #addProductModal .modal-footer,
@@ -453,6 +464,38 @@
             position: sticky;
             bottom: 0;
             background: #fff;
+            border-top: 1px solid #dee2e6;
+            z-index: 10;
+        }
+
+        /* D6: Asegurar que el modal no afecte el scroll del body */
+        #addProductModal.modal {
+            overflow-y: auto !important;
+        }
+
+        #addProductModal .modal-dialog {
+            max-height: calc(100vh - 60px);
+            margin: 30px auto;
+        }
+
+        #addProductModal .modal-content {
+            max-height: calc(100vh - 60px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #addProductModal .modal-header {
+            flex-shrink: 0;
+        }
+
+        /* D2: Estilos para selector de intención */
+        .intent-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+
+        .intent-btn:active {
+            transform: translateY(-1px);
         }
 
         @media (max-width: 768px) {
@@ -624,6 +667,53 @@
             </div>
         @endif
 
+        {{-- ============================================== --}}
+        {{-- BLOQUE POST-VENTA: Pedido relacionado         --}}
+        {{-- UX REFINADO: Explicación clara del flujo      --}}
+        {{-- ============================================== --}}
+        @if(isset($relatedOrder))
+            <input type="hidden" name="related_order_id" value="{{ $relatedOrder->id }}">
+            <div class="alert mb-3" style="background: linear-gradient(135deg, #6f42c1 0%, #8969c7 100%); color: white; border: none; border-radius: 8px;">
+                <div class="d-flex align-items-start">
+                    <div class="mr-3 mt-1">
+                        <i class="fas fa-redo fa-2x"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h5 class="mb-1 font-weight-bold">
+                            <i class="fas fa-link mr-1"></i> Nuevo Pedido Post-Venta
+                        </h5>
+                        <p class="mb-1" style="font-size: 14px;">
+                            Relacionado con <strong>{{ $relatedOrder->order_number }}</strong>
+                            <span class="badge badge-light text-dark ml-1">{{ $relatedOrder->status_label }}</span>
+                        </p>
+                        {{-- MICROCOPY UX: Explicación clara --}}
+                        <div class="mt-2 p-2 rounded" style="background: rgba(255,255,255,0.15); font-size: 13px;">
+                            <div class="mb-1">
+                                <i class="fas fa-check-circle mr-1"></i>
+                                <strong>El cliente ya está seleccionado</strong> — heredado del pedido original
+                            </div>
+                            <div class="mb-1">
+                                <i class="fas fa-edit mr-1"></i>
+                                <strong>Los productos son nuevos</strong> — agrega lo que el cliente necesita ahora
+                            </div>
+                            <div>
+                                <i class="fas fa-shield-alt mr-1"></i>
+                                <strong>El pedido original no se modifica</strong> — este es completamente independiente
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ml-2">
+                        <a href="{{ route('admin.orders.show', $relatedOrder) }}"
+                           class="btn btn-sm btn-light"
+                           target="_blank"
+                           title="Ver pedido original">
+                            <i class="fas fa-external-link-alt"></i> Ver Original
+                        </a>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         <div class="row erp-row">
             {{-- ============================================== --}}
             {{-- COLUMNA IZQUIERDA: Cliente, Medidas, Pago, Entrega --}}
@@ -636,25 +726,51 @@
                         <h5 class="mb-0"><i class="fas fa-user mr-2"></i> 1. Cliente</h5>
                     </div>
                     <div class="card-body">
-                        <input type="hidden" name="cliente_id" id="cliente_id" value="{{ old('cliente_id') }}" required>
-                        @error('cliente_id')
-                            <div class="alert alert-danger py-1 mb-2">{{ $message }}</div>
-                        @enderror
+                        {{-- POST-VENTA: Cliente prellenado y bloqueado --}}
+                        @if(isset($relatedOrder))
+                            <input type="hidden" name="cliente_id" id="cliente_id" value="{{ $relatedOrder->cliente_id }}" required>
 
-                        <button type="button" class="cliente-selector-btn" id="btnSelectClient" data-toggle="modal"
-                            data-target="#clientSearchModal">
-                            <div class="cliente-info" id="clienteDisplay">
-                                <span class="placeholder-text"><i class="fas fa-search mr-1"></i> Buscar cliente...</span>
+                            {{-- Display bloqueado con estilo visual claro --}}
+                            <div class="cliente-selector-btn has-client" style="cursor: default; border-color: #6f42c1; background: #f8f5ff;">
+                                <div class="cliente-info">
+                                    <span class="cliente-nombre">
+                                        <i class="fas fa-lock mr-1" style="color: #6f42c1; font-size: 12px;"></i>
+                                        {{ $relatedOrder->cliente->nombre }} {{ $relatedOrder->cliente->apellidos }}
+                                    </span>
+                                    <span class="cliente-telefono">
+                                        <i class="fas fa-phone mr-1"></i>{{ $relatedOrder->cliente->telefono ?? 'Sin teléfono' }}
+                                    </span>
+                                </div>
+                                <span class="badge" style="background: #6f42c1; color: white; font-size: 11px;">
+                                    <i class="fas fa-redo mr-1"></i> Post-venta
+                                </span>
                             </div>
-                            <i class="fas fa-chevron-right text-muted"></i>
-                        </button>
+                            <small class="text-muted d-block mt-2" style="font-size: 12px;">
+                                <i class="fas fa-info-circle mr-1" style="color: #6f42c1;"></i>
+                                Cliente heredado del pedido original. No se puede cambiar.
+                            </small>
+                        @else
+                            {{-- Modo normal: selector de cliente --}}
+                            <input type="hidden" name="cliente_id" id="cliente_id" value="{{ old('cliente_id') }}" required>
+                            @error('cliente_id')
+                                <div class="alert alert-danger py-1 mb-2">{{ $message }}</div>
+                            @enderror
 
-                        <div class="mt-2 text-right">
-                            <button type="button" class="btn btn-sm btn-outline-success" data-toggle="modal"
-                                data-target="#quickClientModal">
-                                <i class="fas fa-user-plus mr-1"></i> Cliente Rápido
+                            <button type="button" class="cliente-selector-btn" id="btnSelectClient" data-toggle="modal"
+                                data-target="#clientSearchModal">
+                                <div class="cliente-info" id="clienteDisplay">
+                                    <span class="placeholder-text"><i class="fas fa-search mr-1"></i> Buscar cliente...</span>
+                                </div>
+                                <i class="fas fa-chevron-right text-muted"></i>
                             </button>
-                        </div>
+
+                            <div class="mt-2 text-right">
+                                <button type="button" class="btn btn-sm btn-outline-success" data-toggle="modal"
+                                    data-target="#quickClientModal">
+                                    <i class="fas fa-user-plus mr-1"></i> Cliente Rápido
+                                </button>
+                            </div>
+                        @endif
                     </div>
                 </div>
 
@@ -669,6 +785,13 @@
                         <h5 class="mb-0"><i class="fas fa-dollar-sign mr-2"></i> 3. Pago</h5>
                     </div>
                     <div class="card-body payment-section">
+                        {{-- POST-VENTA: Microcopy indicando que es editable --}}
+                        @if(isset($relatedOrder))
+                            <div class="mb-2 py-1 px-2 rounded" style="background: #e8f5e9; font-size: 12px; color: #2e7d32;">
+                                <i class="fas fa-edit mr-1"></i>
+                                Configura el pago para este nuevo pedido
+                            </div>
+                        @endif
                         <div class="form-group mb-2">
                             <label class="font-weight-bold mb-1">Método de Pago</label>
                             <select name="payment_method" id="paymentMethod" class="form-control form-control-sm">
@@ -707,6 +830,13 @@
                         <h5 class="mb-0"><i class="fas fa-truck mr-2"></i> 4. Entrega</h5>
                     </div>
                     <div class="card-body">
+                        {{-- POST-VENTA: Microcopy indicando que es editable --}}
+                        @if(isset($relatedOrder))
+                            <div class="mb-2 py-1 px-2 rounded" style="background: #e8f5e9; font-size: 12px; color: #2e7d32;">
+                                <i class="fas fa-edit mr-1"></i>
+                                Define la urgencia y fecha para este pedido
+                            </div>
+                        @endif
                         <div class="form-group mb-2">
                             <label class="font-weight-bold mb-1">Nivel de Urgencia</label>
                             <select name="urgency_level" id="urgencyLevel" class="form-control form-control-sm">
@@ -756,6 +886,14 @@
                             <i class="fas fa-plus"></i> Agregar
                         </button>
                     </div>
+                    {{-- POST-VENTA: Microcopy indicando que productos son nuevos --}}
+                    @if(isset($relatedOrder))
+                        <div class="px-3 py-2 border-bottom" style="background: #fff8e1; font-size: 12px; color: #f57c00;">
+                            <i class="fas fa-lightbulb mr-1"></i>
+                            <strong>Agrega los productos nuevos</strong> que el cliente necesita.
+                            Los productos del pedido original NO se copian.
+                        </div>
+                    @endif
                     <div class="card-body p-0">
                         <div class="table-responsive products-scroll-container">
                             <table class="table table-hover product-table mb-0" id="itemsTable">
@@ -822,6 +960,12 @@
                     </div>
                 </div>
 
+                {{-- ============================================== --}}
+                {{-- INDICADOR DE ESTADO OPERATIVO (READY/PENDING) --}}
+                {{-- Feedback en tiempo real sobre completitud     --}}
+                {{-- ============================================== --}}
+                @include('admin.orders._order-readiness')
+
                 {{-- 6. NOTAS --}}
                 <div class="card card-erp order-mobile-6">
                     <div class="card-header bg-light py-2">
@@ -835,9 +979,20 @@
 
                 {{-- 7. BOTÓN CREAR PEDIDO --}}
                 <div class="order-mobile-7">
-                    <button type="submit" class="btn btn-success btn-lg btn-block" id="submitBtn">
-                        <i class="fas fa-save mr-2"></i> Crear Pedido
-                    </button>
+                    @if(isset($relatedOrder))
+                        {{-- POST-VENTA: Botón con contexto claro --}}
+                        <button type="submit" class="btn btn-lg btn-block" id="submitBtn"
+                                style="background: linear-gradient(135deg, #6f42c1 0%, #8969c7 100%); color: white; border: none;">
+                            <i class="fas fa-redo mr-2"></i> Crear Pedido Post-Venta
+                        </button>
+                        <small class="text-muted d-block text-center mt-1" style="font-size: 11px;">
+                            Se creará un pedido nuevo relacionado con {{ $relatedOrder->order_number }}
+                        </small>
+                    @else
+                        <button type="submit" class="btn btn-success btn-lg btn-block" id="submitBtn">
+                            <i class="fas fa-save mr-2"></i> Crear Pedido
+                        </button>
+                    @endif
                 </div>
 
             </div>
@@ -929,6 +1084,45 @@
                     <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
                 </div>
                 <div class="modal-body">
+                    {{-- ═══════════════════════════════════════════════════════════ --}}
+                    {{-- D2: SELECTOR DE INTENCIÓN (Solo visible en post-venta)      --}}
+                    {{-- ═══════════════════════════════════════════════════════════ --}}
+                    <div id="modalIntentSelector" style="display: none;">
+                        <div class="text-center py-4">
+                            <div class="mb-4">
+                                <i class="fas fa-hand-pointer fa-3x text-muted mb-3 d-block"></i>
+                                <h5 class="text-dark">¿Qué deseas agregar al pedido?</h5>
+                                <p class="text-muted mb-0">Selecciona una opción para continuar</p>
+                            </div>
+                            <div class="row justify-content-center">
+                                <div class="col-md-5 mb-3 mb-md-0">
+                                    <button type="button" class="btn btn-lg btn-block py-4 intent-btn" id="btnIntentProduct"
+                                            style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 12px; transition: transform 0.2s, box-shadow 0.2s;">
+                                        <i class="fas fa-box fa-2x mb-2 d-block"></i>
+                                        <strong style="font-size: 16px;">Producto</strong>
+                                        <small class="d-block mt-1" style="opacity: 0.9;">Con o sin extras</small>
+                                    </button>
+                                </div>
+                                <div class="col-md-5">
+                                    <button type="button" class="btn btn-lg btn-block py-4 intent-btn" id="btnIntentExtrasOnly"
+                                            style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border: none; border-radius: 12px; transition: transform 0.2s, box-shadow 0.2s;">
+                                        <i class="fas fa-plus-circle fa-2x mb-2 d-block"></i>
+                                        <strong style="font-size: 16px;">Solo Extras</strong>
+                                        <small class="d-block mt-1" style="opacity: 0.9;">Servicios adicionales</small>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mt-4 text-muted" style="font-size: 12px;">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Pedido post-venta: puede agregar productos o servicios adicionales
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- ═══════════════════════════════════════════════════════════ --}}
+                    {{-- SECCIÓN: AGREGAR PRODUCTO (flujo normal)                    --}}
+                    {{-- ═══════════════════════════════════════════════════════════ --}}
+                    <div id="modalProductSection">
                     <div class="row">
                         {{-- COLUMNA IZQUIERDA: Preview + Estados --}}
                         <div class="col-md-4 text-center">
@@ -1182,6 +1376,82 @@
                             </div>
                         </div>
                     </div>
+                    </div>{{-- Fin #modalProductSection --}}
+
+                    {{-- ═══════════════════════════════════════════════════════════ --}}
+                    {{-- D5: SECCIÓN SOLO EXTRAS (post-venta sin producto nuevo)     --}}
+                    {{-- ═══════════════════════════════════════════════════════════ --}}
+                    <div id="modalExtrasOnlySection" style="display: none;">
+                        <div class="row">
+                            <div class="col-12">
+                                {{-- Botón volver a selección de intención --}}
+                                <button type="button" class="btn btn-sm btn-outline-secondary mb-3" id="btnBackToIntent">
+                                    <i class="fas fa-arrow-left mr-1"></i> Volver
+                                </button>
+
+                                {{-- Info contextual --}}
+                                <div class="alert py-2 mb-3" style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border: 1px solid #a5d6a7;">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-concierge-bell mr-2" style="color: #2e7d32; font-size: 20px;"></i>
+                                        <div>
+                                            <strong style="color: #1b5e20;">Servicios Adicionales</strong>
+                                            <div class="small" style="color: #388e3c;">
+                                                Agregue servicios como empaque especial, urgencia u otros extras al pedido.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- Buscador de extras --}}
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        <i class="fas fa-search mr-1 text-muted"></i> Buscar Extras
+                                    </label>
+                                    <input type="text" id="extrasOnlySearchInput" class="form-control" placeholder="Escriba para filtrar extras...">
+                                </div>
+
+                                {{-- Tabla de extras disponibles --}}
+                                <div class="border rounded" style="max-height: 280px; overflow-y: auto;">
+                                    <table class="table table-hover table-sm mb-0" id="extrasOnlyTable">
+                                        <thead class="thead-light" style="position: sticky; top: 0; z-index: 1;">
+                                            <tr>
+                                                <th style="width: 50px;" class="text-center">
+                                                    <input type="checkbox" id="selectAllExtrasOnly" title="Seleccionar todos">
+                                                </th>
+                                                <th>Extra</th>
+                                                <th style="width: 120px;" class="text-right">Precio</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="extrasOnlyTableBody">
+                                            <tr>
+                                                <td colspan="3" class="text-center py-4 text-muted">
+                                                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                                                    <p class="mt-2 mb-0">Cargando extras disponibles...</p>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {{-- Resumen de selección --}}
+                                <div class="mt-3 p-3 rounded d-flex justify-content-between align-items-center" style="background: #f8f9fa;">
+                                    <span><strong id="extrasOnlySelectedCount">0</strong> extras seleccionados</span>
+                                    <span class="text-success font-weight-bold" style="font-size: 1.2rem;">
+                                        Total: <span id="extrasOnlyTotal">$0.00</span>
+                                    </span>
+                                </div>
+
+                                {{-- Notas opcionales --}}
+                                <div class="form-group mt-3 mb-0">
+                                    <label class="font-weight-bold">
+                                        <i class="fas fa-sticky-note mr-1 text-muted"></i> Notas (opcional)
+                                    </label>
+                                    <textarea id="extrasOnlyNotes" class="form-control" rows="2" maxlength="500"
+                                              placeholder="Instrucciones especiales para estos extras..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>{{-- Fin #modalExtrasOnlySection --}}
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
@@ -1416,6 +1686,84 @@
             let clientMeasurementsCache = null; // Cache de medidas existentes del cliente
             // FASE 4: Índice del item que se está editando (null si es CREATE)
             let editingItemIndex = null;
+
+            // ==========================================
+            // D1 + D3: CONTEXTO Y MÁQUINA DE ESTADOS DEL MODAL
+            // ==========================================
+            // D1: Contexto del formulario (viene del padre, NO se infiere)
+            const ORDER_CONTEXT = @json(isset($relatedOrder) ? 'post_sale' : 'normal');
+
+            // D3: Estados explícitos del modal
+            const MODAL_STATES = {
+                IDLE: 'idle',                      // Modal cerrado o recién abierto (sin selección)
+                INTENT_SELECTION: 'intent_selection', // Esperando que el operador elija intención
+                ADDING_PRODUCT: 'adding_product',  // Agregando producto (con o sin extras)
+                ADDING_EXTRAS_ONLY: 'adding_extras_only', // Solo extras (sin producto nuevo)
+                EDITING: 'editing'                 // Editando item existente
+            };
+
+            // Estado actual del modal (D3)
+            let modalState = {
+                current: MODAL_STATES.IDLE,
+                context: ORDER_CONTEXT,            // 'normal' o 'post_sale'
+                intent: null,                      // 'product' o 'extras_only'
+                previousState: null                // Para navegación hacia atrás
+            };
+
+            // D3: Función para cambiar estado del modal con logging
+            function setModalState(newState, intent = null) {
+                console.log(`[Modal State] ${modalState.current} → ${newState}`, intent ? `(intent: ${intent})` : '');
+                modalState.previousState = modalState.current;
+                modalState.current = newState;
+                if (intent !== null) {
+                    modalState.intent = intent;
+                }
+                updateModalUI();
+            }
+
+            // D3: Actualizar UI según estado del modal
+            function updateModalUI() {
+                const $intentSelector = $('#modalIntentSelector');
+                const $productSection = $('#modalProductSection');
+                const $extrasOnlySection = $('#modalExtrasOnlySection');
+                const $modalTitle = $('#addProductModal .modal-title');
+
+                // Ocultar todo por defecto
+                $intentSelector.hide();
+                $productSection.hide();
+                $extrasOnlySection.hide();
+
+                switch (modalState.current) {
+                    case MODAL_STATES.IDLE:
+                    case MODAL_STATES.INTENT_SELECTION:
+                        // En post-venta: mostrar selector de intención
+                        // En normal: ir directo a producto
+                        if (modalState.context === 'post_sale' && editingItemIndex === null) {
+                            $intentSelector.show();
+                            $modalTitle.html('<i class="fas fa-question-circle mr-2"></i> ¿Qué deseas agregar?');
+                        } else {
+                            // Normal mode o editando: ir directo a producto
+                            $productSection.show();
+                            $modalTitle.html('<i class="fas fa-box mr-2"></i> Agregar Producto');
+                        }
+                        break;
+
+                    case MODAL_STATES.ADDING_PRODUCT:
+                    case MODAL_STATES.EDITING:
+                        $productSection.show();
+                        $modalTitle.html(editingItemIndex !== null
+                            ? '<i class="fas fa-edit mr-2"></i> Editar Producto'
+                            : '<i class="fas fa-box mr-2"></i> Agregar Producto');
+                        break;
+
+                    case MODAL_STATES.ADDING_EXTRAS_ONLY:
+                        $extrasOnlySection.show();
+                        $modalTitle.html('<i class="fas fa-concierge-bell mr-2"></i> Agregar Servicios Adicionales');
+                        break;
+                }
+
+                updateAddButtonState();
+            }
 
             const urgencyMultipliers = {
                 'normal': 1.0,
@@ -1684,11 +2032,21 @@
                         ?.focus();
                 }, 0);
             }).on('select2:select', function(e) {
+                // FASE 5: Limpiar estado del producto ANTERIOR antes de asignar nuevo
+                resetProductDependentState();
                 selectedProduct = e.params.data.product;
                 updateProductPreview();
-            }).on('select2:clear', function() {
+            }).on('select2:clear select2:unselect', function(e) {
+                // RESET COMPLETO: El modal debe quedar exactamente como cuando se abre
+                console.log('[Select2] Clear/Unselect triggered:', e.type);
                 selectedProduct = null;
-                resetProductModal();
+                resetProductModal(true); // true = skip select2 reset (ya está cleared)
+                // Volver al estado inicial del modal (selector de intención o producto según contexto)
+                if (modalState.context === 'post_sale' && editingItemIndex === null) {
+                    setModalState(MODAL_STATES.INTENT_SELECTION);
+                } else {
+                    setModalState(MODAL_STATES.ADDING_PRODUCT);
+                }
             });
 
             function updateProductPreview() {
@@ -2418,12 +2776,41 @@
                 currentItemMeasurements = null;
             }
 
-            // Habilitar/deshabilitar botón agregar
+            // Habilitar/deshabilitar botón agregar (D3: según estado del modal)
             function updateAddButtonState() {
                 const $btn = $('#addProductBtn');
 
+                // D3: Comportamiento según estado del modal
+                switch (modalState.current) {
+                    case MODAL_STATES.IDLE:
+                    case MODAL_STATES.INTENT_SELECTION:
+                        // En selección de intención: botón deshabilitado
+                        $btn.prop('disabled', true).attr('title', '').tooltip('dispose');
+                        $btn.html('<i class="fas fa-plus mr-1"></i> Agregar al Pedido');
+                        return;
+
+                    case MODAL_STATES.ADDING_EXTRAS_ONLY:
+                        // D5: Modo solo extras - habilitar si hay extras seleccionados
+                        if (extrasOnlySelected.length === 0) {
+                            $btn.prop('disabled', true)
+                                .attr('title', 'Seleccione al menos un servicio')
+                                .tooltip('dispose').tooltip();
+                        } else {
+                            $btn.prop('disabled', false).attr('title', '').tooltip('dispose');
+                        }
+                        $btn.html('<i class="fas fa-concierge-bell mr-1"></i> Agregar Servicios');
+                        return;
+
+                    case MODAL_STATES.ADDING_PRODUCT:
+                    case MODAL_STATES.EDITING:
+                        // Flujo normal de producto
+                        break;
+                }
+
+                // Flujo ADDING_PRODUCT / EDITING: validación estándar
                 if (!selectedProduct) {
                     $btn.prop('disabled', true).attr('title', '').tooltip('dispose');
+                    $btn.html('<i class="fas fa-plus mr-1"></i> Agregar al Pedido');
                     return;
                 }
 
@@ -2446,10 +2833,44 @@
 
                 // Todo OK: habilitar botón
                 $btn.prop('disabled', false).attr('title', '').tooltip('dispose');
+                $btn.html(editingItemIndex !== null
+                    ? '<i class="fas fa-save mr-1"></i> Guardar Cambios'
+                    : '<i class="fas fa-plus mr-1"></i> Agregar al Pedido');
             }
 
-            function resetProductModal() {
-                $('#modalProductSelect').val(null).trigger('change.select2');
+            // ==========================================
+            // FASE 5: RESET DE ESTADO DEPENDIENTE DEL PRODUCTO
+            // Llamado al CAMBIAR de producto (select2:select)
+            // Limpia TODO lo que pertenece al producto anterior
+            // ==========================================
+            function resetProductDependentState() {
+                // 1. Medidas del item (pertenecen al producto seleccionado)
+                currentItemMeasurements = null;
+                $('#measurementsSummaryBody').hide();
+                $('#measurementsSummaryContent').empty();
+
+                // 2. Extras seleccionados del producto anterior
+                selectedExtras = [];
+                tempSelectedExtras = [];
+                renderSelectedExtrasList();
+
+                // 3. Ajuste manual de precio (dependiente del contexto del producto)
+                $('#modalExtrasCost').val('0');
+
+                // 4. Reset visual de estado de medidas (se reconfigura en updateProductPreview)
+                $('#measurementsStatusBadge')
+                    .html('<i class="fas fa-exclamation-circle mr-1"></i>REQUISITO OBLIGATORIO')
+                    .css({'background': '#e65100', 'color': 'white', 'font-size': '11px', 'padding': '4px 8px'});
+                $('#btnMeasurementsText').text('Completar requisito: capturar medidas');
+                $('#btnOpenMeasurementsModal').css({'background': '#0d47a1', 'border-color': '#0d47a1'});
+            }
+
+            // D4: RESET TOTAL DE ESTADO DEL MODAL
+            function resetProductModal(skipSelect2Reset = false) {
+                // === RESET SECCIÓN PRODUCTO ===
+                if (!skipSelect2Reset) {
+                    $('#modalProductSelect').val(null).trigger('change.select2');
+                }
                 $('#productPreviewName').text('-');
                 $('#productPreviewSku').text('-');
                 $('#productPreviewImage').attr('src', '{{ asset('img/no-image.png') }}');
@@ -2481,7 +2902,7 @@
                 $('#modalEmbroideryText').val('');
                 $('#modalExtrasCost').val('0');
                 $('#modalCustomizationNotes').val('');
-                // Reset extras - Nueva estructura
+                // Reset extras del producto
                 $('#productExtrasSection').hide();
                 $('#selectedExtrasList').empty().hide();
                 $('#noExtrasSelectedMsg').show();
@@ -2492,11 +2913,30 @@
                 $('#modalQuantity').val(1);
                 $('#modalVariantSelect').empty().append('<option value="">-- Producto base --</option>');
                 $('#variantGroup').hide();
-                $('#addProductBtn').prop('disabled', true).text('Agregar al Pedido');
+
+                // === D4: RESET VARIABLES DE ESTADO ===
                 selectedProduct = null;
                 modalBasePrice = 0;
-                // Reset modo edición
                 editingItemIndex = null;
+
+                // === D4: RESET SECCIÓN EXTRAS-ONLY (delegado a función consolidada) ===
+                resetExtrasOnlySelection();
+                // Reset tabla a estado inicial (carga diferida)
+                $('#extrasOnlyTableBody').html(`
+                    <tr>
+                        <td colspan="3" class="text-center py-4 text-muted">
+                            <i class="fas fa-box-open fa-2x mb-2 d-block"></i>
+                            Seleccione "Solo Extras" para cargar
+                        </td>
+                    </tr>
+                `);
+
+                // === D4: RESET ESTADO DEL MODAL ===
+                modalState.intent = null;
+                modalState.previousState = null;
+
+                // Reset botón
+                $('#addProductBtn').prop('disabled', true).html('<i class="fas fa-plus mr-1"></i> Agregar al Pedido');
             }
 
             // Variable para trackear precio base
@@ -2559,9 +2999,26 @@
             });
 
             // ==========================================
-            // AGREGAR PRODUCTO AL PEDIDO
+            // AGREGAR PRODUCTO AL PEDIDO (D3: según estado del modal)
             // ==========================================
             $('#addProductBtn').on('click', function() {
+                // D3: Comportamiento según estado del modal
+                if (modalState.current === MODAL_STATES.ADDING_EXTRAS_ONLY) {
+                    // D5: Modo solo extras
+                    if (extrasOnlySelected.length === 0) {
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Sin extras seleccionados',
+                            text: 'Seleccione al menos un extra para continuar',
+                            confirmButtonColor: '#7f00ff'
+                        });
+                        return;
+                    }
+                    addExtrasOnlyToOrder();
+                    return;
+                }
+
+                // Flujo normal: ADDING_PRODUCT o EDITING
                 if (!selectedProduct) return;
 
                 // === VALIDACIÓN PREVIA: PRECIO ===
@@ -2584,6 +3041,57 @@
                 // Agregar producto directamente
                 addProductToOrder();
             });
+
+            // D5: Función para agregar solo extras (sin producto)
+            function addExtrasOnlyToOrder() {
+                const notes = $('#extrasOnlyNotes').val().trim();
+                const totalExtras = extrasOnlySelected.reduce((sum, e) => sum + e.price, 0);
+
+                // Crear item especial de tipo "extras_only"
+                const newItem = {
+                    index: itemIndex++,
+                    product_id: null,              // Sin producto
+                    product_variant_id: null,
+                    product_name: 'Extras Adicionales',
+                    variant_display: null,
+                    variant_sku: null,
+                    image_url: null,
+                    quantity: 1,
+                    unit_price: totalExtras,
+                    is_customized: true,           // Marcar como personalizado
+                    embroidery_text: '',
+                    extras_cost: 0,
+                    customization_notes: notes,
+                    extras: extrasOnlySelected.map(e => ({
+                        id: e.id,
+                        name: e.name,
+                        price: e.price
+                    })),
+                    measurements: null,
+                    item_type: 'extras_only'       // Tipo especial para identificar
+                };
+
+                orderItems.push(newItem);
+                renderItemsTable();
+                updateHiddenInputs();
+                calculateTotals();
+
+                // Cerrar modal y notificar
+                $('#addProductModal').modal('hide');
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Extras agregados',
+                    text: `${extrasOnlySelected.length} extra(s) por $${totalExtras.toFixed(2)}`,
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 2500
+                });
+
+                // Reset
+                resetProductModal();
+            }
 
             // Función separada para agregar/actualizar producto
             function addProductToOrder() {
@@ -2706,6 +3214,7 @@
                 updateHiddenInputs();
                 calculateTotals();
                 calculateMinimumDate();
+                updateReadinessIndicator();
 
                 $('#addProductModal').modal('hide');
                 resetProductModal();
@@ -2741,7 +3250,50 @@
                     const subtotal = item.quantity * item.unit_price;
                     const leadTimeDays = item.lead_time || 0;
 
-                    // === CONSTRUCCIÓN DE BADGES POR FILAS ===
+                    // D5: Renderizado especial para items de tipo "extras_only"
+                    if (item.item_type === 'extras_only') {
+                        // Construir lista de extras
+                        let extrasListHtml = '';
+                        if (item.extras && item.extras.length > 0) {
+                            const extrasList = item.extras.map(e => `<li>${e.name} (+$${e.price.toFixed(2)})</li>`).join('');
+                            extrasListHtml = `<ul class="mb-0 mt-1 pl-3" style="font-size: 0.9rem;">${extrasList}</ul>`;
+                        }
+
+                        // Notas
+                        let notesRow = '';
+                        if (item.customization_notes) {
+                            notesRow = `<div class="mt-1" style="font-size: 0.95rem;"><strong>Notas:</strong> ${item.customization_notes}</div>`;
+                        }
+
+                        $tbody.append(`
+                            <tr data-index="${item.index}" style="background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);">
+                                <td class="text-center">
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto" style="width: 50px; height: 50px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                                        <i class="fas fa-plus-circle fa-lg text-white"></i>
+                                    </div>
+                                </td>
+                                <td>
+                                    <strong style="font-size: 1.05rem; color: #2e7d32;">
+                                        <i class="fas fa-plus-circle mr-1"></i> Extras Adicionales
+                                    </strong>
+                                    <span class="badge ml-1" style="background: #11998e; color: white; font-size: 10px;">POST-VENTA</span>
+                                    ${extrasListHtml}
+                                    ${notesRow}
+                                </td>
+                                <td class="text-center text-muted">-</td>
+                                <td class="text-center text-muted">-</td>
+                                <td class="font-weight-bold text-success" style="font-size: 1.05rem;">
+                                    $${subtotal.toFixed(2)}
+                                </td>
+                                <td class="text-nowrap">
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn" data-index="${item.index}" title="Eliminar"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>
+                        `);
+                        return; // Continuar con el siguiente item
+                    }
+
+                    // === RENDERIZADO NORMAL PARA PRODUCTOS ===
                     // Variante
                     const variantText = item.variant_display ?
                         `<small class="text-muted d-block">${item.variant_display}</small>` : '';
@@ -2837,6 +3389,7 @@
                 updateHiddenInputs();
                 calculateTotals();
                 calculateMinimumDate();
+                updateReadinessIndicator();
             });
 
             // ==========================================
@@ -3052,9 +3605,9 @@
                 $container.empty();
 
                 orderItems.forEach((item, idx) => {
-                    // Campos base del ítem
+                    // D5: Campos base del ítem (incluyendo item_type para extras_only)
                     $container.append(`
-                        <input type="hidden" name="items[${idx}][product_id]" value="${item.product_id}">
+                        <input type="hidden" name="items[${idx}][product_id]" value="${item.product_id || ''}">
                         <input type="hidden" name="items[${idx}][product_variant_id]" value="${item.product_variant_id || ''}">
                         <input type="hidden" name="items[${idx}][quantity]" value="${item.quantity}">
                         <input type="hidden" name="items[${idx}][unit_price]" value="${item.unit_price}">
@@ -3062,11 +3615,13 @@
                         <input type="hidden" name="items[${idx}][customization_notes]" value="${item.customization_notes || ''}">
                         <input type="hidden" name="items[${idx}][extras_cost]" value="${item.extras_cost || 0}">
                         <input type="hidden" name="items[${idx}][is_customized]" value="${item.is_customized ? 1 : 0}">
+                        <input type="hidden" name="items[${idx}][item_type]" value="${item.item_type || 'product'}">
                     `);
 
-                    // Extras seleccionados (de BD)
-                    if (item.selected_extras && item.selected_extras.length > 0) {
-                        item.selected_extras.forEach((extra, extIdx) => {
+                    // D5: Extras - puede venir de selected_extras (producto) o extras (extras_only)
+                    const extrasArray = item.selected_extras || item.extras || [];
+                    if (extrasArray.length > 0) {
+                        extrasArray.forEach((extra, extIdx) => {
                             $container.append(`
                                 <input type="hidden" name="items[${idx}][extras][${extIdx}][id]" value="${extra.id}">
                                 <input type="hidden" name="items[${idx}][extras][${extIdx}][name]" value="${extra.name}">
@@ -3122,6 +3677,107 @@
 
             $('#discount').on('input', calculateTotals);
             $('#requiresInvoice').on('change', calculateTotals);
+
+            // ==========================================
+            // INDICADOR DE ESTADO OPERATIVO (READY/PENDING)
+            // ==========================================
+            function updateReadinessIndicator() {
+                const $indicator = $('#orderReadinessIndicator');
+                const $content = $('#readinessContent');
+
+                // Si no hay items, ocultar indicador
+                if (orderItems.length === 0) {
+                    $indicator.hide();
+                    return;
+                }
+
+                // Analizar items para detectar pendientes
+                let pendingItems = [];
+
+                orderItems.forEach(function(item) {
+                    // Items que requieren medidas pero no las tienen
+                    if (item.requires_measurements && !item.measurements) {
+                        pendingItems.push({
+                            type: 'measurements',
+                            product: item.product_name,
+                            message: 'Requiere medidas'
+                        });
+                    }
+
+                    // Items personalizados (diseño) - en captura inicial no hay aprobación,
+                    // pero sí podemos indicar que requerirá aprobación post-creación
+                    if (item.personalization_type === 'design') {
+                        pendingItems.push({
+                            type: 'design',
+                            product: item.product_name,
+                            message: 'Diseño pendiente de aprobación'
+                        });
+                    }
+                });
+
+                // Determinar estado
+                const isReady = pendingItems.length === 0;
+                const hasMeasurementsPending = pendingItems.some(p => p.type === 'measurements');
+                const hasDesignPending = pendingItems.some(p => p.type === 'design');
+
+                // Actualizar clases
+                $indicator
+                    .removeClass('status-ready status-pending status-empty')
+                    .addClass(isReady ? 'status-ready' : 'status-pending')
+                    .show();
+
+                // Construir contenido
+                let html = '';
+
+                if (isReady) {
+                    html = `
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-check-circle readiness-icon" style="color: #28a745;"></i>
+                            <div>
+                                <div class="readiness-title" style="color: #155724;">Pedido listo para crear</div>
+                                <p class="readiness-subtitle mb-0" style="color: #155724;">
+                                    Todos los datos de captura están completos.
+                                </p>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    let pendingList = '';
+
+                    if (hasMeasurementsPending) {
+                        const measurementItems = pendingItems
+                            .filter(p => p.type === 'measurements')
+                            .map(p => p.product)
+                            .join(', ');
+                        pendingList += `<li><strong>Medidas pendientes:</strong> ${measurementItems}</li>`;
+                    }
+
+                    if (hasDesignPending) {
+                        const designItems = pendingItems
+                            .filter(p => p.type === 'design')
+                            .map(p => p.product)
+                            .join(', ');
+                        pendingList += `<li><strong>Requiere aprobación de diseño:</strong> ${designItems}</li>`;
+                    }
+
+                    html = `
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-exclamation-triangle readiness-icon" style="color: #856404;"></i>
+                            <div>
+                                <div class="readiness-title" style="color: #856404;">Pedido incompleto</div>
+                                <p class="readiness-subtitle mb-0" style="color: #856404;">
+                                    Información pendiente:
+                                </p>
+                                <ul class="readiness-pending-list mb-0" style="color: #856404;">
+                                    ${pendingList}
+                                </ul>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                $content.html(html);
+            }
 
             // ==========================================
             // LÓGICA DE PAGO
@@ -3212,17 +3868,26 @@
             });
 
             // ==========================================
-            // MODALES - FOCUS Y RESET
+            // MODALES - FOCUS Y RESET (D3 + D4)
             // ==========================================
             $('#addProductModal').on('show.bs.modal', function() {
-                // NO resetear si estamos editando un item existente
+                // D4: Reset total si es nuevo (no editando)
                 if (editingItemIndex === null) {
-                    resetProductModal();
+                    resetProductModal(); // D4: Reset completo
+                    // D3: Establecer estado inicial según contexto
+                    if (modalState.context === 'post_sale') {
+                        setModalState(MODAL_STATES.INTENT_SELECTION);
+                    } else {
+                        setModalState(MODAL_STATES.ADDING_PRODUCT, 'product');
+                    }
+                } else {
+                    // Editando: ir directo a producto
+                    setModalState(MODAL_STATES.EDITING);
                 }
             });
             $('#addProductModal').on('shown.bs.modal', function() {
-                // Solo abrir Select2 en modo CREATE (no en EDIT)
-                if (editingItemIndex === null) {
+                // Solo abrir Select2 en modo ADDING_PRODUCT y no editando
+                if (modalState.current === MODAL_STATES.ADDING_PRODUCT && editingItemIndex === null) {
                     setTimeout(function() {
                         $('#modalProductSelect').select2('open');
                         setTimeout(function() {
@@ -3231,6 +3896,155 @@
                     }, 150);
                 }
             });
+            $('#addProductModal').on('hidden.bs.modal', function() {
+                // D4: Reset TOTAL al cerrar modal (elimina estados fantasma)
+                resetProductModal();
+                setModalState(MODAL_STATES.IDLE);
+            });
+
+            // ==========================================
+            // D2: HANDLERS SELECTOR DE INTENCIÓN
+            // ==========================================
+            $('#btnIntentProduct').on('click', function() {
+                setModalState(MODAL_STATES.ADDING_PRODUCT, 'product');
+                // Abrir Select2 después de transición
+                setTimeout(function() {
+                    $('#modalProductSelect').select2('open');
+                }, 200);
+            });
+
+            $('#btnIntentExtrasOnly').on('click', function() {
+                setModalState(MODAL_STATES.ADDING_EXTRAS_ONLY, 'extras_only');
+                // Cargar todos los extras disponibles
+                loadAllExtrasForSelection();
+            });
+
+            $('#btnBackToIntent').on('click', function() {
+                // FASE 5: Volver al selector de intención
+                // 1. Cambiar estado PRIMERO (para que updateAddButtonState tenga contexto correcto)
+                setModalState(MODAL_STATES.INTENT_SELECTION);
+                // 2. Limpiar selección de extras (después del cambio de estado)
+                resetExtrasOnlySelection();
+                // 3. Forzar actualización del botón con estado ya cambiado
+                updateAddButtonState();
+            });
+
+            // ==========================================
+            // D5: EXTRAS SIN PRODUCTO - FUNCIONES
+            // ==========================================
+            let extrasOnlySelected = []; // Extras seleccionados en modo solo-extras
+
+            function loadAllExtrasForSelection() {
+                const $tbody = $('#extrasOnlyTableBody');
+                $tbody.html(`
+                    <tr>
+                        <td colspan="3" class="text-center py-4">
+                            <i class="fas fa-spinner fa-spin fa-2x text-success"></i>
+                            <p class="mt-2 mb-0 text-muted">Cargando extras disponibles...</p>
+                        </td>
+                    </tr>
+                `);
+
+                $.ajax({
+                    url: '{{ route("admin.product-extras.all-active") }}',
+                    method: 'GET',
+                    dataType: 'json',
+                    success: function(response) {
+                        const extras = response.extras || [];
+                        if (extras.length === 0) {
+                            $tbody.html(`
+                                <tr>
+                                    <td colspan="3" class="text-center py-4 text-muted">
+                                        <i class="fas fa-box-open fa-2x mb-2 d-block"></i>
+                                        No hay extras disponibles
+                                    </td>
+                                </tr>
+                            `);
+                            return;
+                        }
+
+                        $tbody.empty();
+                        extras.forEach(extra => {
+                            const rowHtml = `
+                                <tr data-extra-id="${extra.id}" data-name="${extra.name}" data-price="${extra.price_addition}">
+                                    <td class="text-center">
+                                        <input type="checkbox" class="extras-only-checkbox">
+                                    </td>
+                                    <td>${extra.name}</td>
+                                    <td class="text-right text-success font-weight-bold">+$${parseFloat(extra.price_addition).toFixed(2)}</td>
+                                </tr>
+                            `;
+                            $tbody.append(rowHtml);
+                        });
+                    },
+                    error: function() {
+                        $tbody.html(`
+                            <tr>
+                                <td colspan="3" class="text-center py-4 text-danger">
+                                    <i class="fas fa-exclamation-triangle fa-2x mb-2 d-block"></i>
+                                    Error al cargar extras
+                                </td>
+                            </tr>
+                        `);
+                    }
+                });
+            }
+
+            // Checkbox en tabla de extras-only
+            $(document).on('change', '.extras-only-checkbox', function() {
+                const $row = $(this).closest('tr');
+                const extraId = $row.data('extra-id');
+                const extraName = $row.data('name');
+                const extraPrice = parseFloat($row.data('price')) || 0;
+
+                if ($(this).is(':checked')) {
+                    if (!extrasOnlySelected.some(e => e.id === extraId)) {
+                        extrasOnlySelected.push({ id: extraId, name: extraName, price: extraPrice });
+                    }
+                } else {
+                    extrasOnlySelected = extrasOnlySelected.filter(e => e.id !== extraId);
+                }
+
+                updateExtrasOnlySummary();
+                updateAddButtonState();
+            });
+
+            // Seleccionar todos extras-only
+            $('#selectAllExtrasOnly').on('change', function() {
+                const isChecked = $(this).is(':checked');
+                $('#extrasOnlyTableBody tr:visible').each(function() {
+                    const $checkbox = $(this).find('.extras-only-checkbox');
+                    if ($checkbox.length && $checkbox.prop('checked') !== isChecked) {
+                        $checkbox.prop('checked', isChecked).trigger('change');
+                    }
+                });
+            });
+
+            // Buscador de extras-only
+            $('#extrasOnlySearchInput').on('input', function() {
+                const term = $(this).val().toLowerCase().trim();
+                $('#extrasOnlyTableBody tr').each(function() {
+                    const name = ($(this).data('name') || '').toLowerCase();
+                    $(this).toggle(name.includes(term));
+                });
+            });
+
+            function updateExtrasOnlySummary() {
+                const count = extrasOnlySelected.length;
+                const total = extrasOnlySelected.reduce((sum, e) => sum + e.price, 0);
+                $('#extrasOnlySelectedCount').text(count);
+                $('#extrasOnlyTotal').text('$' + total.toFixed(2));
+            }
+
+            function resetExtrasOnlySelection() {
+                extrasOnlySelected = [];
+                $('#extrasOnlySearchInput').val('');
+                $('#extrasOnlyNotes').val('');
+                $('#selectAllExtrasOnly').prop('checked', false);
+                // Desmarcar checkboxes individuales (evita estados visuales residuales)
+                $('.extras-only-checkbox').prop('checked', false);
+                updateExtrasOnlySummary();
+            }
 
             $('#quickClientModal').on('shown.bs.modal', function() {
                 setTimeout(function() {

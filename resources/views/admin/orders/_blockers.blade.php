@@ -74,7 +74,7 @@
             <i class="fas fa-hand-paper mr-2"></i>
             <strong style="font-size: 16px;">Este pedido NO puede iniciar producción</strong>
             @if(request('from') === 'queue')
-                <span class="badge badge-light ml-2" style="font-size: 11px;">Desde Cola de Producción</span>
+                <span class="badge badge-light ml-2" style="font-size: 14px;">Desde Cola de Producción</span>
             @endif
         </div>
         <div class="card-body" style="font-size: 15px;">
@@ -212,7 +212,7 @@
 
                         {{-- Nota sobre extras con inventario --}}
                         @if($order->hasExtrasWithInventory())
-                            <div class="p-2 rounded mb-2" style="background: #e3f2fd; font-size: 13px; border-left: 3px solid #1976d2;">
+                            <div class="p-2 rounded mb-2" style="background: #e3f2fd; font-size: 14px; border-left: 3px solid #1976d2;">
                                 <i class="fas fa-info-circle mr-1" style="color: #1976d2;"></i>
                                 <span style="color: #0d47a1;">
                                     <strong>Nota:</strong> Este pedido incluye extras que consumen materiales del inventario
@@ -223,7 +223,7 @@
 
                         {{-- ACCIONES DISPONIBLES --}}
                         <div class="mt-3 pt-3 border-top">
-                            <p class="mb-2" style="font-size: 13px; color: #616161; font-weight: 600;">
+                            <p class="mb-2" style="font-size: 14px; color: #495057; font-weight: 600;">
                                 <i class="fas fa-hand-point-right mr-1"></i> ACCIONES DISPONIBLES:
                             </p>
                             <div class="d-flex flex-wrap" style="gap: 10px;">
@@ -253,7 +253,7 @@
                                 </button>
                             </div>
 
-                            <p class="mt-3 mb-0" style="font-size: 13px; color: #757575;">
+                            <p class="mt-3 mb-0" style="font-size: 14px; color: #495057;">
                                 <i class="fas fa-lightbulb mr-1" style="color: #ffc107;"></i>
                                 <strong>Consejo:</strong> Una vez que el inventario esté disponible, vuelva a la
                                 <a href="{{ route('admin.production.queue') }}" style="color: #1565c0; font-weight: 600;">Cola de Producción</a>
