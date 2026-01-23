@@ -93,8 +93,20 @@
 
     {{-- TABLA PRINCIPAL --}}
     <div class="card">
+        <div class="card-header py-2 d-flex justify-content-between align-items-center">
+            <span class="font-weight-bold">Listado de Materiales</span>
+            {{-- Toggle de unidades --}}
+            <div class="btn-group btn-group-sm unit-toggle" role="group">
+                <button type="button" class="btn btn-primary active" data-unit-mode="consumption">
+                    Consumo
+                </button>
+                <button type="button" class="btn btn-outline-primary" data-unit-mode="base">
+                    Compra
+                </button>
+            </div>
+        </div>
         <div class="card-body p-0">
-            <table class="table table-hover table-sm mb-0" style="font-size: 16px;">
+            <table class="table table-hover table-sm mb-0 materials-table" style="font-size: 16px;">
                 <thead style="background-color: #000; color: #fff;">
                     <tr>
                         <th>Material</th>
@@ -114,10 +126,13 @@
                             $reserved = $variant->reserved_stock;
                             $available = $variant->available_stock;
                             $isLow = $variant->current_stock <= $variant->min_stock_alert;
-                            // Stock se almacena en unidad de consumo (después de conversión)
-                            $unit = $variant->material?->consumptionUnit?->symbol
-                                  ?? $variant->material?->baseUnit?->symbol
-                                  ?? '';
+                            // Datos para conversión de unidades
+                            $material = $variant->material;
+                            $conversionFactor = $material?->conversion_factor ?? 1;
+                            $unitConsumption = $material?->consumptionUnit?->symbol
+                                            ?? $material?->baseUnit?->symbol
+                                            ?? '';
+                            $unitBase = $material?->baseUnit?->symbol ?? $unitConsumption;
                         @endphp
                         <tr class="{{ $isLow ? 'table-warning' : '' }}">
                             <td>
@@ -132,20 +147,36 @@
                                     <span class="text-muted">-</span>
                                 @endif
                             </td>
-                            <td class="text-right">{{ number_format($variant->current_stock, 2) }} {{ $unit }}
+                            <td class="text-right unit-convertible"
+                                data-qty="{{ $variant->current_stock }}"
+                                data-factor="{{ $conversionFactor }}"
+                                data-unit-consumption="{{ $unitConsumption }}"
+                                data-unit-base="{{ $unitBase }}">
+                                <span class="qty-value">{{ number_format($variant->current_stock, 2) }}</span>
+                                <span class="unit-symbol">{{ $unitConsumption }}</span>
                             </td>
                             <td class="text-right">
                                 @if ($reserved > 0)
-                                    <span style="color: #fd7e14; font-weight: bold;">{{ number_format($reserved, 2) }} <i
-                                            class="fas fa-lock ml-1"></i></span>
+                                    <span style="color: #fd7e14; font-weight: bold;" class="unit-convertible"
+                                        data-qty="{{ $reserved }}"
+                                        data-factor="{{ $conversionFactor }}"
+                                        data-unit-consumption="{{ $unitConsumption }}"
+                                        data-unit-base="{{ $unitBase }}">
+                                        <span class="qty-value">{{ number_format($reserved, 2) }}</span>
+                                        <i class="fas fa-lock ml-1"></i>
+                                    </span>
                                 @else
                                     <span class="text-muted">0</span>
                                 @endif
                             </td>
                             <td class="text-right">
-                                <strong
-                                    class="{{ $available <= $variant->min_stock_alert ? 'text-danger' : 'text-success' }}">
-                                    {{ number_format($available, 2) }} {{ $unit }}
+                                <strong class="{{ $available <= $variant->min_stock_alert ? 'text-danger' : 'text-success' }} unit-convertible"
+                                    data-qty="{{ $available }}"
+                                    data-factor="{{ $conversionFactor }}"
+                                    data-unit-consumption="{{ $unitConsumption }}"
+                                    data-unit-base="{{ $unitBase }}">
+                                    <span class="qty-value">{{ number_format($available, 2) }}</span>
+                                    <span class="unit-symbol">{{ $unitConsumption }}</span>
                                 </strong>
                             </td>
                             <td class="text-right">${{ number_format($variant->current_value, 2) }}</td>
@@ -184,4 +215,62 @@
             </div>
         @endif
     </div>
+@stop
+
+@section('js')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // =====================================================
+    // UNIT TOGGLE - Conversión de unidades en tiempo real
+    // =====================================================
+    document.querySelectorAll('.unit-toggle').forEach(function(toggleGroup) {
+        const container = toggleGroup.closest('.card') || document;
+        const buttons = toggleGroup.querySelectorAll('[data-unit-mode]');
+
+        buttons.forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const mode = this.dataset.unitMode;
+
+                // Actualizar estado visual de botones
+                buttons.forEach(b => {
+                    b.classList.remove('btn-primary', 'active');
+                    b.classList.add('btn-outline-primary');
+                });
+                this.classList.remove('btn-outline-primary');
+                this.classList.add('btn-primary', 'active');
+
+                // Convertir todas las celdas
+                container.querySelectorAll('.unit-convertible').forEach(function(el) {
+                    const qty = parseFloat(el.dataset.qty) || 0;
+                    const factor = parseFloat(el.dataset.factor) || 1;
+                    const unitConsumption = el.dataset.unitConsumption || 'u';
+                    const unitBase = el.dataset.unitBase || unitConsumption;
+
+                    let displayQty, displayUnit;
+
+                    if (mode === 'base' && factor > 1) {
+                        displayQty = qty / factor;
+                        displayUnit = unitBase;
+                    } else {
+                        displayQty = qty;
+                        displayUnit = unitConsumption;
+                    }
+
+                    const qtyEl = el.querySelector('.qty-value');
+                    const unitEl = el.querySelector('.unit-symbol');
+                    if (qtyEl) qtyEl.textContent = formatNumber(displayQty);
+                    if (unitEl) unitEl.textContent = displayUnit;
+                });
+            });
+        });
+    });
+
+    function formatNumber(num) {
+        return num.toLocaleString('es-MX', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+});
+</script>
 @stop

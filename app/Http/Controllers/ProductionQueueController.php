@@ -218,14 +218,20 @@ class ProductionQueueController extends Controller
 
                     $available = $currentStock - $totalReserved;
 
+                    // Datos para conversión de unidades en frontend
+                    $material = $materialVariant->material;
+                    $conversionFactor = $material->conversion_factor ?? 1;
+                    $consumptionUnit = $material->consumptionUnit->symbol ?? $material->baseUnit->symbol ?? 'u';
+                    $baseUnit = $material->baseUnit->symbol ?? $consumptionUnit;
+
                     $requirements[$variantId] = [
                         'material_variant_id' => $variantId,
-                        'material_name' => $materialVariant->material->name ?? 'N/A',
+                        'material_name' => $material->name ?? 'N/A',
                         'variant_color' => $materialVariant->color,
                         'variant_sku' => $materialVariant->sku,
-                        'unit' => $materialVariant->material->consumptionUnit->symbol
-                            ?? $materialVariant->material->baseUnit->symbol
-                            ?? 'u',
+                        'unit' => $consumptionUnit,
+                        'unit_base' => $baseUnit,
+                        'conversion_factor' => $conversionFactor,
                         'required' => 0,
                         'current_stock' => $currentStock,
                         'total_reserved' => $totalReserved,

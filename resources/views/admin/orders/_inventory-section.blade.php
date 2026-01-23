@@ -88,6 +88,12 @@
                         $variantIdentifier = $productVariant;
                     }
 
+                    // Datos para conversión de unidades
+                    $materialModel = $variant->material;
+                    $conversionFactor = $materialModel?->conversion_factor ?? 1;
+                    $unitConsumption = $materialModel?->consumptionUnit?->symbol ?? $materialModel?->baseUnit?->symbol ?? '';
+                    $unitBase = $materialModel?->baseUnit?->symbol ?? $unitConsumption;
+
                     $materials[] = [
                         'variant_id' => $variant->id,
                         'material_id' => $materialId,
@@ -98,7 +104,9 @@
                         'variant_sku' => $variant->sku,
                         'display_name' => $variant->display_name,
                         'required_qty' => $requiredQty,
-                        'unit' => $variant->material?->consumptionUnit?->symbol ?? $variant->material?->baseUnit?->symbol ?? '',
+                        'unit' => $unitConsumption,
+                        'unit_base' => $unitBase,
+                        'conversion_factor' => $conversionFactor,
                         'unit_cost' => $unitCost,
                         'line_cost' => $lineCost,
                         'status' => $status,
@@ -115,6 +123,7 @@
             $groupedMaterials = collect($materials)->groupBy('material_name')->map(function($variants, $materialName) {
                 $groupCost = $variants->sum('line_cost');
                 $hasGroupCost = $variants->contains(fn($v) => $v['line_cost'] !== null);
+                $first = $variants->first();
 
                 return [
                     'material_name' => $materialName,
@@ -122,7 +131,9 @@
                     'variant_count' => $variants->count(),
                     'total_qty' => $variants->sum('required_qty'),
                     'total_cost' => $hasGroupCost ? $groupCost : null,
-                    'unit' => $variants->first()['unit'] ?? '',
+                    'unit' => $first['unit'] ?? '',
+                    'unit_base' => $first['unit_base'] ?? $first['unit'] ?? '',
+                    'conversion_factor' => $first['conversion_factor'] ?? 1,
                     'all_consumed' => $variants->every(fn($v) => $v['status'] === 'consumed'),
                     'all_reserved' => $variants->every(fn($v) => in_array($v['status'], ['reserved', 'consumed'])),
                 ];
@@ -317,7 +328,16 @@
             <i class="fas fa-boxes mr-2"></i> Inventario del Pedido
             <span class="ml-2 font-weight-normal" style="font-size: 14px;">(detalle por producto)</span>
         </h5>
-        <div>
+        <div class="d-flex align-items-center">
+            {{-- Toggle de unidades --}}
+            <div class="btn-group btn-group-sm unit-toggle mr-2" role="group">
+                <button type="button" class="btn btn-primary active" data-unit-mode="consumption">
+                    Consumo
+                </button>
+                <button type="button" class="btn btn-outline-primary" data-unit-mode="base">
+                    Compra
+                </button>
+            </div>
             <button type="button" class="btn btn-sm btn-light px-2" id="btn-expand-all" title="Expandir todo">
                 <i class="fas fa-expand-alt"></i>
             </button>
@@ -455,9 +475,13 @@
                                                             <span class="inventory-material-variant">Variante #{{ $loop->iteration }}</span>
                                                         @endif
                                                     </td>
-                                                    <td class="text-right">
-                                                        <span class="inventory-qty">{{ number_format($material['required_qty'], 2) }}</span>
-                                                        <span class="inventory-unit ml-1">{{ $material['unit'] }}</span>
+                                                    <td class="text-right unit-convertible"
+                                                        data-qty="{{ $material['required_qty'] }}"
+                                                        data-factor="{{ $material['conversion_factor'] ?? 1 }}"
+                                                        data-unit-consumption="{{ $material['unit'] }}"
+                                                        data-unit-base="{{ $material['unit_base'] ?? $material['unit'] }}">
+                                                        <span class="inventory-qty qty-value">{{ number_format($material['required_qty'], 2) }}</span>
+                                                        <span class="inventory-unit ml-1 unit-symbol">{{ $material['unit'] }}</span>
                                                     </td>
                                                     <td class="text-center">
                                                         <span class="badge badge-{{ $material['status_color'] }}" style="font-size: 13px;">
@@ -491,9 +515,13 @@
                                                         <span class="inventory-material-variant"> — {{ $material['variant_identifier'] }}</span>
                                                     @endif
                                                 </td>
-                                                <td class="text-right">
-                                                    <span class="inventory-qty">{{ number_format($material['required_qty'], 2) }}</span>
-                                                    <span class="inventory-unit ml-1">{{ $material['unit'] }}</span>
+                                                <td class="text-right unit-convertible"
+                                                    data-qty="{{ $material['required_qty'] }}"
+                                                    data-factor="{{ $material['conversion_factor'] ?? 1 }}"
+                                                    data-unit-consumption="{{ $material['unit'] }}"
+                                                    data-unit-base="{{ $material['unit_base'] ?? $material['unit'] }}">
+                                                    <span class="inventory-qty qty-value">{{ number_format($material['required_qty'], 2) }}</span>
+                                                    <span class="inventory-unit ml-1 unit-symbol">{{ $material['unit'] }}</span>
                                                 </td>
                                                 <td class="text-center">
                                                     <span class="badge badge-{{ $material['status_color'] }}" style="font-size: 13px;">
@@ -584,6 +612,58 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // =====================================================
+    // UNIT TOGGLE - Conversión de unidades en tiempo real
+    // =====================================================
+    document.querySelectorAll('.card-section-inventario .unit-toggle').forEach(function(toggleGroup) {
+        const container = toggleGroup.closest('.card');
+        const buttons = toggleGroup.querySelectorAll('[data-unit-mode]');
+
+        buttons.forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const mode = this.dataset.unitMode;
+
+                // Actualizar estado visual de botones
+                buttons.forEach(b => {
+                    b.classList.remove('btn-primary', 'active');
+                    b.classList.add('btn-outline-primary');
+                });
+                this.classList.remove('btn-outline-primary');
+                this.classList.add('btn-primary', 'active');
+
+                // Convertir todas las celdas
+                container.querySelectorAll('.unit-convertible').forEach(function(el) {
+                    const qty = parseFloat(el.dataset.qty) || 0;
+                    const factor = parseFloat(el.dataset.factor) || 1;
+                    const unitConsumption = el.dataset.unitConsumption || 'u';
+                    const unitBase = el.dataset.unitBase || unitConsumption;
+
+                    let displayQty, displayUnit;
+
+                    if (mode === 'base' && factor > 1) {
+                        displayQty = qty / factor;
+                        displayUnit = unitBase;
+                    } else {
+                        displayQty = qty;
+                        displayUnit = unitConsumption;
+                    }
+
+                    const qtyEl = el.querySelector('.qty-value');
+                    const unitEl = el.querySelector('.unit-symbol');
+                    if (qtyEl) qtyEl.textContent = formatNumber(displayQty);
+                    if (unitEl) unitEl.textContent = displayUnit;
+                });
+            });
+        });
+    });
+
+    function formatNumber(num) {
+        return num.toLocaleString('es-MX', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
 });
 </script>
 @endif
