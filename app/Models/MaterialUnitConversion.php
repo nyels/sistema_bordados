@@ -14,9 +14,24 @@ class MaterialUnitConversion extends Model
         'to_unit_id',
         'conversion_factor',
         'label',
+        'conversion_mode',
         'intermediate_unit_id',
         'intermediate_qty',
     ];
+
+    /**
+     * Modos de conversión disponibles
+     */
+    const MODE_MANUAL = 'manual';
+    const MODE_POR_CONTENIDO = 'por_contenido';
+
+    public static function getModes(): array
+    {
+        return [
+            self::MODE_MANUAL => 'Manual (Directa)',
+            self::MODE_POR_CONTENIDO => 'Por Contenido',
+        ];
+    }
 
     protected $casts = [
         'conversion_factor' => 'decimal:4',

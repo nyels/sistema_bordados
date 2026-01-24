@@ -476,6 +476,8 @@
                                                         @endif
                                                     </td>
                                                     <td class="text-right unit-convertible"
+                                                        data-material-id="{{ $material['material_id'] }}"
+                                                        data-material-name="{{ $material['material_name'] }}"
                                                         data-qty="{{ $material['required_qty'] }}"
                                                         data-factor="{{ $material['conversion_factor'] ?? 1 }}"
                                                         data-unit-consumption="{{ $material['unit'] }}"
@@ -516,6 +518,8 @@
                                                     @endif
                                                 </td>
                                                 <td class="text-right unit-convertible"
+                                                    data-material-id="{{ $material['material_id'] }}"
+                                                    data-material-name="{{ $material['material_name'] }}"
                                                     data-qty="{{ $material['required_qty'] }}"
                                                     data-factor="{{ $material['conversion_factor'] ?? 1 }}"
                                                     data-unit-consumption="{{ $material['unit'] }}"
@@ -586,6 +590,9 @@
     </div>
 </div>
 
+{{-- Modal de conversiones de unidades --}}
+@include('partials._unit-conversion-modal')
+
 @if($hasMaterials)
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -614,48 +621,92 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // =====================================================
-    // UNIT TOGGLE - Conversión de unidades en tiempo real
+    // UNIT TOGGLE - Conversión con modal de selección
     // =====================================================
+    var inventoryAppliedConversions = {};
+
     document.querySelectorAll('.card-section-inventario .unit-toggle').forEach(function(toggleGroup) {
         const container = toggleGroup.closest('.card');
         const buttons = toggleGroup.querySelectorAll('[data-unit-mode]');
+        const btnConsumption = toggleGroup.querySelector('[data-unit-mode="consumption"]');
+        const btnCompra = toggleGroup.querySelector('[data-unit-mode="base"]');
 
-        buttons.forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                const mode = this.dataset.unitMode;
+        // Obtener materiales únicos (padres) de la sección
+        function getUniqueMaterials() {
+            const materialsMap = new Map();
+            container.querySelectorAll('[data-material-id]').forEach(function(el) {
+                const id = parseInt(el.dataset.materialId);
+                if (id > 0 && !materialsMap.has(id)) {
+                    // Usar data-material-name que contiene el nombre del material padre
+                    const name = el.dataset.materialName || 'Material #' + id;
+                    materialsMap.set(id, { id: id, name: name });
+                }
+            });
+            return Array.from(materialsMap.values());
+        }
 
-                // Actualizar estado visual de botones
-                buttons.forEach(b => {
+        // Click en Consumo: restaurar valores originales
+        if (btnConsumption) {
+            btnConsumption.addEventListener('click', function() {
+                buttons.forEach(function(b) {
                     b.classList.remove('btn-primary', 'active');
                     b.classList.add('btn-outline-primary');
                 });
                 this.classList.remove('btn-outline-primary');
                 this.classList.add('btn-primary', 'active');
 
-                // Convertir todas las celdas
+                inventoryAppliedConversions = {};
+
                 container.querySelectorAll('.unit-convertible').forEach(function(el) {
                     const qty = parseFloat(el.dataset.qty) || 0;
-                    const factor = parseFloat(el.dataset.factor) || 1;
                     const unitConsumption = el.dataset.unitConsumption || 'u';
-                    const unitBase = el.dataset.unitBase || unitConsumption;
-
-                    let displayQty, displayUnit;
-
-                    if (mode === 'base' && factor > 1) {
-                        displayQty = qty / factor;
-                        displayUnit = unitBase;
-                    } else {
-                        displayQty = qty;
-                        displayUnit = unitConsumption;
-                    }
 
                     const qtyEl = el.querySelector('.qty-value');
                     const unitEl = el.querySelector('.unit-symbol');
-                    if (qtyEl) qtyEl.textContent = formatNumber(displayQty);
-                    if (unitEl) unitEl.textContent = displayUnit;
+                    if (qtyEl) qtyEl.textContent = formatNumber(qty);
+                    if (unitEl) unitEl.textContent = unitConsumption;
                 });
             });
-        });
+        }
+
+        // Click en Compra: abrir modal
+        if (btnCompra) {
+            btnCompra.addEventListener('click', function() {
+                const materials = getUniqueMaterials();
+
+                if (materials.length === 0) {
+                    alert('No hay materiales en esta seccion');
+                    return;
+                }
+
+                openUnitConversionModal(materials, function(materialId, conversion) {
+                    inventoryAppliedConversions[materialId] = {
+                        factor: conversion.conversion_factor,
+                        unitSymbol: conversion.from_unit_symbol || conversion.label
+                    };
+
+                    buttons.forEach(function(b) {
+                        b.classList.remove('btn-primary', 'active');
+                        b.classList.add('btn-outline-primary');
+                    });
+                    btnCompra.classList.remove('btn-outline-primary');
+                    btnCompra.classList.add('btn-primary', 'active');
+
+                    // Aplicar conversión solo al material seleccionado
+                    container.querySelectorAll('[data-material-id="' + materialId + '"].unit-convertible').forEach(function(el) {
+                        const qty = parseFloat(el.dataset.qty) || 0;
+                        const factor = conversion.conversion_factor || 1;
+                        const displayQty = qty / factor;
+                        const displayUnit = conversion.from_unit_symbol || conversion.label;
+
+                        const qtyEl = el.querySelector('.qty-value');
+                        const unitEl = el.querySelector('.unit-symbol');
+                        if (qtyEl) qtyEl.textContent = formatNumber(displayQty);
+                        if (unitEl) unitEl.textContent = displayUnit;
+                    });
+                });
+            });
+        }
     });
 
     function formatNumber(num) {

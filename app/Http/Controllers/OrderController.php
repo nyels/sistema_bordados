@@ -100,6 +100,7 @@ class OrderController extends Controller
         }
 
         $kpis = [
+            'borradores' => Order::where('status', Order::STATUS_DRAFT)->count(),
             'para_producir' => $paraProducir,
             'bloqueados' => $bloqueados,
             'en_produccion' => Order::where('status', Order::STATUS_IN_PRODUCTION)->count(),
@@ -263,11 +264,16 @@ class OrderController extends Controller
             'cliente',
             'measurement',
             'items.product.primaryImage',
+            'items.product.productType',
+            // FASE X-A: Cargar materiales del BOM para ajuste pre-producción
+            'items.product.materials.material.category',
             'items.variant',
             'payments.receiver',
             'creator',
             'parentOrder',
             'annexOrders',
+            'postSaleOrders',
+            'relatedOrder',
         ]);
 
         // Determinar si puede agregar items anexos (confirmado o producción temprana)
@@ -699,6 +705,140 @@ class OrderController extends Controller
     {
         return $cliente->busto || $cliente->cintura || $cliente->cadera ||
                $cliente->alto_cintura || $cliente->largo || $cliente->largo_vestido;
+    }
+
+    // ========================================
+    // FASE Y: HISTORIAL DE MEDIDAS DEL CLIENTE
+    // ========================================
+
+    /**
+     * Obtener historial completo de medidas de un cliente.
+     * Incluye medidas de todos los pedidos anteriores + capturas manuales.
+     * Orden: más reciente primero.
+     */
+    public function getClientMeasurementHistory(Cliente $cliente)
+    {
+        $history = \App\Models\ClientMeasurementHistory::where('cliente_id', $cliente->id)
+            ->with(['order:id,order_number', 'orderItem:id,product_name', 'product:id,name', 'creator:id,name'])
+            ->orderBy('captured_at', 'desc')
+            ->get();
+
+        // Formatear para frontend
+        $formatted = $history->map(function ($record) {
+            $measurements = $record->measurements ?? [];
+            $measurementCount = count(array_filter($measurements, fn($v) => !empty($v) && $v !== '0'));
+
+            return [
+                'id' => $record->id,
+                'uuid' => $record->uuid,
+                'measurements' => $measurements,
+                'measurement_count' => $measurementCount,
+                'summary' => $record->summary,
+                'source' => $record->source,
+                'source_label' => $record->source_label,
+                'order_number' => $record->order?->order_number,
+                'product_name' => $record->orderItem?->product_name ?? $record->product?->name,
+                'captured_at' => $record->captured_at?->format('d/m/Y H:i'),
+                'captured_at_relative' => $record->captured_at?->diffForHumans(),
+                'created_by_name' => $record->creator?->name ?? 'Sistema',
+                'notes' => $record->notes,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $formatted,
+            'count' => $formatted->count(),
+        ]);
+    }
+
+    /**
+     * Obtener una medida específica del historial por ID.
+     */
+    public function getMeasurementHistoryById(Cliente $cliente, $historyId)
+    {
+        $record = \App\Models\ClientMeasurementHistory::where('cliente_id', $cliente->id)
+            ->where('id', $historyId)
+            ->first();
+
+        if (!$record) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Registro de medidas no encontrado.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $record->id,
+                'uuid' => $record->uuid,
+                'measurements' => $record->measurements,
+                'summary' => $record->summary,
+                'source' => $record->source,
+                'source_label' => $record->source_label,
+                'captured_at' => $record->captured_at?->format('d/m/Y H:i'),
+                'notes' => $record->notes,
+            ],
+        ]);
+    }
+
+    /**
+     * Crear nueva entrada de medidas en el historial (captura manual).
+     * Se usa cuando el operador captura medidas FUERA del contexto de un pedido.
+     */
+    public function storeClientMeasurementHistory(Request $request, Cliente $cliente)
+    {
+        $validated = $request->validate([
+            'measurements' => 'required|array',
+            'measurements.busto' => 'nullable|numeric|min:0|max:300',
+            'measurements.cintura' => 'nullable|numeric|min:0|max:300',
+            'measurements.cadera' => 'nullable|numeric|min:0|max:300',
+            'measurements.alto_cintura' => 'nullable|numeric|min:0|max:300',
+            'measurements.largo' => 'nullable|numeric|min:0|max:300',
+            'measurements.largo_vestido' => 'nullable|numeric|min:0|max:300',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        // Limpiar medidas vacías
+        $cleanMeasurements = collect($validated['measurements'])
+            ->filter(fn($value) => !empty($value) && $value !== '0' && $value !== 0)
+            ->toArray();
+
+        if (empty($cleanMeasurements)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Debe capturar al menos una medida.',
+            ], 422);
+        }
+
+        $history = \App\Models\ClientMeasurementHistory::create([
+            'cliente_id' => $cliente->id,
+            'measurements' => $cleanMeasurements,
+            'source' => 'manual',
+            'notes' => $validated['notes'] ?? "Captura manual desde perfil del cliente",
+            'created_by' => Auth::id(),
+            'captured_at' => now(),
+        ]);
+
+        Log::channel('daily')->info('MEASUREMENT_HISTORY_CREATED', [
+            'cliente_id' => $cliente->id,
+            'history_id' => $history->id,
+            'source' => 'manual',
+            'user_id' => Auth::id(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Medidas registradas en el historial del cliente.',
+            'data' => [
+                'id' => $history->id,
+                'uuid' => $history->uuid,
+                'measurements' => $history->measurements,
+                'summary' => $history->summary,
+                'captured_at' => $history->captured_at->format('d/m/Y H:i'),
+            ],
+        ]);
     }
 
     // === AJAX: GUARDAR MEDIDAS EN CLIENTE ===
@@ -1310,6 +1450,265 @@ class OrderController extends Controller
                 'success' => false,
                 'message' => 'Error al desvincular el diseño.',
                 'error_code' => 'INTERNAL_ERROR',
+            ], 500);
+        }
+    }
+
+    // ========================================
+    // FASE Y: GESTIÓN DE MEDIDAS POR ITEM
+    // ========================================
+
+    /**
+     * Obtener medidas actuales de un item específico.
+     */
+    public function getItemMeasurements(Order $order, OrderItem $item)
+    {
+        if ($item->order_id !== $order->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El item no pertenece a este pedido.',
+            ], 403);
+        }
+
+        $measurements = $item->measurements ?? [];
+        $measurementCount = count(array_filter($measurements, fn($v) => !empty($v) && $v !== '0'));
+
+        // Cargar historial vinculado si existe
+        $historyRecord = null;
+        if ($item->measurement_history_id) {
+            $historyRecord = \App\Models\ClientMeasurementHistory::find($item->measurement_history_id);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'item_id' => $item->id,
+                'item_name' => $item->product_name,
+                'requires_measurements' => $item->requires_measurements,
+                'measurements' => $measurements,
+                'measurement_count' => $measurementCount,
+                'measurement_history_id' => $item->measurement_history_id,
+                'history_record' => $historyRecord ? [
+                    'id' => $historyRecord->id,
+                    'uuid' => $historyRecord->uuid,
+                    'source' => $historyRecord->source,
+                    'source_label' => $historyRecord->source_label,
+                    'captured_at' => $historyRecord->captured_at?->format('d/m/Y H:i'),
+                    'notes' => $historyRecord->notes,
+                ] : null,
+            ],
+        ]);
+    }
+
+    /**
+     * Actualizar medidas de un item (captura nueva o selección de historial).
+     * INMUTABLE: Siempre crea un nuevo registro en el historial.
+     *
+     * Modos:
+     * - mode='capture': Captura nuevas medidas
+     * - mode='select': Selecciona medidas existentes del historial
+     */
+    public function updateItemMeasurements(Request $request, Order $order, OrderItem $item)
+    {
+        // Validar que el item pertenece al pedido
+        if ($item->order_id !== $order->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El item no pertenece a este pedido.',
+            ], 403);
+        }
+
+        // Solo permitir en estados editables
+        if (!in_array($order->status, [Order::STATUS_DRAFT, Order::STATUS_CONFIRMED])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pueden modificar medidas en este estado del pedido.',
+            ], 422);
+        }
+
+        // Validar que el item requiere medidas
+        if (!$item->requires_measurements) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Este producto no requiere medidas.',
+            ], 422);
+        }
+
+        $mode = $request->input('mode', 'capture');
+        $userId = Auth::id();
+
+        Log::channel('daily')->info('ITEM_MEASUREMENTS_UPDATE_ATTEMPT', [
+            'order_id' => $order->id,
+            'item_id' => $item->id,
+            'mode' => $mode,
+            'user_id' => $userId,
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            if ($mode === 'select') {
+                // MODO SELECCIÓN: Usar medidas existentes del historial
+                $historyId = $request->input('measurement_history_id');
+
+                if (!$historyId) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Debe seleccionar un registro del historial.',
+                    ], 422);
+                }
+
+                // Verificar que el historial existe y pertenece al cliente
+                $historyRecord = \App\Models\ClientMeasurementHistory::where('id', $historyId)
+                    ->where('cliente_id', $order->cliente_id)
+                    ->first();
+
+                if (!$historyRecord) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Registro de medidas no encontrado o no pertenece al cliente.',
+                    ], 404);
+                }
+
+                // Copiar medidas al item (snapshot inmutable)
+                $item->measurements = $historyRecord->measurements;
+                $item->measurement_history_id = $historyRecord->id;
+                $item->save();
+
+                // Registrar evento
+                OrderEvent::create([
+                    'order_id' => $order->id,
+                    'event_type' => 'item_measurements_selected',
+                    'message' => "Medidas seleccionadas del historial para: {$item->product_name}",
+                    'metadata' => [
+                        'item_id' => $item->id,
+                        'history_id' => $historyRecord->id,
+                        'history_uuid' => $historyRecord->uuid,
+                        'source' => $historyRecord->source,
+                        'captured_at' => $historyRecord->captured_at?->toIso8601String(),
+                    ],
+                    'created_by' => $userId,
+                ]);
+
+            } else {
+                // MODO CAPTURA: Nuevas medidas
+                $validated = $request->validate([
+                    'measurements' => 'required|array',
+                    'measurements.busto' => 'nullable|numeric|min:0|max:300',
+                    'measurements.cintura' => 'nullable|numeric|min:0|max:300',
+                    'measurements.cadera' => 'nullable|numeric|min:0|max:300',
+                    'measurements.alto_cintura' => 'nullable|numeric|min:0|max:300',
+                    'measurements.largo' => 'nullable|numeric|min:0|max:300',
+                    'measurements.largo_vestido' => 'nullable|numeric|min:0|max:300',
+                    'save_to_history' => 'nullable|boolean',
+                    'notes' => 'nullable|string|max:500',
+                ]);
+
+                // Limpiar medidas vacías
+                $cleanMeasurements = collect($validated['measurements'])
+                    ->filter(fn($value) => !empty($value) && $value !== '0' && $value !== 0)
+                    ->toArray();
+
+                if (empty($cleanMeasurements)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Debe capturar al menos una medida.',
+                    ], 422);
+                }
+
+                // Actualizar medidas en el item
+                $item->measurements = $cleanMeasurements;
+
+                // Crear registro en historial (siempre, por trazabilidad)
+                $saveToHistory = $request->boolean('save_to_history', true);
+
+                if ($saveToHistory) {
+                    $historyRecord = \App\Models\ClientMeasurementHistory::create([
+                        'cliente_id' => $order->cliente_id,
+                        'order_id' => $order->id,
+                        'order_item_id' => $item->id,
+                        'product_id' => $item->product_id,
+                        'measurements' => $cleanMeasurements,
+                        'source' => 'order',
+                        'notes' => $validated['notes'] ?? "Capturado en pedido {$order->order_number} - {$item->product_name}",
+                        'created_by' => $userId,
+                        'captured_at' => now(),
+                    ]);
+
+                    $item->measurement_history_id = $historyRecord->id;
+                }
+
+                $item->save();
+
+                // Registrar evento
+                OrderEvent::create([
+                    'order_id' => $order->id,
+                    'event_type' => 'item_measurements_captured',
+                    'message' => "Nuevas medidas capturadas para: {$item->product_name}",
+                    'metadata' => [
+                        'item_id' => $item->id,
+                        'measurement_count' => count($cleanMeasurements),
+                        'saved_to_history' => $saveToHistory,
+                        'history_id' => $historyRecord->id ?? null,
+                    ],
+                    'created_by' => $userId,
+                ]);
+            }
+
+            // Si el diseño estaba aprobado y se cambiaron medidas, invalidar (R4)
+            if ($item->design_approved && $item->hasMeasurementsChangedAfterApproval()) {
+                $item->design_approved = false;
+                $item->save();
+
+                OrderEvent::create([
+                    'order_id' => $order->id,
+                    'event_type' => 'design_invalidated',
+                    'message' => "Diseño invalidado por cambio de medidas: {$item->product_name}",
+                    'metadata' => [
+                        'item_id' => $item->id,
+                        'reason' => 'measurements_changed',
+                    ],
+                    'created_by' => $userId,
+                ]);
+            }
+
+            DB::commit();
+
+            Log::channel('daily')->info('ITEM_MEASUREMENTS_UPDATE_SUCCESS', [
+                'order_id' => $order->id,
+                'item_id' => $item->id,
+                'mode' => $mode,
+                'user_id' => $userId,
+            ]);
+
+            $measurements = $item->measurements ?? [];
+            $measurementCount = count(array_filter($measurements, fn($v) => !empty($v) && $v !== '0'));
+
+            return response()->json([
+                'success' => true,
+                'message' => $mode === 'select'
+                    ? 'Medidas del historial aplicadas correctamente.'
+                    : 'Medidas capturadas correctamente.',
+                'data' => [
+                    'item_id' => $item->id,
+                    'measurements' => $measurements,
+                    'measurement_count' => $measurementCount,
+                    'measurement_history_id' => $item->measurement_history_id,
+                ],
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            Log::channel('daily')->error('ITEM_MEASUREMENTS_UPDATE_ERROR', [
+                'order_id' => $order->id,
+                'item_id' => $item->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar las medidas.',
             ], 500);
         }
     }

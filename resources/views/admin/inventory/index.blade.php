@@ -55,39 +55,35 @@
     {{-- FILTROS --}}
     <div class="card card-outline card-primary mb-3">
         <div class="card-body py-2">
-            <form method="GET" action="{{ route('admin.inventory.index') }}" class="row align-items-center">
+            <div class="row align-items-center">
                 <div class="col-md-3">
-                    <select name="category_id" class="form-control form-control-sm" onchange="this.form.submit()">
+                    <select id="filter-category" class="form-control form-control-sm">
                         <option value="">-- Categoria --</option>
                         @foreach ($categories as $cat)
-                            <option value="{{ $cat->id }}" {{ request('category_id') == $cat->id ? 'selected' : '' }}>
-                                {{ $cat->name }}
-                            </option>
+                            <option value="{{ $cat->name }}">{{ $cat->name }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <select name="stock_status" class="form-control form-control-sm" onchange="this.form.submit()">
+                    <select id="filter-stock-status" class="form-control form-control-sm">
                         <option value="">-- Estado Stock --</option>
-                        <option value="ok" {{ request('stock_status') == 'ok' ? 'selected' : '' }}>OK</option>
-                        <option value="low" {{ request('stock_status') == 'low' ? 'selected' : '' }}>Bajo Minimo
-                        </option>
-                        <option value="zero" {{ request('stock_status') == 'zero' ? 'selected' : '' }}>Sin Stock</option>
+                        <option value="BAJO">Bajo Minimo</option>
+                        <option value="OK">OK</option>
                     </select>
                 </div>
                 <div class="col-md-4">
                     <div class="input-group input-group-sm">
-                        <input type="text" name="search" class="form-control"
-                            placeholder="Buscar SKU, color, material..." value="{{ request('search') }}">
+                        <input type="text" id="filter-search" class="form-control"
+                            placeholder="Buscar SKU, color, material...">
                         <div class="input-group-append">
-                            <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>
+                            <button type="button" id="btn-search" class="btn btn-primary"><i class="fas fa-search"></i></button>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-2">
-                    <a href="{{ route('admin.inventory.index') }}" class="btn btn-sm btn-outline-secondary">Limpiar</a>
+                    <button type="button" id="btn-clear-filters" class="btn btn-sm btn-outline-secondary">Limpiar</button>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
@@ -106,7 +102,7 @@
             </div>
         </div>
         <div class="card-body p-0">
-            <table class="table table-hover table-sm mb-0 materials-table" style="font-size: 16px;">
+            <table id="inventoryTable" class="table table-hover table-sm mb-0 materials-table" style="font-size: 16px;">
                 <thead style="background-color: #000; color: #fff;">
                     <tr>
                         <th>Material</th>
@@ -134,7 +130,7 @@
                                             ?? '';
                             $unitBase = $material?->baseUnit?->symbol ?? $unitConsumption;
                         @endphp
-                        <tr class="{{ $isLow ? 'table-warning' : '' }}">
+                        <tr class="{{ $isLow ? 'table-warning' : '' }}" data-material-id="{{ $material?->id ?? 0 }}" data-material-name="{{ $material?->name ?? 'N/A' }}">
                             <td>
                                 <strong>{{ $variant->material?->name ?? 'N/A' }}</strong>
                                 <br><small class="text-muted">{{ $variant->material?->category?->name ?? '' }}</small>
@@ -209,60 +205,253 @@
                 </tbody>
             </table>
         </div>
-        @if ($variants->hasPages())
-            <div class="card-footer">
-                {{ $variants->links() }}
-            </div>
-        @endif
+        {{-- Paginación manejada por DataTables --}}
     </div>
+
+    {{-- Modal de conversiones de unidades --}}
+    @include('partials._unit-conversion-modal')
+@stop
+
+@section('css')
+    <style>
+        /* DataTables - Botones de exportación (igual que proveedores) */
+        #inventoryTable_wrapper .dt-buttons {
+            background-color: transparent;
+            box-shadow: none;
+            border: none;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        #inventoryTable_wrapper .dt-buttons .btn {
+            color: #fff;
+            border-radius: 4px;
+            padding: 5px 15px;
+            font-size: 14px;
+        }
+
+        .btn-default {
+            background-color: #6e7176;
+            color: #fff;
+            border: none;
+        }
+    </style>
 @stop
 
 @section('js')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // =====================================================
-    // UNIT TOGGLE - Conversión de unidades en tiempo real
+    // INICIALIZAR DATATABLE (igual que proveedores)
     // =====================================================
+    var table = $('#inventoryTable').DataTable({
+        "pageLength": 10,
+        "language": {
+            "emptyTable": "No hay materiales en inventario",
+            "info": "Mostrando _START_ a _END_ de _TOTAL_ Materiales",
+            "infoEmpty": "Mostrando 0 a 0 de 0 Materiales",
+            "infoFiltered": "(Filtrado de _MAX_ total Materiales)",
+            "lengthMenu": "Mostrar _MENU_ Materiales",
+            "loadingRecords": "Cargando...",
+            "processing": "Procesando...",
+            "search": "Buscador:",
+            "zeroRecords": "Sin resultados encontrados",
+            "paginate": {
+                "first": "Primero",
+                "last": "Ultimo",
+                "next": "Siguiente",
+                "previous": "Anterior"
+            }
+        },
+        "responsive": true,
+        "lengthChange": true,
+        "autoWidth": false,
+        buttons: [{
+                text: '<i class="fas fa-copy"></i> COPIAR',
+                extend: 'copy',
+                className: 'btn btn-default'
+            },
+            {
+                text: '<i class="fas fa-file-pdf"></i> PDF',
+                extend: 'pdf',
+                className: 'btn btn-danger',
+                title: 'Inventario General',
+                exportOptions: {
+                    columns: ':not(:last-child)'
+                }
+            },
+            {
+                text: '<i class="fas fa-file-csv"></i> CSV',
+                extend: 'csv',
+                className: 'btn btn-info',
+                title: 'Inventario General',
+                exportOptions: {
+                    columns: ':not(:last-child)'
+                }
+            },
+            {
+                text: '<i class="fas fa-file-excel"></i> EXCEL',
+                extend: 'excel',
+                className: 'btn btn-success',
+                title: 'Inventario General',
+                exportOptions: {
+                    columns: ':not(:last-child)'
+                }
+            },
+            {
+                text: '<i class="fas fa-print"></i> IMPRIMIR',
+                extend: 'print',
+                className: 'btn btn-default',
+                title: 'Inventario General',
+                exportOptions: {
+                    columns: ':not(:last-child)'
+                }
+            }
+        ]
+    });
+    table.buttons().container().appendTo('#inventoryTable_wrapper .row:eq(0)');
+
+    // =====================================================
+    // FILTROS - Filtrado por DataTables (sin recargar página)
+    // =====================================================
+    var filterCategory = document.getElementById('filter-category');
+    var filterStockStatus = document.getElementById('filter-stock-status');
+    var filterSearch = document.getElementById('filter-search');
+    var btnSearch = document.getElementById('btn-search');
+    var btnClear = document.getElementById('btn-clear-filters');
+
+    function applyFilters() {
+        // Columna 0: Material (incluye categoría en small)
+        // Columna 7: Estado (BAJO/OK)
+        var categoryVal = filterCategory.value;
+        var stockVal = filterStockStatus.value;
+        var searchVal = filterSearch.value;
+
+        // Filtro por categoría (columna 0 contiene nombre + categoría)
+        table.column(0).search(categoryVal, false, true);
+
+        // Filtro por estado de stock (columna 7)
+        table.column(7).search(stockVal, false, true);
+
+        // Búsqueda general
+        table.search(searchVal);
+
+        table.draw();
+    }
+
+    // Eventos de filtros
+    filterCategory.addEventListener('change', applyFilters);
+    filterStockStatus.addEventListener('change', applyFilters);
+    filterSearch.addEventListener('keyup', function(e) {
+        if (e.key === 'Enter') applyFilters();
+    });
+    btnSearch.addEventListener('click', applyFilters);
+
+    // Limpiar filtros
+    btnClear.addEventListener('click', function() {
+        filterCategory.value = '';
+        filterStockStatus.value = '';
+        filterSearch.value = '';
+        table.search('').columns().search('').draw();
+    });
+
+    // =====================================================
+    // UNIT TOGGLE - Conversión con modal de selección
+    // =====================================================
+    // Estado de conversiones aplicadas por material: {materialId: {factor, unitSymbol}}
+    var appliedConversions = {};
+
     document.querySelectorAll('.unit-toggle').forEach(function(toggleGroup) {
         const container = toggleGroup.closest('.card') || document;
         const buttons = toggleGroup.querySelectorAll('[data-unit-mode]');
+        const btnConsumption = toggleGroup.querySelector('[data-unit-mode="consumption"]');
+        const btnCompra = toggleGroup.querySelector('[data-unit-mode="base"]');
 
-        buttons.forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                const mode = this.dataset.unitMode;
+        // Obtener materiales únicos (padres) de la tabla
+        function getUniqueMaterials() {
+            const materialsMap = new Map();
+            container.querySelectorAll('tr[data-material-id]').forEach(function(row) {
+                const id = parseInt(row.dataset.materialId);
+                if (id > 0 && !materialsMap.has(id)) {
+                    // Usar data-material-name que contiene el nombre del material padre
+                    const name = row.dataset.materialName || 'Material #' + id;
+                    materialsMap.set(id, { id: id, name: name });
+                }
+            });
+            return Array.from(materialsMap.values());
+        }
 
-                // Actualizar estado visual de botones
-                buttons.forEach(b => {
+        // Click en Consumo: restaurar valores originales
+        if (btnConsumption) {
+            btnConsumption.addEventListener('click', function() {
+                // Actualizar estado visual
+                buttons.forEach(function(b) {
                     b.classList.remove('btn-primary', 'active');
                     b.classList.add('btn-outline-primary');
                 });
                 this.classList.remove('btn-outline-primary');
                 this.classList.add('btn-primary', 'active');
 
-                // Convertir todas las celdas
+                // Limpiar conversiones aplicadas
+                appliedConversions = {};
+
+                // Restaurar valores originales
                 container.querySelectorAll('.unit-convertible').forEach(function(el) {
                     const qty = parseFloat(el.dataset.qty) || 0;
-                    const factor = parseFloat(el.dataset.factor) || 1;
                     const unitConsumption = el.dataset.unitConsumption || 'u';
-                    const unitBase = el.dataset.unitBase || unitConsumption;
-
-                    let displayQty, displayUnit;
-
-                    if (mode === 'base' && factor > 1) {
-                        displayQty = qty / factor;
-                        displayUnit = unitBase;
-                    } else {
-                        displayQty = qty;
-                        displayUnit = unitConsumption;
-                    }
 
                     const qtyEl = el.querySelector('.qty-value');
                     const unitEl = el.querySelector('.unit-symbol');
-                    if (qtyEl) qtyEl.textContent = formatNumber(displayQty);
-                    if (unitEl) unitEl.textContent = displayUnit;
+                    if (qtyEl) qtyEl.textContent = formatNumber(qty);
+                    if (unitEl) unitEl.textContent = unitConsumption;
                 });
             });
-        });
+        }
+
+        // Click en Compra: abrir modal de selección
+        if (btnCompra) {
+            btnCompra.addEventListener('click', function() {
+                const materials = getUniqueMaterials();
+
+                if (materials.length === 0) {
+                    alert('No hay materiales en la tabla');
+                    return;
+                }
+
+                // Abrir modal con lista de materiales
+                openUnitConversionModal(materials, function(materialId, conversion) {
+                    // Guardar conversión aplicada
+                    appliedConversions[materialId] = {
+                        factor: conversion.conversion_factor,
+                        unitSymbol: conversion.from_unit_symbol || conversion.label
+                    };
+
+                    // Actualizar estado visual del toggle
+                    buttons.forEach(function(b) {
+                        b.classList.remove('btn-primary', 'active');
+                        b.classList.add('btn-outline-primary');
+                    });
+                    btnCompra.classList.remove('btn-outline-primary');
+                    btnCompra.classList.add('btn-primary', 'active');
+
+                    // Aplicar conversión solo a las celdas del material seleccionado
+                    container.querySelectorAll('tr[data-material-id="' + materialId + '"] .unit-convertible').forEach(function(el) {
+                        const qty = parseFloat(el.dataset.qty) || 0;
+                        const factor = conversion.conversion_factor || 1;
+                        const displayQty = qty / factor;
+                        const displayUnit = conversion.from_unit_symbol || conversion.label;
+
+                        const qtyEl = el.querySelector('.qty-value');
+                        const unitEl = el.querySelector('.unit-symbol');
+                        if (qtyEl) qtyEl.textContent = formatNumber(displayQty);
+                        if (unitEl) unitEl.textContent = displayUnit;
+                    });
+                });
+            });
+        }
     });
 
     function formatNumber(num) {

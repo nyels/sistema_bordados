@@ -27,15 +27,19 @@ class ProductionQueueController extends Controller
     public function index(Request $request)
     {
         // Pedidos en cola: Confirmados (listos para iniciar) + En Produccion (en progreso)
+        // Orden: Urgentes/Express primero, luego por fecha de creación descendente
         $query = Order::with([
             'cliente',
             'items.product.materials.material.consumptionUnit',
             'items.product.materials.material.baseUnit',
         ])
             ->whereIn('status', [Order::STATUS_CONFIRMED, Order::STATUS_IN_PRODUCTION])
-            ->orderBy('priority', 'asc')
-            ->orderBy('promised_date', 'asc')
-            ->orderBy('created_at', 'asc');
+            ->orderByRaw("CASE
+                WHEN urgency_level = 'express' THEN 1
+                WHEN urgency_level = 'urgente' THEN 2
+                ELSE 3
+            END")
+            ->orderBy('created_at', 'desc');
 
         // Filtros
         if ($request->filled('status')) {
@@ -43,20 +47,23 @@ class ProductionQueueController extends Controller
         }
 
         if ($request->filled('urgency')) {
-            $query->where('urgency_level', $request->urgency);
+            if ($request->urgency === 'urgent_express') {
+                $query->whereIn('urgency_level', [\App\Models\Order::URGENCY_URGENTE, \App\Models\Order::URGENCY_EXPRESS]);
+            } else {
+                $query->where('urgency_level', $request->urgency);
+            }
         }
 
         if ($request->filled('blocked')) {
-            // Filtrar solo bloqueados
-            $query->where(function ($q) {
-                $q->whereHas('items', function ($qi) {
-                    $qi->where('has_pending_adjustments', true)
-                        ->orWhere(function ($q2) {
-                            $q2->where('personalization_type', 'design')
-                                ->where('design_approved', false);
-                        });
-                });
-            });
+            // Filtrar todos y luego filtrar en colección para precisión total (considera inventario dinámico)
+            $orders = $query->get();
+            $filteredIds = $orders->filter(fn($o) => $this->checkBlockers($o))->pluck('id');
+            $query = Order::whereIn('id', $filteredIds);
+        }
+
+        if ($request->filled('overdue')) {
+            $query->whereNotNull('promised_date')
+                ->where('promised_date', '<', now()->startOfDay());
         }
 
         $orders = $query->paginate(20);
@@ -68,6 +75,11 @@ class ProductionQueueController extends Controller
             $order->blocker_reasons = $this->getBlockerReasons($order);
             return $order;
         });
+
+        // Si es AJAX, retornar solo la tabla
+        if ($request->ajax()) {
+            return view('admin.production._queue-table', compact('orders'));
+        }
 
         // Resumen de cola
         $summary = [
@@ -226,6 +238,7 @@ class ProductionQueueController extends Controller
 
                     $requirements[$variantId] = [
                         'material_variant_id' => $variantId,
+                        'material_id' => $material->id ?? 0,
                         'material_name' => $material->name ?? 'N/A',
                         'variant_color' => $materialVariant->color,
                         'variant_sku' => $materialVariant->sku,
@@ -321,16 +334,13 @@ class ProductionQueueController extends Controller
      */
     protected function countBlockedOrders(): int
     {
-        // Bloqueados por reglas de negocio
-        $blockedByRules = Order::where('status', Order::STATUS_CONFIRMED)
-            ->whereHas('items', function ($q) {
-                $q->where('has_pending_adjustments', true)
-                    ->orWhere(function ($q2) {
-                        $q2->where('personalization_type', 'design')
-                            ->where('design_approved', false);
-                    });
-            })->count();
-
-        return $blockedByRules;
+        $orders = Order::whereIn('status', [Order::STATUS_CONFIRMED, Order::STATUS_IN_PRODUCTION])->get();
+        $count = 0;
+        foreach ($orders as $order) {
+            if ($this->checkBlockers($order)) {
+                $count++;
+            }
+        }
+        return $count;
     }
 }

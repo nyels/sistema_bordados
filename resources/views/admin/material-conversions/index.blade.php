@@ -95,6 +95,7 @@
                             <th class="text-center" style="width: 80px;"><i class="fas fa-arrow-right"></i></th>
                             <th>Unidad de Inventario</th>
                             <th class="text-center">Factor</th>
+                            <th>Modo</th>
                             <th>Conversión</th>
                             <th style="width: 120px; text-align: center;">Acciones</th>
                         </tr>
@@ -146,6 +147,17 @@
                                     @else
                                         <strong>{{ number_format($conversion->conversion_factor, 4) }}
                                             {{ $conversion->toUnit->symbol }}</strong>
+                                    @endif
+                                </td>
+                                <td class="align-middle text-center">
+                                    @if ($conversion->conversion_mode === 'por_contenido')
+                                        <span class="badge badge-info" title="Factor calculado por contenido (qty × valor)">
+                                            <i class="fas fa-boxes"></i> Por Contenido
+                                        </span>
+                                    @else
+                                        <span class="badge badge-secondary" title="Factor ingresado manualmente">
+                                            <i class="fas fa-ruler-horizontal"></i> Manual
+                                        </span>
                                     @endif
                                 </td>
                                 <td class="align-middle">

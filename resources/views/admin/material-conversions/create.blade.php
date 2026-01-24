@@ -64,6 +64,7 @@
                 action="{{ route('admin.material-conversions.store', $material->id) }}">
                 @csrf
                 <input type="hidden" name="material_id" value="{{ $material->id }}">
+                <input type="hidden" name="conversion_mode" id="conversion_mode" value="manual">
 
                 <div class="row">
                     {{-- COLUMNA izquierda --}}
@@ -395,6 +396,9 @@
                 if (mode === 'direct') {
                     $('#intermediate_qty').val('');
                     $('#intermediate_unit_id').val('');
+                    $('#conversion_mode').val('manual');
+                } else if (mode === 'content') {
+                    $('#conversion_mode').val('por_contenido');
                 }
             };
 

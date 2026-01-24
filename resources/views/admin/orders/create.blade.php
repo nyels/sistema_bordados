@@ -15,9 +15,21 @@
             <h1><i class="fas fa-clipboard-list mr-2"></i>
                 {{ isset($isEdit) ? 'Editar Pedido #' . $order->order_number : 'Nuevo Pedido' }}</h1>
         @endif
-        <a href="{{ route('admin.orders.index') }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Volver
-        </a>
+        <div class="d-flex align-items-center">
+            <a href="{{ route('admin.orders.index') }}" class="btn btn-secondary mr-3">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+            @if (isset($relatedOrder))
+                <button type="submit" form="orderForm" class="btn shadow-sm"
+                    style="background: linear-gradient(135deg, #6f42c1 0%, #8969c7 100%); color: white; border: none;">
+                    <i class="fas fa-redo mr-2"></i> Crear Pedido Post-Venta
+                </button>
+            @else
+                <button type="submit" form="orderForm" class="btn btn-success shadow-sm">
+                    <i class="fas fa-save mr-2"></i> Crear Pedido
+                </button>
+            @endif
+        </div>
     </div>
 @stop
 
@@ -438,11 +450,11 @@
 
         /* ================================================== */
         /* === CSS MODAL MEDIDAS EXTERNO — ELIMINADO (FASE 1)
-                                                                                                                         El modal #measurementsModal ya no existe.
-                                                                                                                         Clases eliminadas: .medida-card, .medida-img,
-                                                                                                                         .medida-input, .medida-label, .medida-hint, .medidas-grid,
-                                                                                                                         .measurement-history-item
-                                                                                                                         ================================================== */
+                                                                                                                                                                     El modal #measurementsModal ya no existe.
+                                                                                                                                                                     Clases eliminadas: .medida-card, .medida-img,
+                                                                                                                                                                     .medida-input, .medida-label, .medida-hint, .medidas-grid,
+                                                                                                                                                                     .measurement-history-item
+                                                                                                                                                                     ================================================== */
 
         /* Badge requiere medidas (se mantiene para tabla de items) */
         .badge-requires-measurements {
@@ -502,48 +514,13 @@
 
         /* Responsive para REQUISITOS DEL PRODUCTO */
         @media (max-width: 768px) {
-            #measurementsSection .card-header {
-                padding: 10px 12px !important;
-            }
-
-            #measurementsSection .card-header strong {
-                font-size: 12px !important;
-            }
-
-            #measurementsSection .card-header small {
-                font-size: 10px !important;
-            }
-
-            #measurementsSection .card-body {
-                padding: 12px !important;
-            }
-
             #measurementsSection #btnOpenMeasurementsModal {
                 width: 100% !important;
-                margin-top: 12px !important;
-                padding: 12px 16px !important;
-                font-size: 13px !important;
-            }
-
-            #measurementsStatusBadge {
-                display: block !important;
-                margin-top: 6px !important;
-                margin-left: 0 !important;
+                margin-top: 8px !important;
             }
 
             #systemClientDivider span {
                 font-size: 10px !important;
-            }
-        }
-
-        @media (max-width: 576px) {
-            #measurementsSection .card-body>.d-flex {
-                flex-direction: column !important;
-                align-items: stretch !important;
-            }
-
-            #measurementsSection .card-body>.d-flex>div:first-child {
-                margin-bottom: 12px !important;
             }
         }
 
@@ -805,7 +782,7 @@
                         <div class="form-group mb-2">
                             <label class="font-weight-bold mb-1">Método de Pago</label>
                             <select name="payment_method" id="paymentMethod" class="form-control form-control-sm">
-                                <option value="">-- Sin pago inicial --</option>
+                                <option value="">-- Seleccionar Método de Pago --</option>
                                 <option value="cash" {{ old('payment_method') == 'cash' ? 'selected' : '' }}>Efectivo
                                 </option>
                                 <option value="transfer" {{ old('payment_method') == 'transfer' ? 'selected' : '' }}>
@@ -998,23 +975,7 @@
                     </div>
                 </div>
 
-                {{-- 7. BOTÓN CREAR PEDIDO --}}
-                <div class="order-mobile-7">
-                    @if (isset($relatedOrder))
-                        {{-- POST-VENTA: Botón con contexto claro --}}
-                        <button type="submit" class="btn btn-lg btn-block" id="submitBtn"
-                            style="background: linear-gradient(135deg, #6f42c1 0%, #8969c7 100%); color: white; border: none;">
-                            <i class="fas fa-redo mr-2"></i> Crear Pedido Post-Venta
-                        </button>
-                        <small class="text-muted d-block text-center mt-1" style="font-size: 11px;">
-                            Se creará un pedido nuevo relacionado con {{ $relatedOrder->order_number }}
-                        </small>
-                    @else
-                        <button type="submit" class="btn btn-success btn-lg btn-block" id="submitBtn">
-                            <i class="fas fa-save mr-2"></i> Crear Pedido
-                        </button>
-                    @endif
-                </div>
+
 
             </div>
         </div>
@@ -1241,132 +1202,77 @@
                                         </div>
                                     </div>
 
-                                    {{-- ESTADO DEL PRODUCTO --}}
-                                    <div id="productTypeIndicator" class="mb-3" style="display: none;">
-                                        <div id="productTypeStandard" class="d-none align-items-center p-3 rounded"
-                                            style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border: 1px solid #a5d6a7;">
-                                            <i class="fas fa-box-open fa-2x mr-3" style="color: #2e7d32;"></i>
-                                            <div>
-                                                <span class="badge px-3 py-2"
-                                                    style="background: #2e7d32; color: white; font-size: 13px;">
-                                                    <i class="fas fa-check-circle mr-1"></i> Producto Estándar
-                                                </span>
-                                                <div class="mt-1" style="color: #1b5e20; font-size: 12px;">
-                                                    Este producto no requiere medidas — listo para agregar
-                                                </div>
-                                            </div>
+                                    {{-- ═══════════════════════════════════════════════════════════ --}}
+                                    {{-- BLOQUE SISTÉMICO: PRODUCTO A MEDIDA                          --}}
+                                    {{-- Contiene: Checkbox + Botón Capturar Medidas                  --}}
+                                    {{-- ═══════════════════════════════════════════════════════════ --}}
+                                    <div class="form-group mb-3" id="measurementsSection" style="display: none;">
+                                        <div class="custom-control custom-checkbox mb-2">
+                                            <input type="checkbox" class="custom-control-input"
+                                                id="chkRequiresMeasurements">
+                                            <label class="custom-control-label" for="chkRequiresMeasurements"
+                                                style="font-size: 15px; color: #495057;">
+                                                <i class="fas fa-ruler-combined mr-1" style="color: #0d47a1;"></i>
+                                                Requiere medidas del cliente
+                                            </label>
                                         </div>
-                                        <div id="productTypeCustom" class="d-none align-items-center p-3 rounded"
-                                            style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border: 1px solid #90caf9;">
-                                            <i class="fas fa-ruler-combined fa-2x mr-3" style="color: #0d47a1;"></i>
-                                            <div>
-                                                <span class="badge px-3 py-2"
-                                                    style="background: #0d47a1; color: white; font-size: 13px;">
-                                                    <i class="fas fa-ruler mr-1"></i> Producto a Medida
-                                                </span>
-                                                <div class="mt-1" style="color: #0d47a1; font-size: 12px;">
-                                                    Requiere captura de medidas antes de agregar al pedido
-                                                </div>
+                                        <button type="button" class="btn btn-sm btn-secondary"
+                                            id="btnOpenMeasurementsModal" style="font-weight: 500; padding: 8px 16px;"
+                                            disabled>
+                                            <i class="fas fa-tape mr-1"></i>
+                                            <span id="btnMeasurementsText">Capturar Medidas</span>
+                                        </button>
+
+                                        {{-- Resumen de medidas capturadas --}}
+                                        <div id="measurementsSummaryBody" style="display: none;"
+                                            class="mt-3 pt-2 border-top">
+                                            <div class="row" id="measurementsSummaryContent" style="font-size: 14px;">
                                             </div>
                                         </div>
                                     </div>
 
-                                    {{-- REQUISITOS DEL PRODUCTO (Medidas) --}}
-                                    <div class="card mb-3" id="measurementsSection"
-                                        style="display: none; border: 2px solid #0d47a1; border-radius: 8px; box-shadow: 0 2px 8px rgba(13,71,161,0.15);">
-                                        <div class="card-header py-2 px-3"
-                                            style="background: linear-gradient(135deg, #0d47a1 0%, #1a237e 100%); color: white; border-radius: 6px 6px 0 0;">
-                                            <div class="d-flex justify-content-between align-items-center flex-wrap">
-                                                <div>
-                                                    <div class="d-flex align-items-center">
-                                                        <i class="fas fa-shield-alt mr-2" style="font-size: 16px;"></i>
-                                                        <strong
-                                                            style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Requisitos
-                                                            del Producto</strong>
-                                                    </div>
-                                                    <small class="d-block mt-1"
-                                                        style="color: rgba(255,255,255,0.85); font-size: 11px; margin-left: 26px;">
-                                                        <i class="fas fa-lock mr-1"></i> Requisito técnico obligatorio
-                                                        definido por el sistema
-                                                    </small>
-                                                </div>
-                                                <span class="badge d-none d-sm-inline-block"
-                                                    style="background: rgba(255,255,255,0.2); color: white; font-size: 10px;">
-                                                    <i class="fas fa-cog mr-1"></i> SISTEMA
-                                                </span>
-                                            </div>
+                                    {{-- ═══════════════════════════════════════════════════════════ --}}
+                                    {{-- SECCIÓN PERSONALIZACIÓN (NO BLOQUE AZUL - FORMULARIO NORMAL) --}}
+                                    {{-- Contiene: Checkbox requiere diseño + Input texto a bordar   --}}
+                                    {{-- ═══════════════════════════════════════════════════════════ --}}
+                                    <div class="form-group mb-3" id="personalizationSection">
+                                        <div class="custom-control custom-checkbox mb-2">
+                                            <input type="checkbox" class="custom-control-input" id="chkRequiresDesign">
+                                            <label class="custom-control-label" for="chkRequiresDesign"
+                                                style="font-size: 15px; color: #495057;">
+                                                <i class="fas fa-palette mr-1" style="color: #7b1fa2;"></i> Requiere
+                                                personalización (texto, logo o diseño)
+                                            </label>
                                         </div>
-                                        <div class="card-body py-3 px-3"
-                                            style="background: linear-gradient(180deg, #e3f2fd 0%, #bbdefb 100%);">
-                                            <div class="d-flex justify-content-between align-items-center flex-wrap">
-                                                <div class="mb-2 mb-sm-0 flex-grow-1">
-                                                    <div class="d-flex align-items-center">
-                                                        <i class="fas fa-ruler-combined mr-2"
-                                                            style="color: #0d47a1; font-size: 20px;"></i>
-                                                        <div>
-                                                            <strong style="color: #0d47a1; font-size: 15px;">Medidas del
-                                                                Ítem</strong>
-                                                            <span class="badge ml-2" id="measurementsStatusBadge"
-                                                                style="background: #e65100; color: white; font-size: 11px; padding: 4px 8px;">
-                                                                <i class="fas fa-exclamation-circle mr-1"></i>REQUISITO
-                                                                OBLIGATORIO
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <div class="mt-2"
-                                                        style="margin-left: 28px; padding: 8px 12px; background: rgba(255,255,255,0.7); border-radius: 4px; border-left: 3px solid #0d47a1;">
-                                                        <small style="color: #37474f; font-size: 12px;">
-                                                            <i class="fas fa-info-circle mr-1"
-                                                                style="color: #0d47a1;"></i>
-                                                            <strong>Este producto no puede fabricarse sin capturar las
-                                                                medidas requeridas.</strong>
-                                                        </small>
-                                                    </div>
-                                                </div>
-                                                <div class="mt-2 mt-sm-0 w-100 w-sm-auto" style="min-width: 220px;">
-                                                    <button type="button" class="btn btn-block btn-sm"
-                                                        id="btnOpenMeasurementsModal"
-                                                        style="background: #0d47a1; color: white; font-weight: 600; padding: 10px 16px;">
-                                                        <i class="fas fa-clipboard-check mr-1"></i>
-                                                        <span id="btnMeasurementsText">Completar requisito: capturar
-                                                            medidas</span>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div id="measurementsSummaryBody" style="display: none;"
-                                                class="mt-3 pt-2 border-top">
-                                                <div class="row small" id="measurementsSummaryContent"></div>
-                                            </div>
+                                        <div id="embroideryTextContainer">
+                                            <label class="font-weight-bold mb-1" style="font-size: 14px; color: #495057;">
+                                                <i class="fas fa-pen-fancy mr-1 text-info"></i> Texto a Bordar
+                                            </label>
+                                            <input type="text" id="modalEmbroideryText" class="form-control"
+                                                maxlength="255" placeholder="Nombre, frase, iniciales..." disabled>
+                                            <small id="embroideryTextHint"
+                                                style="display: none; font-size: 14px; color: #495057;">
+                                                El diseño se vinculará después de crear el pedido
+                                            </small>
                                         </div>
                                     </div>
 
-                                    {{-- SEPARADOR: Opciones del Cliente --}}
+                                    {{-- SEPARADOR: Opciones Adicionales --}}
                                     <div id="systemClientDivider" class="my-3 text-center" style="display: none;">
                                         <div class="d-flex align-items-center">
                                             <hr class="flex-grow-1" style="border-color: #bdbdbd;">
-                                            <span class="px-3 text-muted"
-                                                style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; white-space: nowrap;">
-                                                <i class="fas fa-user mr-1"></i> Opciones del Cliente
+                                            <span class="px-3"
+                                                style="font-size: 14px; color: #495057; text-transform: uppercase; letter-spacing: 1px; white-space: nowrap;">
+                                                <i class="fas fa-cogs mr-1"></i> Opciones Adicionales
                                             </span>
                                             <hr class="flex-grow-1" style="border-color: #bdbdbd;">
                                         </div>
                                     </div>
 
-                                    {{-- Texto a Bordar --}}
-
-
                                     {{-- Contenedor 2 columnas: Extras | Ajuste+Notas+Subtotal --}}
                                     <div class="row">
                                         {{-- Columna Izquierda: Extras --}}
                                         <div class="col-md-6 mb-3 mb-md-0">
-                                            <div class="form-group mb-0">
-                                                <label class="font-weight-bold mb-1">
-                                                    <i class="fas fa-pen-fancy mr-1 text-info"></i> Texto a Bordar
-                                                </label>
-                                                <input type="text" id="modalEmbroideryText" class="form-control"
-                                                    maxlength="255" placeholder="Nombre, frase, iniciales...">
-                                            </div>
-
                                             <div class="form-group mb-0" id="productExtrasSection"
                                                 style="display: none;">
                                                 <label class="font-weight-bold mb-1">
@@ -1384,7 +1290,8 @@
                                                     style="display: none; max-height: 150px; overflow-y: auto;">
                                                     {{-- Se llena dinámicamente con JS --}}
                                                 </div>
-                                                <small class="text-muted" id="noExtrasSelectedMsg">Sin extras
+                                                <small id="noExtrasSelectedMsg"
+                                                    style="font-size: 14px; color: #495057;">Sin extras
                                                     seleccionados</small>
                                             </div>
 
@@ -1404,7 +1311,8 @@
                                                     <input type="number" id="modalExtrasCost" class="form-control"
                                                         step="0.01" min="0" value="0">
                                                 </div>
-                                                <small class="text-muted">Ajuste manual por medidas especiales o trabajos
+                                                <small style="font-size: 14px; color: #495057;">Ajuste manual por medidas
+                                                    especiales o trabajos
                                                     adicionales</small>
                                             </div>
 
@@ -1556,116 +1464,114 @@
                         <strong>Producto:</strong> <span id="measurementsProductName">-</span>
                     </div>
 
-                    {{-- Selector: usar medidas existentes o capturar nuevas --}}
-                    <div class="mb-3" id="measurementsSourceSelector">
-                        <label class="font-weight-bold mb-2">
-                            <i class="fas fa-clipboard-list mr-1"></i> Origen de las medidas:
-                        </label>
-                        <div class="btn-group btn-group-toggle w-100" data-toggle="buttons">
-                            <label class="btn btn-outline-primary active" id="lblNewMeasures">
-                                <input type="radio" name="measurementSource" value="new" checked>
-                                <i class="fas fa-plus-circle mr-1"></i> Capturar Nuevas
-                            </label>
-                            <label class="btn btn-outline-primary" id="lblExistingMeasures">
-                                <input type="radio" name="measurementSource" value="existing">
-                                <i class="fas fa-history mr-1"></i> Usar Existentes
-                            </label>
-                        </div>
-                    </div>
+                    {{-- TABS: Capturar Nuevas | Usar Existentes (N) --}}
+                    <ul class="nav nav-tabs mb-3" id="measurementsTabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="tab-new-measures" data-toggle="tab"
+                                href="#panel-new-measures" role="tab">
+                                <i class="fas fa-plus-circle mr-1"></i> Capturar nuevas
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="tab-existing-measures" data-toggle="tab"
+                                href="#panel-existing-measures" role="tab">
+                                <i class="fas fa-history mr-1"></i> Usar existentes (<span
+                                    id="existingMeasuresCount">0</span>)
+                            </a>
+                        </li>
+                    </ul>
 
-                    {{-- Panel: Capturar nuevas medidas con imágenes --}}
-                    <div id="newMeasurementsPanel">
-                        <div class="row">
-                            {{-- BUSTO --}}
-                            <div class="form-group col-md-4 col-6 text-center">
-                                <label class="medida-label">BUSTO</label>
-                                <div class="medida-card">
-                                    <img src="{{ asset('images/busto.png') }}" alt="Busto"
-                                        class="img-fluid medida-img">
-                                    <input type="text" id="medBusto"
-                                        class="form-control form-control-sm medida-input" placeholder="Ej: 80.5"
-                                        maxlength="6" inputmode="decimal" oninput="validateMedidaModal(this)">
+                    {{-- Tab Content --}}
+                    <div class="tab-content" id="measurementsTabContent">
+                        {{-- Panel: Capturar nuevas medidas con imágenes --}}
+                        <div class="tab-pane fade show active" id="panel-new-measures" role="tabpanel">
+                            <div class="row">
+                                {{-- BUSTO --}}
+                                <div class="form-group col-md-4 col-6 text-center">
+                                    <label class="medida-label">BUSTO</label>
+                                    <div class="medida-card">
+                                        <img src="{{ asset('images/busto.png') }}" alt="Busto"
+                                            class="img-fluid medida-img">
+                                        <input type="text" id="medBusto"
+                                            class="form-control form-control-sm medida-input" placeholder="Ej: 80.5"
+                                            maxlength="6" inputmode="decimal" oninput="validateMedidaModal(this)">
+                                    </div>
                                 </div>
-                            </div>
-                            {{-- ALTO CINTURA --}}
-                            <div class="form-group col-md-4 col-6 text-center">
-                                <label class="medida-label">ALTO CINTURA</label>
-                                <div class="medida-card">
-                                    <img src="{{ asset('images/alto_cintura.png') }}" alt="Alto Cintura"
-                                        class="img-fluid medida-img">
-                                    <input type="text" id="medAltoCintura"
-                                        class="form-control form-control-sm medida-input" placeholder="Ej: 40.5"
-                                        maxlength="6" inputmode="decimal" oninput="validateMedidaModal(this)">
+                                {{-- ALTO CINTURA --}}
+                                <div class="form-group col-md-4 col-6 text-center">
+                                    <label class="medida-label">ALTO CINTURA</label>
+                                    <div class="medida-card">
+                                        <img src="{{ asset('images/alto_cintura.png') }}" alt="Alto Cintura"
+                                            class="img-fluid medida-img">
+                                        <input type="text" id="medAltoCintura"
+                                            class="form-control form-control-sm medida-input" placeholder="Ej: 40.5"
+                                            maxlength="6" inputmode="decimal" oninput="validateMedidaModal(this)">
+                                    </div>
                                 </div>
-                            </div>
-                            {{-- CINTURA --}}
-                            <div class="form-group col-md-4 col-6 text-center">
-                                <label class="medida-label">CINTURA</label>
-                                <div class="medida-card">
-                                    <img src="{{ asset('images/cintura.png') }}" alt="Cintura"
-                                        class="img-fluid medida-img">
-                                    <input type="text" id="medCintura"
-                                        class="form-control form-control-sm medida-input" placeholder="Ej: 70.5"
-                                        maxlength="6" inputmode="decimal" oninput="validateMedidaModal(this)">
+                                {{-- CINTURA --}}
+                                <div class="form-group col-md-4 col-6 text-center">
+                                    <label class="medida-label">CINTURA</label>
+                                    <div class="medida-card">
+                                        <img src="{{ asset('images/cintura.png') }}" alt="Cintura"
+                                            class="img-fluid medida-img">
+                                        <input type="text" id="medCintura"
+                                            class="form-control form-control-sm medida-input" placeholder="Ej: 70.5"
+                                            maxlength="6" inputmode="decimal" oninput="validateMedidaModal(this)">
+                                    </div>
                                 </div>
-                            </div>
-                            {{-- CADERA --}}
-                            <div class="form-group col-md-4 col-6 text-center">
-                                <label class="medida-label">CADERA</label>
-                                <div class="medida-card">
-                                    <img src="{{ asset('images/cadera.png') }}" alt="Cadera"
-                                        class="img-fluid medida-img">
-                                    <input type="text" id="medCadera"
-                                        class="form-control form-control-sm medida-input" placeholder="Ej: 95.5"
-                                        maxlength="6" inputmode="decimal" oninput="validateMedidaModal(this)">
+                                {{-- CADERA --}}
+                                <div class="form-group col-md-4 col-6 text-center">
+                                    <label class="medida-label">CADERA</label>
+                                    <div class="medida-card">
+                                        <img src="{{ asset('images/cadera.png') }}" alt="Cadera"
+                                            class="img-fluid medida-img">
+                                        <input type="text" id="medCadera"
+                                            class="form-control form-control-sm medida-input" placeholder="Ej: 95.5"
+                                            maxlength="6" inputmode="decimal" oninput="validateMedidaModal(this)">
+                                    </div>
                                 </div>
-                            </div>
-                            {{-- LARGO BLUSA --}}
-                            <div class="form-group col-md-4 col-6 text-center">
-                                <label class="medida-label">LARGO BLUSA</label>
-                                <div class="medida-card">
-                                    <img src="{{ asset('images/largo.png') }}" alt="Largo Blusa"
-                                        class="img-fluid medida-img">
-                                    <input type="text" id="medLargo"
-                                        class="form-control form-control-sm medida-input" placeholder="Ej: 60.5"
-                                        maxlength="6" inputmode="decimal" oninput="validateMedidaModal(this)">
+                                {{-- LARGO BLUSA --}}
+                                <div class="form-group col-md-4 col-6 text-center">
+                                    <label class="medida-label">LARGO BLUSA</label>
+                                    <div class="medida-card">
+                                        <img src="{{ asset('images/largo.png') }}" alt="Largo Blusa"
+                                            class="img-fluid medida-img">
+                                        <input type="text" id="medLargo"
+                                            class="form-control form-control-sm medida-input" placeholder="Ej: 60.5"
+                                            maxlength="6" inputmode="decimal" oninput="validateMedidaModal(this)">
+                                    </div>
                                 </div>
-                            </div>
-                            {{-- LARGO VESTIDO --}}
-                            <div class="form-group col-md-4 col-6 text-center">
-                                <label class="medida-label">LARGO VESTIDO</label>
-                                <div class="medida-card">
-                                    <img src="{{ asset('images/largo_vestido.png') }}" alt="Largo Vestido"
-                                        class="img-fluid medida-img">
-                                    <input type="text" id="medLargoVestido"
-                                        class="form-control form-control-sm medida-input" placeholder="Ej: 120.5"
-                                        maxlength="6" inputmode="decimal" oninput="validateMedidaModal(this)">
+                                {{-- LARGO VESTIDO --}}
+                                <div class="form-group col-md-4 col-6 text-center">
+                                    <label class="medida-label">LARGO VESTIDO</label>
+                                    <div class="medida-card">
+                                        <img src="{{ asset('images/largo_vestido.png') }}" alt="Largo Vestido"
+                                            class="img-fluid medida-img">
+                                        <input type="text" id="medLargoVestido"
+                                            class="form-control form-control-sm medida-input" placeholder="Ej: 120.5"
+                                            maxlength="6" inputmode="decimal" oninput="validateMedidaModal(this)">
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        {{-- Checkbox guardar en cliente --}}
-                        <div class="custom-control custom-checkbox mt-2" id="saveToClientOption" style="display: none;">
-                            <input type="checkbox" class="custom-control-input" id="chkSaveMeasuresToClient">
-                            <label class="custom-control-label" for="chkSaveMeasuresToClient">
-                                Guardar estas medidas en el perfil del cliente
-                            </label>
-                        </div>
-                    </div>
 
-                    {{-- Panel: Seleccionar medidas existentes del cliente --}}
-                    <div id="existingMeasurementsPanel" style="display: none;">
-                        <div class="text-center py-3" id="existingMeasuresLoading">
-                            <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
-                            <p class="mt-2 mb-0 text-muted">Cargando medidas del cliente...</p>
+                        {{-- Panel: Seleccionar medidas existentes del cliente --}}
+                        <div class="tab-pane fade" id="panel-existing-measures" role="tabpanel">
+                            <div class="text-center py-3" id="existingMeasuresLoading">
+                                <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
+                                <p class="mt-2 mb-0" style="color: #495057;">Cargando medidas del cliente...</p>
+                            </div>
+                            <div id="existingMeasuresList">
+                                {{-- Se llena dinámicamente con fecha y medidas --}}
+                            </div>
+                            <div class="alert alert-secondary py-3 mt-2 text-center" id="noExistingMeasuresAlert"
+                                style="display: none;">
+                                <i class="fas fa-inbox fa-2x mb-2 d-block" style="color: #6c757d;"></i>
+                                <span style="color: #495057; font-size: 14px;">Este cliente no tiene medidas
+                                    registradas.</span>
+                            </div>
                         </div>
-                        <div id="existingMeasuresList">
-                            {{-- Se llena dinámicamente --}}
-                        </div>
-                        <div class="alert alert-warning py-2 mt-2" id="noExistingMeasuresAlert" style="display: none;">
-                            <i class="fas fa-exclamation-triangle mr-1"></i>
-                            Este cliente no tiene medidas registradas. Capture nuevas medidas.
-                        </div>
-                    </div>
+                    </div>{{-- fin tab-content --}}
                 </div>
                 <div class="modal-footer py-2">
                     {{-- Footer para modo editable --}}
@@ -2475,77 +2381,101 @@
             // ==========================================
 
             // ==========================================
-            // CONTROL DE VISIBILIDAD MEDIDAS + INDICADOR TIPO
+            // CONTROL DE VISIBILIDAD MEDIDAS (ÚNICO BLOQUE)
             // ==========================================
             function updateMeasurementsSectionVisibility() {
                 if (!selectedProduct) {
-                    // Sin producto: ocultar indicadores
-                    $('#productTypeIndicator').hide();
-                    $('#productTypeStandard').addClass('d-none').removeClass('d-flex');
-                    $('#productTypeCustom').addClass('d-none').removeClass('d-flex');
+                    // Sin producto: ocultar bloque de medidas
                     $('#measurementsSection').hide();
                     $('#systemClientDivider').hide();
+                    // Deshabilitar botón de medidas y resetear checkbox
+                    $('#chkRequiresMeasurements').prop('checked', false);
+                    $('#btnOpenMeasurementsModal').prop('disabled', true).removeClass('btn-primary btn-success')
+                        .addClass('btn-secondary');
                     return;
                 }
-
-                // Mostrar indicador de tipo de producto
-                $('#productTypeIndicator').show();
 
                 console.log('[DEBUG] Producto:', selectedProduct.name, '| requires_measurements:', selectedProduct
                     .requires_measurements);
 
                 if (selectedProduct.requires_measurements) {
-                    // PRODUCTO A MEDIDA
-                    $('#productTypeStandard').addClass('d-none').removeClass('d-flex');
-                    $('#productTypeCustom').removeClass('d-none').addClass('d-flex');
+                    // PRODUCTO A MEDIDA - mostrar ÚNICO bloque sistémico
                     $('#measurementsSection').show();
                     $('#systemClientDivider').show();
 
+                    // Reset checkbox y botón (deshabilitado hasta marcar checkbox)
+                    $('#chkRequiresMeasurements').prop('checked', false);
+                    $('#btnOpenMeasurementsModal').prop('disabled', true).removeClass('btn-success btn-primary')
+                        .addClass('btn-secondary');
+
                     if (currentItemMeasurements) {
-                        // ✓ REQUISITO COMPLETADO
-                        $('#measurementsStatusBadge')
-                            .html('<i class="fas fa-check-circle mr-1"></i>REQUISITO COMPLETADO')
-                            .css({
-                                'background': '#2e7d32',
-                                'color': 'white',
-                                'font-size': '11px',
-                                'padding': '4px 8px'
-                            });
-                        $('#btnMeasurementsText').text('Editar medidas (requisito completado)');
-                        $('#btnOpenMeasurementsModal').css({
-                            'background': '#2e7d32',
-                            'border-color': '#2e7d32'
-                        });
+                        // Medidas capturadas: marcar checkbox, habilitar y actualizar botón
+                        $('#chkRequiresMeasurements').prop('checked', true);
+                        $('#btnMeasurementsText').text('Editar Medidas');
+                        $('#btnOpenMeasurementsModal').prop('disabled', false).removeClass('btn-secondary')
+                            .addClass('btn-success');
                         updateMeasurementsSummary(currentItemMeasurements);
                         $('#measurementsSummaryBody').show();
                     } else {
-                        // ⚠ REQUISITO OBLIGATORIO - Sin medidas
-                        $('#measurementsStatusBadge')
-                            .html('<i class="fas fa-exclamation-circle mr-1"></i>REQUISITO OBLIGATORIO')
-                            .css({
-                                'background': '#e65100',
-                                'color': 'white',
-                                'font-size': '11px',
-                                'padding': '4px 8px'
-                            });
-                        $('#btnMeasurementsText').text('Completar requisito: capturar medidas');
-                        $('#btnOpenMeasurementsModal').css({
-                            'background': '#0d47a1',
-                            'border-color': '#0d47a1'
-                        });
+                        // Sin medidas: botón deshabilitado (gris)
+                        $('#btnMeasurementsText').text('Capturar Medidas');
                         $('#measurementsSummaryBody').hide();
                     }
+                    // Cargar conteo de medidas existentes del cliente vía AJAX
+                    loadMeasurementsCountForTabs();
                 } else {
-                    // PRODUCTO ESTÁNDAR
-                    $('#productTypeStandard').removeClass('d-none').addClass('d-flex');
-                    $('#productTypeCustom').addClass('d-none').removeClass('d-flex');
+                    // PRODUCTO ESTÁNDAR - ocultar bloque de medidas
                     $('#measurementsSection').hide();
                     $('#systemClientDivider').hide();
                 }
 
-                // Actualizar estado del botón guardar
+                // Actualizar estado del botón guardar (NUNCA se bloquea por medidas)
                 updateAddButtonState();
             }
+
+            // Cargar conteo de medidas existentes para mostrar en tab
+            function loadMeasurementsCountForTabs() {
+                if (!selectedClientData) {
+                    $('#existingMeasuresCount').text('0');
+                    return;
+                }
+                // Usar cache si existe
+                if (clientMeasurementsCache !== null) {
+                    $('#existingMeasuresCount').text(clientMeasurementsCache.length || 0);
+                    return;
+                }
+                // Cargar desde servidor
+                $.ajax({
+                    url: `/admin/orders/ajax/clientes/${selectedClientData.id}/measurements`,
+                    method: 'GET',
+                    dataType: 'json',
+                    success: function(measurements) {
+                        clientMeasurementsCache = measurements;
+                        $('#existingMeasuresCount').text(measurements.length || 0);
+                    },
+                    error: function() {
+                        $('#existingMeasuresCount').text('0');
+                    }
+                });
+            }
+
+            // Habilitar/deshabilitar botón de medidas según checkbox
+            $('#chkRequiresMeasurements').on('change', function() {
+                if ($(this).is(':checked')) {
+                    // Habilitar botón con estilo azul
+                    $('#btnOpenMeasurementsModal').prop('disabled', false).removeClass('btn-secondary')
+                        .addClass('btn-primary');
+                } else {
+                    // Deshabilitar botón y resetear medidas
+                    $('#btnOpenMeasurementsModal').prop('disabled', true).removeClass(
+                        'btn-primary btn-success').addClass('btn-secondary');
+                    // Limpiar medidas capturadas
+                    currentItemMeasurements = null;
+                    $('#measurementsSummaryBody').hide();
+                    $('#measurementsSummaryContent').empty();
+                    $('#btnMeasurementsText').text('Capturar Medidas');
+                }
+            });
 
             // Abrir modal de medidas (overlay, sin cerrar modal producto)
             $('#btnOpenMeasurementsModal').on('click', function() {
@@ -2567,39 +2497,19 @@
                     $('#measurementsModal .medida-input').val('');
                 }
 
-                // Mostrar opción de guardar en cliente si hay cliente seleccionado
-                if (selectedClientData) {
-                    $('#saveToClientOption').show();
-                    // Rehidratar checkbox desde estado persistido
-                    const savedToClient = currentItemMeasurements?.save_to_client || false;
-                    $('#chkSaveMeasuresToClient').prop('checked', savedToClient);
-                } else {
-                    $('#saveToClientOption').hide();
-                }
+                // Reset tabs al primer tab (Capturar nuevas)
+                $('#tab-new-measures').tab('show');
 
-                // Reset selector de origen
-                $('input[name="measurementSource"][value="new"]').prop('checked', true);
-                $('#lblNewMeasures').addClass('active');
-                $('#lblExistingMeasures').removeClass('active');
-                $('#newMeasurementsPanel').show();
-                $('#existingMeasurementsPanel').hide();
+                // Actualizar conteo de medidas existentes
+                loadMeasurementsCountForTabs();
 
                 // Abrir modal como overlay (NO cierra #addProductModal)
                 $('#measurementsModal').modal('show');
             });
 
-            // Toggle entre capturar nuevas / usar existentes
-            $('input[name="measurementSource"]').on('change', function() {
-                const source = $(this).val();
-
-                if (source === 'new') {
-                    $('#newMeasurementsPanel').show();
-                    $('#existingMeasurementsPanel').hide();
-                } else {
-                    $('#newMeasurementsPanel').hide();
-                    $('#existingMeasurementsPanel').show();
-                    loadClientMeasurementsForSelection();
-                }
+            // Al cambiar a tab "Usar existentes", cargar medidas
+            $('#tab-existing-measures').on('shown.bs.tab', function() {
+                loadClientMeasurementsForSelection();
             });
 
             // Cargar medidas existentes del cliente
@@ -2713,11 +2623,9 @@
                     alto_cintura: parseFloat($('#medAltoCintura').val()) || null,
                     largo: parseFloat($('#medLargo').val()) || null,
                     largo_vestido: parseFloat($('#medLargoVestido').val()) || null,
-                    // Persistir estado del checkbox POR ITEM
-                    save_to_client: $('#chkSaveMeasuresToClient').is(':checked')
                 };
 
-                // Verificar que al menos una medida tenga valor (excluir save_to_client)
+                // Verificar que al menos una medida tenga valor
                 const hasAnyMeasurement = ['busto', 'cintura', 'cadera', 'alto_cintura', 'largo',
                         'largo_vestido'
                     ]
@@ -2733,16 +2641,12 @@
                     return;
                 }
 
-                // Guardar medidas en variable del item actual (flujo UNIFORME)
+                // Guardar medidas en variable del item actual
+                // Las medidas se guardan SOLO al crear el pedido (backend)
                 currentItemMeasurements = measurements;
 
                 // Actualizar UI del modal de producto
                 updateMeasurementsUIAfterCapture();
-
-                // Guardar en cliente si checkbox está marcado
-                if (measurements.save_to_client && selectedClientData) {
-                    saveMeasurementsToClient(measurements);
-                }
 
                 // Cerrar SOLO el modal de medidas (el de producto sigue abierto)
                 $('#measurementsModal').modal('hide');
@@ -2757,32 +2661,23 @@
                 });
             });
 
-            // Actualizar UI después de capturar medidas
+            // Actualizar UI después de capturar medidas (SIN badges de estado)
             function updateMeasurementsUIAfterCapture() {
                 if (!currentItemMeasurements) return;
 
-                // Cambiar badge a "✓ REQUISITO COMPLETADO"
-                $('#measurementsStatusBadge')
-                    .html('<i class="fas fa-check-circle mr-1"></i>REQUISITO COMPLETADO')
-                    .css({
-                        'background': '#2e7d32',
-                        'color': 'white',
-                        'font-size': '11px',
-                        'padding': '4px 8px'
-                    });
+                // Marcar que las medidas fueron confirmadas (para no resetear al cerrar modal)
+                $('#measurementsModal').data('confirmed', true);
 
-                $('#btnMeasurementsText').text('Editar medidas (requisito completado)');
-                $('#btnOpenMeasurementsModal').css({
-                    'background': '#2e7d32',
-                    'border-color': '#2e7d32'
-                });
+                // Cambiar texto y color del botón a verde (éxito)
+                $('#btnMeasurementsText').text('Editar Medidas');
+                $('#btnOpenMeasurementsModal').removeClass('btn-secondary btn-primary').addClass('btn-success');
 
                 // Mostrar resumen de medidas
                 const summaryHtml = buildMeasurementsSummaryHtml(currentItemMeasurements);
                 $('#measurementsSummaryContent').html(summaryHtml);
                 $('#measurementsSummaryBody').show();
 
-                // Actualizar estado del botón guardar
+                // Actualizar estado del botón guardar (NUNCA se bloquea por medidas)
                 updateAddButtonState();
             }
 
@@ -2949,21 +2844,18 @@
 
                 const price = parseFloat($('#modalPrice').val()) || 0;
 
-                // Bloquear si precio es 0
+                // Bloquear SOLO si precio es 0
                 if (price <= 0) {
                     $btn.prop('disabled', true).attr('title', 'Ingrese un precio válido').tooltip('dispose')
                         .tooltip();
                     return;
                 }
 
-                // VALIDACIÓN DE MEDIDAS: Si requiere medidas y no las tiene, bloquear
-                if (selectedProduct.requires_measurements && !currentItemMeasurements) {
-                    $btn.prop('disabled', true)
-                        .attr('title', 'Completa las medidas para continuar')
-                        .tooltip('dispose')
-                        .tooltip();
-                    return;
-                }
+                // ═══════════════════════════════════════════════════════════
+                // REGLA DE ORO: El botón NUNCA se bloquea por medidas faltantes
+                // Las validaciones duras ocurren en el backend al confirmar
+                // El operador DECIDE, el sistema DECLARA estados (PENDING)
+                // ═══════════════════════════════════════════════════════════
 
                 // Todo OK: habilitar botón
                 $btn.prop('disabled', false).attr('title', '').tooltip('dispose');
@@ -2983,12 +2875,9 @@
                 $('#measurementsSummaryBody').hide();
                 $('#measurementsSummaryContent').empty();
 
-                // 1.1 Ocultar secciones de medidas y tipo (se reevalúan con el nuevo producto)
+                // 1.1 Ocultar sección de medidas (se reevalúa con el nuevo producto)
                 $('#measurementsSection').hide();
                 $('#systemClientDivider').hide();
-                $('#productTypeIndicator').hide();
-                $('#productTypeStandard').addClass('d-none').removeClass('d-flex');
-                $('#productTypeCustom').addClass('d-none').removeClass('d-flex');
 
                 // 2. Extras seleccionados del producto anterior
                 selectedExtras = [];
@@ -2998,20 +2887,11 @@
                 // 3. Ajuste manual de precio (dependiente del contexto del producto)
                 $('#modalExtrasCost').val('0');
 
-                // 4. Reset visual de estado de medidas (se reconfigura en updateProductPreview)
-                $('#measurementsStatusBadge')
-                    .html('<i class="fas fa-exclamation-circle mr-1"></i>REQUISITO OBLIGATORIO')
-                    .css({
-                        'background': '#e65100',
-                        'color': 'white',
-                        'font-size': '11px',
-                        'padding': '4px 8px'
-                    });
-                $('#btnMeasurementsText').text('Completar requisito: capturar medidas');
-                $('#btnOpenMeasurementsModal').css({
-                    'background': '#0d47a1',
-                    'border-color': '#0d47a1'
-                });
+                // 4. Reset visual del botón de medidas y checkbox
+                $('#chkRequiresMeasurements').prop('checked', false);
+                $('#btnMeasurementsText').text('Capturar Medidas');
+                $('#btnOpenMeasurementsModal').prop('disabled', true).removeClass('btn-primary btn-success')
+                    .addClass('btn-secondary');
             }
 
             // D4: RESET TOTAL DE ESTADO DEL MODAL
@@ -3024,27 +2904,14 @@
                 $('#productPreviewSku').text('-');
                 $('#productPreviewImage').attr('src', '{{ asset('img/no-image.png') }}');
                 $('#productPreviewType').hide();
-                // Reset indicador de tipo de producto
-                $('#productTypeIndicator').hide();
-                $('#productTypeStandard').addClass('d-none').removeClass('d-flex');
-                $('#productTypeCustom').addClass('d-none').removeClass('d-flex');
                 // Reset medidas del item
                 currentItemMeasurements = null;
                 $('#measurementsSection').hide();
                 $('#systemClientDivider').hide();
-                $('#measurementsStatusBadge')
-                    .html('<i class="fas fa-exclamation-circle mr-1"></i>REQUISITO OBLIGATORIO')
-                    .css({
-                        'background': '#e65100',
-                        'color': 'white',
-                        'font-size': '11px',
-                        'padding': '4px 8px'
-                    });
-                $('#btnMeasurementsText').text('Completar requisito: capturar medidas');
-                $('#btnOpenMeasurementsModal').css({
-                    'background': '#0d47a1',
-                    'border-color': '#0d47a1'
-                });
+                $('#chkRequiresMeasurements').prop('checked', false);
+                $('#btnMeasurementsText').text('Capturar Medidas');
+                $('#btnOpenMeasurementsModal').prop('disabled', true).removeClass('btn-primary btn-success')
+                    .addClass('btn-secondary');
                 $('#measurementsSummaryBody').hide();
                 $('#measurementsSummaryContent').empty();
                 // Reset precio y comparación
@@ -3052,11 +2919,15 @@
                 $('#priceComparisonContainer').hide();
                 // $('#priceModifiedAlert').hide();
                 $('#itemSubtotalContainer').hide();
-                // Reset personalización
+                // Reset personalización (nuevo flujo)
+                $('#chkRequiresDesign').prop('checked', false);
+                $('#modalEmbroideryText').prop('disabled', true).val('').attr('placeholder',
+                    'Marque el checkbox para habilitar');
+                $('#embroideryTextHint').hide();
+                // Reset personalización (LEGACY)
                 $('#isCustomized').prop('checked', false);
                 $('#customizationBody').hide();
                 $('#customizationChevron').removeClass('fa-chevron-up').addClass('fa-chevron-down');
-                $('#modalEmbroideryText').val('');
                 $('#modalExtrasCost').val('0');
                 $('#modalCustomizationNotes').val('');
                 // Reset extras del producto
@@ -3081,7 +2952,7 @@
                 // Reset tabla a estado inicial (carga diferida)
                 $('#extrasOnlyTableBody').html(`
                     <tr>
-                        <td colspan="3" class="text-center py-4 text-muted">
+                        <td colspan="3" class="text-center py-4" style="color: #495057;">
                             <i class="fas fa-box-open fa-2x mb-2 d-block"></i>
                             Seleccione "Solo Extras" para cargar
                         </td>
@@ -3123,7 +2994,23 @@
                 updateItemSubtotal();
             });
 
-            // Handler para checkbox de personalización
+            // Handler para checkbox de personalización (requiere diseño)
+            $('#chkRequiresDesign').on('change', function() {
+                const isChecked = $(this).is(':checked');
+                if (isChecked) {
+                    // Habilitar input de texto a bordar
+                    $('#modalEmbroideryText').prop('disabled', false).attr('placeholder',
+                        'Nombre, frase, iniciales...');
+                    $('#embroideryTextHint').show();
+                } else {
+                    // Deshabilitar y limpiar input de texto a bordar
+                    $('#modalEmbroideryText').prop('disabled', true).val('').attr('placeholder',
+                        'Marque el checkbox para habilitar');
+                    $('#embroideryTextHint').hide();
+                }
+            });
+
+            // Handler LEGACY para checkbox de personalización (mantener compatibilidad)
             $('#isCustomized').on('change', function() {
                 const isChecked = $(this).is(':checked');
                 if (isChecked) {
@@ -3135,7 +3022,7 @@
                 }
             });
 
-            // Toggle por click en header de personalización
+            // Toggle por click en header de personalización (LEGACY)
             $('#customizationToggle').on('click', function(e) {
                 // Evitar toggle cuando se hace click directamente en el checkbox
                 if ($(e.target).is('#isCustomized') || $(e.target).closest('label').is(
@@ -3259,11 +3146,13 @@
                 const newQuantity = parseInt($('#modalQuantity').val()) || 1;
                 const newPrice = parseFloat($('#modalPrice').val()) || 0;
 
-                // Capturar datos de personalización
-                const isCustomized = $('#isCustomized').is(':checked');
+                // Capturar flag de personalización (requiere diseño)
+                const requiresDesign = $('#chkRequiresDesign').is(':checked');
                 const embroideryText = $('#modalEmbroideryText').val().trim();
                 const extrasCost = parseFloat($('#modalExtrasCost').val()) || 0;
                 const customizationNotes = $('#modalCustomizationNotes').val().trim();
+                // LEGACY: mantener is_customized basado en requiresDesign
+                const isCustomized = requiresDesign || embroideryText.length > 0;
 
                 // Clonar extras seleccionados para este ítem
                 const itemExtras = selectedExtras.map(e => ({
@@ -3289,6 +3178,7 @@
                         editItem.unit_price = newPrice;
                         editItem.lead_time = selectedProduct.lead_time || 0;
                         editItem.requires_measurements = selectedProduct.requires_measurements || false;
+                        editItem.requires_design = requiresDesign;
                         editItem.product_type_name = selectedProduct.product_type_name || null;
                         editItem.is_customized = isCustomized;
                         editItem.embroidery_text = embroideryText;
@@ -3359,6 +3249,7 @@
                             unit_price: newPrice,
                             lead_time: selectedProduct.lead_time || 0,
                             requires_measurements: selectedProduct.requires_measurements || false,
+                            requires_design: requiresDesign,
                             product_type_name: selectedProduct.product_type_name || null,
                             is_customized: isCustomized,
                             embroidery_text: embroideryText,
@@ -3646,6 +3537,18 @@
 
                     $(this).data('readonly', false);
                 }
+
+                // Si se canceló (no se confirmaron medidas), reiniciar el ciclo
+                if (!$(this).data('confirmed') && !currentItemMeasurements) {
+                    // Desmarcar checkbox y deshabilitar botón
+                    $('#chkRequiresMeasurements').prop('checked', false);
+                    $('#btnOpenMeasurementsModal').prop('disabled', true).removeClass(
+                        'btn-primary btn-success').addClass('btn-secondary');
+                    $('#btnMeasurementsText').text('Capturar Medidas');
+                }
+
+                // Resetear flag de confirmación para próximo uso
+                $(this).data('confirmed', false);
             });
 
             // ==========================================

@@ -55,6 +55,7 @@
                 @csrf
                 @method('PUT')
                 <input type="hidden" name="material_id" value="{{ $material->id }}">
+                <input type="hidden" name="conversion_mode" value="{{ $conversion->conversion_mode ?? 'manual' }}">
 
                 <div class="row">
 

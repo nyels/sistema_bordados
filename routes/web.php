@@ -805,6 +805,11 @@ Route::get('admin/materials/{materialId}/conversion-factor/{fromUnitId}', [App\H
     ->name('admin.material-conversions.factor')
     ->middleware('auth');
 
+// AJAX: Obtener todas las conversiones de un material (para modal de unidades)
+Route::get('admin/materials/{materialId}/conversions-modal', [App\Http\Controllers\MaterialUnitConversionController::class, 'getConversionsForModal'])
+    ->name('admin.material-conversions.modal')
+    ->middleware('auth');
+
 /*
 |--------------------------------------------------------------------------
 | RUTAS DE COMPRAS (PURCHASES) - FORMATO EXPLÍCITO
@@ -1209,6 +1214,15 @@ Route::prefix('admin/orders')->name('admin.orders.')->middleware('auth')->group(
     Route::get('{order}/items/{item}/designs', [App\Http\Controllers\OrderController::class, 'getItemDesigns'])->name('items.designs');
     Route::post('{order}/items/{item}/link-design', [App\Http\Controllers\OrderController::class, 'linkDesignToItem'])->name('items.link-design');
     Route::delete('{order}/items/{item}/unlink-design/{designExportId}', [App\Http\Controllers\OrderController::class, 'unlinkDesignFromItem'])->name('items.unlink-design');
+
+    // FASE Y: Medidas por item (captura/selección de historial)
+    Route::get('{order}/items/{item}/measurements', [App\Http\Controllers\OrderController::class, 'getItemMeasurements'])->name('items.measurements');
+    Route::post('{order}/items/{item}/measurements', [App\Http\Controllers\OrderController::class, 'updateItemMeasurements'])->name('items.measurements.update');
+
+    // FASE Y: Historial de medidas del cliente (para selector)
+    Route::get('ajax/cliente/{cliente}/measurement-history', [App\Http\Controllers\OrderController::class, 'getClientMeasurementHistory'])->name('ajax.client-measurement-history');
+    Route::get('ajax/cliente/{cliente}/measurement-history/{historyId}', [App\Http\Controllers\OrderController::class, 'getMeasurementHistoryById'])->name('ajax.measurement-history-by-id');
+    Route::post('ajax/cliente/{cliente}/measurement-history', [App\Http\Controllers\OrderController::class, 'storeClientMeasurementHistory'])->name('ajax.store-measurement-history');
 });
 
 /*

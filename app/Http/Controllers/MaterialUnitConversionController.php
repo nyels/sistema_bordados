@@ -176,10 +176,18 @@ class MaterialUnitConversionController extends Controller
             $conversion->conversion_factor = (float) $request->conversion_factor;
             $conversion->label = $request->label;
 
-            // Campos de desglose (si se usó la calculadora/wizard)
+            // Guardar el modo de conversión
+            $conversionMode = $request->input('conversion_mode', MaterialUnitConversion::MODE_MANUAL);
+            $conversion->conversion_mode = in_array($conversionMode, [MaterialUnitConversion::MODE_MANUAL, MaterialUnitConversion::MODE_POR_CONTENIDO])
+                ? $conversionMode
+                : MaterialUnitConversion::MODE_MANUAL;
+
+            // Campos de desglose (si se usó la calculadora/wizard - Por Contenido)
             if ($request->filled('intermediate_unit_id') && $request->filled('intermediate_qty')) {
                 $conversion->intermediate_unit_id = (int) $request->intermediate_unit_id;
                 $conversion->intermediate_qty = (float) $request->intermediate_qty;
+                // Forzar modo por_contenido si tiene datos de desglose
+                $conversion->conversion_mode = MaterialUnitConversion::MODE_POR_CONTENIDO;
 
                 // VALIDACIÓN DE INTEGRIDAD (ARQUITECTURA EMPRESARIAL)
                 // Si la unidad intermedia es la misma que la unidad de consumo (Base),
@@ -192,6 +200,10 @@ class MaterialUnitConversionController extends Controller
                         throw new \Exception('Error de integridad: Si selecciona la unidad base como contenido, el valor unitario debe ser 1.');
                     }
                 }
+            } else {
+                // Si no hay datos de desglose, limpiar campos intermedios
+                $conversion->intermediate_unit_id = null;
+                $conversion->intermediate_qty = null;
             }
 
             $conversion->save();
@@ -317,6 +329,21 @@ class MaterialUnitConversionController extends Controller
             $conversion->conversion_factor = (float) $request->conversion_factor;
             $conversion->label = $request->label;
 
+            // Actualizar modo de conversión y campos de desglose
+            $conversionMode = $request->input('conversion_mode', MaterialUnitConversion::MODE_MANUAL);
+            $conversion->conversion_mode = in_array($conversionMode, [MaterialUnitConversion::MODE_MANUAL, MaterialUnitConversion::MODE_POR_CONTENIDO])
+                ? $conversionMode
+                : MaterialUnitConversion::MODE_MANUAL;
+
+            if ($request->filled('intermediate_unit_id') && $request->filled('intermediate_qty')) {
+                $conversion->intermediate_unit_id = (int) $request->intermediate_unit_id;
+                $conversion->intermediate_qty = (float) $request->intermediate_qty;
+                $conversion->conversion_mode = MaterialUnitConversion::MODE_POR_CONTENIDO;
+            } else {
+                $conversion->intermediate_unit_id = null;
+                $conversion->intermediate_qty = null;
+            }
+
             if (!$conversion->isDirty()) {
                 return redirect()->route('admin.material-conversions.index', $material->id)
                     ->with('info', 'No se realizaron cambios');
@@ -439,6 +466,60 @@ class MaterialUnitConversionController extends Controller
 
             return redirect()->route('material-conversions.index', $materialId)
                 ->with('error', 'Error al eliminar la conversión');
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | AJAX: Obtener todas las conversiones de un material (para modal)
+    |--------------------------------------------------------------------------
+    */
+
+    public function getConversionsForModal(Request $request, $materialId)
+    {
+        try {
+            if (!is_numeric($materialId) || $materialId < 1) {
+                return response()->json(['error' => 'Material no válido'], 400);
+            }
+
+            $material = Material::with(['consumptionUnit', 'baseUnit'])
+                ->find((int) $materialId);
+
+            if (!$material) {
+                return response()->json(['error' => 'Material no encontrado'], 404);
+            }
+
+            $conversions = MaterialUnitConversion::where('material_id', $material->id)
+                ->with(['fromUnit', 'toUnit'])
+                ->orderBy('label')
+                ->get();
+
+            $consumptionUnit = $material->consumptionUnit ?? $material->baseUnit;
+
+            $data = $conversions->map(function ($conv) use ($consumptionUnit) {
+                return [
+                    'id' => $conv->id,
+                    'label' => $conv->label ?: $conv->fromUnit->name,
+                    'from_unit_id' => $conv->from_unit_id,
+                    'from_unit_name' => $conv->fromUnit->name ?? '',
+                    'from_unit_symbol' => $conv->fromUnit->symbol ?? '',
+                    'to_unit_id' => $conv->to_unit_id,
+                    'to_unit_symbol' => $conv->toUnit->symbol ?? '',
+                    'conversion_factor' => (float) $conv->conversion_factor,
+                    'display' => "1 {$conv->fromUnit->name} = {$conv->conversion_factor} {$consumptionUnit->symbol}",
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'material_id' => $material->id,
+                'material_name' => $material->name,
+                'consumption_unit' => $consumptionUnit->symbol ?? 'u',
+                'conversions' => $data,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error AJAX getConversionsForModal: ' . $e->getMessage());
+            return response()->json(['error' => 'Error al obtener conversiones'], 500);
         }
     }
 

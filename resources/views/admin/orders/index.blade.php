@@ -14,7 +14,7 @@
 @stop
 
 @section('content')
-    @if(session('success'))
+    @if (session('success'))
         <div class="alert alert-success alert-dismissible fade show">
             {{ session('success') }}
             <button type="button" class="close" data-dismiss="alert">&times;</button>
@@ -25,64 +25,72 @@
          KPIs OPERATIVOS
     ======================================== --}}
     <div class="row">
+        {{-- 0. BORRADORES (Gray) --}}
         <div class="col-lg col-md-4 col-sm-6 col-12">
-            <div class="small-box bg-info" title="Requisitos comerciales completos. El inventario se valida al iniciar producción.">
+            <div class="small-box bg-secondary kpi-filter" data-status="draft" style="cursor: pointer;"
+                title="Pedidos en borrador, pendientes de confirmar.">
+                <div class="inner">
+                    <h3>{{ $kpis['borradores'] ?? 0 }}</h3>
+                    <p>Borradores</p>
+                </div>
+                <div class="icon"><i class="fas fa-edit"></i></div>
+            </div>
+        </div>
+
+        {{-- 1. CONFIRMADOS (Blue) --}}
+        <div class="col-lg col-md-4 col-sm-6 col-12">
+            <div class="small-box bg-primary kpi-filter" data-status="confirmed" style="cursor: pointer;"
+                title="Requisitos comerciales completos. El inventario se valida al iniciar producción.">
                 <div class="inner">
                     <h3>{{ $kpis['para_producir'] }}</h3>
                     <p>Confirmados</p>
                 </div>
                 <div class="icon"><i class="fas fa-clipboard-check"></i></div>
-                <a href="javascript:;" class="small-box-footer kpi-filter" data-status="confirmed">
-                    Ver confirmados <i class="fas fa-arrow-circle-right"></i>
-                </a>
             </div>
         </div>
+
+        {{-- 2. EN PRODUCCION (Purple) --}}
         <div class="col-lg col-md-4 col-sm-6 col-12">
-            <div class="small-box bg-danger">
-                <div class="inner">
-                    <h3>{{ $kpis['bloqueados'] }}</h3>
-                    <p>Bloqueados</p>
-                </div>
-                <div class="icon"><i class="fas fa-ban"></i></div>
-                <a href="javascript:;" class="small-box-footer kpi-filter" data-blocked="1">
-                    Ver bloqueados <i class="fas fa-arrow-circle-right"></i>
-                </a>
-            </div>
-        </div>
-        <div class="col-lg col-md-4 col-sm-6 col-12">
-            <div class="small-box bg-warning">
+            <div class="small-box kpi-filter" data-status="in_production"
+                style="background-color: #6610f2; color: white; cursor: pointer;">
                 <div class="inner">
                     <h3>{{ $kpis['en_produccion'] }}</h3>
                     <p>En Produccion</p>
                 </div>
                 <div class="icon"><i class="fas fa-cogs"></i></div>
-                <a href="javascript:;" class="small-box-footer kpi-filter" data-status="in_production">
-                    Ver en produccion <i class="fas fa-arrow-circle-right"></i>
-                </a>
             </div>
         </div>
+
+        {{-- 3. PARA ENTREGAR (Green) --}}
         <div class="col-lg col-md-4 col-sm-6 col-12">
-            <div class="small-box bg-success">
+            <div class="small-box bg-success kpi-filter" data-status="ready" style="cursor: pointer;">
                 <div class="inner">
                     <h3>{{ $kpis['para_entregar'] }}</h3>
-                    <p>Para Entregar</p>
+                    <p>Listo para entregar</p>
                 </div>
                 <div class="icon"><i class="fas fa-box-open"></i></div>
-                <a href="javascript:;" class="small-box-footer kpi-filter" data-status="ready">
-                    Ver listos <i class="fas fa-arrow-circle-right"></i>
-                </a>
             </div>
         </div>
+
+        {{-- 4. BLOQUEADOS (Red) --}}
         <div class="col-lg col-md-4 col-sm-6 col-12">
-            <div class="small-box {{ $kpis['retrasados'] > 0 ? 'bg-maroon' : 'bg-secondary' }}">
+            <div class="small-box bg-danger kpi-filter" data-blocked="1" style="cursor: pointer;">
                 <div class="inner">
-                    <h3>{{ $kpis['retrasados'] }}</h3>
-                    <p>Retrasados</p>
+                    <h3>{{ $kpis['bloqueados'] }}</h3>
+                    <p>Bloqueados</p>
                 </div>
-                <div class="icon"><i class="fas fa-exclamation-triangle"></i></div>
-                <a href="javascript:;" class="small-box-footer kpi-filter" data-delayed="1">
-                    Ver retrasados <i class="fas fa-arrow-circle-right"></i>
-                </a>
+                <div class="icon"><i class="fas fa-ban"></i></div>
+            </div>
+        </div>
+
+        {{-- 5. RETRASADOS (Warning/Yellow with White Text) --}}
+        <div class="col-lg col-md-4 col-sm-6 col-12">
+            <div class="small-box bg-warning kpi-filter text-white" data-delayed="1" style="cursor: pointer;">
+                <div class="inner">
+                    <h3 class="text-white">{{ $kpis['retrasados'] }}</h3>
+                    <p class="text-white">Retrasados</p>
+                </div>
+                <div class="icon"><i class="fas fa-clock"></i></div>
             </div>
         </div>
     </div>
@@ -104,256 +112,384 @@
 @stop
 
 @section('css')
-<style>
-    .small-box .inner h3 {
-        font-size: 2.2rem;
-        font-weight: bold;
-    }
-    .small-box .inner p {
-        font-size: 15px;
-    }
-    #orders-table-container {
-        position: relative;
-        min-height: 200px;
-    }
-    #orders-table-container.loading::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(255,255,255,0.7);
-        z-index: 10;
-    }
-    #orders-table-container.loading::before {
-        content: 'Cargando...';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 11;
-        font-weight: bold;
-        color: #333;
-    }
-    .filter-toggle.active {
-        box-shadow: 0 0 0 3px rgba(0,123,255,0.5);
-    }
-</style>
+    <style>
+        .small-box .inner h3 {
+            font-size: 2.2rem;
+            font-weight: bold;
+        }
+
+        .small-box .inner p {
+            font-size: 15px;
+        }
+
+        #orders-table-container {
+            position: relative;
+            min-height: 200px;
+        }
+
+        #orders-table-container.loading::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.7);
+            z-index: 10;
+        }
+
+        #orders-table-container.loading::before {
+            content: 'Cargando...';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 11;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .filter-toggle.active {
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.5);
+        }
+
+        /* DataTables - Botones de exportación (igual que proveedores) */
+        #ordersTable_wrapper .dt-buttons {
+            background-color: transparent;
+            box-shadow: none;
+            border: none;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        #ordersTable_wrapper .dt-buttons .btn {
+            color: #fff;
+            border-radius: 4px;
+            padding: 5px 15px;
+            font-size: 14px;
+        }
+
+        .btn-default {
+            background-color: #6e7176;
+            color: #fff;
+            border: none;
+        }
+
+        /* Ocultar paginación de DataTables (usamos la del servidor) */
+        #ordersTable_wrapper .dataTables_paginate {
+            display: none;
+        }
+    </style>
 @stop
 
 @section('js')
-<script>
-(function() {
-    'use strict';
+    <script>
+        (function() {
+            'use strict';
 
-    var baseUrl = '{{ route("admin.orders.index") }}';
-    var container = document.getElementById('orders-table-container');
-    var currentFilters = {};
+            var baseUrl = '{{ route('admin.orders.index') }}';
+            var container = document.getElementById('orders-table-container');
+            var currentFilters = {};
 
-    // ========================================
-    // FUNCIÓN AJAX PARA CARGAR TABLA
-    // ========================================
-    function loadTable(filters) {
-        filters = filters || {};
-        currentFilters = filters;
+            // ========================================
+            // FUNCIÓN AJAX PARA CARGAR TABLA
+            // ========================================
+            function loadTable(filters) {
+                filters = filters || {};
+                currentFilters = filters;
 
-        var params = new URLSearchParams();
-        Object.keys(filters).forEach(function(key) {
-            if (filters[key]) {
-                params.append(key, filters[key]);
-            }
-        });
-
-        var url = baseUrl + (params.toString() ? '?' + params.toString() : '');
-
-        container.classList.add('loading');
-
-        fetch(url, {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'text/html'
-            }
-        })
-        .then(function(response) {
-            return response.text();
-        })
-        .then(function(html) {
-            container.innerHTML = html;
-            // Actualizar URL sin recargar
-            window.history.replaceState({}, '', url);
-        })
-        .catch(function(error) {
-            console.error('Error:', error);
-        })
-        .finally(function() {
-            container.classList.remove('loading');
-        });
-    }
-
-    // ========================================
-    // FUNCIÓN PARA OBTENER FILTROS ACTUALES
-    // ========================================
-    function getFiltersFromForm() {
-        var filters = {};
-        var status = document.getElementById('filter-status');
-        var payment = document.getElementById('filter-payment');
-        var urgency = document.getElementById('filter-urgency');
-        var blocked = document.getElementById('filter-blocked');
-        var delayed = document.getElementById('filter-delayed');
-
-        if (status && status.value) filters.status = status.value;
-        if (payment && payment.value) filters.payment_status = payment.value;
-        if (urgency && urgency.value) filters.urgency = urgency.value;
-        if (blocked && blocked.classList.contains('active')) filters.blocked = '1';
-        if (delayed && delayed.classList.contains('active')) filters.delayed = '1';
-
-        return filters;
-    }
-
-    // ========================================
-    // EVENTOS DE FILTROS
-    // ========================================
-    document.addEventListener('DOMContentLoaded', function() {
-        // Selects
-        ['filter-status', 'filter-payment', 'filter-urgency'].forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el) {
-                el.addEventListener('change', function() {
-                    loadTable(getFiltersFromForm());
+                var params = new URLSearchParams();
+                Object.keys(filters).forEach(function(key) {
+                    if (filters[key]) {
+                        params.append(key, filters[key]);
+                    }
                 });
+
+                var url = baseUrl + (params.toString() ? '?' + params.toString() : '');
+
+                container.classList.add('loading');
+
+                fetch(url, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'text/html'
+                        }
+                    })
+                    .then(function(response) {
+                        return response.text();
+                    })
+                    .then(function(html) {
+                        container.innerHTML = html;
+                        // Actualizar URL sin recargar
+                        window.history.replaceState({}, '', url);
+                        // Reinicializar DataTable
+                        initDataTable();
+                    })
+                    .catch(function(error) {
+                        console.error('Error:', error);
+                    })
+                    .finally(function() {
+                        container.classList.remove('loading');
+                    });
             }
-        });
 
-        // Toggles
-        ['filter-blocked', 'filter-delayed'].forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el) {
-                el.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    this.classList.toggle('active');
-                    loadTable(getFiltersFromForm());
-                });
-            }
-        });
-
-        // Limpiar filtros
-        var clearBtn = document.getElementById('filter-clear');
-        if (clearBtn) {
-            clearBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                // Reset selects
-                ['filter-status', 'filter-payment', 'filter-urgency'].forEach(function(id) {
-                    var el = document.getElementById(id);
-                    if (el) el.value = '';
-                });
-                // Reset toggles
-                ['filter-blocked', 'filter-delayed'].forEach(function(id) {
-                    var el = document.getElementById(id);
-                    if (el) el.classList.remove('active');
-                });
-                loadTable({});
-            });
-        }
-
-        // KPI clicks
-        document.querySelectorAll('.kpi-filter').forEach(function(el) {
-            el.addEventListener('click', function(e) {
-                e.preventDefault();
+            // ========================================
+            // FUNCIÓN PARA OBTENER FILTROS ACTUALES
+            // ========================================
+            function getFiltersFromForm() {
                 var filters = {};
+                var status = document.getElementById('filter-status');
+                var payment = document.getElementById('filter-payment');
+                var urgency = document.getElementById('filter-urgency');
+                var blocked = document.getElementById('filter-blocked');
+                var delayed = document.getElementById('filter-delayed');
 
-                // Reset form controls
+                if (status && status.value) filters.status = status.value;
+                if (payment && payment.value) filters.payment_status = payment.value;
+                if (urgency && urgency.value) filters.urgency = urgency.value;
+                if (blocked && blocked.classList.contains('active')) filters.blocked = '1';
+                if (delayed && delayed.classList.contains('active')) filters.delayed = '1';
+
+                return filters;
+            }
+
+            // ========================================
+            // INICIALIZAR DATATABLE (igual que proveedores)
+            // ========================================
+            function initDataTable() {
+                var table = container.querySelector('table');
+                if (!table) return;
+
+                if (!table.id) {
+                    table.id = 'ordersTable';
+                }
+
+                var tableId = '#' + table.id;
+
+                // Destruir instancia anterior si existe
+                if ($.fn.DataTable.isDataTable(tableId)) {
+                    $(tableId).DataTable().destroy();
+                }
+
+                // Inicializar DataTable igual que proveedores
+                // Nota: paging:false porque usamos paginación del servidor via AJAX
+                $(tableId).DataTable({
+                    "paging": false,
+                    "language": {
+                        "emptyTable": "No hay pedidos",
+                        "info": "Mostrando _START_ a _END_ de _TOTAL_ Pedidos",
+                        "infoEmpty": "Mostrando 0 a 0 de 0 Pedidos",
+                        "infoFiltered": "(Filtrado de _MAX_ total Pedidos)",
+                        "lengthMenu": "Mostrar _MENU_ Pedidos",
+                        "loadingRecords": "Cargando...",
+                        "processing": "Procesando...",
+                        "search": "Buscador:",
+                        "zeroRecords": "Sin resultados encontrados",
+                        "paginate": {
+                            "first": "Primero",
+                            "last": "Ultimo",
+                            "next": "Siguiente",
+                            "previous": "Anterior"
+                        }
+                    },
+                    "responsive": true,
+                    "lengthChange": false,
+                    "autoWidth": false,
+                    buttons: [{
+                            text: '<i class="fas fa-copy"></i> COPIAR',
+                            extend: 'copy',
+                            className: 'btn btn-default'
+                        },
+                        {
+                            text: '<i class="fas fa-file-pdf"></i> PDF',
+                            extend: 'pdf',
+                            className: 'btn btn-danger',
+                            title: 'Control de Pedidos',
+                            exportOptions: {
+                                columns: ':not(:last-child)'
+                            }
+                        },
+                        {
+                            text: '<i class="fas fa-file-csv"></i> CSV',
+                            extend: 'csv',
+                            className: 'btn btn-info',
+                            title: 'Control de Pedidos',
+                            exportOptions: {
+                                columns: ':not(:last-child)'
+                            }
+                        },
+                        {
+                            text: '<i class="fas fa-file-excel"></i> EXCEL',
+                            extend: 'excel',
+                            className: 'btn btn-success',
+                            title: 'Control de Pedidos',
+                            exportOptions: {
+                                columns: ':not(:last-child)'
+                            }
+                        },
+                        {
+                            text: '<i class="fas fa-print"></i> IMPRIMIR',
+                            extend: 'print',
+                            className: 'btn btn-default',
+                            title: 'Control de Pedidos',
+                            exportOptions: {
+                                columns: ':not(:last-child)'
+                            }
+                        }
+                    ]
+                }).buttons().container().appendTo(tableId + '_wrapper .row:eq(0)');
+            }
+
+            // ========================================
+            // EVENTOS DE FILTROS
+            // ========================================
+            document.addEventListener('DOMContentLoaded', function() {
+                // Selects
                 ['filter-status', 'filter-payment', 'filter-urgency'].forEach(function(id) {
-                    var input = document.getElementById(id);
-                    if (input) input.value = '';
+                    var el = document.getElementById(id);
+                    if (el) {
+                        el.addEventListener('change', function() {
+                            loadTable(getFiltersFromForm());
+                        });
+                    }
                 });
+
+                // Toggles
                 ['filter-blocked', 'filter-delayed'].forEach(function(id) {
-                    var input = document.getElementById(id);
-                    if (input) input.classList.remove('active');
+                    var el = document.getElementById(id);
+                    if (el) {
+                        el.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            this.classList.toggle('active');
+                            loadTable(getFiltersFromForm());
+                        });
+                    }
                 });
 
-                // Aplicar filtro del KPI
-                if (this.dataset.status) {
-                    filters.status = this.dataset.status;
-                    var statusSelect = document.getElementById('filter-status');
-                    if (statusSelect) statusSelect.value = this.dataset.status;
-                }
-                if (this.dataset.blocked) {
-                    filters.blocked = '1';
-                    var blockedBtn = document.getElementById('filter-blocked');
-                    if (blockedBtn) blockedBtn.classList.add('active');
-                }
-                if (this.dataset.delayed) {
-                    filters.delayed = '1';
-                    var delayedBtn = document.getElementById('filter-delayed');
-                    if (delayedBtn) delayedBtn.classList.add('active');
+                // Limpiar filtros
+                var clearBtn = document.getElementById('filter-clear');
+                if (clearBtn) {
+                    clearBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        // Reset selects
+                        ['filter-status', 'filter-payment', 'filter-urgency'].forEach(function(id) {
+                            var el = document.getElementById(id);
+                            if (el) el.value = '';
+                        });
+                        // Reset toggles
+                        ['filter-blocked', 'filter-delayed'].forEach(function(id) {
+                            var el = document.getElementById(id);
+                            if (el) el.classList.remove('active');
+                        });
+                        loadTable({});
+                    });
                 }
 
-                loadTable(filters);
+                // KPI clicks
+                document.querySelectorAll('.kpi-filter').forEach(function(el) {
+                    el.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        var filters = {};
+
+                        // Reset form controls
+                        ['filter-status', 'filter-payment', 'filter-urgency'].forEach(function(
+                            id) {
+                            var input = document.getElementById(id);
+                            if (input) input.value = '';
+                        });
+                        ['filter-blocked', 'filter-delayed'].forEach(function(id) {
+                            var input = document.getElementById(id);
+                            if (input) input.classList.remove('active');
+                        });
+
+                        // Aplicar filtro del KPI
+                        if (this.dataset.status) {
+                            filters.status = this.dataset.status;
+                            var statusSelect = document.getElementById('filter-status');
+                            if (statusSelect) statusSelect.value = this.dataset.status;
+                        }
+                        if (this.dataset.blocked) {
+                            filters.blocked = '1';
+                            var blockedBtn = document.getElementById('filter-blocked');
+                            if (blockedBtn) blockedBtn.classList.add('active');
+                        }
+                        if (this.dataset.delayed) {
+                            filters.delayed = '1';
+                            var delayedBtn = document.getElementById('filter-delayed');
+                            if (delayedBtn) delayedBtn.classList.add('active');
+                        }
+
+                        loadTable(filters);
+                    });
+                });
+
+                // Paginacion AJAX
+                container.addEventListener('click', function(e) {
+                    var link = e.target.closest('.pagination a');
+                    if (link) {
+                        e.preventDefault();
+                        var url = new URL(link.href);
+                        var params = {};
+                        url.searchParams.forEach(function(value, key) {
+                            params[key] = value;
+                        });
+                        loadTable(params);
+                    }
+                });
+
+                // Inicializar DataTable
+                initDataTable();
+
+                // ========================================
+                // BOTÓN DE PAGO RÁPIDO (Delegación)
+                // ========================================
+                container.addEventListener('click', function(e) {
+                    var btn = e.target.closest('.btn-quick-payment');
+                    if (btn) {
+                        e.preventDefault();
+                        var orderId = btn.dataset.orderId;
+                        var orderNumber = btn.dataset.orderNumber;
+                        var balance = parseFloat(btn.dataset.balance);
+
+                        initPaymentModal(orderId, orderNumber, balance);
+                        $('#modalPayment').modal('show');
+                    }
+                });
             });
-        });
 
-        // Paginacion AJAX
-        container.addEventListener('click', function(e) {
-            var link = e.target.closest('.pagination a');
-            if (link) {
-                e.preventDefault();
-                var url = new URL(link.href);
-                var params = {};
-                url.searchParams.forEach(function(value, key) {
-                    params[key] = value;
-                });
-                loadTable(params);
+            // ========================================
+            // FUNCIÓN PARA INICIALIZAR MODAL DE PAGO
+            // ========================================
+            function initPaymentModal(orderId, orderNumber, balance) {
+                var form = document.getElementById('paymentForm');
+                var numberEl = document.getElementById('paymentOrderNumber');
+                var balanceEl = document.getElementById('paymentBalance');
+                var amountEl = document.getElementById('paymentAmount');
+                var referenceEl = document.getElementById('paymentReference');
+                var notesEl = document.getElementById('paymentNotes');
+                var methodEl = form ? form.querySelector('[name="payment_method"]') : null;
+
+                if (form) {
+                    form.action = '/admin/orders/' + orderId + '/payments';
+                }
+                if (numberEl) {
+                    numberEl.textContent = orderNumber;
+                }
+                if (balanceEl) {
+                    balanceEl.textContent = '$' + balance.toFixed(2);
+                }
+                if (amountEl) {
+                    amountEl.value = balance.toFixed(2);
+                    amountEl.max = balance;
+                }
+                // Reset campos
+                if (referenceEl) referenceEl.value = '';
+                if (notesEl) notesEl.value = '';
+                if (methodEl) methodEl.value = 'cash';
             }
-        });
-
-        // ========================================
-        // BOTÓN DE PAGO RÁPIDO (Delegación)
-        // ========================================
-        container.addEventListener('click', function(e) {
-            var btn = e.target.closest('.btn-quick-payment');
-            if (btn) {
-                e.preventDefault();
-                var orderId = btn.dataset.orderId;
-                var orderNumber = btn.dataset.orderNumber;
-                var balance = parseFloat(btn.dataset.balance);
-
-                initPaymentModal(orderId, orderNumber, balance);
-                $('#modalPayment').modal('show');
-            }
-        });
-    });
-
-    // ========================================
-    // FUNCIÓN PARA INICIALIZAR MODAL DE PAGO
-    // ========================================
-    function initPaymentModal(orderId, orderNumber, balance) {
-        var form = document.getElementById('paymentForm');
-        var numberEl = document.getElementById('paymentOrderNumber');
-        var balanceEl = document.getElementById('paymentBalance');
-        var amountEl = document.getElementById('paymentAmount');
-        var referenceEl = document.getElementById('paymentReference');
-        var notesEl = document.getElementById('paymentNotes');
-        var methodEl = form ? form.querySelector('[name="payment_method"]') : null;
-
-        if (form) {
-            form.action = '/admin/orders/' + orderId + '/payments';
-        }
-        if (numberEl) {
-            numberEl.textContent = orderNumber;
-        }
-        if (balanceEl) {
-            balanceEl.textContent = '$' + balance.toFixed(2);
-        }
-        if (amountEl) {
-            amountEl.value = balance.toFixed(2);
-            amountEl.max = balance;
-        }
-        // Reset campos
-        if (referenceEl) referenceEl.value = '';
-        if (notesEl) notesEl.value = '';
-        if (methodEl) methodEl.value = 'cash';
-    }
-})();
-</script>
+        })();
+    </script>
 @stop

@@ -164,18 +164,33 @@
                 </div>
             </div>
 
-            {{-- 2. PRODUCTOS: Siempre visible (solo lectura post-draft) --}}
-            @include('admin.orders._items-table')
-
-            {{-- 2.5A ESTADO OPERATIVO: Solo en DRAFT (antes de confirmar) --}}
+            {{-- ESTADO OPERATIVO: Solo en DRAFT (antes de confirmar) --}}
             @if($status === Order::STATUS_DRAFT)
                 @include('admin.orders._order-readiness')
             @endif
 
-            {{-- 2.5B BLOCKERS: Solo en CONFIRMED, DESPUÉS de productos --}}
-            {{-- El operador primero ve QUÉ tiene el pedido, luego QUÉ falta resolver --}}
+            {{-- BLOCKERS: Solo en CONFIRMED (antes de productos) --}}
             @if($status === Order::STATUS_CONFIRMED)
                 @include('admin.orders._blockers')
+            @endif
+
+            {{-- MENSAJES/NOTAS: Visible desde IN_PRODUCTION en adelante --}}
+            @if(in_array($status, [Order::STATUS_IN_PRODUCTION, Order::STATUS_READY, Order::STATUS_DELIVERED]))
+                @include('admin.orders._messages')
+            @endif
+
+            {{-- 2. PRODUCTOS: Siempre visible (solo lectura post-draft) --}}
+            @include('admin.orders._items-table')
+
+            {{-- FASE Y: Modal de edición de medidas por item --}}
+            @include('admin.orders._item-measurements-modal')
+
+            {{-- ================================================================ --}}
+            {{-- FASE X-A: AJUSTE BOM POR MEDIDAS (PRE-PRODUCCIÓN) --}}
+            {{-- Solo visible en CONFIRMED - Sin persistencia (validación UX) --}}
+            {{-- ================================================================ --}}
+            @if($status === Order::STATUS_CONFIRMED)
+                @include('admin.orders._bom-adjustment')
             @endif
 
             {{-- 3. DISEÑO: Solo en CONFIRMED (gestion activa) - COLAPSADO por defecto --}}
@@ -670,13 +685,6 @@
                 @include('admin.orders._events')
             @endif
 
-            {{-- 8. MENSAJES/NOTAS: --}}
-            {{-- DRAFT: Ocultar --}}
-            {{-- CONFIRMED: Ocultar --}}
-            {{-- IN_PRODUCTION+: Mostrar --}}
-            @if(in_array($status, [Order::STATUS_IN_PRODUCTION, Order::STATUS_READY, Order::STATUS_DELIVERED]))
-                @include('admin.orders._messages')
-            @endif
 
             {{-- ANEXOS: --}}
             {{-- DRAFT: Ocultar --}}

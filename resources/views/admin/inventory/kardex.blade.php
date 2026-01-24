@@ -70,37 +70,32 @@
     {{-- FILTROS --}}
     <div class="card card-outline card-primary mb-3">
         <div class="card-body py-2">
-            <form method="GET" action="{{ route('admin.inventory.kardex', $variant) }}" class="row align-items-center">
+            <div class="row align-items-center">
                 <div class="col-md-2">
-                    <select name="type" class="form-control form-control-sm" onchange="this.form.submit()">
+                    <select id="filter-type" class="form-control form-control-sm">
                         <option value="">-- Tipo --</option>
-                        <option value="entrada" {{ request('type') == 'entrada' ? 'selected' : '' }}>Entradas</option>
-                        <option value="salida" {{ request('type') == 'salida' ? 'selected' : '' }}>Salidas</option>
-                        <option value="ajuste_positivo" {{ request('type') == 'ajuste_positivo' ? 'selected' : '' }}>Ajuste
-                            +</option>
-                        <option value="ajuste_negativo" {{ request('type') == 'ajuste_negativo' ? 'selected' : '' }}>Ajuste
-                            -</option>
+                        <option value="Entrada">Entradas</option>
+                        <option value="Salida">Salidas</option>
+                        <option value="Ajuste +">Ajuste +</option>
+                        <option value="Ajuste -">Ajuste -</option>
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <input type="date" name="from" class="form-control form-control-sm" value="{{ request('from') }}"
-                        placeholder="Desde">
+                    <input type="date" id="filter-from" class="form-control form-control-sm" placeholder="Desde">
                 </div>
                 <div class="col-md-2">
-                    <input type="date" name="to" class="form-control form-control-sm" value="{{ request('to') }}"
-                        placeholder="Hasta">
+                    <input type="date" id="filter-to" class="form-control form-control-sm" placeholder="Hasta">
                 </div>
                 <div class="col-md-2">
-                    <button type="submit" class="btn btn-sm btn-primary">Filtrar</button>
-                    <a href="{{ route('admin.inventory.kardex', $variant) }}"
-                        class="btn btn-sm btn-outline-secondary">Limpiar</a>
+                    <button type="button" id="btn-filter" class="btn btn-sm btn-primary">Filtrar</button>
+                    <button type="button" id="btn-clear-filters" class="btn btn-sm btn-outline-secondary">Limpiar</button>
                 </div>
                 <div class="col-md-4 text-right">
                     <a href="{{ route('admin.inventory.adjustment', $variant) }}" class="btn btn-sm btn-warning">
                         <i class="fas fa-edit mr-1"></i> Registrar Ajuste
                     </a>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
@@ -110,7 +105,7 @@
             <h5 class="mb-0"><i class="fas fa-list mr-2"></i>Movimientos</h5>
         </div>
         <div class="card-body p-0">
-            <table class="table table-sm table-hover mb-0" style="font-size: 16px;">
+            <table id="kardexTable" class="table table-sm table-hover mb-0" style="font-size: 16px;">
                 <thead style="background-color: #000; color: #fff;">
                     <tr>
                         <th style="width: 140px;">Fecha</th>
@@ -180,10 +175,148 @@
                 </tbody>
             </table>
         </div>
-        @if ($movements->hasPages())
-            <div class="card-footer">
-                {{ $movements->links() }}
-            </div>
-        @endif
+        {{-- Paginación manejada por DataTables --}}
     </div>
+@stop
+
+@section('css')
+    <style>
+        /* DataTables - Botones de exportación (igual que proveedores) */
+        #kardexTable_wrapper .dt-buttons {
+            background-color: transparent;
+            box-shadow: none;
+            border: none;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        #kardexTable_wrapper .dt-buttons .btn {
+            color: #fff;
+            border-radius: 4px;
+            padding: 5px 15px;
+            font-size: 14px;
+        }
+
+        .btn-default {
+            background-color: #6e7176;
+            color: #fff;
+            border: none;
+        }
+    </style>
+@stop
+
+@section('js')
+<script>
+$(function() {
+    // Inicializar DataTable igual que proveedores
+    var table = $('#kardexTable').DataTable({
+        "pageLength": 10,
+        "language": {
+            "emptyTable": "No hay movimientos registrados",
+            "info": "Mostrando _START_ a _END_ de _TOTAL_ Movimientos",
+            "infoEmpty": "Mostrando 0 a 0 de 0 Movimientos",
+            "infoFiltered": "(Filtrado de _MAX_ total Movimientos)",
+            "lengthMenu": "Mostrar _MENU_ Movimientos",
+            "loadingRecords": "Cargando...",
+            "processing": "Procesando...",
+            "search": "Buscador:",
+            "zeroRecords": "Sin resultados encontrados",
+            "paginate": {
+                "first": "Primero",
+                "last": "Ultimo",
+                "next": "Siguiente",
+                "previous": "Anterior"
+            }
+        },
+        "responsive": true,
+        "lengthChange": true,
+        "autoWidth": false,
+        buttons: [{
+                text: '<i class="fas fa-copy"></i> COPIAR',
+                extend: 'copy',
+                className: 'btn btn-default'
+            },
+            {
+                text: '<i class="fas fa-file-pdf"></i> PDF',
+                extend: 'pdf',
+                className: 'btn btn-danger',
+                title: 'Kardex - {{ $variant->display_name }}'
+            },
+            {
+                text: '<i class="fas fa-file-csv"></i> CSV',
+                extend: 'csv',
+                className: 'btn btn-info',
+                title: 'Kardex - {{ $variant->display_name }}'
+            },
+            {
+                text: '<i class="fas fa-file-excel"></i> EXCEL',
+                extend: 'excel',
+                className: 'btn btn-success',
+                title: 'Kardex - {{ $variant->display_name }}'
+            },
+            {
+                text: '<i class="fas fa-print"></i> IMPRIMIR',
+                extend: 'print',
+                className: 'btn btn-default',
+                title: 'Kardex - {{ $variant->display_name }}'
+            }
+        ]
+    });
+    table.buttons().container().appendTo('#kardexTable_wrapper .row:eq(0)');
+
+    // =====================================================
+    // FILTROS - Filtrado por DataTables (sin recargar página)
+    // =====================================================
+    var filterType = document.getElementById('filter-type');
+    var filterFrom = document.getElementById('filter-from');
+    var filterTo = document.getElementById('filter-to');
+    var btnFilter = document.getElementById('btn-filter');
+    var btnClear = document.getElementById('btn-clear-filters');
+
+    // Filtro personalizado para fechas
+    $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+        if (settings.nTable.id !== 'kardexTable') return true;
+
+        var fromDate = filterFrom.value ? new Date(filterFrom.value) : null;
+        var toDate = filterTo.value ? new Date(filterTo.value) : null;
+
+        // La fecha está en columna 0, formato dd/mm/yyyy HH:mm
+        var dateStr = data[0];
+        if (!dateStr) return true;
+
+        // Parsear fecha dd/mm/yyyy
+        var parts = dateStr.split(' ')[0].split('/');
+        if (parts.length !== 3) return true;
+
+        var rowDate = new Date(parts[2], parts[1] - 1, parts[0]);
+
+        if (fromDate && rowDate < fromDate) return false;
+        if (toDate && rowDate > toDate) return false;
+
+        return true;
+    });
+
+    function applyFilters() {
+        // Filtro por tipo (columna 1)
+        var typeVal = filterType.value;
+        table.column(1).search(typeVal, false, true);
+        table.draw();
+    }
+
+    // Eventos de filtros
+    filterType.addEventListener('change', applyFilters);
+    btnFilter.addEventListener('click', applyFilters);
+
+    // Limpiar filtros
+    btnClear.addEventListener('click', function() {
+        filterType.value = '';
+        filterFrom.value = '';
+        filterTo.value = '';
+        table.search('').columns().search('').draw();
+    });
+});
+</script>
 @stop
