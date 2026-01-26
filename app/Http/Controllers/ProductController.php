@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Application_types;
 use App\Models\MaterialVariant;
 use App\Models\Material;
+use App\Models\ProductType;
 
 class ProductController extends Controller
 {
@@ -227,7 +228,10 @@ class ProductController extends Controller
                 ->orderBy('name')
                 ->get();
 
-
+            // 5. Tipos de Producto (para selector visual en Step 1)
+            $productTypes = ProductType::where('active', true)
+                ->orderBy('sort_order')
+                ->get();
 
             return view('admin.products.create', compact(
                 'categories',
@@ -238,6 +242,7 @@ class ProductController extends Controller
                 'sizeAttribute',
                 'colorAttribute',
                 'materials',
+                'productTypes', // NEW: Product types for visual selector
                 'cloneMode',
                 'cloneProduct'
             ));
@@ -489,6 +494,11 @@ class ProductController extends Controller
             $sizeAttribute = \App\Models\Attribute::with(['values' => fn($q) => $q->orderBy('value')])->where('slug', 'talla')->first();
             $colorAttribute = \App\Models\Attribute::with(['values' => fn($q) => $q->orderBy('value')])->where('slug', 'color')->first();
 
+            // Tipos de producto (para selector visual)
+            $productTypes = ProductType::where('active', true)
+                ->orderBy('sort_order')
+                ->get();
+
             // === PRECARGAR DATOS PARA EL STATE ===
             // Usamos la MISMA vista que create, con editMode=true
             return view('admin.products.create', [
@@ -501,6 +511,7 @@ class ProductController extends Controller
                 'materials' => $materials,
                 'sizeAttribute' => $sizeAttribute,
                 'colorAttribute' => $colorAttribute,
+                'productTypes' => $productTypes,
             ]);
         } catch (ModelNotFoundException $e) {
             return redirect()->route('admin.products.index')

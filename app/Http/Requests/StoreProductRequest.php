@@ -22,6 +22,12 @@ class StoreProductRequest extends FormRequest
                 'min:1',
                 Rule::exists('product_categories', 'id')->where('is_active', true),
             ],
+            'product_type_id' => [
+                'required',
+                'integer',
+                'min:1',
+                Rule::exists('product_types', 'id')->where('active', true),
+            ],
             'name' => [
                 'required',
                 'string',
@@ -159,6 +165,8 @@ class StoreProductRequest extends FormRequest
         return [
             'product_category_id.required' => 'La categoría es obligatoria.',
             'product_category_id.exists' => 'La categoría seleccionada no existe o está inactiva.',
+            'product_type_id.required' => 'El tipo de producto es obligatorio.',
+            'product_type_id.exists' => 'El tipo de producto seleccionado no existe o está inactivo.',
             'name.required' => 'El nombre del producto es obligatorio.',
             'name.min' => 'El nombre debe tener al menos 3 caracteres.',
             'name.max' => 'El nombre no puede exceder 200 caracteres.',

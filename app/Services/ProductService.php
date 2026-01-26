@@ -27,6 +27,7 @@ class ProductService
                 'uuid' => (string) Str::uuid(),
                 'tenant_id' => $data['tenant_id'] ?? 1,
                 'product_category_id' => $data['product_category_id'],
+                'product_type_id' => $data['product_type_id'] ?? null, // Tipo de producto (comportamiento operativo)
                 'name' => $data['name'],
                 'sku' => $data['sku'],
                 'description' => $data['description'] ?? null,
@@ -143,6 +144,7 @@ class ProductService
 
             $product->update([
                 'product_category_id' => $data['product_category_id'],
+                'product_type_id' => $data['product_type_id'] ?? $product->product_type_id,
                 'name' => $data['name'],
                 'sku' => $data['sku'],
                 'description' => $data['description'] ?? null,

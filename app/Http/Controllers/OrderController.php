@@ -600,7 +600,7 @@ class OrderController extends Controller
                 $q->where('name', 'like', "%{$term}%")
                     ->orWhere('sku', 'like', "%{$term}%");
             })
-            ->with(['variants.attributeValues', 'primaryImage', 'productType', 'extras']);
+            ->with(['variants.attributeValues', 'primaryImage', 'productType', 'extras', 'category']);
 
         $total = $query->count();
         $products = $query->skip(($page - 1) * $perPage)
@@ -616,6 +616,8 @@ class OrderController extends Controller
                 'base_price' => $p->base_price,
                 'lead_time' => $p->production_lead_time ?? 0,
                 'image_url' => $p->primary_image_url,
+                // Categoría del producto
+                'category_name' => $p->category?->name ?? null,
                 // Campos para lógica de medidas por tipo de producto
                 'requires_measurements' => $p->productType?->requires_measurements ?? false,
                 'product_type_name' => $p->productType?->display_name ?? null,
@@ -649,7 +651,7 @@ class OrderController extends Controller
     // === AJAX: OBTENER PRODUCTO POR ID (para edición de items) ===
     public function getProduct(Product $product)
     {
-        $product->load(['variants.attributeValues', 'primaryImage', 'productType', 'extras']);
+        $product->load(['variants.attributeValues', 'primaryImage', 'productType', 'extras', 'category']);
 
         return response()->json([
             'id' => $product->id,
@@ -658,6 +660,7 @@ class OrderController extends Controller
             'base_price' => $product->base_price,
             'lead_time' => $product->production_lead_time ?? 0,
             'image_url' => $product->primary_image_url,
+            'category_name' => $product->category?->name ?? null,
             'requires_measurements' => $product->productType?->requires_measurements ?? false,
             'product_type_name' => $product->productType?->display_name ?? null,
             'extras' => $product->extras->map(fn($e) => [

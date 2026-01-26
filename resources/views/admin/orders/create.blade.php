@@ -1147,12 +1147,13 @@
                                             class="img-fluid rounded" style="max-height: 150px;">
                                     </div>
 
-                                    {{-- Nombre y SKU --}}
-                                    <div id="productPreviewName" class="font-weight-bold text-center"
-                                        style="font-size:20px;">-</div>
-                                    <div id="productPreviewSku" class="text-muted small text-center">-</div>
-                                    {{-- <div id="productPreviewType" class="small mt-2 text-center" style="display: none;">
-                                    </div> --}}
+                                    {{-- Nombre (MAYÚSCULAS), Categoría y SKU --}}
+                                    <div id="productPreviewName" class="font-weight-bold text-center text-uppercase"
+                                        style="font-size: 1.1rem; line-height: 1.2;">-</div>
+                                    <div id="productPreviewCategory" class="text-muted small text-center mb-1">-</div>
+                                    <div id="productPreviewSku" class="text-center">
+                                        <span class="badge badge-secondary" style="font-size: 0.75rem;">-</span>
+                                    </div>
 
                                     {{-- Resumen de Precios (mt-auto = se pega abajo) --}}
                                     <div id="priceComparisonContainer"
@@ -2129,25 +2130,23 @@
             function updateProductPreview() {
                 if (!selectedProduct) return;
 
-                $('#productPreviewName').text(selectedProduct.name);
-                $('#productPreviewSku').text(selectedProduct.sku || '-');
+                // Nombre en MAYÚSCULAS
+                $('#productPreviewName').text(selectedProduct.name ? selectedProduct.name.toUpperCase() : '-');
+                // Categoría del producto
+                $('#productPreviewCategory').text(selectedProduct.category_name || '-');
+                // SKU como badge
+                $('#productPreviewSku').html(
+                    selectedProduct.sku
+                        ? `<span class="badge badge-secondary" style="font-size: 0.75rem;">${selectedProduct.sku}</span>`
+                        : '-'
+                );
+                // Imagen
                 $('#productPreviewImage').attr('src', selectedProduct.image_url ||
                     '{{ asset('img/no-image.png') }}');
 
                 // Guardar precio base y establecer precio
                 modalBasePrice = parseFloat(selectedProduct.base_price) || 0;
                 $('#modalPrice').val(modalBasePrice);
-
-                // Mostrar tipo de producto si existe
-                if (selectedProduct.product_type_name) {
-                    $('#productPreviewType')
-                        .html(
-                            `<span class="badge badge-secondary" style="font-size:14px;">${selectedProduct.product_type_name}</span>`
-                        )
-                        .show();
-                } else {
-                    $('#productPreviewType').hide();
-                }
 
                 // === MOSTRAR/OCULTAR SECCIÓN DE MEDIDAS ===
                 updateMeasurementsSectionVisibility();
@@ -2997,7 +2996,8 @@
                     $('#modalProductSelect').val(null).trigger('change.select2');
                 }
                 $('#productPreviewName').text('-');
-                $('#productPreviewSku').text('-');
+                $('#productPreviewCategory').text('-');
+                $('#productPreviewSku').html('-');
                 $('#productPreviewImage').attr('src', '{{ asset('img/no-image.png') }}');
                 $('#productPreviewType').hide();
                 // Reset medidas del item

@@ -137,12 +137,12 @@
                             </div>
                         </div>
                     </div>
-                    {{-- ROW 2: CATEGORY + STATUS --}}
+                    {{-- ROW 2: CATEGORY --}}
                     <div class="row">
                         <div class="col-md-12">
                             <div class="form-group">
-                                <label class="font-weight-bold">Categoría</label>
-                                <select class="form-control" name="product_category_id" id="inpCategory">
+                                <label class="font-weight-bold">Categoría *</label>
+                                <select class="form-control" name="product_category_id" id="inpCategory" required>
                                     <option value="">-- Selecciona una categoría --</option>
                                     @foreach($categories ?? [] as $cat)
                                         <option value="{{ $cat->id }}" {{ old('product_category_id') == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
@@ -152,6 +152,72 @@
                         </div>
                         {{-- HIDDEN STATUS: Always Active --}}
                         <input type="hidden" name="status" value="active">
+                    </div>
+
+                    {{-- ROW 2.5: TIPO DE PRODUCTO (Visual Radio Cards) --}}
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <div class="form-group mb-0">
+                                <label class="font-weight-bold d-flex align-items-center">
+                                    Tipo de Producto *
+                                    <i class="fas fa-info-circle text-info ml-2" data-toggle="tooltip" data-placement="right"
+                                       title="Define el comportamiento operativo: si requiere medidas personalizadas, si es servicio, etc."></i>
+                                </label>
+                                <p class="text-muted small mb-2">Selecciona cómo se comportará este producto en pedidos</p>
+
+                                @php
+                                    // Determinar valor actual: old() tiene prioridad, luego producto en edit, luego vacío
+                                    $currentTypeId = old('product_type_id', isset($product) ? $product->product_type_id : null);
+                                @endphp
+                                <input type="hidden" name="product_type_id" id="inpProductTypeId" value="{{ $currentTypeId }}" required>
+
+                                <div class="product-type-selector" id="productTypeSelector">
+                                    @php
+                                        $typeIcons = [
+                                            'GARMENT_CUSTOM' => 'fa-ruler-combined',
+                                            'GARMENT_STANDARD' => 'fa-tshirt',
+                                            'ACCESSORY' => 'fa-shopping-bag',
+                                            'SERVICE' => 'fa-tools',
+                                            'HOME_DECOR' => 'fa-home',
+                                        ];
+                                        $typeColors = [
+                                            'GARMENT_CUSTOM' => '#8e44ad',
+                                            'GARMENT_STANDARD' => '#3498db',
+                                            'ACCESSORY' => '#e67e22',
+                                            'SERVICE' => '#27ae60',
+                                            'HOME_DECOR' => '#e74c3c',
+                                        ];
+                                    @endphp
+                                    @foreach($productTypes ?? [] as $type)
+                                        <div class="product-type-card {{ $currentTypeId == $type->id ? 'selected' : '' }}"
+                                             data-type-id="{{ $type->id }}"
+                                             data-requires-measurements="{{ $type->requires_measurements ? '1' : '0' }}"
+                                             onclick="selectProductType({{ $type->id }}, {{ $type->requires_measurements ? 'true' : 'false' }})">
+                                            <div class="type-icon" style="color: {{ $typeColors[$type->code] ?? '#6c757d' }}">
+                                                <i class="fas {{ $typeIcons[$type->code] ?? 'fa-box' }}"></i>
+                                            </div>
+                                            <div class="type-name">{{ $type->display_name }}</div>
+                                            <div class="type-description">{{ Str::limit($type->description, 60) }}</div>
+                                            @if($type->requires_measurements)
+                                                <div class="type-badge badge-measurements">
+                                                    <i class="fas fa-ruler mr-1"></i> Requiere medidas
+                                                </div>
+                                            @else
+                                                <div class="type-badge badge-standard">
+                                                    <i class="fas fa-check mr-1"></i> Sin medidas
+                                                </div>
+                                            @endif
+                                            <div class="type-check">
+                                                <i class="fas fa-check-circle"></i>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                                <div id="productTypeError" class="invalid-feedback" style="display: none;">
+                                    Debes seleccionar un tipo de producto
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     {{-- ROW 3: DESCRIPTION --}}
                     <div class="row">
@@ -1091,6 +1157,121 @@
 
         .gap-3 {
             gap: 1rem;
+        }
+
+        /* ========================================= */
+        /* PRODUCT TYPE SELECTOR (Visual Radio Cards) */
+        /* ========================================= */
+        .product-type-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+        }
+
+        /* Responsive: 2 columns on tablet, 1 on mobile */
+        @media (max-width: 768px) {
+            .product-type-selector {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .product-type-selector {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .product-type-card {
+            position: relative;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 16px 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #fff;
+            min-height: 160px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+        }
+
+        .product-type-card:hover {
+            border-color: #007bff;
+            background: #f8f9ff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+        }
+
+        .product-type-card.selected {
+            border-color: #007bff;
+            background: linear-gradient(135deg, #f0f7ff 0%, #e8f4fd 100%);
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.25);
+        }
+
+        .product-type-card.selected .type-check {
+            display: flex;
+        }
+
+        .product-type-card .type-icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            opacity: 0.85;
+        }
+
+        .product-type-card .type-name {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: #2c3e50;
+            margin-bottom: 4px;
+            line-height: 1.2;
+        }
+
+        .product-type-card .type-description {
+            font-size: 0.75rem;
+            color: #6c757d;
+            line-height: 1.3;
+            margin-bottom: 8px;
+            flex-grow: 1;
+        }
+
+        .product-type-card .type-badge {
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .product-type-card .badge-measurements {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .product-type-card .badge-standard {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .product-type-card .type-check {
+            display: none;
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 24px;
+            height: 24px;
+            background: #007bff;
+            border-radius: 50%;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            box-shadow: 0 2px 5px rgba(0, 123, 255, 0.4);
+        }
+
+        /* Error state */
+        .product-type-selector.is-invalid .product-type-card {
+            border-color: #dc3545;
         }
 
         /* ========================================= */
@@ -3007,6 +3188,41 @@
             }
         }
 
+        // === PRODUCT TYPE SELECTOR ===
+        window.selectProductType = function(typeId, requiresMeasurements) {
+            // Update hidden input
+            $('#inpProductTypeId').val(typeId);
+
+            // Update visual state
+            $('.product-type-card').removeClass('selected');
+            $(`.product-type-card[data-type-id="${typeId}"]`).addClass('selected');
+
+            // Remove error state
+            $('#productTypeSelector').removeClass('is-invalid');
+            $('#productTypeError').hide();
+
+            // Store in state
+            State.definition.product_type_id = typeId;
+            State.definition.requires_measurements = requiresMeasurements;
+
+            // Feedback visual
+            const typeName = $(`.product-type-card[data-type-id="${typeId}"] .type-name`).text();
+            console.log(`[ProductType] Selected: ${typeName} (ID: ${typeId}, Requires Measurements: ${requiresMeasurements})`);
+        };
+
+        // Initialize product type from old() if exists
+        $(document).ready(function() {
+            const savedTypeId = $('#inpProductTypeId').val();
+            if (savedTypeId) {
+                const $card = $(`.product-type-card[data-type-id="${savedTypeId}"]`);
+                if ($card.length) {
+                    $card.addClass('selected');
+                    State.definition.product_type_id = parseInt(savedTypeId);
+                    State.definition.requires_measurements = $card.data('requires-measurements') === 1;
+                }
+            }
+        });
+
         // Step validation
         function validateStep(step) {
             switch (step) {
@@ -3014,6 +3230,9 @@
                     // Validate product definition
                     const name = $('#inpName').val().trim();
                     const sku = $('#inpSku').val().trim();
+                    const productTypeId = $('#inpProductTypeId').val();
+                    const categoryId = $('#inpCategory').val();
+
                     if (!name) {
                         Swal.fire('Error', 'El nombre del producto es requerido', 'error');
                         return false;
@@ -3022,11 +3241,28 @@
                         Swal.fire('Error', 'El SKU es requerido', 'error');
                         return false;
                     }
+                    if (!categoryId) {
+                        Swal.fire('Error', 'Debes seleccionar una categoría', 'error');
+                        return false;
+                    }
+                    if (!productTypeId) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Tipo de producto requerido',
+                            text: 'Debes seleccionar el tipo de producto para definir su comportamiento operativo',
+                            confirmButtonText: 'Entendido'
+                        });
+                        $('#productTypeSelector').addClass('is-invalid');
+                        $('#productTypeError').show();
+                        return false;
+                    }
+
                     // Save to state
                     State.definition.name = name;
                     State.definition.sku = sku;
                     State.definition.category = $('#inpCategory option:selected').text();
-                    State.definition.category_id = $('#inpCategory').val();
+                    State.definition.category_id = categoryId;
+                    State.definition.product_type_id = parseInt(productTypeId);
                     return true;
                 case 2:
                     // OBLIGATORIO: Al menos una presentación para continuar a Materiales
