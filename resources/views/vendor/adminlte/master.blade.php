@@ -58,9 +58,10 @@
             @break
 
             @default
-                <link rel="stylesheet" href="{{ asset('vendor/fontawesome-free/css/all.min.css') }}">
-                <link rel="stylesheet" href="{{ asset('vendor/overlayScrollbars/css/OverlayScrollbars.min.css') }}">
-                <link rel="stylesheet" href="{{ asset('vendor/adminlte/dist/css/adminlte.min.css') }}">
+                @php $cacheVersion = config('app.asset_version', '20260125'); @endphp
+                <link rel="stylesheet" href="{{ asset('vendor/fontawesome-free/css/all.min.css') }}?v={{ $cacheVersion }}">
+                <link rel="stylesheet" href="{{ asset('vendor/overlayScrollbars/css/OverlayScrollbars.min.css') }}?v={{ $cacheVersion }}">
+                <link rel="stylesheet" href="{{ asset('vendor/adminlte/dist/css/adminlte.min.css') }}?v={{ $cacheVersion }}">
 
                 @if (config('adminlte.google_fonts.allowed', true))
                     <link rel="stylesheet"
@@ -128,10 +129,11 @@
             @break
 
             @default
-                <script src="{{ asset('vendor/jquery/jquery.min.js') }}"></script>
-                <script src="{{ asset('vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-                <script src="{{ asset('vendor/overlayScrollbars/js/jquery.overlayScrollbars.min.js') }}"></script>
-                <script src="{{ asset('vendor/adminlte/dist/js/adminlte.min.js') }}"></script>
+                @php $jsVersion = config('app.asset_version', '20260125'); @endphp
+                <script src="{{ asset('vendor/jquery/jquery.min.js') }}?v={{ $jsVersion }}"></script>
+                <script src="{{ asset('vendor/bootstrap/js/bootstrap.bundle.min.js') }}?v={{ $jsVersion }}"></script>
+                <script src="{{ asset('vendor/overlayScrollbars/js/jquery.overlayScrollbars.min.js') }}?v={{ $jsVersion }}"></script>
+                <script src="{{ asset('vendor/adminlte/dist/js/adminlte.min.js') }}?v={{ $jsVersion }}"></script>
         @endswitch
     @endif
 

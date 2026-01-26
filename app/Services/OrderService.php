@@ -10,6 +10,8 @@ use App\Models\OrderEvent;
 use App\Models\Product;
 use App\Models\InventoryMovement;
 use App\Models\InventoryReservation;
+use App\Models\ProductVariant;
+use App\Models\ProductVariantReservation;
 use App\Models\ClientMeasurementHistory;
 use App\Models\PersonalizationTimeMultiplier;
 use App\Enums\MovementType;
@@ -24,10 +26,11 @@ class OrderService
     {
         return DB::transaction(function () use ($data) {
             // Crear pedido base
+            // NOTA: cliente_id puede ser NULL para producción para stock (for_stock=true)
             $order = Order::create([
                 'order_parent_id' => $data['order_parent_id'] ?? null,
                 'related_order_id' => $data['related_order_id'] ?? null, // POST-VENTA
-                'cliente_id' => $data['cliente_id'],
+                'cliente_id' => $data['cliente_id'] ?? null, // NULL = Producción para stock
                 'client_measurement_id' => $data['client_measurement_id'] ?? null,
                 'urgency_level' => $data['urgency_level'] ?? Order::URGENCY_NORMAL,
                 'promised_date' => $data['promised_date'] ?? null,
@@ -244,10 +247,15 @@ class OrderService
                 $costPerThousand = $order->getEmbroideryCostPerThousand();
                 $embroideryCost = $order->calculateEmbroideryCost($costPerThousand);
 
-                // CREAR RESERVAS (NO descuenta stock físico)
+                // CREAR RESERVAS DE MATERIALES (NO descuenta stock físico)
                 foreach ($order->items as $item) {
                     $this->createReservationsForItem($item);
                 }
+
+                // === v2.2: RESERVAR STOCK DE PRODUCTOS TERMINADOS ===
+                // Si hay stock disponible del ProductVariant, se RESERVA.
+                // Si NO hay stock, el Order sigue como MAKE-TO-ORDER normal.
+                $stockReservationsSummary = $this->reserveFinishedGoodsStock($order);
 
                 // === R8: REGISTRAR TRANSICIÓN CON SNAPSHOTS ===
                 $order->update([
@@ -270,7 +278,13 @@ class OrderService
                     ])
                     ->toArray();
 
-                OrderEvent::logProductionStarted($order, $reservationsSummary);
+                // Incluir resumen de reservas de productos terminados en el evento
+                $eventMetadata = [
+                    'material_reservations' => $reservationsSummary,
+                    'stock_reservations' => $stockReservationsSummary,
+                ];
+
+                OrderEvent::logProductionStarted($order, $eventMetadata);
             });
         } catch (\Exception $e) {
             // === PERSISTENCIA DE BLOQUEO POR INVENTARIO (FUERA DE TRANSACCIÓN) ===
@@ -370,6 +384,9 @@ class OrderService
                 ];
             }
 
+            // === v2.2: CONSUMIR RESERVAS DE PRODUCTOS TERMINADOS ===
+            $consumedProducts = $this->consumeFinishedGoodsReservations($order);
+
             // Actualizar estado del pedido
             $order->update([
                 'status' => Order::STATUS_READY,
@@ -381,93 +398,238 @@ class OrderService
                 $order,
                 OrderEvent::TYPE_READY,
                 "Producción completada. Materiales consumidos del inventario.",
-                ['consumed_materials' => $consumedMaterials]
+                [
+                    'consumed_materials' => $consumedMaterials,
+                    'consumed_products' => $consumedProducts,
+                ]
             );
         });
     }
 
-    // === TRIGGER: ENTREGAR PEDIDO (ready → delivered) ===
-    // Al entregar: Solo cambio de estado (inventario ya fue consumido en READY)
+    /**
+     * Consume las reservas de productos terminados al marcar READY.
+     * REGLA v2.2: Reduce AMBOS current_stock Y reserved_stock.
+     *
+     * @param Order $order
+     * @return array Resumen de productos consumidos
+     */
+    protected function consumeFinishedGoodsReservations(Order $order): array
+    {
+        $consumedProducts = [];
+
+        // Obtener reservas activas de productos terminados
+        $stockReservations = ProductVariantReservation::where('order_id', $order->id)
+            ->where('status', ProductVariantReservation::STATUS_RESERVED)
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($stockReservations as $reservation) {
+            // Bloquear variante para actualización
+            $variant = ProductVariant::where('id', $reservation->product_variant_id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$variant) {
+                continue;
+            }
+
+            $stockBefore = $variant->current_stock;
+
+            // Consumir stock reservado (reduce current_stock Y reserved_stock)
+            $variant->consumeReservedStock($reservation->quantity);
+
+            // Marcar reserva como consumida
+            $reservation->markConsumed(Auth::id());
+
+            // Registrar movimiento de productos terminados
+            \App\Models\FinishedGoodsMovement::create([
+                'product_variant_id' => $variant->id,
+                'type' => \App\Models\FinishedGoodsMovement::TYPE_SALE_EXIT,
+                'reference_type' => 'order',
+                'reference_id' => $order->id,
+                'quantity' => $reservation->quantity,
+                'stock_before' => $stockBefore,
+                'stock_after' => $variant->current_stock,
+                'notes' => "Producción completada - Pedido {$order->order_number}",
+                'created_by' => Auth::id(),
+            ]);
+
+            $consumedProducts[] = [
+                'product_variant_id' => $variant->id,
+                'sku' => $variant->sku_variant,
+                'quantity' => $reservation->quantity,
+                'stock_before' => $stockBefore,
+                'stock_after' => $variant->current_stock,
+            ];
+        }
+
+        return $consumedProducts;
+    }
+
+    /**
+     * Libera las reservas de productos terminados al cancelar un Order.
+     * REGLA v2.2: Devuelve la cantidad a available_stock reduciendo reserved_stock.
+     *
+     * @param Order $order
+     * @return int Cantidad de reservas liberadas
+     */
+    protected function releaseFinishedGoodsReservations(Order $order): int
+    {
+        $releasedCount = 0;
+
+        // Obtener reservas activas de productos terminados
+        $stockReservations = ProductVariantReservation::where('order_id', $order->id)
+            ->where('status', ProductVariantReservation::STATUS_RESERVED)
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($stockReservations as $reservation) {
+            // Bloquear variante para actualización
+            $variant = ProductVariant::where('id', $reservation->product_variant_id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($variant) {
+                // Liberar stock reservado (devuelve a available_stock)
+                $variant->releaseReservedStock($reservation->quantity);
+            }
+
+            // Marcar reserva como liberada
+            $reservation->markReleased();
+            $releasedCount++;
+        }
+
+        return $releasedCount;
+    }
+
+    // =========================================================================
+    // === TRIGGER: ENTREGAR PEDIDO (ready → delivered) — CIERRE FINAL v2.3 ===
+    // =========================================================================
+    //
+    // REGLAS ERP SELLADAS:
+    // - Entregar ≠ producir (producción ya terminó en READY)
+    // - Entregar ≠ consumir stock (ya ocurrió en triggerReady)
+    // - Entregar = cierre logístico y contable DEFINITIVO
+    // - Un Order DELIVERED es INMUTABLE (estado terminal)
+    //
+    // PROTECCIONES:
+    // - Solo READY puede transicionar a DELIVERED
+    // - Pedidos ya entregados NO pueden re-entregarse
+    // - El inventario NO se toca en esta transición
+    // - El timestamp delivered_date es ÚNICO e inmutable
+    //
     public function triggerDelivery(Order $order): void
     {
-        if ($order->status !== Order::STATUS_READY) {
-            throw new \Exception('Solo pedidos listos pueden ser entregados.');
+        // === GATE v2.3: VALIDACIÓN ESTRICTA ===
+
+        // Protección contra re-entrega (idempotencia)
+        if ($order->isDelivered()) {
+            throw new \Exception(
+                "El pedido {$order->order_number} ya fue entregado el " .
+                $order->delivered_date?->format('d/m/Y') . ". " .
+                "Un pedido entregado es INMUTABLE y no puede re-procesarse."
+            );
+        }
+
+        // Protección contra entrega desde estado inválido
+        if (!$order->canBeDelivered()) {
+            throw new \Exception(
+                "Solo pedidos en estado READY pueden ser entregados. " .
+                "Estado actual: {$order->status_label}."
+            );
         }
 
         DB::transaction(function () use ($order) {
-            // Actualizar estado del pedido
+            // === CIERRE DEFINITIVO ===
             $order->update([
                 'status' => Order::STATUS_DELIVERED,
                 'delivered_date' => now(),
                 'updated_by' => Auth::id(),
             ]);
 
-            // === EVENTO: PEDIDO ENTREGADO ===
+            // Refrescar para obtener valores actualizados
+            $order->refresh();
+
+            // === EVENTO: PEDIDO ENTREGADO (CIERRE FINAL v2.3) ===
             OrderEvent::logDelivered($order);
+
+            // === v2.5: CIERRE CONTABLE SI ESTÁ TOTALMENTE PAGADO ===
+            // Si el pedido está DELIVERED + PAID → cierre contable automático
+            if ($order->isFinanciallyClosed()) {
+                OrderEvent::logFinanciallyClosed($order);
+            }
         });
     }
 
-    // === CANCELAR PEDIDO CON LIBERACIÓN DE RESERVAS ===
-    // AUDITORÍA: Maneja correctamente todos los estados pre-entrega
-    // - DRAFT/CONFIRMED: Sin reservas, solo cambia estado
-    // - IN_PRODUCTION: Libera reservas activas (stock físico intacto)
-    // - READY: Stock ya consumido, NO se puede revertir automáticamente
-    public function cancelOrder(Order $order, ?string $reason = null): void
+    // =========================================================================
+    // === CIERRE CANÓNICO: CANCELACIÓN DE PEDIDO ===
+    // =========================================================================
+    //
+    // DEFINICIÓN: Cancelar pedido es un ACTO ADMINISTRATIVO que:
+    // - Marca el pedido como CANCELLED
+    // - Registra auditoría completa (quién, cuándo, por qué)
+    // - Libera reservas de inventario (NO descuenta stock)
+    //
+    // PROHIBIDO:
+    // - NO genera merma automática
+    // - NO revierte movimientos de inventario
+    // - NO borra nada (soft delete via status)
+    //
+    // ESTADOS PERMITIDOS: DRAFT, CONFIRMED, IN_PRODUCTION
+    // ESTADOS PROHIBIDOS: DELIVERED, CANCELLED
+    //
+    public function cancelOrder(Order $order, string $reason): void
     {
-        if ($order->status === Order::STATUS_DELIVERED) {
-            throw new \Exception('No se puede cancelar un pedido entregado.');
+        // === GATE: Validar que el pedido puede cancelarse ===
+        if (!$order->canCancel()) {
+            throw new \Exception(
+                $order->getCancelBlockReason() ?? 'El pedido no puede cancelarse.'
+            );
         }
 
-        // ================================================================
-        // ADVERTENCIA CRÍTICA: Cancelación desde READY
-        // El stock físico YA fue consumido en triggerReady().
-        // La cancelación NO revierte el stock automáticamente.
-        // Requiere ajuste de inventario manual si se necesita.
-        // ================================================================
-        $stockAlreadyConsumed = ($order->status === Order::STATUS_READY);
+        // Capturar estado previo para auditoría
+        $previousStatus = $order->status;
 
-        DB::transaction(function () use ($order, $reason, $stockAlreadyConsumed) {
-            // Liberar todas las reservas activas (solo aplica si están en 'reserved')
-            $reservations = InventoryReservation::where('order_id', $order->id)
+        DB::transaction(function () use ($order, $reason, $previousStatus) {
+            // === LIBERAR RESERVAS DE MATERIALES (NO descuenta stock) ===
+            $materialReservations = InventoryReservation::where('order_id', $order->id)
                 ->where('status', InventoryReservation::STATUS_RESERVED)
                 ->get();
 
-            $releasedCount = 0;
-            foreach ($reservations as $reservation) {
+            $releasedMaterialCount = 0;
+            foreach ($materialReservations as $reservation) {
                 $reservation->markReleased();
-                $releasedCount++;
+                $releasedMaterialCount++;
             }
 
-            // Construir nota de cancelación con contexto de inventario
-            $inventoryNote = '';
-            if ($stockAlreadyConsumed) {
-                $inventoryNote = "\n[ADVERTENCIA: Stock físico ya consumido. Requiere ajuste de inventario manual si aplica.]";
-            } elseif ($releasedCount > 0) {
-                $inventoryNote = "\n[Reservas liberadas: {$releasedCount}]";
-            }
+            // === LIBERAR RESERVAS DE PRODUCTOS TERMINADOS ===
+            $releasedProductCount = $this->releaseFinishedGoodsReservations($order);
 
-            // Actualizar estado del pedido (saveQuietly para evitar validación de transición)
+            // === ACTUALIZAR PEDIDO CON AUDITORÍA COMPLETA ===
             $order->status = Order::STATUS_CANCELLED;
-            $order->notes = $order->notes . ($reason ? "\n[Cancelado: {$reason}]" : '') . $inventoryNote;
+            $order->cancelled_at = now();
+            $order->cancelled_by = Auth::id();
+            $order->cancel_reason = $reason;
             $order->updated_by = Auth::id();
             $order->saveQuietly();
 
-            // === EVENTO: PEDIDO CANCELADO ===
-            OrderEvent::logCancelled($order, $reason);
-
-            // Log de auditoría adicional para casos de stock consumido
-            if ($stockAlreadyConsumed) {
-                OrderEvent::log(
-                    $order,
-                    OrderEvent::TYPE_STATUS_CHANGED,
-                    "ADVERTENCIA: Pedido cancelado después de consumo de stock. Materiales NO devueltos automáticamente.",
-                    [
-                        'previous_status' => Order::STATUS_READY,
-                        'stock_consumed' => true,
-                        'requires_manual_adjustment' => true,
-                    ]
-                );
-            }
+            // === EVENTO: PEDIDO CANCELADO CON METADATA COMPLETA ===
+            OrderEvent::log(
+                $order,
+                OrderEvent::TYPE_CANCELLED,
+                "Pedido cancelado: {$reason}",
+                [
+                    'reason' => $reason,
+                    'previous_status' => $previousStatus,
+                    'cancelled_by' => Auth::id(),
+                    'cancelled_at' => now()->toIso8601String(),
+                    'released_material_reservations' => $releasedMaterialCount,
+                    'released_product_reservations' => $releasedProductCount,
+                    // NOTA EXPLÍCITA: La cancelación NO genera merma
+                    'generates_waste' => false,
+                    'reverts_inventory' => false,
+                ]
+            );
         });
     }
 
@@ -696,6 +858,89 @@ class OrderService
                 ]);
             }
         }
+    }
+
+    // =========================================================================
+    // === v2.2: RESERVA DE STOCK DE PRODUCTOS TERMINADOS ===
+    // =========================================================================
+
+    /**
+     * Reserva stock de productos terminados para un Order.
+     *
+     * REGLAS ERP v2.2:
+     * - Reservar ≠ descontar (current_stock NO cambia, reserved_stock SÍ)
+     * - Si NO hay stock suficiente, el Order sigue como MAKE-TO-ORDER normal
+     * - Un OrderItem solo puede tener UNA reserva (idempotencia por unique constraint)
+     * - NO bloquea producción si no hay stock
+     *
+     * @param Order $order
+     * @return array Resumen de reservas creadas
+     */
+    protected function reserveFinishedGoodsStock(Order $order): array
+    {
+        $reservationsSummary = [];
+
+        foreach ($order->items as $item) {
+            // Solo procesar items que tienen ProductVariant asociado
+            if (!$item->product_variant_id) {
+                continue;
+            }
+
+            // IDEMPOTENCIA: Verificar que no exista ya una reserva para este item
+            if ($item->hasActiveStockReservation()) {
+                continue;
+            }
+
+            // Obtener variante con lock FOR UPDATE
+            $variant = ProductVariant::where('id', $item->product_variant_id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$variant) {
+                continue;
+            }
+
+            // Verificar si hay stock disponible
+            $requiredQty = (float) $item->quantity;
+
+            if (!$variant->canReserve($requiredQty)) {
+                // NO hay stock suficiente → Order sigue como MAKE-TO-ORDER
+                // NO es un error, simplemente no se reserva
+                $reservationsSummary[] = [
+                    'order_item_id' => $item->id,
+                    'product_variant_id' => $variant->id,
+                    'sku' => $variant->sku_variant,
+                    'requested' => $requiredQty,
+                    'available' => $variant->available_stock,
+                    'reserved' => false,
+                    'reason' => 'insufficient_stock',
+                ];
+                continue;
+            }
+
+            // RESERVAR stock (actualiza reserved_stock en ProductVariant)
+            $variant->reserveStock($requiredQty);
+
+            // Crear registro de reserva
+            ProductVariantReservation::create([
+                'order_id' => $order->id,
+                'order_item_id' => $item->id,
+                'product_variant_id' => $variant->id,
+                'quantity' => $requiredQty,
+                'status' => ProductVariantReservation::STATUS_RESERVED,
+                'created_by' => Auth::id(),
+            ]);
+
+            $reservationsSummary[] = [
+                'order_item_id' => $item->id,
+                'product_variant_id' => $variant->id,
+                'sku' => $variant->sku_variant,
+                'quantity' => $requiredQty,
+                'reserved' => true,
+            ];
+        }
+
+        return $reservationsSummary;
     }
 
     // === SINCRONIZAR ITEMS CON SNAPSHOTS ===
@@ -1134,6 +1379,135 @@ class OrderService
 
             return $item->fresh();
         });
+    }
+
+    // =========================================================================
+    // === FASE v2.4: SISTEMA DE PAGOS Y BALANCE ===
+    // =========================================================================
+
+    /**
+     * Registrar un pago para un pedido.
+     *
+     * GATE CONTABLE v2.4:
+     * - Valida que el pedido pueda recibir pagos (no CANCELLED, no sobrepagado)
+     * - Valida que el monto sea positivo y no exceda el balance
+     * - Registra el pago con auditoría completa
+     * - Recalcula automáticamente amount_paid, balance y payment_status
+     *
+     * @param Order $order Pedido a abonar
+     * @param float $amount Monto del pago
+     * @param string $paymentMethod Método de pago (cash, transfer, card, other)
+     * @param string|null $reference Referencia externa (voucher, folio, etc)
+     * @param string|null $notes Notas adicionales
+     * @return OrderPayment
+     * @throws \Exception Si el pago no es válido
+     */
+    public function registerPayment(
+        Order $order,
+        float $amount,
+        string $paymentMethod = OrderPayment::METHOD_CASH,
+        ?string $reference = null,
+        ?string $notes = null
+    ): OrderPayment {
+        // === GATE 1: ESTADO DEL PEDIDO ===
+        if (!$order->canReceivePayment()) {
+            throw new \Exception($order->getPaymentBlockReason() ?? 'El pedido no puede recibir pagos.');
+        }
+
+        // === GATE 2: VALIDACIÓN DE MONTO ===
+        $validation = $order->validatePaymentAmount($amount);
+        if (!$validation['valid']) {
+            throw new \Exception($validation['error']);
+        }
+
+        // === GATE 3: MÉTODO DE PAGO VÁLIDO ===
+        $validMethods = [
+            OrderPayment::METHOD_CASH,
+            OrderPayment::METHOD_TRANSFER,
+            OrderPayment::METHOD_CARD,
+            OrderPayment::METHOD_OTHER,
+        ];
+        if (!in_array($paymentMethod, $validMethods)) {
+            throw new \Exception("Método de pago inválido: {$paymentMethod}");
+        }
+
+        return DB::transaction(function () use ($order, $amount, $paymentMethod, $reference, $notes) {
+            // Snapshot del balance ANTES del pago (para auditoría)
+            $balanceBefore = (float) $order->balance;
+
+            // Crear registro de pago
+            $payment = OrderPayment::create([
+                'order_id' => $order->id,
+                'amount' => $amount,
+                'payment_method' => $paymentMethod,
+                'reference' => $reference,
+                'notes' => $notes,
+                'received_by' => Auth::id(),
+                'payment_date' => now(),
+            ]);
+
+            // El hook saved() de OrderPayment ya llama a recalculateTotals()
+            // Pero refrescamos el order para obtener valores actualizados
+            $order->refresh();
+
+            // === v2.5: EVENTO DE AUDITORÍA CONTABLE COMPLETO ===
+            OrderEvent::logPaymentRegistered(
+                $order,
+                $amount,
+                $paymentMethod,
+                $balanceBefore,
+                (float) $order->balance
+            );
+
+            // === v2.5: CIERRE CONTABLE SI APLICA ===
+            // Si el pedido quedó DELIVERED + PAID → cierre contable automático
+            if ($order->isFinanciallyClosed()) {
+                OrderEvent::logFinanciallyClosed($order);
+            }
+
+            return $payment;
+        });
+    }
+
+    /**
+     * Obtiene el resumen de pagos de un pedido.
+     *
+     * @param Order $order
+     * @return array
+     */
+    public function getPaymentsSummary(Order $order): array
+    {
+        $payments = $order->payments()->orderBy('payment_date', 'desc')->get();
+
+        $byMethod = $payments->groupBy('payment_method')->map(function ($group) {
+            return [
+                'count' => $group->count(),
+                'total' => $group->sum('amount'),
+            ];
+        });
+
+        return [
+            'total_paid' => (float) $order->amount_paid,
+            'balance' => (float) $order->balance,
+            'total' => (float) $order->total,
+            'payment_status' => $order->payment_status,
+            'payment_status_label' => $order->payment_status_label,
+            'payments_count' => $payments->count(),
+            'can_receive_payment' => $order->canReceivePayment(),
+            'max_payable' => $order->getMaxPayableAmount(),
+            'by_method' => $byMethod->toArray(),
+            'payments' => $payments->map(fn($p) => [
+                'id' => $p->id,
+                'uuid' => $p->uuid,
+                'amount' => (float) $p->amount,
+                'method' => $p->payment_method,
+                'method_label' => $p->method_label,
+                'reference' => $p->reference,
+                'notes' => $p->notes,
+                'received_by' => $p->receiver?->name,
+                'payment_date' => $p->payment_date?->format('Y-m-d H:i:s'),
+            ])->toArray(),
+        ];
     }
 
     /**

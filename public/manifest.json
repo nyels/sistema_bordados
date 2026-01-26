@@ -1,0 +1,60 @@
+{
+    "name": "POS Sistema Bordados",
+    "short_name": "POS",
+    "description": "Punto de Venta - Sistema de Bordados ERP",
+    "start_url": "/pos",
+    "id": "/pos",
+    "display": "standalone",
+    "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+    "orientation": "any",
+    "background_color": "#f5f5f7",
+    "theme_color": "#1d1d1f",
+    "scope": "/pos",
+    "icons": [
+        {
+            "src": "/images/pos-icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        },
+        {
+            "src": "/images/pos-icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/images/pos-icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/images/pos-icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/images/pos-icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ],
+    "screenshots": [],
+    "shortcuts": [
+        {
+            "name": "Nueva Venta",
+            "short_name": "Venta",
+            "description": "Iniciar una nueva venta",
+            "url": "/pos?action=new",
+            "icons": [{"src": "/images/pos-icon-192.png", "sizes": "192x192"}]
+        }
+    ],
+    "categories": ["business", "productivity", "shopping"],
+    "lang": "es-MX",
+    "dir": "ltr",
+    "prefer_related_applications": false,
+    "handle_links": "preferred"
+}

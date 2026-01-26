@@ -98,11 +98,24 @@
             <div class="small-box {{ $insumosEnRiesgo > 0 ? 'bg-danger' : 'bg-secondary' }}">
                 <div class="inner">
                     <h3>{{ $insumosEnRiesgo }}</h3>
-                    <p>Insumos en Riesgo</p>
+                    <p>Materiales Bajo Stock</p>
                 </div>
                 <div class="icon"><i class="fas fa-exclamation-triangle"></i></div>
-                <a href="{{ route('admin.inventory.index') }}" class="small-box-footer">
+                <a href="{{ route('admin.inventory.index', ['stock_status' => 'BAJO']) }}" class="small-box-footer">
                     Ver inventario <i class="fas fa-arrow-circle-right"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-6">
+            <div class="small-box {{ $productosBajoStock > 0 ? 'bg-warning' : 'bg-secondary' }}">
+                <div class="inner">
+                    <h3>{{ $productosBajoStock }}</h3>
+                    <p>Productos Bajo Stock</p>
+                </div>
+                <div class="icon"><i class="fas fa-boxes"></i></div>
+                <a href="{{ route('admin.finished-goods-stock.index', ['stock_status' => 'bajo']) }}" class="small-box-footer">
+                    Ver stock PT <i class="fas fa-arrow-circle-right"></i>
                 </a>
             </div>
         </div>

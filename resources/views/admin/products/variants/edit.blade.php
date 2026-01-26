@@ -102,7 +102,10 @@
                                     @error('stock_alert')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
-                                    <small class="text-muted">Notificar cuando el stock sea menor a este valor</small>
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle text-info"></i>
+                                        Solo genera alertas visuales. <strong>NO bloquea</strong> ventas ni producción.
+                                    </small>
                                 </div>
                             </div>
                             <div class="col-md-6">

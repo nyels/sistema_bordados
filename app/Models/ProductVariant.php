@@ -17,12 +17,18 @@ class ProductVariant extends Model
         'price',
         'attribute_combinations',
         'stock_alert',
+        'current_stock',
+        'reserved_stock',
+        'activo',
     ];
 
     protected $casts = [
         'price' => 'decimal:4',
         'attribute_combinations' => 'array',
         'stock_alert' => 'integer',
+        'current_stock' => 'decimal:4',
+        'reserved_stock' => 'decimal:4',
+        'activo' => 'boolean',
     ];
 
     /*
@@ -74,6 +80,41 @@ class ProductVariant extends Model
             ->withTimestamps();
     }
 
+    /**
+     * Infraestructura mínima de stock v2.
+     * Producciones para stock asociadas a esta variante.
+     */
+    public function stockProductions()
+    {
+        return $this->hasMany(StockProduction::class, 'product_variant_id');
+    }
+
+    /**
+     * Infraestructura mínima de stock v2.
+     * Movimientos de productos terminados de esta variante.
+     */
+    public function finishedGoodsMovements()
+    {
+        return $this->hasMany(FinishedGoodsMovement::class, 'product_variant_id');
+    }
+
+    /**
+     * RESERVAS DE STOCK v2.2
+     * Reservas de productos terminados para Orders.
+     */
+    public function stockReservations()
+    {
+        return $this->hasMany(ProductVariantReservation::class, 'product_variant_id');
+    }
+
+    /**
+     * Reservas activas (status = 'reserved').
+     */
+    public function activeReservations()
+    {
+        return $this->stockReservations()->where('status', ProductVariantReservation::STATUS_RESERVED);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | SCOPES
@@ -83,6 +124,21 @@ class ProductVariant extends Model
     public function scopeOrdered(Builder $query): Builder
     {
         return $query->orderBy('sku_variant', 'asc');
+    }
+
+    public function scopeActivo(Builder $query): Builder
+    {
+        return $query->where('activo', true);
+    }
+
+    /**
+     * Scope: Variantes con stock bajo el nivel de alerta.
+     * REGLA: current_stock <= stock_alert
+     * USO: Solo para alertas operativas, NO bloquea ventas ni producción.
+     */
+    public function scopeLowStock(Builder $query): Builder
+    {
+        return $query->whereColumn('current_stock', '<=', 'stock_alert');
     }
 
     /*
@@ -130,6 +186,64 @@ class ProductVariant extends Model
 
     /*
     |--------------------------------------------------------------------------
+    | ACCESSORS - STOCK v2
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Infraestructura mínima de stock v2.
+     * Stock disponible = stock físico - stock reservado.
+     */
+    public function getAvailableStockAttribute(): float
+    {
+        return max(0, (float) $this->current_stock - (float) $this->reserved_stock);
+    }
+
+    /**
+     * Infraestructura mínima de stock v2.
+     * Indica si hay stock disponible.
+     */
+    public function getHasAvailableStockAttribute(): bool
+    {
+        return $this->available_stock > 0;
+    }
+
+    /**
+     * Infraestructura mínima de stock v2.
+     * Stock formateado para display.
+     */
+    public function getFormattedCurrentStockAttribute(): string
+    {
+        return number_format($this->current_stock, 2);
+    }
+
+    /**
+     * Infraestructura mínima de stock v2.
+     * Indica si el stock está bajo el nivel de alerta.
+     */
+    public function getIsLowStockAttribute(): bool
+    {
+        return $this->current_stock <= $this->stock_alert;
+    }
+
+    /**
+     * Verifica si el stock está bajo el mínimo de alerta.
+     *
+     * DEFINICIÓN CANÓNICA:
+     * - Es SOLO una alerta operativa
+     * - NO bloquea ventas
+     * - NO bloquea producción
+     * - NO genera movimientos
+     *
+     * @return bool TRUE si current_stock <= stock_alert
+     */
+    public function isBelowMinStock(): bool
+    {
+        return $this->current_stock <= ($this->stock_alert ?? 0);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | MÉTODOS
     |--------------------------------------------------------------------------
     */
@@ -144,5 +258,95 @@ class ProductVariant extends Model
         }
 
         return implode('-', $parts);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | MÉTODOS DE RESERVA DE STOCK v2.2
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Verifica si hay stock disponible suficiente para reservar.
+     *
+     * REGLA: available_stock = current_stock - reserved_stock
+     *
+     * @param float $quantity Cantidad a reservar
+     * @return bool TRUE si hay stock disponible suficiente
+     */
+    public function canReserve(float $quantity): bool
+    {
+        return $this->available_stock >= $quantity;
+    }
+
+    /**
+     * Reserva stock para un pedido.
+     * REGLA: current_stock NO cambia, reserved_stock SÍ cambia.
+     *
+     * @param float $quantity Cantidad a reservar
+     * @return void
+     * @throws \Exception Si no hay stock disponible suficiente
+     */
+    public function reserveStock(float $quantity): void
+    {
+        if (!$this->canReserve($quantity)) {
+            throw new \Exception(
+                "Stock insuficiente para reservar. " .
+                "Disponible: {$this->available_stock}, Requerido: {$quantity}"
+            );
+        }
+
+        $this->reserved_stock = (float) $this->reserved_stock + $quantity;
+        $this->save();
+    }
+
+    /**
+     * Libera stock reservado (al cancelar un pedido).
+     * REGLA: Devuelve la cantidad a available_stock reduciendo reserved_stock.
+     *
+     * @param float $quantity Cantidad a liberar
+     * @return void
+     */
+    public function releaseReservedStock(float $quantity): void
+    {
+        $this->reserved_stock = max(0, (float) $this->reserved_stock - $quantity);
+        $this->save();
+    }
+
+    /**
+     * Consume stock reservado (al entregar un pedido).
+     * REGLA: Reduce AMBOS current_stock Y reserved_stock.
+     *
+     * @param float $quantity Cantidad a consumir
+     * @return void
+     */
+    public function consumeReservedStock(float $quantity): void
+    {
+        $this->current_stock = max(0, (float) $this->current_stock - $quantity);
+        $this->reserved_stock = max(0, (float) $this->reserved_stock - $quantity);
+        $this->save();
+    }
+
+    /**
+     * Obtiene el total de stock reservado recalculado desde la tabla de reservas.
+     * Útil para auditoría y reconciliación.
+     *
+     * @return float
+     */
+    public function getCalculatedReservedStock(): float
+    {
+        return (float) $this->activeReservations()->sum('quantity');
+    }
+
+    /**
+     * Sincroniza reserved_stock con las reservas activas reales.
+     * Útil para corregir inconsistencias.
+     *
+     * @return void
+     */
+    public function syncReservedStock(): void
+    {
+        $this->reserved_stock = $this->getCalculatedReservedStock();
+        $this->save();
     }
 }

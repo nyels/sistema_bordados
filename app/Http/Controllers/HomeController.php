@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\MaterialVariant;
+use App\Models\ProductVariant;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -80,10 +81,19 @@ class HomeController extends Controller
             ->sum('total');
 
         // ========================================
-        // KPI: INSUMOS EN RIESGO
+        // KPI: INSUMOS EN RIESGO (Materiales bajo mínimo)
         // ========================================
         $insumosEnRiesgo = MaterialVariant::where('activo', true)
             ->whereColumn('current_stock', '<=', 'min_stock_alert')
+            ->count();
+
+        // ========================================
+        // KPI: PRODUCTOS TERMINADOS BAJO STOCK
+        // Fuente: ProductVariant con current_stock <= stock_alert
+        // REGLA: Solo alerta operativa, NO bloquea ventas ni producción
+        // ========================================
+        $productosBajoStock = ProductVariant::where('activo', true)
+            ->whereColumn('current_stock', '<=', 'stock_alert')
             ->count();
 
         // ========================================
@@ -120,6 +130,7 @@ class HomeController extends Controller
             'kpis',
             'ventasDelMes',
             'insumosEnRiesgo',
+            'productosBajoStock',
             'nombreMes',
             'mesesConVentas',
             'analyticsData'

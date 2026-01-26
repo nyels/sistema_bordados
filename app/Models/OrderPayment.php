@@ -41,6 +41,9 @@ class OrderPayment extends Model
             if (empty($model->uuid)) {
                 $model->uuid = (string) Str::uuid();
             }
+
+            // === VALIDACIONES CONTABLES v2.4 ===
+            $model->validatePayment();
         });
 
         // Recalcular totales del pedido al registrar pago
@@ -48,9 +51,73 @@ class OrderPayment extends Model
             $model->order->recalculateTotals();
         });
 
+        // ================================================================
+        // v2.5: PROTECCIÓN CONTRA ELIMINACIÓN DE PAGOS
+        // REGLA CONTABLE: amount_paid SOLO puede CRECER, nunca decrecer
+        // ================================================================
+        static::deleting(function (self $model): void {
+            $order = $model->order;
+
+            // R1: Pedidos financieramente cerrados NO permiten eliminación de pagos
+            if ($order->isFinanciallyClosed()) {
+                throw new \Exception(
+                    "CIERRE CONTABLE: No se puede eliminar el pago. " .
+                    "El pedido {$order->order_number} está cerrado contablemente " .
+                    "(ENTREGADO + PAGADO). Los pagos son inmutables."
+                );
+            }
+
+            // R2: Regla de negocio - pagos solo pueden crecer
+            // En un ERP contable, los pagos NO se eliminan, se hacen notas de crédito
+            throw new \Exception(
+                "VIOLACIÓN CONTABLE: Los pagos registrados NO pueden eliminarse. " .
+                "El amount_paid solo puede crecer. " .
+                "Para ajustes, registre una nota de crédito o contacte al administrador. " .
+                "Pago intentado eliminar: \$" . number_format($model->amount, 2)
+            );
+        });
+
         static::deleted(function (self $model): void {
+            // Este código NUNCA se ejecutará debido al gate en deleting()
+            // Se mantiene por si en el futuro se implementa soft delete de pagos
             $model->order->recalculateTotals();
         });
+    }
+
+    /**
+     * GATE v2.4: Validaciones contables antes de crear pago.
+     * Segunda capa de seguridad (OrderService es la primera).
+     *
+     * @throws \Exception Si el pago viola reglas contables
+     */
+    protected function validatePayment(): void
+    {
+        $order = $this->order;
+
+        // V1: Monto positivo
+        if ($this->amount <= 0) {
+            throw new \Exception('El monto del pago debe ser mayor a cero.');
+        }
+
+        // V2: No pagos en pedidos cancelados
+        if ($order->status === Order::STATUS_CANCELLED) {
+            throw new \Exception('No se pueden registrar pagos en pedidos cancelados.');
+        }
+
+        // V3: No sobrepago
+        // Calcular balance actual ANTES de este pago
+        $currentPaid = $order->payments()
+            ->where('id', '!=', $this->id ?? 0)
+            ->sum('amount');
+        $currentBalance = $order->total - $currentPaid;
+
+        if ($this->amount > $currentBalance + 0.01) { // Tolerancia de centavos
+            throw new \Exception(
+                "Sobrepago no permitido. Balance pendiente: \$" .
+                number_format($currentBalance, 2) .
+                ", monto intentado: \$" . number_format($this->amount, 2)
+            );
+        }
     }
 
     // === RELACIONES ===

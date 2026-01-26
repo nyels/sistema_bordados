@@ -322,8 +322,8 @@
                     $globalMaterials = collect();
                     $materialsByVariant = [];
 
-                    // Inicializar arrays para cada variante
-                    foreach ($product->variants as $variant) {
+                    // Inicializar arrays para cada variante activa
+                    foreach ($product->activeVariants as $variant) {
                         $materialsByVariant[$variant->id] = [
                             'variant' => $variant,
                             'materials' => collect(),
@@ -742,7 +742,14 @@
                 </div>
 
                 {{-- SPECS SUMMARY --}}
-                @if ($product->specifications && count($product->specifications) > 0)
+                @php
+                    $specs = $product->specifications;
+                    if (is_string($specs)) {
+                        $specs = json_decode($specs, true) ?? [];
+                    }
+                    $specs = is_array($specs) ? $specs : [];
+                @endphp
+                @if (count($specs) > 0)
                     <div class="card shadow-sm mb-4">
                         <div class="card-header bg-white border-0">
                             <h3 class="card-title font-weight-bold text-dark text-small">Especificaciones</h3>
@@ -750,7 +757,7 @@
                         <div class="card-body p-0">
                             <table class="table table-sm table-striped">
                                 <tbody>
-                                    @foreach ($product->specifications as $key => $value)
+                                    @foreach ($specs as $key => $value)
                                         <tr>
                                             <td class="pl-3 text-dark small font-weight-bold text-uppercase"
                                                 style="width:40%;">{{ $key }}</td>
@@ -780,7 +787,7 @@
                 <div class="card shadow-sm border-0 mb-4" id="variants-section">
                     <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-2">
                         <h3 class="card-title font-weight-bold mb-0">
-                            <i class="fas fa-th mr-2"></i>Variantes del Producto ({{ $product->variants->count() }})
+                            <i class="fas fa-th mr-2"></i>Variantes del Producto ({{ $product->activeVariants->count() }})
                         </h3>
                     </div>
 
@@ -797,7 +804,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse($product->variants as $variant)
+                                @forelse($product->activeVariants as $variant)
                                     @php
                                         // Variant price = variant's own price (price override)
                                         $variantPrice = (float) $variant->price;

@@ -1,25 +1,19 @@
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
-@source '../**/*.blade.php';
-@source '../**/*.js';
-
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
-}
-
-@layer base {
-    svg {
-        width: 1.5rem !important;
-        /* Aproximadamente 24px */
-        height: 1.5rem !important;
-        display: inline-block !important;
-    }
-}
+/* =====================================================================
+   GLOBAL CSS — Sistema Bordados ERP
+   CSS estándar compatible con AdminLTE/Bootstrap
+   ===================================================================== */
 
 /* Ocultar elementos sobrantes de Filament que chocan con AdminLTE */
 .fi-sidebar,
 .fi-topbar,
 .fi-breadcrumbs {
     display: none !important;
+}
+
+/* SVG sizing global para AdminLTE (NO afecta POS que tiene sus propios overrides) */
+.content-wrapper svg,
+.main-sidebar svg {
+    width: 1.5rem;
+    height: 1.5rem;
+    display: inline-block;
 }

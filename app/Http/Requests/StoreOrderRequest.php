@@ -30,12 +30,18 @@ class StoreOrderRequest extends FormRequest
             // === A) PEDIDO (ROOT) ===
             // ================================================
 
-            // CLIENTE (OBLIGATORIO)
+            // CLIENTE (OBLIGATORIO excepto producción para stock)
             'cliente_id' => [
-                'required',
+                'nullable',
                 'integer',
                 'min:1',
                 'exists:clientes,id',
+            ],
+
+            // PRODUCCIÓN PARA STOCK (sin cliente)
+            'for_stock' => [
+                'nullable',
+                'boolean',
             ],
 
             // MEDIDAS (OPCIONAL)
@@ -54,9 +60,9 @@ class StoreOrderRequest extends FormRequest
                 'exists:orders,id',
             ],
 
-            // URGENCIA (OBLIGATORIO)
+            // URGENCIA (OBLIGATORIO excepto producción para stock)
             'urgency_level' => [
-                'required',
+                'nullable',
                 'string',
                 'in:normal,urgente,express',
             ],
@@ -67,9 +73,9 @@ class StoreOrderRequest extends FormRequest
                 'boolean',
             ],
 
-            // FECHA PROMETIDA (OBLIGATORIO)
+            // FECHA PROMETIDA (OBLIGATORIO excepto producción para stock)
             'promised_date' => [
-                'required',
+                'nullable',
                 'date',
                 'after_or_equal:today',
             ],
@@ -241,6 +247,8 @@ class StoreOrderRequest extends FormRequest
                 return;
             }
 
+            // PRODUCCIÓN PARA STOCK: cliente_id no requerido
+            $this->validateClienteRequiredOrStock($validator);
             $this->validateClienteActivo($validator);
             $this->validateProductsActivos($validator);
             $this->validateProductsHaveType($validator);
@@ -326,6 +334,28 @@ class StoreOrderRequest extends FormRequest
                 'related_order_id',
                 'No se puede crear post-venta de un pedido que ya es post-venta. Use el pedido original.'
             );
+        }
+    }
+
+    // === 0. VALIDAR QUE CLIENTE ES REQUERIDO O ES PRODUCCIÓN PARA STOCK ===
+    protected function validateClienteRequiredOrStock(Validator $validator): void
+    {
+        $forStock = $this->boolean('for_stock');
+        $clienteId = $this->input('cliente_id');
+        $promisedDate = $this->input('promised_date');
+
+        // Si NO es para stock, cliente y fecha prometida son obligatorios
+        if (!$forStock && empty($clienteId)) {
+            $validator->errors()->add('cliente_id', 'Debe seleccionar un cliente o marcar "Producción para stock".');
+        }
+
+        if (!$forStock && empty($promisedDate)) {
+            $validator->errors()->add('promised_date', 'Debe indicar la fecha de entrega prometida.');
+        }
+
+        // Si ES para stock, cliente debe estar vacío
+        if ($forStock && !empty($clienteId)) {
+            $validator->errors()->add('for_stock', 'Un pedido para stock no puede tener cliente asignado.');
         }
     }
 
@@ -475,8 +505,14 @@ class StoreOrderRequest extends FormRequest
     }
 
     // === 5. VALIDAR FECHA PROMETIDA VS LEAD TIME (CRÍTICO) ===
+    // NO aplica para producción para stock (for_stock = true)
     protected function validatePromisedDateVsLeadTime(Validator $validator): void
     {
+        // PRODUCCIÓN PARA STOCK: No requiere fecha prometida
+        if ($this->boolean('for_stock')) {
+            return;
+        }
+
         $items = $this->input('items', []);
         $promisedDate = $this->input('promised_date');
 
@@ -508,8 +544,14 @@ class StoreOrderRequest extends FormRequest
     }
 
     // === 6. VALIDAR MONTO DE PAGO ===
+    // NO aplica para producción para stock (for_stock = true)
     protected function validatePaymentAmount(Validator $validator): void
     {
+        // PRODUCCIÓN PARA STOCK: No requiere pago
+        if ($this->boolean('for_stock')) {
+            return;
+        }
+
         $items = $this->input('items', []);
         $discount = (float) ($this->input('discount') ?? 0);
         $requiresInvoice = (bool) $this->input('requires_invoice', false);

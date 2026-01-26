@@ -122,6 +122,22 @@ class MaterialVariant extends Model
     }
 
     /**
+     * Verifica si el stock está bajo el mínimo de alerta.
+     *
+     * DEFINICIÓN CANÓNICA:
+     * - Es SOLO una alerta operativa
+     * - NO bloquea ventas
+     * - NO bloquea producción
+     * - NO genera movimientos
+     *
+     * @return bool TRUE si current_stock <= min_stock_alert
+     */
+    public function isBelowMinStock(): bool
+    {
+        return $this->current_stock <= ($this->min_stock_alert ?? 0);
+    }
+
+    /**
      * Stock reservado = SUM(reservations WHERE status = reserved)
      */
     public function getReservedStockAttribute(): float

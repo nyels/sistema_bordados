@@ -12,6 +12,7 @@ use App\Models\ClientMeasurement;
 use App\Models\DesignExport;
 use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\StoreOrderPaymentRequest;
+use App\Http\Requests\CancelOrderRequest;
 use App\Services\OrderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -532,13 +533,24 @@ class OrderController extends Controller
             ->with('success', 'Estado actualizado.');
     }
 
-    // === CANCELAR PEDIDO (CON LIBERACIÓN DE RESERVAS) ===
-    public function cancel(Order $order)
+    // =========================================================================
+    // === CIERRE CANÓNICO: CANCELAR PEDIDO ===
+    // =========================================================================
+    //
+    // DEFINICIÓN: Cancelar es un ACTO ADMINISTRATIVO.
+    // - Motivo OBLIGATORIO
+    // - NO genera merma
+    // - NO revierte inventario
+    // - Libera reservas activas
+    //
+    public function cancel(CancelOrderRequest $request, Order $order)
     {
         try {
-            $this->orderService->cancelOrder($order);
+            $reason = $request->validated()['cancel_reason'];
+            $this->orderService->cancelOrder($order, $reason);
+
             return redirect()->route('admin.orders.show', $order)
-                ->with('success', 'Pedido cancelado. Reservas de inventario liberadas.');
+                ->with('success', 'Pedido cancelado correctamente. Las reservas de inventario han sido liberadas.');
         } catch (\Exception $e) {
             return redirect()->back()
                 ->with('error', 'Error al cancelar: ' . $e->getMessage());
@@ -667,6 +679,51 @@ class OrderController extends Controller
                 ];
             }),
         ]);
+    }
+
+    /**
+     * === AJAX: OBTENER INFO DE MÚLTIPLES PRODUCTOS ===
+     * Usado para restaurar items después de error de validación (old input)
+     */
+    public function getProductsInfo(Request $request)
+    {
+        $productIds = $request->input('product_ids', []);
+
+        if (empty($productIds)) {
+            return response()->json([]);
+        }
+
+        $products = Product::whereIn('id', $productIds)
+            ->with(['primaryImage', 'productType', 'variants.attributeValues'])
+            ->get()
+            ->keyBy('id');
+
+        $result = [];
+        foreach ($productIds as $productId) {
+            $product = $products->get($productId);
+            if (!$product) {
+                continue;
+            }
+
+            // Buscar variante si viene en el request
+            $variantId = $request->input("variant_ids.{$productId}");
+            $variant = $variantId ? $product->variants->firstWhere('id', $variantId) : null;
+
+            $result[$productId] = [
+                'id' => $product->id,
+                'name' => $product->name,
+                'sku' => $product->sku,
+                'base_price' => $product->base_price,
+                'lead_time' => $product->production_lead_time ?? 0,
+                'image_url' => $product->primary_image_url,
+                'requires_measurements' => $product->productType?->requires_measurements ?? false,
+                'product_type_name' => $product->productType?->display_name ?? null,
+                'variant_sku' => $variant?->sku_variant ?? '',
+                'variant_display' => $variant?->attributes_display ?? '',
+            ];
+        }
+
+        return response()->json($result);
     }
 
     // === AJAX: MEDIDAS DEL CLIENTE ===

@@ -133,7 +133,8 @@
                                 @enderror
                             </div>
                             <small class="form-text text-muted">
-                                Se alertará cuando el stock sea igual o menor a este valor
+                                <i class="fas fa-info-circle text-info"></i>
+                                Solo genera alertas visuales. <strong>NO bloquea</strong> ventas ni producción.
                             </small>
                         </div>
 

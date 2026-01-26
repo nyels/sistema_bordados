@@ -104,6 +104,10 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle text-info"></i>
+                                Solo genera alertas visuales. <strong>NO bloquea</strong> ventas ni producción.
+                            </small>
                         </div>
                     </div>
 

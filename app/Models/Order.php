@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 class Order extends Model
@@ -30,6 +31,8 @@ class Order extends Model
         'discount',
         'requires_invoice',
         'iva_amount',
+        'iva_rate',
+        'total_with_tax',
         'total',
         'amount_paid',
         'balance',
@@ -40,6 +43,9 @@ class Order extends Model
         'promised_date',
         'minimum_date',
         'delivered_date',
+        'cancelled_at',
+        'cancelled_by',
+        'cancel_reason',
         'notes',
         'created_by',
         'updated_by',
@@ -56,6 +62,8 @@ class Order extends Model
         'discount' => 'decimal:2',
         'requires_invoice' => 'boolean',
         'iva_amount' => 'decimal:2',
+        'iva_rate' => 'decimal:2',
+        'total_with_tax' => 'decimal:2',
         'total' => 'decimal:2',
         'amount_paid' => 'decimal:2',
         'balance' => 'decimal:2',
@@ -66,6 +74,7 @@ class Order extends Model
         'promised_date' => 'date',
         'minimum_date' => 'date',
         'delivered_date' => 'date',
+        'cancelled_at' => 'datetime',
     ];
 
     // === CONSTANTES DE ESTADO ===
@@ -132,6 +141,61 @@ class Order extends Model
                     );
                 }
             }
+
+            // ================================================================
+            // v2.5: INMUTABILIDAD FINANCIERA
+            // Si hay pagos registrados, los campos financieros NO pueden cambiar
+            // ================================================================
+            $originalAmountPaid = (float) $model->getOriginal('amount_paid');
+
+            if ($originalAmountPaid > 0) {
+                // Verificar si se está intentando modificar campos financieros protegidos
+                $protectedChanges = [];
+
+                foreach (self::IMMUTABLE_FINANCIAL_FIELDS as $field) {
+                    if ($model->isDirty($field)) {
+                        $oldValue = $model->getOriginal($field);
+                        $newValue = $model->$field;
+
+                        // Tolerancia para decimales (evitar falsos positivos por redondeo)
+                        if (abs((float) $oldValue - (float) $newValue) > 0.01) {
+                            $protectedChanges[] = $field;
+                        }
+                    }
+                }
+
+                if (!empty($protectedChanges)) {
+                    $fieldList = implode(', ', $protectedChanges);
+                    throw new \Exception(
+                        "VIOLACIÓN CONTABLE: No se pueden modificar campos financieros " .
+                        "cuando hay pagos registrados (\${$originalAmountPaid}). " .
+                        "Campos bloqueados: {$fieldList}. " .
+                        "Para modificar el total, primero debe revertir todos los pagos."
+                    );
+                }
+            }
+
+            // ================================================================
+            // v2.5: CIERRE CONTABLE ABSOLUTO
+            // Un pedido financieramente cerrado es 100% inmutable
+            // ================================================================
+            $wasFinanciallyClosed = $model->getOriginal('status') === self::STATUS_DELIVERED
+                && $model->getOriginal('payment_status') === self::PAYMENT_PAID;
+
+            if ($wasFinanciallyClosed) {
+                // Solo permitir cambios cosméticos (notes) o auditoría (updated_by)
+                $allowedChanges = ['notes', 'updated_by', 'updated_at'];
+                $actualChanges = array_keys($model->getDirty());
+                $blockedChanges = array_diff($actualChanges, $allowedChanges);
+
+                if (!empty($blockedChanges)) {
+                    throw new \Exception(
+                        "CIERRE CONTABLE: El pedido {$model->order_number} está cerrado " .
+                        "(ENTREGADO + PAGADO). Ningún campo financiero u operativo puede modificarse. " .
+                        "Cambios bloqueados: " . implode(', ', $blockedChanges)
+                    );
+                }
+            }
         });
     }
 
@@ -186,6 +250,14 @@ class Order extends Model
     public function updater(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    /**
+     * CIERRE POS: Usuario que canceló el pedido.
+     */
+    public function canceller(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancelled_by');
     }
 
     public function parentOrder(): BelongsTo
@@ -253,12 +325,37 @@ class Order extends Model
     }
 
     /**
+     * Reservas de stock de PRODUCTOS TERMINADOS v2.2.
+     */
+    public function stockReservations(): HasMany
+    {
+        return $this->hasMany(ProductVariantReservation::class, 'order_id');
+    }
+
+    /**
+     * Reservas de stock activas (status = 'reserved').
+     */
+    public function activeStockReservations(): HasMany
+    {
+        return $this->stockReservations()->where('status', ProductVariantReservation::STATUS_RESERVED);
+    }
+
+    /**
      * Relación con el archivo de producción (DesignExport) vinculado.
      * Solo se permite vincular exports con status 'aprobado'.
      */
     public function designExport(): BelongsTo
     {
         return $this->belongsTo(DesignExport::class, 'design_export_id');
+    }
+
+    /**
+     * v2.6-MIN: Relación 1:1 con Invoice (factura).
+     * REGLA: Un pedido puede tener máximo UNA factura.
+     */
+    public function invoice(): HasOne
+    {
+        return $this->hasOne(Invoice::class, 'order_id');
     }
 
     // === SCOPES ===
@@ -361,6 +458,48 @@ class Order extends Model
             self::STATUS_READY,
             self::STATUS_DELIVERED,
         ]);
+    }
+
+    /**
+     * FASE v2.3: Verifica si el pedido está ENTREGADO (estado terminal).
+     * REGLA ERP: Un pedido DELIVERED es INMUTABLE y NO puede:
+     * - Volver a producción
+     * - Modificar inventario
+     * - Cambiar a ningún otro estado
+     *
+     * @return bool TRUE si el pedido está entregado
+     */
+    public function isDelivered(): bool
+    {
+        return $this->status === self::STATUS_DELIVERED;
+    }
+
+    /**
+     * FASE v2.3: Verifica si el pedido está en estado TERMINAL (cerrado).
+     * Estados terminales: DELIVERED, CANCELLED
+     * REGLA: Estados terminales NO permiten ninguna transición de estado.
+     *
+     * @return bool TRUE si el pedido está en estado terminal
+     */
+    public function isTerminal(): bool
+    {
+        return in_array($this->status, [
+            self::STATUS_DELIVERED,
+            self::STATUS_CANCELLED,
+        ]);
+    }
+
+    /**
+     * FASE v2.3: Verifica si el pedido puede ser entregado.
+     * REGLAS:
+     * - Solo pedidos READY pueden entregarse
+     * - Pedidos ya entregados NO pueden re-entregarse
+     *
+     * @return bool TRUE si el pedido puede transicionar a DELIVERED
+     */
+    public function canBeDelivered(): bool
+    {
+        return $this->status === self::STATUS_READY;
     }
 
     /**
@@ -1027,6 +1166,179 @@ class Order extends Model
         return $prefix . '$' . number_format(abs($margin), 2);
     }
 
+    // =========================================================================
+    // === FASE v2.5: CIERRE CONTABLE Y GATES FINANCIEROS ===
+    // =========================================================================
+
+    /**
+     * GATE v2.5: Verifica si los campos financieros pueden editarse.
+     *
+     * REGLA CONTABLE SELLADA:
+     * - Si amount_paid > 0 → total NO puede cambiar
+     * - Si isFinanciallyClosed() → NADA financiero puede cambiar
+     *
+     * Campos protegidos cuando amount_paid > 0:
+     * - subtotal, discount, requires_invoice, iva_amount, total
+     *
+     * @return bool TRUE si se pueden editar campos financieros
+     */
+    public function canEditFinancials(): bool
+    {
+        // R1: Si hay pagos registrados, el total está sellado
+        if ($this->amount_paid > 0) {
+            return false;
+        }
+
+        // R2: Si está financieramente cerrado, nada se puede editar
+        if ($this->isFinanciallyClosed()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * GATE v2.5: Verifica si el pedido está CERRADO CONTABLEMENTE.
+     *
+     * DEFINICIÓN CANÓNICA:
+     * Un pedido está financieramente cerrado cuando:
+     * - Estado = DELIVERED (entregado al cliente)
+     * - payment_status = PAID (totalmente pagado)
+     *
+     * CONSECUENCIAS del cierre contable:
+     * - total INMUTABLE
+     * - amount_paid INMUTABLE (no más pagos, no eliminaciones)
+     * - balance = 0 (invariante)
+     * - Registro histórico DEFINITIVO
+     *
+     * @return bool TRUE si el pedido está cerrado contablemente
+     */
+    public function isFinanciallyClosed(): bool
+    {
+        return $this->status === self::STATUS_DELIVERED
+            && $this->payment_status === self::PAYMENT_PAID;
+    }
+
+    /**
+     * Obtiene el motivo por el cual no se pueden editar campos financieros.
+     *
+     * @return string|null NULL si se puede editar, mensaje explicativo si no
+     */
+    public function getFinancialEditBlockReason(): ?string
+    {
+        if ($this->isFinanciallyClosed()) {
+            return 'El pedido está cerrado contablemente (ENTREGADO + PAGADO). ' .
+                   'Los datos financieros son inmutables.';
+        }
+
+        if ($this->amount_paid > 0) {
+            return 'El pedido tiene pagos registrados ($' .
+                   number_format($this->amount_paid, 2) . '). ' .
+                   'El total no puede modificarse para evitar descuadres contables.';
+        }
+
+        return null;
+    }
+
+    /**
+     * Lista de campos financieros inmutables cuando hay pagos.
+     */
+    public const IMMUTABLE_FINANCIAL_FIELDS = [
+        'subtotal',
+        'discount',
+        'requires_invoice',
+        'iva_amount',
+        'total',
+    ];
+
+    // =========================================================================
+    // === FASE v2.4: SISTEMA DE PAGOS Y BALANCE ===
+    // =========================================================================
+
+    /**
+     * GATE v2.4: Verifica si el pedido puede recibir pagos.
+     *
+     * REGLAS CONTABLES SELLADAS:
+     * - NO se aceptan pagos en pedidos CANCELLED
+     * - Pedidos con balance <= 0 NO aceptan más pagos (ya pagados)
+     * - Todos los demás estados SÍ aceptan pagos
+     *
+     * @return bool TRUE si el pedido puede recibir pagos
+     */
+    public function canReceivePayment(): bool
+    {
+        // R1: Pedidos cancelados NO reciben pagos
+        if ($this->status === self::STATUS_CANCELLED) {
+            return false;
+        }
+
+        // R2: Pedidos ya pagados completamente NO reciben más pagos
+        if ($this->balance <= 0) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Obtiene el motivo por el cual no se pueden recibir pagos.
+     *
+     * @return string|null NULL si puede recibir pagos, mensaje si no
+     */
+    public function getPaymentBlockReason(): ?string
+    {
+        if ($this->status === self::STATUS_CANCELLED) {
+            return 'No se pueden registrar pagos en pedidos cancelados.';
+        }
+
+        if ($this->balance <= 0) {
+            return 'El pedido ya está completamente pagado.';
+        }
+
+        return null;
+    }
+
+    /**
+     * Calcula el monto máximo que se puede pagar (balance pendiente).
+     *
+     * @return float Monto máximo aceptable
+     */
+    public function getMaxPayableAmount(): float
+    {
+        return max(0, (float) $this->balance);
+    }
+
+    /**
+     * Valida si un monto de pago es aceptable.
+     *
+     * REGLAS:
+     * - Monto > 0
+     * - Monto <= balance (no sobrepago)
+     *
+     * @param float $amount Monto a validar
+     * @return array ['valid' => bool, 'error' => string|null]
+     */
+    public function validatePaymentAmount(float $amount): array
+    {
+        if ($amount <= 0) {
+            return [
+                'valid' => false,
+                'error' => 'El monto del pago debe ser mayor a cero.',
+            ];
+        }
+
+        $maxPayable = $this->getMaxPayableAmount();
+
+        if ($amount > $maxPayable) {
+            return [
+                'valid' => false,
+                'error' => "El monto excede el balance pendiente. Máximo aceptable: \${$maxPayable}",
+            ];
+        }
+
+        return ['valid' => true, 'error' => null];
+    }
+
     /**
      * Verifica si el pedido es PERSONALIZADO.
      * REGLA: Un pedido es personalizado si AL MENOS UN item tiene
@@ -1369,5 +1681,125 @@ class Order extends Model
     public function hasExtrasWithInventory(): bool
     {
         return $this->getExtrasWithInventory()->isNotEmpty();
+    }
+
+    // =========================================================================
+    // === CIERRE POS: MÉTODOS DE VENTA POS Y CANCELACIÓN ===
+    // =========================================================================
+
+    /**
+     * Verifica si el pedido es una VENTA POS (mostrador).
+     *
+     * CRITERIOS:
+     * - cliente_id = NULL (venta sin cliente registrado)
+     * - status = DELIVERED (creado directo como entregado)
+     * - Tiene movimiento TYPE_SALE_EXIT asociado
+     *
+     * @return bool TRUE si es venta POS
+     */
+    public function isPosOrder(): bool
+    {
+        // Venta POS: sin cliente, entregado, tiene notas de POS
+        return $this->cliente_id === null
+            && $this->status === self::STATUS_DELIVERED
+            && str_contains($this->notes ?? '', '[VENTA POS MOSTRADOR]');
+    }
+
+    /**
+     * Verifica si el pedido POS puede ser cancelado.
+     *
+     * REGLAS:
+     * - Debe ser venta POS
+     * - NO debe estar ya cancelado
+     * - NO tiene restricción de tiempo (siempre cancelable)
+     *
+     * @return bool TRUE si puede cancelarse
+     */
+    public function canCancelPosOrder(): bool
+    {
+        if (!$this->isPosOrder()) {
+            return false;
+        }
+
+        if ($this->status === self::STATUS_CANCELLED) {
+            return false;
+        }
+
+        if ($this->cancelled_at !== null) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Verifica si el pedido está cancelado.
+     *
+     * @return bool TRUE si está cancelado
+     */
+    public function isCancelled(): bool
+    {
+        return $this->status === self::STATUS_CANCELLED
+            || $this->cancelled_at !== null;
+    }
+
+    /**
+     * CIERRE CANÓNICO: Verifica si el pedido puede ser cancelado.
+     *
+     * REGLAS INVIOLABLES:
+     * - PERMITIDO: DRAFT, CONFIRMED, IN_PRODUCTION
+     * - PROHIBIDO: DELIVERED, CANCELLED
+     *
+     * NOTA: La cancelación es un ACTO ADMINISTRATIVO.
+     * NO genera merma automática. NO revierte inventarios.
+     *
+     * @return bool TRUE si el pedido puede cancelarse
+     */
+    public function canCancel(): bool
+    {
+        // Estados que PERMITEN cancelación
+        $cancellableStates = [
+            self::STATUS_DRAFT,
+            self::STATUS_CONFIRMED,
+            self::STATUS_IN_PRODUCTION,
+        ];
+
+        return in_array($this->status, $cancellableStates);
+    }
+
+    /**
+     * Obtiene el motivo por el cual el pedido NO puede cancelarse.
+     *
+     * @return string|null NULL si puede cancelarse, mensaje si no
+     */
+    public function getCancelBlockReason(): ?string
+    {
+        if ($this->canCancel()) {
+            return null;
+        }
+
+        return match($this->status) {
+            self::STATUS_DELIVERED => 'No se puede cancelar un pedido ya entregado.',
+            self::STATUS_CANCELLED => 'El pedido ya está cancelado.',
+            default => 'El pedido no puede cancelarse en este estado.',
+        };
+    }
+
+    /**
+     * Obtiene el motivo de cancelación formateado.
+     *
+     * @return string|null
+     */
+    public function getCancellationInfoAttribute(): ?array
+    {
+        if (!$this->isCancelled()) {
+            return null;
+        }
+
+        return [
+            'cancelled_at' => $this->cancelled_at?->format('Y-m-d H:i:s'),
+            'cancelled_by' => $this->canceller?->name ?? 'Sistema',
+            'reason' => $this->cancel_reason ?? 'Sin motivo especificado',
+        ];
     }
 }

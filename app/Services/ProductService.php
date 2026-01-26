@@ -98,7 +98,8 @@ class ProductService
                         // SKU vacío = generar automático en createVariant()
                         'sku_variant' => !empty($v['sku_variant']) ? $v['sku_variant'] : (!empty($v['sku']) ? $v['sku'] : null),
                         'price' => $data['base_price'] ?? 0,
-                        'stock_alert' => 5,
+                        // Stock mínimo desde wizard (default 0 si no viene)
+                        'stock_alert' => isset($v['stock_alert']) ? (int) $v['stock_alert'] : 0,
                         'attribute_values' => []
                     ];
 
@@ -382,18 +383,16 @@ class ProductService
     }
 
     /**
-     * Eliminar variante
+     * Baja lógica de variante (no elimina físicamente)
      */
     public function deleteVariant(ProductVariant $variant): bool
     {
         return DB::transaction(function () use ($variant) {
             $variantId = $variant->id;
 
-            $variant->attributeValues()->detach();
-            $variant->designExports()->detach();
-            $variant->delete();
+            $variant->update(['activo' => false]);
 
-            Log::info('Variante de producto eliminada', [
+            Log::info('Variante de producto desactivada', [
                 'variant_id' => $variantId,
                 'user_id' => Auth::id(),
             ]);
@@ -417,14 +416,10 @@ class ProductService
             ->pluck('db_id')
             ->toArray();
 
-        // Eliminar variantes que ya no están en el frontend
+        // Baja lógica de variantes que ya no están en el frontend
         $product->variants()
             ->whereNotIn('id', $incomingDbIds)
-            ->each(function ($variant) {
-                $variant->attributeValues()->detach();
-                $variant->designExports()->detach();
-                $variant->delete();
-            });
+            ->update(['activo' => false]);
 
         foreach ($variants as $v) {
             $attributeValues = [];
@@ -442,6 +437,7 @@ class ProductService
                     $this->updateVariant($existing, [
                         'sku_variant' => !empty($v['sku']) ? $v['sku'] : $existing->sku_variant,
                         'price' => $v['price'] ?? $basePrice,
+                        'stock_alert' => isset($v['stock_alert']) ? (int) $v['stock_alert'] : $existing->stock_alert,
                         'attribute_values' => $attributeValues,
                     ]);
                 }
@@ -450,6 +446,7 @@ class ProductService
                 $this->createVariant($product, [
                     'sku_variant' => !empty($v['sku']) ? $v['sku'] : null,
                     'price' => $v['price'] ?? $basePrice,
+                    'stock_alert' => isset($v['stock_alert']) ? (int) $v['stock_alert'] : 0,
                     'attribute_values' => $attributeValues,
                 ]);
             }

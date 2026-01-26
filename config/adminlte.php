@@ -301,10 +301,31 @@ return [
     'menu' => [
         /*
         |--------------------------------------------------------------------------
-        | GESTIÓN COMERCIAL
+        | VENTAS POS (Mostrador)
         |--------------------------------------------------------------------------
         */
-        ['header' => 'GESTIÓN COMERCIAL'],
+        ['header' => 'VENTAS POS'],
+
+        [
+            'text' => 'Punto de Venta',
+            'url' => 'pos',
+            'icon' => 'fas fa-fw fa-cash-register',
+            'active' => ['pos', 'pos/'],
+        ],
+
+        [
+            'text' => 'Historial Ventas POS',
+            'url' => 'admin/pos-sales',
+            'icon' => 'fas fa-fw fa-history',
+            'active' => ['admin/pos-sales*'],
+        ],
+
+        /*
+        |--------------------------------------------------------------------------
+        | PEDIDOS CLIENTE
+        |--------------------------------------------------------------------------
+        */
+        ['header' => 'PEDIDOS CLIENTE'],
 
         [
             'text' => 'Pedidos',
@@ -314,6 +335,14 @@ return [
             'label' => 'Nuevo',
             'label_color' => 'success',
         ],
+
+        /*
+        |--------------------------------------------------------------------------
+        | PRODUCCIÓN OPERATIVA
+        |--------------------------------------------------------------------------
+        */
+        ['header' => 'PRODUCCIÓN OPERATIVA'],
+
         [
             'text' => 'Cola de Producción',
             'url' => 'admin/production/queue',
@@ -322,39 +351,19 @@ return [
             'active' => ['admin/production/queue*'],
             'label_color' => 'warning',
         ],
-        [
-            'text' => 'Clientes',
-            'url' => 'clientes',
-            'icon' => 'fas fa-fw fa-users',
-            'active' => ['clientes*'],
-        ],
-        [
-            'text' => 'Proveedores',
-            'url' => 'proveedores',
-            'icon' => 'fas fa-fw fa-truck',
-            'active' => ['proveedores*'],
-        ],
 
         /*
         |--------------------------------------------------------------------------
-        | DISEÑOS Y PRODUCCIÓN
+        | PRODUCCIÓN TÉCNICA (Bordados)
         |--------------------------------------------------------------------------
         */
-        ['header' => 'DISEÑOS Y PRODUCCIÓN'],
-
+        ['header' => 'PRODUCCIÓN TÉCNICA'],
 
         [
-            'text' => 'Diseños',
-            'url' => 'admin/designs',
+            'text' => 'Diseños de Bordado',
             'icon' => 'fas fa-fw fa-pencil-ruler',
-            'active' => ['admin/designs*', 'admin/categories*'],
+            'active' => ['admin/designs*', 'admin/production', 'admin/production/create*', 'admin/visualizer*'],
             'submenu' => [
-                [
-                    'text' => 'Categorías',
-                    'url' => 'admin/categories',
-                    'icon' => 'fas fa-fw fa-folder-open',
-                    'active' => ['admin/categories*'],
-                ],
                 [
                     'text' => 'Catálogo de Diseños',
                     'url' => 'admin/designs',
@@ -362,39 +371,43 @@ return [
                     'active' => ['admin/designs*'],
                 ],
                 [
-                    'text' => 'Bordados / Exportaciones Técnicas',
+                    'text' => 'Exportaciones Técnicas',
                     'url' => 'admin/production',
-                    'icon' => 'fas fa-fw fa-industry',
+                    'icon' => 'fas fa-fw fa-file-export',
                     'active' => ['admin/production', 'admin/production/create*', 'admin/production/{id}*'],
                 ],
-
+                [
+                    'text' => 'Visualizador (BETA)',
+                    'url' => 'admin/visualizer',
+                    'icon' => 'fas fa-fw fa-eye',
+                    'active' => ['admin/visualizer*'],
+                ],
             ],
         ],
-        [
-            'text' => 'Visualizador (BETA)',
-            'url' => 'admin/visualizer',
-            'icon' => 'fas fa-fw fa-eye',
-            'active' => ['admin/visualizer*'],
-        ],
-
 
         /*
         |--------------------------------------------------------------------------
-        | INVENTARIO Y COMPRAS
+        | INVENTARIO DE MATERIALES
         |--------------------------------------------------------------------------
         */
-        ['header' => 'INVENTARIO Y COMPRAS'],
+        ['header' => 'INVENTARIO MATERIALES'],
 
         [
-            'text' => 'Inventario',
+            'text' => 'Stock de Materiales',
             'icon' => 'fas fa-fw fa-warehouse',
-            'active' => ['admin/inventory*'],
+            'active' => ['admin/inventory*', 'admin/materials*'],
             'submenu' => [
                 [
                     'text' => 'Vista General',
                     'url' => 'admin/inventory',
                     'icon' => 'fas fa-fw fa-th-list',
                     'active' => ['admin/inventory'],
+                ],
+                [
+                    'text' => 'Catálogo de Materiales',
+                    'url' => 'admin/materials',
+                    'icon' => 'fas fa-fw fa-boxes',
+                    'active' => ['admin/materials*'],
                 ],
                 [
                     'text' => 'Reservas Activas',
@@ -410,87 +423,132 @@ return [
                 ],
             ],
         ],
+
+        /*
+        |--------------------------------------------------------------------------
+        | INVENTARIO PRODUCTO TERMINADO
+        |--------------------------------------------------------------------------
+        */
+        ['header' => 'INVENTARIO PROD. TERMINADO'],
+
         [
-            'text' => 'Materiales',
-            'url' => 'admin/materials',
-            'icon' => 'fas fa-fw fa-cubes',
-            'active' => ['admin/material-categories*', 'admin/materials*'],
+            'text' => 'Stock Prod. Terminado',
+            'icon' => 'fas fa-fw fa-boxes',
+            'active' => ['admin/finished-goods-stock*'],
             'submenu' => [
                 [
-                    'text' => 'Unidades de Medida',
-                    'url' => 'admin/units',
-                    'icon' => 'fas fa-fw fa-ruler-combined',
-                    'active' => ['admin/units*'],
-                ],
-                [
-                    'text' => 'Categorías',
-                    'url' => 'admin/material-categories',
-                    'icon' => 'fas fa-fw fa-layer-group',
-                    'active' => ['admin/material-categories*'],
-                ],
-                [
-                    'text' => 'Catálogo de Materiales',
-                    'url' => 'admin/materials',
-                    'icon' => 'fas fa-fw fa-boxes',
-                    'active' => ['admin/materials*'],
+                    'text' => 'Vista General',
+                    'url' => 'admin/finished-goods-stock',
+                    'icon' => 'fas fa-fw fa-th-list',
+                    'active' => ['admin/finished-goods-stock'],
                 ],
             ],
-        ],
-        [
-            'text' => 'Compras',
-            'url' => 'admin/purchases',
-            'icon' => 'fas fa-fw fa-shopping-cart',
-            'active' => ['admin/purchases*'],
         ],
 
         /*
         |--------------------------------------------------------------------------
-        | PRODUCTOS
+        | MERMA / DESPERDICIO
         |--------------------------------------------------------------------------
         */
-        ['header' => 'PRODUCTOS'],
+        ['header' => 'CONTROL DE MERMA'],
 
         [
-            'text' => 'Gestión de Productos',
-            'url' => 'admin/products',
+            'text' => 'Registro de Mermas',
+            'url' => 'admin/waste',
+            'icon' => 'fas fa-fw fa-trash-alt',
+            'icon_color' => 'danger',
+            'active' => ['admin/waste*'],
+        ],
+
+        /*
+        |--------------------------------------------------------------------------
+        | COMPRAS / ABASTECIMIENTO
+        |--------------------------------------------------------------------------
+        */
+        ['header' => 'COMPRAS'],
+
+        [
+            'text' => 'Órdenes de Compra',
+            'url' => 'admin/purchases',
+            'icon' => 'fas fa-fw fa-shopping-cart',
+            'active' => ['admin/purchases*'],
+        ],
+        [
+            'text' => 'Proveedores',
+            'url' => 'proveedores',
+            'icon' => 'fas fa-fw fa-truck',
+            'active' => ['proveedores*'],
+        ],
+
+        /*
+        |--------------------------------------------------------------------------
+        | CATÁLOGOS (Maestros)
+        |--------------------------------------------------------------------------
+        */
+        ['header' => 'CATÁLOGOS'],
+
+        [
+            'text' => 'Clientes',
+            'url' => 'clientes',
+            'icon' => 'fas fa-fw fa-users',
+            'active' => ['clientes*'],
+        ],
+        [
+            'text' => 'Productos',
             'icon' => 'fas fa-fw fa-box-open',
             'active' => ['admin/products*', 'admin/product-categories*', 'product_extras*'],
             'submenu' => [
                 [
-                    'text' => 'Categorías',
+                    'text' => 'Catálogo de Productos',
+                    'url' => 'admin/products',
+                    'icon' => 'fas fa-fw fa-th-list',
+                    'active' => ['admin/products*'],
+                ],
+                [
+                    'text' => 'Categorías de Producto',
                     'url' => 'admin/product-categories',
                     'icon' => 'fas fa-fw fa-tags',
                     'active' => ['admin/product-categories*'],
                 ],
-
                 [
                     'text' => 'Servicios Extras',
                     'url' => 'product_extras',
                     'icon' => 'fas fa-fw fa-plus-circle',
                     'active' => ['product_extras*'],
                 ],
+            ],
+        ],
+        [
+            'text' => 'Materiales',
+            'icon' => 'fas fa-fw fa-cubes',
+            'active' => ['admin/material-categories*'],
+            'submenu' => [
                 [
-                    'text' => 'Productos',
-                    'url' => 'admin/products',
-                    'icon' => 'fas fa-fw fa-th-list',
-                    'active' => ['admin/products*'],
+                    'text' => 'Categorías de Material',
+                    'url' => 'admin/material-categories',
+                    'icon' => 'fas fa-fw fa-layer-group',
+                    'active' => ['admin/material-categories*'],
                 ],
             ],
         ],
-
-        /*
-        |--------------------------------------------------------------------------
-        | CONFIGURACIÓN DEL SISTEMA
-        |--------------------------------------------------------------------------
-        */
-        ['header' => 'CONFIGURACIÓN'],
-
         [
-            'text' => 'Catálogos',
+            'text' => 'Diseños',
+            'icon' => 'fas fa-fw fa-palette',
+            'active' => ['admin/categories*'],
+            'submenu' => [
+                [
+                    'text' => 'Categorías de Diseño',
+                    'url' => 'admin/categories',
+                    'icon' => 'fas fa-fw fa-folder-open',
+                    'active' => ['admin/categories*'],
+                ],
+            ],
+        ],
+        [
+            'text' => 'Parámetros',
             'icon' => 'fas fa-fw fa-database',
             'active' => ['attributes*', 'attribute-values*', 'estados*', 'giros*', 'recomendaciones*', 'tipos_aplicacion*'],
             'submenu' => [
-
                 [
                     'text' => 'Atributos',
                     'url' => 'attributes',
@@ -521,13 +579,47 @@ return [
                     'icon' => 'fas fa-fw fa-palette',
                     'active' => ['tipos_aplicacion*'],
                 ],
-
             ],
         ],
+
+        /*
+        |--------------------------------------------------------------------------
+        | CONFIGURACIÓN DEL SISTEMA
+        |--------------------------------------------------------------------------
+        */
+        ['header' => 'CONFIGURACIÓN'],
+
         [
             'text' => 'Sistema',
             'icon' => 'fas fa-fw fa-cogs',
-            'active' => ['admin/activity-logs*', 'admin/settings*', 'admin/staff*', 'admin/users*'],
+            'active' => ['admin/settings*', 'admin/units*'],
+            'submenu' => [
+                [
+                    'text' => 'Configuración General',
+                    'url' => 'admin/settings',
+                    'icon' => 'fas fa-fw fa-wrench',
+                    'active' => ['admin/settings*'],
+                ],
+                [
+                    'text' => 'Unidades de Medida',
+                    'url' => 'admin/units',
+                    'icon' => 'fas fa-fw fa-ruler-combined',
+                    'active' => ['admin/units*'],
+                ],
+            ],
+        ],
+
+        /*
+        |--------------------------------------------------------------------------
+        | ADMINISTRACIÓN / AUDITORÍA
+        |--------------------------------------------------------------------------
+        */
+        ['header' => 'ADMINISTRACIÓN'],
+
+        [
+            'text' => 'Acceso y Personal',
+            'icon' => 'fas fa-fw fa-user-shield',
+            'active' => ['admin/staff*', 'admin/users*'],
             'submenu' => [
                 [
                     'text' => 'Personal',
@@ -541,19 +633,13 @@ return [
                     'icon' => 'fas fa-fw fa-users-cog',
                     'active' => ['admin/users*'],
                 ],
-                [
-                    'text' => 'Configuración',
-                    'url' => 'admin/settings',
-                    'icon' => 'fas fa-fw fa-wrench',
-                    'active' => ['admin/settings*'],
-                ],
-                [
-                    'text' => 'Registro de Actividad',
-                    'url' => 'admin/activity-logs',
-                    'icon' => 'fas fa-fw fa-history',
-                    'active' => ['admin/activity-logs*'],
-                ],
             ],
+        ],
+        [
+            'text' => 'Registro de Actividad',
+            'url' => 'admin/activity-logs',
+            'icon' => 'fas fa-fw fa-history',
+            'active' => ['admin/activity-logs*'],
         ],
     ],
 

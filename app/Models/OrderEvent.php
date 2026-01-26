@@ -39,6 +39,10 @@ class OrderEvent extends Model
     public const TYPE_ITEM_ADDED = 'item_added';
     public const TYPE_ANNEX_CREATED = 'annex_created';
 
+    // === v2.5: TIPOS DE EVENTO CONTABLE ===
+    public const TYPE_PAYMENT_REGISTERED = 'payment_registered';        // Pago registrado con auditoría completa
+    public const TYPE_ORDER_FINANCIALLY_CLOSED = 'financially_closed';  // Cierre contable definitivo
+
     // === RELACIONES ===
     public function order(): BelongsTo
     {
@@ -70,6 +74,9 @@ class OrderEvent extends Model
             self::TYPE_STATUS_CHANGED => 'fas fa-exchange-alt text-secondary',
             self::TYPE_ITEM_ADDED => 'fas fa-cart-plus text-info',
             self::TYPE_ANNEX_CREATED => 'fas fa-project-diagram text-info',
+            // v2.5: Eventos contables
+            self::TYPE_PAYMENT_REGISTERED => 'fas fa-file-invoice-dollar text-success',
+            self::TYPE_ORDER_FINANCIALLY_CLOSED => 'fas fa-lock text-primary',
             default => 'fas fa-circle text-muted',
         };
     }
@@ -93,6 +100,9 @@ class OrderEvent extends Model
             self::TYPE_STATUS_CHANGED => 'secondary',
             self::TYPE_ITEM_ADDED => 'info',
             self::TYPE_ANNEX_CREATED => 'info',
+            // v2.5: Eventos contables
+            self::TYPE_PAYMENT_REGISTERED => 'success',
+            self::TYPE_ORDER_FINANCIALLY_CLOSED => 'primary',
             default => 'secondary',
         };
     }
@@ -116,6 +126,9 @@ class OrderEvent extends Model
             self::TYPE_STATUS_CHANGED => 'Cambio de Estado',
             self::TYPE_ITEM_ADDED => 'Item Agregado',
             self::TYPE_ANNEX_CREATED => 'Anexo Creado',
+            // v2.5: Eventos contables
+            self::TYPE_PAYMENT_REGISTERED => 'Pago Registrado',
+            self::TYPE_ORDER_FINANCIALLY_CLOSED => 'Cierre Contable',
             default => 'Evento',
         };
     }
@@ -268,16 +281,24 @@ class OrderEvent extends Model
         );
     }
 
-    // === HELPER: Registrar entrega ===
+    // === HELPER: Registrar entrega (CIERRE FINAL v2.3) ===
     public static function logDelivered(Order $order, array $consumedMaterials = []): self
     {
         return self::log(
             $order,
             self::TYPE_DELIVERED,
-            "Pedido entregado. Materiales consumidos del inventario.",
+            "Pedido entregado al cliente. Ciclo operativo CERRADO.",
             [
-                'delivered_date' => $order->delivered_date?->format('Y-m-d'),
+                'delivered_date' => $order->delivered_date?->format('Y-m-d H:i:s'),
+                'delivered_timestamp' => now()->toIso8601String(),
                 'consumed_materials' => $consumedMaterials,
+                'total_paid' => (float) $order->amount_paid,
+                'balance' => (float) $order->balance,
+                'payment_status' => $order->payment_status,
+                // SELLO DE INMUTABILIDAD v2.3
+                'is_terminal' => true,
+                'allows_transitions' => false,
+                'allows_inventory_changes' => false,
             ]
         );
     }
@@ -304,6 +325,71 @@ class OrderEvent extends Model
                 'amount' => $amount,
                 'method' => $method,
                 'new_balance' => $order->balance,
+            ]
+        );
+    }
+
+    // =========================================================================
+    // === v2.5: HELPERS DE EVENTOS CONTABLES ===
+    // =========================================================================
+
+    /**
+     * Registra un pago con auditoría contable completa.
+     * Incluye snapshot del estado financiero antes/después.
+     */
+    public static function logPaymentRegistered(
+        Order $order,
+        float $amount,
+        string $method,
+        float $balanceBefore,
+        float $balanceAfter
+    ): self {
+        return self::log(
+            $order,
+            self::TYPE_PAYMENT_REGISTERED,
+            "Pago registrado: \$" . number_format($amount, 2) . " vía {$method}",
+            [
+                'amount' => $amount,
+                'method' => $method,
+                'balance_before' => $balanceBefore,
+                'balance_after' => $balanceAfter,
+                'total' => (float) $order->total,
+                'amount_paid_after' => (float) $order->amount_paid,
+                'payment_status_after' => $order->payment_status,
+                'timestamp' => now()->toIso8601String(),
+            ]
+        );
+    }
+
+    /**
+     * Registra el cierre contable definitivo del pedido.
+     * SELLADO v2.5: Marca el pedido como inmutable financieramente.
+     */
+    public static function logFinanciallyClosed(Order $order): self
+    {
+        return self::log(
+            $order,
+            self::TYPE_ORDER_FINANCIALLY_CLOSED,
+            "CIERRE CONTABLE: Pedido {$order->order_number} cerrado definitivamente.",
+            [
+                // Snapshot financiero final
+                'total' => (float) $order->total,
+                'amount_paid' => (float) $order->amount_paid,
+                'balance' => (float) $order->balance,
+                'payment_status' => $order->payment_status,
+                // Snapshot operativo
+                'status' => $order->status,
+                'delivered_date' => $order->delivered_date?->toIso8601String(),
+                // Costos de fabricación (snapshot inmutable)
+                'materials_cost' => (float) $order->materials_cost_snapshot,
+                'embroidery_cost' => (float) $order->embroidery_cost_snapshot,
+                'total_manufacturing_cost' => $order->total_manufacturing_cost,
+                'real_margin' => $order->real_margin,
+                'real_margin_percent' => $order->real_margin_percent,
+                // Sello de inmutabilidad
+                'closed_at' => now()->toIso8601String(),
+                'is_immutable' => true,
+                'financial_fields_locked' => Order::IMMUTABLE_FINANCIAL_FIELDS,
             ]
         );
     }

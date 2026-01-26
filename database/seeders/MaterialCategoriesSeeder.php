@@ -2,40 +2,41 @@
 
 namespace Database\Seeders;
 
-use App\Models\{MaterialCategory, Unit};
+use App\Models\MaterialCategory;
+use App\Models\Unit;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Schema;
 
 class MaterialCategoriesSeeder extends Seeder
 {
     public function run(): void
     {
         $u = Unit::all()->keyBy('slug');
-        $hasUuid = Schema::hasColumn('material_categories', 'uuid');
 
         $categories = [
-            ['name' => 'HILOS BORDADO', 'slug' => 'hilos', 'unit' => 'cono', 'color' => true],
-            ['name' => 'TELAS / TEXTILES', 'slug' => 'telas', 'unit' => 'metro', 'color' => true],
-            ['name' => 'ESTABILIZADORES (PELÓN)', 'slug' => 'pelones', 'unit' => 'metro', 'color' => false],
-            ['name' => 'AGUJAS E INSTRUMENTAL', 'slug' => 'agujas', 'unit' => 'pieza', 'color' => true],
-            ['name' => 'QUÍMICOS / LIMPIEZA', 'slug' => 'quimicos', 'unit' => 'mililitro', 'color' => false],
-            ['name' => 'REFACCIONES MÁQUINA', 'slug' => 'refacciones', 'unit' => 'pieza', 'color' => false],
-            ['name' => 'AVÍOS (BOTONES/CIERRES)', 'slug' => 'avios', 'unit' => 'pieza', 'color' => true],
+            ['name' => 'HILOS BORDADO', 'slug' => 'hilos', 'unit' => 'cono', 'desc' => 'Hilos de poliéster para bordar y bobinas'],
+            ['name' => 'TELAS / TEXTILES', 'slug' => 'telas', 'unit' => 'metro', 'desc' => 'Bolsas y textiles base'],
+            ['name' => 'ESTABILIZADORES (PELÓN)', 'slug' => 'pelones', 'unit' => 'metro', 'desc' => 'Entretelas y estabilizadores'],
+            ['name' => 'AGUJAS E INSTRUMENTAL', 'slug' => 'agujas', 'unit' => 'pieza', 'desc' => 'Agujas e instrumental de bordado'],
+            ['name' => 'QUÍMICOS / LIMPIEZA', 'slug' => 'quimicos', 'unit' => 'mililitro', 'desc' => 'Químicos y productos de limpieza'],
+            ['name' => 'REFACCIONES MÁQUINA', 'slug' => 'refacciones', 'unit' => 'pieza', 'desc' => 'Refacciones para máquinas de bordado'],
+            ['name' => 'AVÍOS (BOTONES/CIERRES)', 'slug' => 'avios', 'unit' => 'pieza', 'desc' => 'Cintas, listones y adornos'],
         ];
 
         foreach ($categories as $data) {
-            $insert = [
-                'name' => $data['name'],
-                'base_unit_id' => $u[$data['unit']]->id,
-                'has_color' => $data['color'],
-                'description' => 'Insumos profesionales de ' . strtolower($data['name']),
-                'activo' => true
-            ];
-            if ($hasUuid) $insert['uuid'] = (string) Str::uuid();
+            $unitId = isset($u[$data['unit']]) ? $u[$data['unit']]->id : null;
 
-            MaterialCategory::updateOrCreate(['slug' => $data['slug']], $insert);
+            MaterialCategory::updateOrCreate(
+                ['slug' => $data['slug']],
+                [
+                    'name' => $data['name'],
+                    'default_inventory_unit_id' => $unitId,
+                    'allow_unit_override' => true,
+                    'description' => $data['desc'],
+                    'activo' => true,
+                ]
+            );
         }
-        $this->command->info('✓ Categorías industriales configuradas.');
+
+        $this->command->info('✓ Categorías de materiales configuradas.');
     }
 }

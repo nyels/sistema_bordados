@@ -734,27 +734,53 @@
                                 Cliente heredado del pedido original. No se puede cambiar.
                             </small>
                         @else
+                            {{-- ================================================ --}}
+                            {{-- SWITCH: PRODUCCIÓN PARA STOCK (sin cliente)      --}}
+                            {{-- ================================================ --}}
+                            <div class="custom-control custom-switch mb-3" id="stockSwitchContainer">
+                                <input type="checkbox" class="custom-control-input" id="forStockSwitch" name="for_stock"
+                                    value="1" {{ old('for_stock') ? 'checked' : '' }}>
+                                <label class="custom-control-label font-weight-bold" for="forStockSwitch">
+                                    <i class="fas fa-boxes mr-1 text-info"></i> Producción para stock
+                                    <small class="text-muted d-block" style="font-weight: normal; font-size: 11px;">
+                                        Sin cliente — para inventario de productos terminados
+                                    </small>
+                                </label>
+                            </div>
+
                             {{-- Modo normal: selector de cliente --}}
-                            <input type="hidden" name="cliente_id" id="cliente_id" value="{{ old('cliente_id') }}"
-                                required>
-                            @error('cliente_id')
-                                <div class="alert alert-danger py-1 mb-2">{{ $message }}</div>
-                            @enderror
+                            <div id="clienteSelectorSection">
+                                <input type="hidden" name="cliente_id" id="cliente_id" value="{{ old('cliente_id') }}">
+                                @error('cliente_id')
+                                    <div class="alert alert-danger py-1 mb-2">{{ $message }}</div>
+                                @enderror
 
-                            <button type="button" class="cliente-selector-btn" id="btnSelectClient" data-toggle="modal"
-                                data-target="#clientSearchModal">
-                                <div class="cliente-info" id="clienteDisplay">
-                                    <span class="placeholder-text"><i class="fas fa-search mr-1"></i> Buscar
-                                        cliente...</span>
-                                </div>
-                                <i class="fas fa-chevron-right text-muted"></i>
-                            </button>
-
-                            <div class="mt-2 text-right">
-                                <button type="button" class="btn btn-sm btn-outline-success" data-toggle="modal"
-                                    data-target="#quickClientModal">
-                                    <i class="fas fa-user-plus mr-1"></i> Cliente Rápido
+                                <button type="button" class="cliente-selector-btn" id="btnSelectClient" data-toggle="modal"
+                                    data-target="#clientSearchModal">
+                                    <div class="cliente-info" id="clienteDisplay">
+                                        <span class="placeholder-text"><i class="fas fa-search mr-1"></i> Buscar
+                                            cliente...</span>
+                                    </div>
+                                    <i class="fas fa-chevron-right text-muted"></i>
                                 </button>
+
+                                <div class="mt-2 text-right" id="quickClientBtnContainer">
+                                    <button type="button" class="btn btn-sm btn-outline-success" data-toggle="modal"
+                                        data-target="#quickClientModal" id="btnQuickClient">
+                                        <i class="fas fa-user-plus mr-1"></i> Cliente Rápido
+                                    </button>
+                                </div>
+                            </div>
+
+                            {{-- Display cuando está en modo STOCK --}}
+                            <div id="stockModeDisplay" style="display: none;">
+                                <div class="alert alert-info mb-0 py-2" style="border-left: 4px solid #17a2b8;">
+                                    <i class="fas fa-boxes mr-2"></i>
+                                    <strong>Modo Producción para Stock</strong>
+                                    <p class="mb-0 mt-1" style="font-size: 12px;">
+                                        Este pedido se guardará sin cliente y producirá para inventario.
+                                    </p>
+                                </div>
                             </div>
                         @endif
                     </div>
@@ -1956,23 +1982,93 @@
             // ==========================================
             // GESTIÓN DE MEDIDAS — ELIMINADO (FASE 1)
             // Las medidas ahora se capturan INLINE en el modal de producto.
-            // Funciones eliminadas:
-            // - loadClientMeasurements()
-            // - selectMeasurement()
-            // - buildMeasurementSummary()
-            // - renderMeasurementsHistory()
-            // - openMeasurementModal()
-            // - validateMedida()
-            // Handlers eliminados:
-            // - #btnShowAllMeasurements
-            // - .btn-use-measurement
-            // - .btn-edit-measurement
-            // - #btnEditActiveMeasurement
-            // - #btnCapturarMedidas, #btnCapturarNuevas
-            // - #saveMeasurementsBtn
-            // - #measurementsModal .medida-input
-            // - IIFE touch fix
             // ==========================================
+
+            // ==========================================
+            // SWITCH: PRODUCCIÓN PARA STOCK (sin cliente)
+            // REGLA: DESHABILITAR campos, NO ocultarlos
+            // ==========================================
+            @if (!isset($relatedOrder) && !isset($isEdit))
+            const $forStockSwitch = $('#forStockSwitch');
+            const $clienteSelectorSection = $('#clienteSelectorSection');
+            const $stockModeDisplay = $('#stockModeDisplay');
+
+            // Referencias a secciones de Pago y Entrega
+            const $pagoCard = $('.order-mobile-3');
+            const $entregaCard = $('.order-mobile-4');
+
+            // Función para actualizar UI según modo stock
+            function updateStockModeUI() {
+                const isStockMode = $forStockSwitch.is(':checked');
+
+                if (isStockMode) {
+                    // ══════════════════════════════════════════
+                    // MODO STOCK: DESHABILITAR (no ocultar)
+                    // ══════════════════════════════════════════
+
+                    // CLIENTE: Deshabilitar visualmente (mostrar indicador)
+                    $clienteSelectorSection.addClass('section-disabled');
+                    $stockModeDisplay.show();
+
+                    // Limpiar cliente seleccionado
+                    $('#cliente_id').val('');
+                    selectedClientData = null;
+                    clientMeasurementsCache = null;
+                    $('#clienteDisplay').html('<span class="placeholder-text"><i class="fas fa-search mr-1"></i> Buscar cliente...</span>');
+                    $('#btnSelectClient').removeClass('has-client');
+
+                    // PAGO: Deshabilitar sección completa
+                    $pagoCard.find('.card-body').addClass('section-disabled');
+                    $pagoCard.find('select, input').prop('disabled', true);
+                    $('#paymentMethod').val('');
+                    $('#payFull').prop('checked', false);
+                    $('#initialPayment').val('');
+                    $('#payFullGroup, #anticipoGroup').hide();
+
+                    // ENTREGA: Deshabilitar sección completa
+                    $entregaCard.find('.card-body').addClass('section-disabled');
+                    $entregaCard.find('select, input').prop('disabled', true);
+
+                } else {
+                    // ══════════════════════════════════════════
+                    // MODO NORMAL: RE-HABILITAR TODO
+                    // ══════════════════════════════════════════
+
+                    // CLIENTE: Habilitar
+                    $clienteSelectorSection.removeClass('section-disabled');
+                    $stockModeDisplay.hide();
+
+                    // PAGO: Habilitar
+                    $pagoCard.find('.card-body').removeClass('section-disabled');
+                    $pagoCard.find('select, input').prop('disabled', false);
+
+                    // ENTREGA: Habilitar
+                    $entregaCard.find('.card-body').removeClass('section-disabled');
+                    $entregaCard.find('select, input').prop('disabled', false);
+                }
+            }
+
+            // Inicializar estado
+            updateStockModeUI();
+
+            // Handler del switch
+            $forStockSwitch.on('change', function() {
+                updateStockModeUI();
+
+                // Feedback visual
+                if ($(this).is(':checked')) {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Producción para Stock',
+                        text: 'Pedido sin cliente, pago ni entrega. Se producirá para inventario.',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+                }
+            });
+            @endif
 
             // ==========================================
             // SELECT2: PRODUCTO EN MODAL
@@ -3943,9 +4039,14 @@
 
             // ==========================================
             // VALIDACIÓN: CLIENTE REQUERIDO PARA AGREGAR PRODUCTOS
+            // (Excepto si está en modo "Producción para stock")
             // ==========================================
             $('#btnAddProduct').on('click', function() {
-                if (!$('#cliente_id').val()) {
+                const isStockMode = $('#forStockSwitch').is(':checked');
+                const hasClient = $('#cliente_id').val();
+
+                // Si NO está en modo stock Y no hay cliente → bloquear
+                if (!isStockMode && !hasClient) {
                     Swal.fire({
                         icon: 'warning',
                         title: 'Cliente requerido',
@@ -4168,12 +4269,15 @@
             $('#orderForm').on('submit', function(e) {
                 let errors = [];
 
-                // 1. Validar cliente seleccionado
-                if (!$('#cliente_id').val()) {
+                // Detectar modo producción para stock
+                const isStockMode = $('#forStockSwitch').is(':checked');
+
+                // 1. Validar cliente (SOLO si NO es modo stock)
+                if (!isStockMode && !$('#cliente_id').val()) {
                     errors.push('<li><i class="fas fa-user mr-1"></i> Debe seleccionar un cliente</li>');
                 }
 
-                // 2. Validar al menos un producto
+                // 2. Validar al menos un producto (SIEMPRE requerido)
                 if (orderItems.length === 0) {
                     errors.push(
                         '<li><i class="fas fa-box mr-1"></i> Debe agregar al menos un producto</li>');
@@ -4183,34 +4287,38 @@
                 // Las medidas se capturarán inline por ítem en FASE 2.
                 // Por ahora, no se bloquea el submit por medidas.
 
-                // 4. Validar método de pago (solo requerido si hay anticipo)
-                const initialPaymentVal = parseFloat($('#initialPayment').val()) || 0;
-                const payFullChecked = $('#payFull').is(':checked');
-                if ((initialPaymentVal > 0 || payFullChecked) && !$('#paymentMethod').val()) {
-                    errors.push(
-                        '<li><i class="fas fa-dollar-sign mr-1"></i> Debe seleccionar un método de pago para registrar el anticipo</li>'
-                    );
+                // 4. Validar método de pago (SOLO si NO es modo stock Y hay anticipo)
+                if (!isStockMode) {
+                    const initialPaymentVal = parseFloat($('#initialPayment').val()) || 0;
+                    const payFullChecked = $('#payFull').is(':checked');
+                    if ((initialPaymentVal > 0 || payFullChecked) && !$('#paymentMethod').val()) {
+                        errors.push(
+                            '<li><i class="fas fa-dollar-sign mr-1"></i> Debe seleccionar un método de pago para registrar el anticipo</li>'
+                        );
+                    }
                 }
 
-                // 5. Validar fecha prometida
-                if (!$('#promisedDate').val()) {
+                // 5. Validar fecha prometida (SOLO si NO es modo stock)
+                if (!isStockMode && !$('#promisedDate').val()) {
                     errors.push(
                         '<li><i class="fas fa-calendar mr-1"></i> Debe indicar la fecha de entrega prometida</li>'
                     );
                 }
 
-                // 6. Validar que fecha prometida sea mayor o igual a la fecha mínima
-                const promisedDate = $('#promisedDate').val();
-                const minDate = $('#promisedDate').attr('min');
-                if (promisedDate && minDate && promisedDate < minDate) {
-                    const minDateFormatted = new Date(minDate + 'T00:00:00').toLocaleDateString('es-MX', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric'
-                    });
-                    errors.push(
-                        '<li><i class="fas fa-exclamation-triangle mr-1"></i> La fecha de entrega debe ser posterior o igual a ' +
-                        minDateFormatted + '</li>');
+                // 6. Validar que fecha prometida sea mayor o igual a la fecha mínima (SOLO si NO es modo stock)
+                if (!isStockMode) {
+                    const promisedDate = $('#promisedDate').val();
+                    const minDate = $('#promisedDate').attr('min');
+                    if (promisedDate && minDate && promisedDate < minDate) {
+                        const minDateFormatted = new Date(minDate + 'T00:00:00').toLocaleDateString('es-MX', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric'
+                        });
+                        errors.push(
+                            '<li><i class="fas fa-exclamation-triangle mr-1"></i> La fecha de entrega debe ser posterior o igual a ' +
+                            minDateFormatted + '</li>');
+                    }
                 }
 
                 // Si hay errores, mostrar SweetAlert y cancelar envío
@@ -4304,6 +4412,120 @@
                     $('#notes').val(@json($order->notes ?? ''));
                     @if ($order->requires_invoice)
                         $('#requiresInvoice').prop('checked', true).trigger('change');
+                    @endif
+                })();
+            @endif
+
+            // ==========================================
+            // RESTAURACIÓN DE DATOS DESDE old() (VALIDACIÓN FALLIDA)
+            // Cuando hay error de validación backend, restaurar items y estado
+            // ==========================================
+            @if (!isset($isEdit) && old('items'))
+                (function restoreFromOldInput() {
+                    console.log('[Restore] Restaurando datos desde old() después de error de validación');
+
+                    // Restaurar items del pedido
+                    const oldItems = @json(old('items', []));
+                    if (oldItems && oldItems.length > 0) {
+                        // Necesitamos cargar info de productos para mostrar nombres
+                        const productIds = [...new Set(oldItems.map(i => i.product_id).filter(Boolean))];
+
+                        // Fetch async de productos para obtener nombres e imágenes
+                        if (productIds.length > 0) {
+                            $.ajax({
+                                url: '{{ route("admin.orders.ajax.get-products-info") }}',
+                                method: 'POST',
+                                data: {
+                                    _token: '{{ csrf_token() }}',
+                                    product_ids: productIds
+                                },
+                                success: function(productsInfo) {
+                                    oldItems.forEach(function(item) {
+                                        const productInfo = productsInfo[item.product_id] || {};
+
+                                        const restoredItem = {
+                                            index: itemIndex,
+                                            product_id: parseInt(item.product_id) || null,
+                                            product_variant_id: item.product_variant_id ? parseInt(item.product_variant_id) : null,
+                                            product_name: productInfo.name || 'Producto #' + item.product_id,
+                                            variant_sku: productInfo.variant_sku || '',
+                                            variant_display: productInfo.variant_display || '',
+                                            unit_price: parseFloat(item.unit_price) || 0,
+                                            quantity: parseInt(item.quantity) || 1,
+                                            lead_time: productInfo.lead_time || 0,
+                                            requires_measurements: productInfo.requires_measurements || false,
+                                            product_type_name: productInfo.product_type_name || null,
+                                            is_customized: item.is_customized == '1' || item.is_customized === true,
+                                            embroidery_text: item.embroidery_text || '',
+                                            customization_notes: item.customization_notes || '',
+                                            extras_cost: parseFloat(item.extras_cost) || 0,
+                                            selected_extras: item.extras || [],
+                                            measurements: item.measurements || null,
+                                            image_url: productInfo.image_url || null,
+                                            item_type: item.item_type || 'product'
+                                        };
+
+                                        if (item.product_id) {
+                                            productLeadTimes[item.product_id] = productInfo.lead_time || 0;
+                                        }
+
+                                        orderItems.push(restoredItem);
+                                        itemIndex++;
+                                    });
+
+                                    // Renderizar tabla
+                                    renderItemsTable();
+                                    updateHiddenInputs();
+                                    calculateTotals();
+                                    calculateMinimumDate();
+                                    updateReadinessIndicator();
+
+                                    console.log('[Restore] Items restaurados:', orderItems.length);
+                                },
+                                error: function() {
+                                    // Fallback: restaurar sin info adicional del producto
+                                    console.warn('[Restore] No se pudo obtener info de productos, restaurando básico');
+                                    oldItems.forEach(function(item) {
+                                        const restoredItem = {
+                                            index: itemIndex,
+                                            product_id: parseInt(item.product_id) || null,
+                                            product_variant_id: item.product_variant_id ? parseInt(item.product_variant_id) : null,
+                                            product_name: 'Producto #' + item.product_id,
+                                            variant_sku: '',
+                                            variant_display: '',
+                                            unit_price: parseFloat(item.unit_price) || 0,
+                                            quantity: parseInt(item.quantity) || 1,
+                                            lead_time: 0,
+                                            requires_measurements: false,
+                                            product_type_name: null,
+                                            is_customized: item.is_customized == '1',
+                                            embroidery_text: item.embroidery_text || '',
+                                            customization_notes: item.customization_notes || '',
+                                            extras_cost: parseFloat(item.extras_cost) || 0,
+                                            selected_extras: item.extras || [],
+                                            measurements: item.measurements || null,
+                                            image_url: null,
+                                            item_type: item.item_type || 'product'
+                                        };
+
+                                        orderItems.push(restoredItem);
+                                        itemIndex++;
+                                    });
+
+                                    renderItemsTable();
+                                    updateHiddenInputs();
+                                    calculateTotals();
+                                }
+                            });
+                        }
+                    }
+
+                    // Restaurar estado del switch de stock si estaba activado
+                    @if(old('for_stock'))
+                        $('#forStockSwitch').prop('checked', true);
+                        if (typeof updateStockModeUI === 'function') {
+                            updateStockModeUI();
+                        }
                     @endif
                 })();
             @endif

@@ -81,32 +81,32 @@
         </div>
         <!-- /.card-body -->
     </div>
-@stop
 
-{{-- Modal de Medidas --}}
-<div class="modal fade" id="measuresModal" tabindex="-1" role="dialog" aria-labelledby="measuresModalLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-info">
-                <h5 class="modal-title font-weight-bold text-white w-100 text-center" id="measuresModalLabel">MEDIDAS
-                    DE: </h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body" id="measuresModalBody">
-                <div class="text-center py-5">
-                    <i class="fas fa-spinner fa-spin fa-3x text-primary"></i>
-                    <p class="mt-3 text-muted">Cargando medidas...</p>
+    {{-- Modal de Medidas (DEBE estar dentro de @section content) --}}
+    <div class="modal fade" id="measuresModal" tabindex="-1" role="dialog" aria-labelledby="measuresModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-info">
+                    <h5 class="modal-title font-weight-bold text-white w-100 text-center" id="measuresModalLabel">MEDIDAS
+                        DE: </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                <div class="modal-body" id="measuresModalBody">
+                    <div class="text-center py-5">
+                        <i class="fas fa-spinner fa-spin fa-3x text-primary"></i>
+                        <p class="mt-3 text-muted">Cargando medidas...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
+@stop
 
 @section('css')
     <style>

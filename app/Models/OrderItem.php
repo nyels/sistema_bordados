@@ -155,11 +155,30 @@ class OrderItem extends Model
     }
 
     /**
-     * Reservas de inventario asociadas a este item
+     * Reservas de inventario de MATERIALES asociadas a este item.
      */
     public function reservations(): HasMany
     {
         return $this->hasMany(InventoryReservation::class, 'order_item_id');
+    }
+
+    /**
+     * Reserva de stock de PRODUCTO TERMINADO asociada a este item.
+     * REGLA v2.2: Un item solo puede tener UNA reserva de producto terminado.
+     */
+    public function stockReservation()
+    {
+        return $this->hasOne(ProductVariantReservation::class, 'order_item_id');
+    }
+
+    /**
+     * Verifica si este item tiene una reserva de stock activa.
+     */
+    public function hasActiveStockReservation(): bool
+    {
+        return $this->stockReservation()
+            ->where('status', ProductVariantReservation::STATUS_RESERVED)
+            ->exists();
     }
 
     /**

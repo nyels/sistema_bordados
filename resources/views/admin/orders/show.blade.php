@@ -281,6 +281,19 @@
                             <i class="fas fa-info-circle mr-1"></i>
                             Los materiales reservados y el tiempo de máquina se reflejarán en el costo final al marcar como listo.
                         </div>
+
+                        {{-- ACCIÓN: Registrar Merma en Proceso (WIP) --}}
+                        <div class="mt-3 pt-3 border-top">
+                            <button type="button"
+                                    class="btn btn-outline-danger"
+                                    data-toggle="modal"
+                                    data-target="#modalWasteWip">
+                                <i class="fas fa-trash-alt mr-1"></i> Registrar Merma en Proceso
+                            </button>
+                            <small class="text-muted ml-2">
+                                Documente materiales perdidos durante la producción.
+                            </small>
+                        </div>
                     </div>
                 </div>
             @endif
@@ -822,21 +835,35 @@
                 </div>
             @endif
 
-            {{-- CANCELAR: No en DELIVERED ni CANCELLED --}}
-            @if (!in_array($status, [Order::STATUS_CANCELLED, Order::STATUS_DELIVERED]))
+            {{-- ================================================================ --}}
+            {{-- CIERRE CANÓNICO: CANCELAR PEDIDO --}}
+            {{-- Solo visible si canCancel() = true --}}
+            {{-- ================================================================ --}}
+            @if ($order->canCancel())
                 <div class="card border-danger">
-                    <div class="card-body text-center">
-                        <form action="{{ route('admin.orders.cancel', $order) }}" method="POST"
-                            data-confirm="cancelar"
-                            data-confirm-title="¿Cancelar pedido {{ $order->order_number }}?"
-                            data-confirm-text="El pedido quedará marcado como cancelado y no podrá continuar en producción."
-                            data-confirm-impact="Los materiales reservados serán liberados automáticamente.">
-                            @csrf
-                            @method('PATCH')
-                            <button type="submit" class="btn btn-outline-danger">
-                                <i class="fas fa-times"></i> Cancelar Pedido
-                            </button>
-                        </form>
+                    <div class="card-header py-2" style="background: #ffebee; color: #c62828;">
+                        <h6 class="mb-0">
+                            <i class="fas fa-times-circle mr-1"></i> Cancelar Pedido
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-2" style="font-size: 14px; color: #495057;">
+                            <i class="fas fa-info-circle text-danger mr-1"></i>
+                            Cancelar un pedido es una acción <strong>administrativa</strong>.
+                        </p>
+                        <div class="alert alert-warning py-2 mb-3" style="font-size: 13px;">
+                            <i class="fas fa-exclamation-triangle mr-1"></i>
+                            <strong>Importante:</strong>
+                            <ul class="mb-0 pl-3 mt-1">
+                                <li>Cancelar <strong>NO</strong> registra merma automáticamente</li>
+                                <li>Cancelar <strong>NO</strong> revierte materiales al inventario</li>
+                                <li>Las reservas activas serán liberadas</li>
+                            </ul>
+                        </div>
+                        <button type="button" class="btn btn-outline-danger btn-block"
+                                data-toggle="modal" data-target="#modalCancelOrder">
+                            <i class="fas fa-times"></i> Cancelar Pedido
+                        </button>
                     </div>
                 </div>
             @endif
@@ -846,6 +873,91 @@
     {{-- MODAL PAGOS: Solo en estados donde se permite registrar --}}
     @if(!in_array($status, [Order::STATUS_READY, Order::STATUS_DELIVERED, Order::STATUS_CANCELLED]))
         @include('admin.orders._payment-modal')
+    @endif
+
+    {{-- ================================================================ --}}
+    {{-- MODAL: CANCELACIÓN DE PEDIDO --}}
+    {{-- CIERRE CANÓNICO: Motivo obligatorio, advertencia clara --}}
+    {{-- ================================================================ --}}
+    @if ($order->canCancel())
+    <div class="modal fade" id="modalCancelOrder" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-times-circle mr-2"></i>
+                        Cancelar Pedido {{ $order->order_number }}
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <form action="{{ route('admin.orders.cancel', $order) }}" method="POST" id="formCancelOrder">
+                    @csrf
+                    @method('PATCH')
+                    <div class="modal-body">
+                        {{-- Advertencia clara --}}
+                        <div class="alert alert-warning mb-3">
+                            <h6 class="alert-heading mb-2">
+                                <i class="fas fa-exclamation-triangle mr-1"></i> Advertencia
+                            </h6>
+                            <p class="mb-2" style="font-size: 14px;">
+                                La cancelación es un <strong>acto administrativo</strong> que:
+                            </p>
+                            <ul class="mb-0" style="font-size: 13px;">
+                                <li><strong>NO</strong> registra merma automáticamente</li>
+                                <li><strong>NO</strong> revierte materiales consumidos</li>
+                                <li><strong>SÍ</strong> libera reservas activas de inventario</li>
+                            </ul>
+                        </div>
+
+                        {{-- Estado actual --}}
+                        <div class="mb-3 p-2 bg-light rounded">
+                            <small class="text-muted">Estado actual:</small>
+                            <span class="badge badge-{{ $order->status_color }} ml-2">
+                                {{ $order->status_label }}
+                            </span>
+                        </div>
+
+                        {{-- Motivo obligatorio --}}
+                        <div class="form-group">
+                            <label for="cancel_reason" class="font-weight-bold">
+                                <i class="fas fa-comment-alt mr-1"></i>
+                                Motivo de cancelación <span class="text-danger">*</span>
+                            </label>
+                            <textarea name="cancel_reason"
+                                      id="cancel_reason"
+                                      class="form-control @error('cancel_reason') is-invalid @enderror"
+                                      rows="3"
+                                      required
+                                      minlength="5"
+                                      maxlength="255"
+                                      placeholder="Ej: Cliente solicitó cancelación, cambio de especificaciones, error en captura..."></textarea>
+                            <small class="form-text text-muted">
+                                Mínimo 5 caracteres. Este motivo quedará registrado en el historial.
+                            </small>
+                            @error('cancel_reason')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                            <i class="fas fa-arrow-left mr-1"></i> Volver
+                        </button>
+                        <button type="submit" class="btn btn-danger" id="btnConfirmCancel">
+                            <i class="fas fa-times mr-1"></i> Confirmar Cancelación
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- MODAL: Merma en Proceso (WIP) - Solo en IN_PRODUCTION --}}
+    @if($status === Order::STATUS_IN_PRODUCTION)
+        @include('admin.waste._modal-wip')
     @endif
 @stop
 

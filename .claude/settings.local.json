@@ -41,7 +41,12 @@
       "Bash(php reset_hipil.php:*)",
       "Bash(git log:*)",
       "Bash(powershell -Command:*)",
-      "Bash(dir storagelogs*.log)"
+      "Bash(dir storagelogs*.log)",
+      "Bash(dir /b publicbuildassets*.css)",
+      "Bash(dir:*)",
+      "Bash(timeout:*)",
+      "Bash(xargs -I {} sh -c 'grep -n \"\"@stop\"\" \"\"{}\"\" | head -1 && grep -n \"\"modal\"\" \"\"{}\"\" | head -1')",
+      "Bash(if not exist \"c:\\\\xampp\\\\htdocs\\\\laravel\\\\sistema_bordados\\\\public\\\\images\" mkdir \"c:\\\\xampp\\\\htdocs\\\\laravel\\\\sistema_bordados\\\\public\\\\images\")"
     ]
   }
 }

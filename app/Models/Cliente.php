@@ -14,6 +14,8 @@ class Cliente extends Model
         'apellidos',
         'telefono',
         'email',
+        'rfc',
+        'razon_social',
         'direccion',
         'ciudad',
         'codigo_postal',

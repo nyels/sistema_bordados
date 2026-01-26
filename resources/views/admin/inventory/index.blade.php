@@ -192,6 +192,18 @@
                                     class="btn btn-sm btn-warning" title="Ajuste Manual">
                                     <i class="fas fa-edit"></i>
                                 </a>
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger btn-waste-material"
+                                        title="Registrar Merma"
+                                        data-toggle="modal"
+                                        data-target="#modalWasteMaterial"
+                                        data-variant-id="{{ $variant->id }}"
+                                        data-name="{{ $variant->material?->name ?? 'N/A' }} {{ $variant->color ? '(' . $variant->color . ')' : '' }}"
+                                        data-stock="{{ number_format($variant->current_stock, 2) }} {{ $unitConsumption }}"
+                                        data-cost="${{ number_format($variant->average_cost ?? 0, 4) }}"
+                                        data-unit="{{ $unitConsumption }}">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
                             </td>
                         </tr>
                     @empty
@@ -210,6 +222,9 @@
 
     {{-- Modal de conversiones de unidades --}}
     @include('partials._unit-conversion-modal')
+
+    {{-- Modal de Merma de Material --}}
+    @include('admin.waste._modal-material')
 @stop
 
 @section('css')
@@ -460,6 +475,21 @@ document.addEventListener('DOMContentLoaded', function() {
             maximumFractionDigits: 2
         });
     }
+
+    // =====================================================
+    // MERMA DE MATERIAL - Inicializar modal
+    // =====================================================
+    document.querySelectorAll('.btn-waste-material').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            initWasteMaterialModal({
+                variant_id: this.dataset.variantId,
+                name: this.dataset.name,
+                stock: this.dataset.stock,
+                cost: this.dataset.cost,
+                unit: this.dataset.unit
+            });
+        });
+    });
 });
 </script>
 @stop

@@ -198,91 +198,188 @@
     </script>
 
 
-    {{-- STEP 2: PRESENTACIONES --}}
+    {{-- STEP 2: PRESENTACIONES - UX CANÓNICA CON STOCK MÍNIMO --}}
     <script type="text/template" id="tpl_step2">
     <div class="card shadow-sm border-0">
         <div class="card-body p-4">
-            <h5 class="step-title"><i class="fas fa-th text-primary"></i> Presentaciones del Producto</h5>
-            <p class="step-description text-muted mb-4">
-                <i class="fas fa-lightbulb text-warning mr-1"></i>
-                Las <strong>presentaciones</strong> son las combinaciones de talla y color que ofrecerás.
-                Ejemplo: Si vendes en tallas S, M, L y colores Azul y Rojo, tendrás 6 presentaciones diferentes.
-            </p>
-
-            <div class="row">
-                {{-- LEFT COLUMN: Selectors --}}
-                <div class="col-md-4">
-                    <div class="card shadow-sm h-100">
-                        <div class="card-header bg-white font-weight-bold">Configurar Presentaciones</div>
-                        <div class="card-body">
-                            <div class="form-group">
-                                <label>Tallas</label>
-                                <div class="position-relative">
-                                    <select class="form-control select2" multiple id="selSizes" data-placeholder="Selecciona tallas...">
-                                        @foreach($sizeAttribute->values ?? [] as $val)
-                                            <option value="{{ $val->id }}">{{ $val->value }}</option>
-                                        @endforeach
-                                    </select>
-                                    <i class="fas fa-times clear-btn-internal"
-                                       onclick="$('#selSizes').val(null).trigger('change')"
-                                       title="Limpiar tallas"></i>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Colores</label>
-                                <div class="position-relative">
-                                    <select class="form-control select2" multiple id="selColors" data-placeholder="Selecciona colores...">
-                                        @foreach($colorAttribute->values ?? [] as $val)
-                                            <option value="{{ $val->id }}" data-hex="{{ $val->hex_color }}">{{ $val->value }}</option>
-                                        @endforeach
-                                    </select>
-                                    <i class="fas fa-times clear-btn-internal"
-                                       onclick="$('#selColors').val(null).trigger('change')"
-                                       title="Limpiar colores"></i>
-                                </div>
-                            </div>
-
-                            <button type="button" class="btn btn-primary btn-block btn-lg" onclick="generateMatrix()">
-                                <i class="fas fa-bolt mr-2"></i>Generar Presentaciones
-                            </button>
-                        </div>
-                    </div>
+            <div class="d-flex justify-content-between align-items-start mb-4">
+                <div>
+                    <h5 class="step-title mb-1"><i class="fas fa-th text-primary"></i> Presentaciones del Producto</h5>
+                    <p class="step-description text-muted mb-0">
+                        <i class="fas fa-lightbulb text-warning mr-1"></i>
+                        Las <strong>presentaciones</strong> son las combinaciones de talla y color que ofrecerás.
+                    </p>
                 </div>
+                <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#modalGenerarVariantes">
+                    <i class="fas fa-plus mr-1"></i> Generar variantes
+                </button>
+            </div>
 
-                {{-- RIGHT COLUMN: Presentations Table --}}
-                <div class="col-md-8">
-                    <div class="card shadow-sm h-100">
-                        <div class="card-header bg-white align-items-center">
-                            <span class="font-weight-bold" style="font-size: 1.1rem;">Presentaciones Generadas</span>
-                            <span class="badge badge-primary ml-2 shadow-sm" id="variantCountBadge" style="font-size: 1.1rem; padding: 0.35em 0.6em;">0</span>
-                        </div>
-                        <div class="card-body p-0">
-                            <div id="variantsTableContainer" class="table-responsive">
-                                <table class="table table-hover mb-0">
-                                    <thead class="thead-light">
-                                        <tr>
-                                            <th>Presentación (Talla / Color)</th>
-                                            <th>SKU Generado</th>
-                                            <th class="text-center" style="width:80px">Acción</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="variantsTableBody">
-                                        <tr id="noVariantsRow">
-                                            <td colspan="3" class="text-center text-muted py-4">
-                                                <i class="fas fa-info-circle mr-2"></i>Seleccione tallas y colores, luego presione Generar
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+            {{-- TABLA CANÓNICA DE VARIANTES --}}
+            <div class="card shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                    <span class="font-weight-bold">Variantes Configuradas</span>
+                    <span class="badge badge-primary shadow-sm" id="variantCountBadge" style="font-size: 1rem; padding: 0.4em 0.7em;">0</span>
+                </div>
+                <div class="card-body p-0">
+                    <div id="variantsTableContainer" class="table-responsive">
+                        <table class="table table-hover mb-0" id="variantsTable">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th style="width: 100px;">Talla</th>
+                                    <th style="width: 120px;">Color</th>
+                                    <th>SKU Generado</th>
+                                    <th style="width: 180px;">
+                                        Stock mínimo
+                                        <i class="fas fa-info-circle text-info ml-1"
+                                           data-toggle="tooltip"
+                                           data-placement="top"
+                                           title="Solo genera alertas visuales. NO bloquea ventas ni producción."></i>
+                                    </th>
+                                    <th class="text-center" style="width: 70px;">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="variantsTableBody">
+                                <tr id="noVariantsRow">
+                                    <td colspan="5" class="text-center text-muted py-5">
+                                        <i class="fas fa-layer-group mb-2" style="font-size: 2rem; opacity: 0.3;"></i>
+                                        <p class="mb-2">Sin variantes configuradas</p>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" data-toggle="modal" data-target="#modalGenerarVariantes">
+                                            <i class="fas fa-plus mr-1"></i> Generar variantes
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</script>
+    </script>
+
+    {{-- MODAL CANÓNICO: GENERAR VARIANTES --}}
+    <div class="modal fade" id="modalGenerarVariantes" tabindex="-1" role="dialog" aria-labelledby="modalGenerarVariantesLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="modalGenerarVariantesLabel">
+                        <i class="fas fa-th-large mr-2"></i>Generar variantes
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-3">Selecciona las tallas y colores para generar combinaciones automáticas.</p>
+
+                    <div class="row">
+                        {{-- COLUMNA TALLAS --}}
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
+                                    <span class="font-weight-bold">Tallas</span>
+                                    <small class="text-muted" id="sizesSelectedCount">0 seleccionadas</small>
+                                </div>
+                                <div class="card-body p-0" style="max-height: 280px; overflow-y: auto;">
+                                    <div class="list-group list-group-flush" id="sizesToggleList">
+                                        @php
+                                            $sizeOrder = ['XXS' => 1, 'XS' => 2, 'S' => 3, 'M' => 4, 'L' => 5, 'XL' => 6, 'XXL' => 7, '2XL' => 8, '3XL' => 9];
+                                            $sortedSizes = ($sizeAttribute->values ?? collect())->sortBy(function($v) use ($sizeOrder) {
+                                                return $sizeOrder[strtoupper($v->value)] ?? 99;
+                                            });
+                                        @endphp
+                                        @foreach($sortedSizes as $val)
+                                            <label class="list-group-item list-group-item-action d-flex justify-content-between align-items-center mb-0 variant-toggle-item" data-id="{{ $val->id }}" data-value="{{ $val->value }}">
+                                                <span>{{ $val->value }}</span>
+                                                <span class="toggle-indicator">
+                                                    <i class="fas fa-check-circle text-success d-none"></i>
+                                                </span>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- COLUMNA COLORES --}}
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
+                                    <span class="font-weight-bold">Colores</span>
+                                    <small class="text-muted" id="colorsSelectedCount">0 seleccionados</small>
+                                </div>
+                                <div class="card-body p-0" style="max-height: 280px; overflow-y: auto;">
+                                    <div class="list-group list-group-flush" id="colorsToggleList">
+                                        @php
+                                            $sortedColors = ($colorAttribute->values ?? collect())->sortBy('value');
+                                        @endphp
+                                        @foreach($sortedColors as $val)
+                                            <label class="list-group-item list-group-item-action d-flex justify-content-between align-items-center mb-0 variant-toggle-item" data-id="{{ $val->id }}" data-value="{{ $val->value }}" data-hex="{{ $val->hex_color }}">
+                                                <span>
+                                                    @if($val->hex_color)
+                                                        <span class="color-swatch mr-2" style="display:inline-block; width:16px; height:16px; border-radius:3px; background:{{ $val->hex_color }}; border:1px solid #ddd; vertical-align:middle;"></span>
+                                                    @endif
+                                                    {{ $val->value }}
+                                                </span>
+                                                <span class="toggle-indicator">
+                                                    <i class="fas fa-check-circle text-success d-none"></i>
+                                                </span>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Preview de combinaciones --}}
+                    <div class="mt-3 p-2 bg-light rounded text-center" id="variantPreviewInfo">
+                        <small class="text-muted">Se generarán <strong id="variantCombinationCount">0</strong> variantes</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <i class="fas fa-times mr-1"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btnConfirmGenerateVariants" onclick="generateVariantsFromModal()" disabled>
+                        <i class="fas fa-bolt mr-1"></i> Generar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Estilos para toggle premium --}}
+    <style>
+        .variant-toggle-item {
+            cursor: pointer;
+            transition: all 0.15s ease;
+            user-select: none;
+        }
+        .variant-toggle-item:hover {
+            background-color: #f8f9fa;
+        }
+        .variant-toggle-item.selected {
+            background-color: #e7f3ff;
+            border-left: 3px solid #007bff;
+        }
+        .variant-toggle-item.selected .toggle-indicator i {
+            display: inline-block !important;
+        }
+        .variant-toggle-item .toggle-indicator {
+            width: 20px;
+            text-align: center;
+        }
+        #variantsTable .stock-alert-input {
+            width: 80px;
+            text-align: center;
+        }
+        #variantsTable .stock-alert-input:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.15rem rgba(0,123,255,.25);
+        }
+    </style>
 
     {{-- STEP 3: MATERIALES DEL PRODUCTO (BOM) - REORGANIZADO UX --}}
     <script type="text/template" id="tpl_step3">
@@ -4914,60 +5011,82 @@
             }
         }
 
-        // --- STEP 2: VARIANTS ---
-        window.renderVariantsTable = function() {
-            const tbody = $('#variantsTableBody');
-            tbody.empty();
+        // --- STEP 2: VARIANTS (UX CANÓNICA CON STOCK MÍNIMO) ---
 
-            if (State.variants.length === 0) {
-                tbody.html(`<tr id="noVariantsRow">
-                                <td colspan="3" class="text-center text-muted py-4">
-                                    <i class="fas fa-info-circle mr-2"></i>Seleccione tallas y colores, luego presione Generar
-                                </td>
-                            </tr>`);
-                $('#noVariantsRow').show();
-                $('#variantCountBadge').text('0');
-                $('#variantsTableContainer').addClass('d-none'); // Optional: hide container if empty
-                return;
-            }
+        // Modal toggle selection state
+        let modalSelectedSizes = [];
+        let modalSelectedColors = [];
 
-            $('#noVariantsRow').hide();
-            $('#variantsTableContainer').removeClass('d-none');
+        // Initialize modal toggle handlers
+        $(document).on('click', '.variant-toggle-item', function() {
+            $(this).toggleClass('selected');
+            updateModalSelectionCounts();
+        });
 
-            State.variants.forEach(v => {
-                tbody.append(`<tr data-id="${v.temp_id}">
-                        <td>${v.size} (${v.color})</td>
-                        <td class="font-weight-bold text-primary">${v.sku}</td>
-                        <td><button class="btn btn-sm btn-danger" onclick="removeVariant('${v.temp_id}', this)"><i class="fas fa-trash"></i></button></td>
-                    </tr>`);
+        function updateModalSelectionCounts() {
+            modalSelectedSizes = [];
+            modalSelectedColors = [];
+
+            $('#sizesToggleList .variant-toggle-item.selected').each(function() {
+                modalSelectedSizes.push({
+                    id: $(this).data('id'),
+                    text: $(this).data('value')
+                });
             });
-            $('#variantCountBadge').text(State.variants.length);
-        };
 
-        window.generateMatrix = function() {
-            const sizes = $('#selSizes').select2('data');
-            const colors = $('#selColors').select2('data');
+            $('#colorsToggleList .variant-toggle-item.selected').each(function() {
+                modalSelectedColors.push({
+                    id: $(this).data('id'),
+                    text: $(this).data('value'),
+                    hex: $(this).data('hex')
+                });
+            });
+
+            $('#sizesSelectedCount').text(modalSelectedSizes.length + ' seleccionadas');
+            $('#colorsSelectedCount').text(modalSelectedColors.length + ' seleccionados');
+
+            const combinations = modalSelectedSizes.length * modalSelectedColors.length;
+            $('#variantCombinationCount').text(combinations);
+
+            // Enable/disable generate button
+            $('#btnConfirmGenerateVariants').prop('disabled', combinations === 0);
+        }
+
+        // Reset modal on open
+        $('#modalGenerarVariantes').on('show.bs.modal', function() {
+            $('.variant-toggle-item').removeClass('selected');
+            modalSelectedSizes = [];
+            modalSelectedColors = [];
+            updateModalSelectionCounts();
+        });
+
+        // Generate variants from modal
+        window.generateVariantsFromModal = function() {
             const baseSku = $('#inpSku').val();
 
-            if (!sizes.length || !colors.length || !baseSku) {
-                Swal.fire('Error', 'Verifique SKU base, tallas y colores', 'error');
+            if (!modalSelectedSizes.length || !modalSelectedColors.length) {
+                Swal.fire('Error', 'Seleccione al menos una talla y un color', 'error');
                 return;
             }
 
-            const tbody = $('#variantsTableBody');
+            if (!baseSku) {
+                Swal.fire('Error', 'Defina el nombre del producto primero para generar el SKU base', 'error');
+                return;
+            }
+
             let addedCount = 0;
             let duplicateCount = 0;
 
-            sizes.forEach(s => {
-                colors.forEach(c => {
-                    // Check if this combination already exists
+            modalSelectedSizes.forEach(s => {
+                modalSelectedColors.forEach(c => {
+                    // Check duplicate
                     const exists = State.variants.find(v =>
                         v.size_id == s.id && v.color_id == c.id
                     );
 
                     if (exists) {
                         duplicateCount++;
-                        return; // Skip duplicate
+                        return;
                     }
 
                     const sku = `${baseSku}-${s.text.charAt(0)}-${c.text.substring(0,3)}`.toUpperCase();
@@ -4979,22 +5098,153 @@
                         size: s.text,
                         color: c.text,
                         size_id: s.id,
-                        color_id: c.id
+                        color_id: c.id,
+                        stock_alert: 0 // Default stock mínimo
                     });
-
-                    tbody.append(`<tr data-id="${tempId}">
-                        <td>${s.text} (${c.text})</td>
-                        <td class="font-weight-bold text-primary">${sku}</td>
-                        <td><button class="btn btn-sm btn-danger" onclick="removeVariant('${tempId}', this)"><i class="fas fa-trash"></i></button></td>
-                    </tr>`);
 
                     addedCount++;
                 });
             });
 
-            $('#variantsTableContainer').removeClass('d-none');
+            // Close modal
+            $('#modalGenerarVariantes').modal('hide');
 
-            // Feedback to user
+            // Render table
+            renderVariantsTable();
+            updateStepperBadges();
+
+            // Feedback
+            if (duplicateCount > 0 && addedCount > 0) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Variantes generadas',
+                    html: `<b>${addedCount}</b> variantes nuevas.<br><b>${duplicateCount}</b> duplicadas omitidas.`,
+                    timer: 2500,
+                    showConfirmButton: false
+                });
+            } else if (duplicateCount > 0 && addedCount === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Sin cambios',
+                    text: 'Todas las combinaciones ya existen.',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            }
+
+            // Initialize tooltips for new elements
+            $('[data-toggle="tooltip"]').tooltip();
+        };
+
+        window.renderVariantsTable = function() {
+            const tbody = $('#variantsTableBody');
+            tbody.empty();
+
+            if (State.variants.length === 0) {
+                tbody.html(`<tr id="noVariantsRow">
+                                <td colspan="5" class="text-center text-muted py-5">
+                                    <i class="fas fa-layer-group mb-2" style="font-size: 2rem; opacity: 0.3;"></i>
+                                    <p class="mb-2">Sin variantes configuradas</p>
+                                    <button type="button" class="btn btn-outline-primary btn-sm" data-toggle="modal" data-target="#modalGenerarVariantes">
+                                        <i class="fas fa-plus mr-1"></i> Generar variantes
+                                    </button>
+                                </td>
+                            </tr>`);
+                $('#noVariantsRow').show();
+                $('#variantCountBadge').text('0');
+                return;
+            }
+
+            $('#noVariantsRow').hide();
+
+            State.variants.forEach(v => {
+                const stockVal = v.stock_alert !== undefined ? v.stock_alert : 0;
+                tbody.append(`<tr data-id="${v.temp_id}">
+                        <td><span class="badge badge-secondary">${v.size}</span></td>
+                        <td><span class="badge badge-info">${v.color}</span></td>
+                        <td class="font-weight-bold text-primary">${v.sku}</td>
+                        <td>
+                            <input type="number"
+                                   class="form-control form-control-sm stock-alert-input"
+                                   value="${stockVal}"
+                                   min="0"
+                                   step="1"
+                                   onchange="updateVariantStockAlert('${v.temp_id}', this.value)">
+                        </td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeVariant('${v.temp_id}', this)" title="Eliminar">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </td>
+                    </tr>`);
+            });
+            $('#variantCountBadge').text(State.variants.length);
+
+            // Tooltips
+            $('[data-toggle="tooltip"]').tooltip();
+        };
+
+        // Update stock_alert in state when input changes
+        window.updateVariantStockAlert = function(tempId, value) {
+            const variant = State.variants.find(v => v.temp_id === tempId);
+            if (variant) {
+                variant.stock_alert = parseInt(value) || 0;
+            }
+        };
+
+        // Legacy generateMatrix for backwards compatibility (if called from old code)
+        window.generateMatrix = function() {
+            // Open modal instead
+            $('#modalGenerarVariantes').modal('show');
+        };
+
+        // LEGACY generateMatrix backup (mantener para pruebas):
+        window.generateMatrixLegacy = function() {
+            const sizes = $('#selSizes').select2('data');
+            const colors = $('#selColors').select2('data');
+            const baseSku = $('#inpSku').val();
+
+            if (!sizes.length || !colors.length || !baseSku) {
+                Swal.fire('Error', 'Verifique SKU base, tallas y colores', 'error');
+                return;
+            }
+
+            let addedCount = 0;
+            let duplicateCount = 0;
+
+            sizes.forEach(s => {
+                colors.forEach(c => {
+                    const exists = State.variants.find(v =>
+                        v.size_id == s.id && v.color_id == c.id
+                    );
+
+                    if (exists) {
+                        duplicateCount++;
+                        return;
+                    }
+
+                    const sku = `${baseSku}-${s.text.charAt(0)}-${c.text.substring(0,3)}`.toUpperCase();
+                    const tempId = Math.random().toString(36).substr(2, 9);
+
+                    State.variants.push({
+                        temp_id: tempId,
+                        sku,
+                        size: s.text,
+                        color: c.text,
+                        size_id: s.id,
+                        color_id: c.id,
+                        stock_alert: 0
+                    });
+
+                    addedCount++;
+                });
+            });
+
+            renderVariantsTable();
+            updateStepperBadges();
+            $('#selSizes').val(null).trigger('change');
+            $('#selColors').val(null).trigger('change');
+
             if (duplicateCount > 0 && addedCount > 0) {
                 Swal.fire({
                     icon: 'info',

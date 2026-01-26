@@ -95,6 +95,7 @@ class Product extends Model
     public function activeVariants()
     {
         return $this->hasMany(ProductVariant::class, 'product_id')
+            ->where('activo', true)
             ->orderBy('sku_variant');
     }
 
@@ -232,7 +233,7 @@ class Product extends Model
 
     public function getVariantsCountAttribute(): int
     {
-        return $this->variants()->count();
+        return $this->activeVariants()->count();
     }
 
     public function getPrimaryImageUrlAttribute(): ?string

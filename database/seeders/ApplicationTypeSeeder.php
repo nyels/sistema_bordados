@@ -7,9 +7,6 @@ use App\Models\Application_types;
 
 class ApplicationTypeSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         $applicationTypes = [
@@ -71,13 +68,14 @@ class ApplicationTypeSeeder extends Seeder
         ];
 
         foreach ($applicationTypes as $type) {
-            Application_types::create([
-                'slug' => $type['slug'],
-                'nombre_aplicacion' => $type['nombre'], // Ahora en MAYÚSCULAS
-                'descripcion' => $type['descripcion'],
-                'activo' => true,
-
-            ]);
+            Application_types::updateOrCreate(
+                ['slug' => $type['slug']],
+                [
+                    'nombre_aplicacion' => $type['nombre'],
+                    'descripcion' => $type['descripcion'],
+                    'activo' => true,
+                ]
+            );
         }
     }
 }

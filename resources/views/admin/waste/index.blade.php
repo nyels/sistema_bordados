@@ -1,0 +1,219 @@
+@extends('adminlte::page')
+
+@section('title', 'Registro de Mermas')
+
+@section('content_header')
+    <div class="d-flex justify-content-between align-items-center">
+        <h1><i class="fas fa-trash-alt mr-2" style="color: #c62828;"></i>Registro de Mermas</h1>
+    </div>
+@stop
+
+@section('content')
+    @if (session('success'))
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="fas fa-check-circle mr-1"></i> {{ session('success') }}
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+        </div>
+    @endif
+    @if (session('error'))
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="fas fa-exclamation-circle mr-1"></i> {{ session('error') }}
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+        </div>
+    @endif
+
+    {{-- ADVERTENCIA CANÓNICA --}}
+    <div class="alert mb-3" style="background: #fff3e0; border: 1px solid #ffcc80; border-left: 4px solid #f57c00;">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-exclamation-triangle mr-3" style="color: #e65100; font-size: 24px;"></i>
+            <div>
+                <strong style="color: #e65100; font-size: 15px;">Registro Contable Inmutable</strong>
+                <p class="mb-0 mt-1" style="color: #5d4037; font-size: 14px;">
+                    La merma es un registro irreversible. <strong>NO ajusta inventario automáticamente.</strong>
+                    Los eventos registrados no pueden editarse ni eliminarse.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    {{-- RESUMEN POR TIPO --}}
+    <div class="row mb-3">
+        @php
+            $materialCount = $wasteEvents->where('waste_type', 'material')->count();
+            $wipCount = $wasteEvents->where('waste_type', 'wip')->count();
+            $ptCount = $wasteEvents->where('waste_type', 'finished_product')->count();
+        @endphp
+        <div class="col-lg-4 col-6">
+            <div class="small-box bg-warning">
+                <div class="inner">
+                    <h3>{{ $materialCount }}</h3>
+                    <p>Merma de Material</p>
+                </div>
+                <div class="icon"><i class="fas fa-cubes"></i></div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-6">
+            <div class="small-box bg-danger">
+                <div class="inner">
+                    <h3>{{ $wipCount }}</h3>
+                    <p>Merma en Proceso</p>
+                </div>
+                <div class="icon"><i class="fas fa-industry"></i></div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-6">
+            <div class="small-box bg-dark">
+                <div class="inner">
+                    <h3>{{ $ptCount }}</h3>
+                    <p>Merma Prod. Terminado</p>
+                </div>
+                <div class="icon"><i class="fas fa-box-open"></i></div>
+            </div>
+        </div>
+    </div>
+
+    {{-- TABLA DE EVENTOS --}}
+    <div class="card">
+        <div class="card-header py-2" style="background: #263238; color: white;">
+            <span class="font-weight-bold">Historial de Mermas</span>
+        </div>
+        <div class="card-body p-0">
+            <table id="wasteTable" class="table table-hover table-sm mb-0" style="font-size: 15px;">
+                <thead style="background-color: #343a40; color: #fff;">
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Tipo</th>
+                        <th>Descripción</th>
+                        <th class="text-right">Costo Est.</th>
+                        <th>Motivo</th>
+                        <th>Registrado por</th>
+                        <th class="text-center" style="width: 80px;">Ver</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($wasteEvents as $event)
+                        <tr>
+                            <td>
+                                <span class="text-muted">{{ $event->created_at->format('d/m/Y') }}</span>
+                                <br>
+                                <small class="text-muted">{{ $event->created_at->format('H:i') }}</small>
+                            </td>
+                            <td>
+                                <span class="badge badge-{{ $event->type_color }}">
+                                    <i class="{{ $event->type_icon }} mr-1"></i>
+                                    {{ $event->type_label }}
+                                </span>
+                            </td>
+                            <td>
+                                @if($event->isMaterialWaste())
+                                    @php $firstItem = $event->materialItems->first(); @endphp
+                                    @if($firstItem)
+                                        <strong>{{ $firstItem->materialVariant?->material?->name ?? 'Material' }}</strong>
+                                        @if($event->materialItems->count() > 1)
+                                            <span class="badge badge-secondary ml-1">+{{ $event->materialItems->count() - 1 }} más</span>
+                                        @endif
+                                    @else
+                                        <span class="text-muted">Sin items</span>
+                                    @endif
+                                @elseif($event->isWipWaste())
+                                    @if($event->order)
+                                        <strong>Pedido {{ $event->order->order_number }}</strong>
+                                    @else
+                                        <span class="text-muted">Pedido no especificado</span>
+                                    @endif
+                                @else
+                                    @if($event->productVariant)
+                                        <strong>{{ $event->productVariant->product?->name ?? 'Producto' }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ $event->formatted_quantity }} unidades</small>
+                                    @else
+                                        <span class="text-muted">Producto no especificado</span>
+                                    @endif
+                                @endif
+                            </td>
+                            <td class="text-right">
+                                <strong style="color: #c62828;">{{ $event->formatted_total_cost }}</strong>
+                            </td>
+                            <td>
+                                <span title="{{ $event->reason }}" style="cursor: help;">
+                                    {{ Str::limit($event->reason, 30) }}
+                                </span>
+                            </td>
+                            <td>
+                                @if($event->creator)
+                                    {{ $event->creator->name }}
+                                @else
+                                    <span class="text-muted">Sistema</span>
+                                @endif
+                            </td>
+                            <td class="text-center">
+                                <a href="{{ route('admin.waste.show', $event) }}"
+                                   class="btn btn-xs btn-outline-info" title="Ver detalle">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">
+                                <i class="fas fa-inbox fa-2x mb-2"></i><br>
+                                No hay eventos de merma registrados
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+        @if($wasteEvents->hasPages())
+            <div class="card-footer">
+                {{ $wasteEvents->links() }}
+            </div>
+        @endif
+    </div>
+
+    {{-- NOTA INFORMATIVA --}}
+    <div class="mt-3">
+        <small class="text-muted">
+            <i class="fas fa-info-circle mr-1"></i>
+            Para registrar merma, acceda desde: Inventario de Materiales, Pedido en Producción, o Inventario de Producto Terminado.
+        </small>
+    </div>
+@stop
+
+@section('css')
+<style>
+    .small-box .icon i {
+        font-size: 70px;
+        top: 20px;
+    }
+</style>
+@stop
+
+@section('js')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // DataTable simple si hay muchos registros
+    if (document.querySelectorAll('#wasteTable tbody tr').length > 10) {
+        $('#wasteTable').DataTable({
+            "pageLength": 25,
+            "order": [[0, 'desc']],
+            "language": {
+                "emptyTable": "No hay eventos de merma",
+                "info": "Mostrando _START_ a _END_ de _TOTAL_ eventos",
+                "infoEmpty": "Mostrando 0 a 0 de 0 eventos",
+                "infoFiltered": "(Filtrado de _MAX_ total eventos)",
+                "lengthMenu": "Mostrar _MENU_ eventos",
+                "search": "Buscar:",
+                "zeroRecords": "Sin resultados",
+                "paginate": {
+                    "first": "Primero",
+                    "last": "Último",
+                    "next": "Siguiente",
+                    "previous": "Anterior"
+                }
+            }
+        });
+    }
+});
+</script>
+@stop

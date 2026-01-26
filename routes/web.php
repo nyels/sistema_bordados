@@ -1193,6 +1193,7 @@ Route::prefix('admin/orders')->name('admin.orders.')->middleware('auth')->group(
     Route::get('ajax/product/{product}', [App\Http\Controllers\OrderController::class, 'getProduct'])->name('ajax.get-product');
     Route::get('ajax/cliente/{cliente}/measurements', [App\Http\Controllers\OrderController::class, 'getClientMeasurements'])->name('ajax.client-measurements');
     Route::post('ajax/cliente/{cliente}/measurements', [App\Http\Controllers\OrderController::class, 'storeClientMeasurements'])->name('ajax.store-client-measurements');
+    Route::post('ajax/get-products-info', [App\Http\Controllers\OrderController::class, 'getProductsInfo'])->name('ajax.get-products-info');
     Route::get('ajax/{order}/check-annex-type', [App\Http\Controllers\OrderController::class, 'checkAnnexType'])->name('ajax.check-annex-type');
     Route::post('ajax/store-quick', [App\Http\Controllers\OrderController::class, 'storeQuick'])->name('ajax.store-quick');
 
@@ -1290,3 +1291,120 @@ Route::prefix('admin/orders/{order}/items/{item}/design')->name('admin.orders.it
 Route::get('admin/orders/{order}/designs/status', [App\Http\Controllers\OrderItemDesignController::class, 'status'])
     ->name('admin.orders.designs.status')
     ->middleware('auth');
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE POS (PUNTO DE VENTA - SALIDA DE STOCK)
+|--------------------------------------------------------------------------
+| Endpoint canónico para ventas de mostrador.
+| SOLO registra salida de stock ya producido.
+| NO crea producción, NO usa reservas, NO lógica fiscal.
+|--------------------------------------------------------------------------
+*/
+
+Route::get('pos', [App\Http\Controllers\PosController::class, 'index'])
+    ->name('pos.index')
+    ->middleware('auth');
+
+Route::post('pos/sale', [App\Http\Controllers\PosController::class, 'sale'])
+    ->name('pos.sale')
+    ->middleware('auth');
+
+Route::post('pos/cancel', [App\Http\Controllers\PosController::class, 'cancelSale'])
+    ->name('pos.cancel')
+    ->middleware('auth');
+
+Route::post('pos/adjustment', [App\Http\Controllers\PosController::class, 'adjustment'])
+    ->name('pos.adjustment')
+    ->middleware('auth');
+
+Route::get('pos/stock/{productVariantId}', [App\Http\Controllers\PosController::class, 'getStock'])
+    ->name('pos.stock')
+    ->middleware('auth')
+    ->where('productVariantId', '[0-9]+');
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE HISTORIAL VENTAS POS (BACKOFFICE)
+|--------------------------------------------------------------------------
+| Vista administrativa del historial de ventas POS.
+| Permite filtrar, consultar y CANCELAR ventas desde el backoffice.
+| REGLA: La cancelación desde el POS activo está DESHABILITADA.
+|--------------------------------------------------------------------------
+*/
+
+Route::get('admin/pos-sales', [App\Http\Controllers\PosSalesController::class, 'index'])
+    ->name('admin.pos-sales.index')
+    ->middleware('auth');
+
+Route::get('admin/pos-sales/{order}', [App\Http\Controllers\PosSalesController::class, 'show'])
+    ->name('admin.pos-sales.show')
+    ->middleware('auth')
+    ->where('order', '[0-9]+');
+
+Route::patch('admin/pos-sales/{order}/cancel', [App\Http\Controllers\PosSalesController::class, 'cancel'])
+    ->name('admin.pos-sales.cancel')
+    ->middleware('auth')
+    ->where('order', '[0-9]+');
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE STOCK PRODUCTO TERMINADO (SOLO LECTURA)
+|--------------------------------------------------------------------------
+| Vista de consulta de stock de productos terminados.
+| Fuente única: FinishedGoodsMovement (ledger).
+| SIN ACCIONES - SIN AJUSTES - SIN DATOS FINANCIEROS.
+|--------------------------------------------------------------------------
+*/
+
+Route::get('admin/finished-goods-stock', [App\Http\Controllers\FinishedGoodsStockController::class, 'index'])
+    ->name('admin.finished-goods-stock.index')
+    ->middleware('auth');
+
+Route::get('admin/finished-goods-stock/{variant}/kardex', [App\Http\Controllers\FinishedGoodsStockController::class, 'kardex'])
+    ->name('admin.finished-goods-stock.kardex')
+    ->middleware('auth')
+    ->where('variant', '[0-9]+');
+
+Route::get('admin/finished-goods-stock/{variant}/adjustment', [App\Http\Controllers\FinishedGoodsStockController::class, 'adjustmentForm'])
+    ->name('admin.finished-goods-stock.adjustment')
+    ->middleware('auth')
+    ->where('variant', '[0-9]+');
+
+Route::post('admin/finished-goods-stock/{variant}/adjustment', [App\Http\Controllers\FinishedGoodsStockController::class, 'storeAdjustment'])
+    ->name('admin.finished-goods-stock.adjustment.store')
+    ->middleware('auth')
+    ->where('variant', '[0-9]+');
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE MERMA (WASTE) - CAPA HTTP PASIVA
+|--------------------------------------------------------------------------
+| Exposición HTTP del WasteService existente.
+| NO contiene lógica - SOLO delegación.
+| Backend autoritario: app/Services/WasteService.php
+|--------------------------------------------------------------------------
+*/
+
+Route::get('admin/waste', [App\Http\Controllers\WasteController::class, 'index'])
+    ->name('admin.waste.index')
+    ->middleware('auth');
+
+Route::get('admin/waste/{wasteEvent}', [App\Http\Controllers\WasteController::class, 'show'])
+    ->name('admin.waste.show')
+    ->middleware('auth')
+    ->where('wasteEvent', '[0-9]+');
+
+Route::post('admin/waste/material', [App\Http\Controllers\WasteController::class, 'storeMaterial'])
+    ->name('admin.waste.store-material')
+    ->middleware('auth');
+
+Route::post('admin/waste/wip/{order}', [App\Http\Controllers\WasteController::class, 'storeWip'])
+    ->name('admin.waste.store-wip')
+    ->middleware('auth')
+    ->where('order', '[0-9]+');
+
+Route::post('admin/waste/finished-product', [App\Http\Controllers\WasteController::class, 'storeFinishedProduct'])
+    ->name('admin.waste.store-finished-product')
+    ->middleware('auth');
+
