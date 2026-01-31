@@ -767,6 +767,11 @@ Route::get('admin/materials/{materialId}/variants-json', [App\Http\Controllers\M
 Route::get('admin/materials/{materialId}/variants-with-conversions', [App\Http\Controllers\MaterialVariantController::class, 'getByMaterial2'])
     ->name('admin.material-variants.conversiones')
     ->middleware('auth');
+
+Route::get('admin/materials/{materialId}/variants-modal', [App\Http\Controllers\MaterialVariantController::class, 'getVariantsForModal'])
+    ->name('admin.material-variants.modal')
+    ->middleware('auth');
+
 /*
 |--------------------------------------------------------------------------
 | RUTAS DE CONVERSIONES DE UNIDADES POR MATERIAL
@@ -870,6 +875,12 @@ Route::post('admin/purchases/{id}/receive', [App\Http\Controllers\PurchaseContro
     ->name('admin.purchases.receive.store')
     ->where('id', '[0-9]+');
 
+// Recepción completa (todo lo pendiente)
+Route::post('admin/purchases/{id}/receive-complete', [App\Http\Controllers\PurchaseController::class, 'receiveComplete'])
+    ->middleware('auth')
+    ->name('admin.purchases.receive.complete')
+    ->where('id', '[0-9]+');
+
 // Cancelar
 Route::get('admin/purchases/{id}/cancel', [App\Http\Controllers\PurchaseController::class, 'showCancel'])
     ->middleware('auth')
@@ -907,6 +918,11 @@ Route::get('admin/purchases/ajax/units/{materialId}', [App\Http\Controllers\Purc
     ->middleware('auth')
     ->name('admin.purchases.ajax.units')
     ->where('materialId', '[0-9]+');
+
+// AJAX: Buscar materiales para modal de compras
+Route::get('admin/purchases/ajax/search-materials', [App\Http\Controllers\PurchaseController::class, 'searchMaterialsForModal'])
+    ->middleware('auth')
+    ->name('admin.purchases.ajax.search-materials');
 
 // Anular recepción
 Route::post('admin/purchases/{id}/receptions/{receptionId}/void', [App\Http\Controllers\PurchaseController::class, 'voidReception'])
@@ -950,6 +966,7 @@ Route::prefix('admin/products')->name('admin.products.')->middleware('auth')->gr
     // Operaciones adicionales
     Route::post('{product}/duplicate', [App\Http\Controllers\ProductController::class, 'duplicate'])->name('duplicate');
     Route::post('{product}/toggle-status', [App\Http\Controllers\ProductController::class, 'toggleStatus'])->name('toggle_status');
+    Route::get('{product}/bom', [App\Http\Controllers\ProductController::class, 'getBom'])->name('bom');
 
     // Variantes de Producto (Sub-rutas)
     Route::prefix('{product}/variants')->name('variants.')->group(function () {
@@ -1263,6 +1280,9 @@ Route::prefix('admin/inventory')->name('admin.inventory.')->middleware('auth')->
     // Ajustes manuales
     Route::get('adjustment/{variant}', [App\Http\Controllers\InventoryController::class, 'adjustmentForm'])->name('adjustment');
     Route::post('adjustment/{variant}', [App\Http\Controllers\InventoryController::class, 'storeAdjustment'])->name('adjustment.store');
+
+    // API para modal de detalles de compra en Kardex
+    Route::get('purchase-details', [App\Http\Controllers\InventoryController::class, 'getPurchaseDetails'])->name('purchase.details');
 });
 
 /*
@@ -1271,9 +1291,17 @@ Route::prefix('admin/inventory')->name('admin.inventory.')->middleware('auth')->
 |--------------------------------------------------------------------------
 */
 Route::prefix('admin/notifications')->name('admin.notifications.')->middleware('auth')->group(function () {
+    // Legacy (mantener compatibilidad)
     Route::get('recent', [App\Http\Controllers\NotificationController::class, 'getRecent'])->name('recent');
     Route::get('count', [App\Http\Controllers\NotificationController::class, 'getCount'])->name('count');
     Route::post('mark-read', [App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('mark-read');
+
+    // Nueva API de mensajes con tracking de lectura
+    Route::get('messages/unread', [App\Http\Controllers\NotificationController::class, 'unreadMessages'])->name('messages.unread');
+    Route::get('messages/unread-count', [App\Http\Controllers\NotificationController::class, 'unreadCount'])->name('messages.unread-count');
+    Route::get('messages/recent', [App\Http\Controllers\NotificationController::class, 'recentMessages'])->name('messages.recent');
+    Route::post('messages/{message}/read', [App\Http\Controllers\NotificationController::class, 'markMessageAsRead'])->name('messages.mark-read');
+    Route::post('messages/mark-all-read', [App\Http\Controllers\NotificationController::class, 'markAllMessagesAsRead'])->name('messages.mark-all-read');
 });
 
 /*

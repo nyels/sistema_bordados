@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\InventoryException;
 use App\Models\WasteEvent;
 use App\Models\WasteMaterialItem;
 use App\Models\MaterialVariant;
@@ -11,37 +12,29 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * SERVICIO DE MERMA (WASTE SERVICE)
+ * Servicio de Merma (Waste Service)
  *
- * PROPÓSITO:
- * Gestionar el registro de eventos de merma como ledger independiente.
- *
- * REGLAS DURAS:
- * - NO actualiza stock de PT (ProductVariant.current_stock)
- * - NO toca FinishedGoodsMovement
- * - NO modifica pedidos
- * - SOLO registra el evento de merma con snapshots de costos
- *
- * FILOSOFÍA:
- * La merma es un REGISTRO CONTABLE, no una operación de inventario.
- * El ajuste de inventario físico (si aplica) es responsabilidad de
- * otro servicio/proceso según políticas del negocio.
+ * Orquestador de eventos de merma.
+ * Usa InventoryService como motor puro de inventario.
  */
 class WasteService
 {
+    protected InventoryService $inventoryService;
+
+    public function __construct(InventoryService $inventoryService)
+    {
+        $this->inventoryService = $inventoryService;
+    }
     /**
      * Registrar merma de materiales (materia prima).
-     *
-     * CASO DE USO:
-     * - Material dañado en almacén
-     * - Material caducado
-     * - Material defectuoso descubierto
      *
      * @param array $materials Array de ['material_variant_id' => int, 'quantity' => float, 'notes' => ?string]
      * @param string $reason Motivo de la merma (obligatorio)
      * @param int|null $orderId Pedido relacionado (opcional)
      * @param string|null $evidencePath Ruta a evidencia (opcional)
      * @return WasteEvent
+     * @throws \InvalidArgumentException Si faltan datos requeridos
+     * @throws InventoryException Si no hay stock suficiente
      */
     public function registerMaterialWaste(
         array $materials,
@@ -50,21 +43,20 @@ class WasteService
         ?string $evidencePath = null
     ): WasteEvent {
         return DB::transaction(function () use ($materials, $reason, $orderId, $evidencePath) {
-            // Validar que hay materiales
+            // Validaciones
             if (empty($materials)) {
                 throw new \InvalidArgumentException(
                     'Debe especificar al menos un material para registrar la merma.'
                 );
             }
 
-            // Validar motivo
             if (empty(trim($reason))) {
                 throw new \InvalidArgumentException(
                     'El motivo de la merma es obligatorio.'
                 );
             }
 
-            // Calcular costo total y preparar items
+            // Preparar y validar items
             $totalCost = 0;
             $itemsData = [];
 
@@ -77,7 +69,17 @@ class WasteService
                     continue;
                 }
 
-                $variant = MaterialVariant::findOrFail($variantId);
+                $variant = MaterialVariant::lockForUpdate()->findOrFail($variantId);
+
+                // Validar stock suficiente
+                if ($variant->current_stock < $quantity) {
+                    throw InventoryException::insufficientStock(
+                        $variantId,
+                        $quantity,
+                        $variant->current_stock
+                    );
+                }
+
                 $unitCost = (float) $variant->average_cost;
                 $itemTotalCost = $quantity * $unitCost;
                 $totalCost += $itemTotalCost;
@@ -100,23 +102,44 @@ class WasteService
                 );
             }
 
-            // Crear evento de merma
+            // Crear WasteEvent (registro contable)
             $wasteEvent = WasteEvent::create([
                 'waste_type' => WasteEvent::TYPE_MATERIAL,
                 'order_id' => $orderId,
                 'product_variant_id' => null,
-                'quantity' => 0, // No aplica para material
+                'quantity' => 0,
                 'total_cost' => $totalCost,
                 'reason' => trim($reason),
                 'evidence_path' => $evidencePath,
                 'created_by' => Auth::id(),
             ]);
 
-            // Crear items de material
+            // Crear items + ajustes negativos de inventario
             foreach ($itemsData as $itemData) {
                 WasteMaterialItem::create([
                     'waste_event_id' => $wasteEvent->id,
-                    ...$itemData,
+                    'material_variant_id' => $itemData['material_variant_id'],
+                    'quantity' => $itemData['quantity'],
+                    'unit_cost_snapshot' => $itemData['unit_cost_snapshot'],
+                    'total_cost' => $itemData['total_cost'],
+                    'unit_symbol' => $itemData['unit_symbol'],
+                    'notes' => $itemData['notes'],
+                ]);
+
+                // Ajuste negativo via motor puro
+                $movement = $this->inventoryService->registerAdjustment(
+                    variantId: $itemData['material_variant_id'],
+                    quantity: $itemData['quantity'],
+                    unitCost: $itemData['unit_cost_snapshot'],
+                    isPositive: false,
+                    notes: "Merma: " . trim($reason),
+                    userId: Auth::id()
+                );
+
+                // Asignar referencia para trazabilidad (orquestador)
+                $movement->update([
+                    'reference_type' => 'App\\Models\\WasteEvent',
+                    'reference_id' => $wasteEvent->id,
                 ]);
             }
 
@@ -189,16 +212,12 @@ class WasteService
     /**
      * Registrar merma en proceso (WIP).
      *
-     * CASO DE USO:
-     * - Falla durante producción
-     * - Pedido cancelado con materiales ya consumidos
-     * - Error de confección/bordado
-     *
      * @param int $orderId ID del pedido donde ocurrió la falla
      * @param array $materials Array de materiales perdidos
      * @param string $reason Motivo de la merma
      * @param string|null $evidencePath Ruta a evidencia
      * @return WasteEvent
+     * @throws InventoryException Si no hay stock suficiente
      */
     public function registerWipWaste(
         int $orderId,
@@ -207,17 +226,14 @@ class WasteService
         ?string $evidencePath = null
     ): WasteEvent {
         return DB::transaction(function () use ($orderId, $materials, $reason, $evidencePath) {
-            // Validar que el pedido existe
             $order = Order::findOrFail($orderId);
 
-            // Validar motivo
             if (empty(trim($reason))) {
                 throw new \InvalidArgumentException(
                     'El motivo de la merma es obligatorio.'
                 );
             }
 
-            // Calcular costo total
             $totalCost = 0;
             $itemsData = [];
 
@@ -230,7 +246,16 @@ class WasteService
                     continue;
                 }
 
-                $variant = MaterialVariant::findOrFail($variantId);
+                $variant = MaterialVariant::lockForUpdate()->findOrFail($variantId);
+
+                if ($variant->current_stock < $quantity) {
+                    throw InventoryException::insufficientStock(
+                        $variantId,
+                        $quantity,
+                        $variant->current_stock
+                    );
+                }
+
                 $unitCost = (float) $variant->average_cost;
                 $itemTotalCost = $quantity * $unitCost;
                 $totalCost += $itemTotalCost;
@@ -247,7 +272,6 @@ class WasteService
                 ];
             }
 
-            // Crear evento de merma (puede tener 0 materiales si es falla de mano de obra)
             $wasteEvent = WasteEvent::create([
                 'waste_type' => WasteEvent::TYPE_WIP,
                 'order_id' => $orderId,
@@ -259,11 +283,31 @@ class WasteService
                 'created_by' => Auth::id(),
             ]);
 
-            // Crear items de material (si hay)
             foreach ($itemsData as $itemData) {
                 WasteMaterialItem::create([
                     'waste_event_id' => $wasteEvent->id,
-                    ...$itemData,
+                    'material_variant_id' => $itemData['material_variant_id'],
+                    'quantity' => $itemData['quantity'],
+                    'unit_cost_snapshot' => $itemData['unit_cost_snapshot'],
+                    'total_cost' => $itemData['total_cost'],
+                    'unit_symbol' => $itemData['unit_symbol'],
+                    'notes' => $itemData['notes'],
+                ]);
+
+                // Ajuste negativo via motor puro
+                $movement = $this->inventoryService->registerAdjustment(
+                    variantId: $itemData['material_variant_id'],
+                    quantity: $itemData['quantity'],
+                    unitCost: $itemData['unit_cost_snapshot'],
+                    isPositive: false,
+                    notes: "Merma WIP (Pedido #{$order->order_number}): " . trim($reason),
+                    userId: Auth::id()
+                );
+
+                // Asignar referencia para trazabilidad (orquestador)
+                $movement->update([
+                    'reference_type' => 'App\\Models\\WasteEvent',
+                    'reference_id' => $wasteEvent->id,
                 ]);
             }
 

@@ -1,6 +1,7 @@
 @extends('adminlte::page')
 
-@section('title', isset($editMode) && $editMode ? 'Editar Producto - ' . $product->name : (isset($cloneMode) && $cloneMode ? 'Duplicar Producto - ' . $cloneProduct->name : 'Nuevo Producto - Enterprise Configurator'))
+@section('title', isset($editMode) && $editMode ? 'Editar Producto - ' . $product->name : (isset($cloneMode) &&
+    $cloneMode ? 'Duplicar Producto - ' . $cloneProduct->name : 'Nuevo Producto - Enterprise Configurator'))
 
 @section('plugins.Sweetalert2', true)
 @section('plugins.Select2', true)
@@ -10,17 +11,15 @@
         <div class="d-flex justify-content-between align-items-center">
             <div>
                 <h1 class="text-white"><i class="fas fa-cube mr-2"></i> Configurador de Productos</h1>
-                @if(isset($cloneMode) && $cloneMode)
-                    <p class="text-white-50 mb-0"><i class="fas fa-copy mr-1"></i> Duplicando: {{ $cloneProduct->name }} - Modifique SKU y datos necesarios</p>
+                @if (isset($cloneMode) && $cloneMode)
+                    <p class="text-white-50 mb-0"><i class="fas fa-copy mr-1"></i> Duplicando: {{ $cloneProduct->name }} -
+                        Modifique SKU y datos necesarios</p>
                 @else
                     <p class="text-white-50 mb-0">Crea tu producto paso a paso: define, configura y publica</p>
                 @endif
             </div>
             <div class="d-flex align-items-center gap-3">
-                <div class="live-cost-badge d-none d-md-block">
-                    <span class="label">Costo Producción Est.:</span>
-                    <span class="value" id="headerCost">$0.00</span>
-                </div>
+
                 <a href="{{ route('admin.products.index') }}" class="btn btn-outline-light btn-sm">
                     <i class="fas fa-times"></i> Cancelar
                 </a>
@@ -32,13 +31,14 @@
 @section('content')
     <div class="content-wrapper-custom">
         @php
-            $formAction = isset($editMode) && $editMode
-                ? route('admin.products.update', $product->id)
-                : route('admin.products.store');
+            $formAction =
+                isset($editMode) && $editMode
+                    ? route('admin.products.update', $product->id)
+                    : route('admin.products.store');
         @endphp
         <form id="productForm" action="{{ $formAction }}" method="POST" enctype="multipart/form-data">
             @csrf
-            @if(isset($editMode) && $editMode)
+            @if (isset($editMode) && $editMode)
                 @method('PUT')
                 <input type="hidden" name="product_id" value="{{ $product->id }}">
             @endif
@@ -56,7 +56,7 @@
                     </div>
                     <div class="stepper-item" data-step="2" onclick="navigateToStep(2)" style="cursor:pointer;">
                         <div class="step-counter">2</div>
-                        <div class="step-name">Presentaciones <span class="step-badge d-none" id="badgeStep2"></span></div>
+                        <div class="step-name">Presentaciones</div>
                     </div>
                     <div class="stepper-item" data-step="3" onclick="navigateToStep(3)" style="cursor:pointer;">
                         <div class="step-counter">3</div>
@@ -154,71 +154,8 @@
                         <input type="hidden" name="status" value="active">
                     </div>
 
-                    {{-- ROW 2.5: TIPO DE PRODUCTO (Visual Radio Cards) --}}
-                    <div class="row mt-2">
-                        <div class="col-12">
-                            <div class="form-group mb-0">
-                                <label class="font-weight-bold d-flex align-items-center">
-                                    Tipo de Producto *
-                                    <i class="fas fa-info-circle text-info ml-2" data-toggle="tooltip" data-placement="right"
-                                       title="Define el comportamiento operativo: si requiere medidas personalizadas, si es servicio, etc."></i>
-                                </label>
-                                <p class="text-muted small mb-2">Selecciona cómo se comportará este producto en pedidos</p>
-
-                                @php
-                                    // Determinar valor actual: old() tiene prioridad, luego producto en edit, luego vacío
-                                    $currentTypeId = old('product_type_id', isset($product) ? $product->product_type_id : null);
-                                @endphp
-                                <input type="hidden" name="product_type_id" id="inpProductTypeId" value="{{ $currentTypeId }}" required>
-
-                                <div class="product-type-selector" id="productTypeSelector">
-                                    @php
-                                        $typeIcons = [
-                                            'GARMENT_CUSTOM' => 'fa-ruler-combined',
-                                            'GARMENT_STANDARD' => 'fa-tshirt',
-                                            'ACCESSORY' => 'fa-shopping-bag',
-                                            'SERVICE' => 'fa-tools',
-                                            'HOME_DECOR' => 'fa-home',
-                                        ];
-                                        $typeColors = [
-                                            'GARMENT_CUSTOM' => '#8e44ad',
-                                            'GARMENT_STANDARD' => '#3498db',
-                                            'ACCESSORY' => '#e67e22',
-                                            'SERVICE' => '#27ae60',
-                                            'HOME_DECOR' => '#e74c3c',
-                                        ];
-                                    @endphp
-                                    @foreach($productTypes ?? [] as $type)
-                                        <div class="product-type-card {{ $currentTypeId == $type->id ? 'selected' : '' }}"
-                                             data-type-id="{{ $type->id }}"
-                                             data-requires-measurements="{{ $type->requires_measurements ? '1' : '0' }}"
-                                             onclick="selectProductType({{ $type->id }}, {{ $type->requires_measurements ? 'true' : 'false' }})">
-                                            <div class="type-icon" style="color: {{ $typeColors[$type->code] ?? '#6c757d' }}">
-                                                <i class="fas {{ $typeIcons[$type->code] ?? 'fa-box' }}"></i>
-                                            </div>
-                                            <div class="type-name">{{ $type->display_name }}</div>
-                                            <div class="type-description">{{ Str::limit($type->description, 60) }}</div>
-                                            @if($type->requires_measurements)
-                                                <div class="type-badge badge-measurements">
-                                                    <i class="fas fa-ruler mr-1"></i> Requiere medidas
-                                                </div>
-                                            @else
-                                                <div class="type-badge badge-standard">
-                                                    <i class="fas fa-check mr-1"></i> Sin medidas
-                                                </div>
-                                            @endif
-                                            <div class="type-check">
-                                                <i class="fas fa-check-circle"></i>
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                </div>
-                                <div id="productTypeError" class="invalid-feedback" style="display: none;">
-                                    Debes seleccionar un tipo de producto
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    {{-- NOTA: product_type_id se asigna automáticamente desde categoría o default --}}
+                    {{-- La decisión de medidas pertenece al PEDIDO, no al producto --}}
                     {{-- ROW 3: DESCRIPTION --}}
                     <div class="row">
                         <div class="col-12">
@@ -244,6 +181,9 @@
                             <h6 class="font-weight-bold text-dark mb-1">Arrastra tu imagen aquí</h6>
                             <p class="small text-muted mb-0">o haz clic para seleccionar</p>
                             <div class="mt-2 text-muted small">PNG, JPG, WEBP (Max 2MB)</div>
+                            @if($errors->any() && !session('product_temp_image'))
+                            <div class="mt-2 text-warning small"><i class="fas fa-exclamation-triangle mr-1"></i>Vuelve a seleccionar la imagen</div>
+                            @endif
                             <div class="mt-1 text-danger small d-none" id="imageErrorMsg"></div>
                         </div>
 
@@ -285,7 +225,6 @@
             <div class="card shadow-sm">
                 <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
                     <span class="font-weight-bold">Variantes Configuradas</span>
-                    <span class="badge badge-primary shadow-sm" id="variantCountBadge" style="font-size: 1rem; padding: 0.4em 0.7em;">0</span>
                 </div>
                 <div class="card-body p-0">
                     <div id="variantsTableContainer" class="table-responsive">
@@ -325,7 +264,8 @@
     </script>
 
     {{-- MODAL CANÓNICO: GENERAR VARIANTES --}}
-    <div class="modal fade" id="modalGenerarVariantes" tabindex="-1" role="dialog" aria-labelledby="modalGenerarVariantesLabel" aria-hidden="true">
+    <div class="modal fade" id="modalGenerarVariantes" tabindex="-1" role="dialog"
+        aria-labelledby="modalGenerarVariantesLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
@@ -350,13 +290,27 @@
                                 <div class="card-body p-0" style="max-height: 280px; overflow-y: auto;">
                                     <div class="list-group list-group-flush" id="sizesToggleList">
                                         @php
-                                            $sizeOrder = ['XXS' => 1, 'XS' => 2, 'S' => 3, 'M' => 4, 'L' => 5, 'XL' => 6, 'XXL' => 7, '2XL' => 8, '3XL' => 9];
-                                            $sortedSizes = ($sizeAttribute->values ?? collect())->sortBy(function($v) use ($sizeOrder) {
+                                            $sizeOrder = [
+                                                'XXS' => 1,
+                                                'XS' => 2,
+                                                'S' => 3,
+                                                'M' => 4,
+                                                'L' => 5,
+                                                'XL' => 6,
+                                                'XXL' => 7,
+                                                '2XL' => 8,
+                                                '3XL' => 9,
+                                            ];
+                                            $sortedSizes = ($sizeAttribute->values ?? collect())->sortBy(function (
+                                                $v,
+                                            ) use ($sizeOrder) {
                                                 return $sizeOrder[strtoupper($v->value)] ?? 99;
                                             });
                                         @endphp
-                                        @foreach($sortedSizes as $val)
-                                            <label class="list-group-item list-group-item-action d-flex justify-content-between align-items-center mb-0 variant-toggle-item" data-id="{{ $val->id }}" data-value="{{ $val->value }}">
+                                        @foreach ($sortedSizes as $val)
+                                            <label
+                                                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center mb-0 variant-toggle-item"
+                                                data-id="{{ $val->id }}" data-value="{{ $val->value }}">
                                                 <span>{{ $val->value }}</span>
                                                 <span class="toggle-indicator">
                                                     <i class="fas fa-check-circle text-success d-none"></i>
@@ -380,11 +334,15 @@
                                         @php
                                             $sortedColors = ($colorAttribute->values ?? collect())->sortBy('value');
                                         @endphp
-                                        @foreach($sortedColors as $val)
-                                            <label class="list-group-item list-group-item-action d-flex justify-content-between align-items-center mb-0 variant-toggle-item" data-id="{{ $val->id }}" data-value="{{ $val->value }}" data-hex="{{ $val->hex_color }}">
+                                        @foreach ($sortedColors as $val)
+                                            <label
+                                                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center mb-0 variant-toggle-item"
+                                                data-id="{{ $val->id }}" data-value="{{ $val->value }}"
+                                                data-hex="{{ $val->hex_color }}">
                                                 <span>
-                                                    @if($val->hex_color)
-                                                        <span class="color-swatch mr-2" style="display:inline-block; width:16px; height:16px; border-radius:3px; background:{{ $val->hex_color }}; border:1px solid #ddd; vertical-align:middle;"></span>
+                                                    @if ($val->hex_color)
+                                                        <span class="color-swatch mr-2"
+                                                            style="display:inline-block; width:16px; height:16px; border-radius:3px; background:{{ $val->hex_color }}; border:1px solid #ddd; vertical-align:middle;"></span>
                                                     @endif
                                                     {{ $val->value }}
                                                 </span>
@@ -401,14 +359,16 @@
 
                     {{-- Preview de combinaciones --}}
                     <div class="mt-3 p-2 bg-light rounded text-center" id="variantPreviewInfo">
-                        <small class="text-muted">Se generarán <strong id="variantCombinationCount">0</strong> variantes</small>
+                        <small class="text-muted">Se generarán <strong id="variantCombinationCount">0</strong>
+                            variantes</small>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">
                         <i class="fas fa-times mr-1"></i> Cancelar
                     </button>
-                    <button type="button" class="btn btn-primary" id="btnConfirmGenerateVariants" onclick="generateVariantsFromModal()" disabled>
+                    <button type="button" class="btn btn-primary" id="btnConfirmGenerateVariants"
+                        onclick="generateVariantsFromModal()" disabled>
                         <i class="fas fa-bolt mr-1"></i> Generar
                     </button>
                 </div>
@@ -423,27 +383,33 @@
             transition: all 0.15s ease;
             user-select: none;
         }
+
         .variant-toggle-item:hover {
             background-color: #f8f9fa;
         }
+
         .variant-toggle-item.selected {
             background-color: #e7f3ff;
             border-left: 3px solid #007bff;
         }
+
         .variant-toggle-item.selected .toggle-indicator i {
             display: inline-block !important;
         }
+
         .variant-toggle-item .toggle-indicator {
             width: 20px;
             text-align: center;
         }
+
         #variantsTable .stock-alert-input {
             width: 80px;
             text-align: center;
         }
+
         #variantsTable .stock-alert-input:focus {
             border-color: #007bff;
-            box-shadow: 0 0 0 0.15rem rgba(0,123,255,.25);
+            box-shadow: 0 0 0 0.15rem rgba(0, 123, 255, .25);
         }
     </style>
 
@@ -491,7 +457,7 @@
                                     <select class="form-control select2" id="bomFamilySelectorGlobal" data-placeholder="Seleccione familia...">
                                         <option value=""></option>
                                         @foreach($materials ?? [] as $m)
-                                            <option value="{{ $m->id }}" data-unit="{{ $m->baseUnit->symbol ?? 'unid' }}">{{ $m->name }}</option>
+                                            <option value="{{ $m->id }}" data-unit="{{ $m->consumptionUnit->symbol ?? ($m->baseUnit->symbol ?? 'unid') }}">{{ $m->name }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -513,10 +479,6 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="form-check mb-3">
-                                <input class="form-check-input" type="checkbox" id="materialIsPrimaryGlobal">
-                                <label class="form-check-label small" for="materialIsPrimaryGlobal">Material principal</label>
-                            </div>
                             <button type="button" class="btn btn-primary btn-block" onclick="addMaterialCommon()">
                                 <i class="fas fa-plus-circle mr-1"></i> Agregar Material Común
                             </button>
@@ -525,7 +487,7 @@
 
                     {{-- Tabla de materiales comunes --}}
                     <div class="col-md-7">
-                        <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                        <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
                             <table class="table table-sm table-hover mb-0" id="bomTableGlobal">
                                 <thead class="thead-light sticky-top">
                                     <tr>
@@ -542,14 +504,12 @@
                                         </td>
                                     </tr>
                                 </tbody>
-                                <tfoot class="bg-light font-weight-bold">
-                                    <tr>
-                                        <td colspan="2">Total Materiales Comunes</td>
-                                        <td class="text-right" id="bomTotalGlobal">$0.00</td>
-                                        <td></td>
-                                    </tr>
-                                </tfoot>
                             </table>
+                        </div>
+                        {{-- Total fijo fuera del scroll --}}
+                        <div class="bg-dark text-white p-2 rounded-bottom d-flex justify-content-between align-items-center">
+                            <strong>Total Materiales Comunes</strong>
+                            <strong id="bomTotalGlobal">$0.00</strong>
                         </div>
                     </div>
                 </div>
@@ -590,7 +550,7 @@
                                 <select class="form-control select2" id="bomFamilySelectorSpecific" data-placeholder="Seleccione familia...">
                                     <option value=""></option>
                                     @foreach($materials ?? [] as $m)
-                                        <option value="{{ $m->id }}" data-unit="{{ $m->baseUnit->symbol ?? 'unid' }}">{{ $m->name }}</option>
+                                        <option value="{{ $m->id }}" data-unit="{{ $m->consumptionUnit->symbol ?? ($m->baseUnit->symbol ?? 'unid') }}">{{ $m->name }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -619,7 +579,7 @@
 
                     {{-- Tabla de materiales específicos --}}
                     <div class="col-md-7">
-                        <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                        <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
                             <table class="table table-sm table-hover mb-0" id="bomTableSpecific">
                                 <thead class="thead-light sticky-top">
                                     <tr>
@@ -637,34 +597,18 @@
                                         </td>
                                     </tr>
                                 </tbody>
-                                <tfoot class="bg-light font-weight-bold">
-                                    <tr>
-                                        <td colspan="3">Total Materiales Específicos</td>
-                                        <td class="text-right" id="bomTotalSpecific">$0.00</td>
-                                        <td></td>
-                                    </tr>
-                                </tfoot>
                             </table>
+                        </div>
+                        {{-- Total fijo fuera del scroll --}}
+                        <div class="bg-info text-white p-2 rounded-bottom d-flex justify-content-between align-items-center">
+                            <strong>Total Materiales Específicos</strong>
+                            <strong id="bomTotalSpecific">$0.00</strong>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        {{-- RESUMEN TOTAL BOM --}}
-        <div class="card shadow-sm border-0 mt-4 bg-dark text-white">
-            <div class="card-body py-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h5 class="mb-0"><i class="fas fa-calculator mr-2"></i> Costo Total de Materiales</h5>
-                        <small class="text-white-50">Suma de materiales comunes + específicos</small>
-                    </div>
-                    <div class="text-right">
-                        <h3 class="mb-0 font-weight-bold" id="bomGrandTotal">$0.00</h3>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 </script>
 
@@ -732,95 +676,6 @@
         </div>
     </div>
 </script>
-
-    {{-- BACKUP: OLD STEP 4 - Uncomment to revert to original design-based view
-            <script type="text/template" id="tpl_step4_OLD">
-    <div class="card shadow-sm border-0">
-        <div class="card-body">
-                <h5 class="step-title"><i class="fas fa-vector-square text-primary"></i> Diseños de Bordado</h5>
-                <p class="step-description text-muted mb-3">
-                    <i class="fas fa-lightbulb text-warning mr-1"></i>
-                    Selecciona los <strong>diseños de bordado</strong> que aplicarás a tu producto.
-                    Haz clic en un diseño para configurar su posición (pecho, manga, espalda, etc.).
-                </p>
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <div class="custom-control custom-switch">
-                        <input type="checkbox" class="custom-control-input" id="toggleNoDesign" onchange="toggleNoDesignMode()">
-                        <label class="custom-control-label font-weight-bold" for="toggleNoDesign">
-                            <i class="fas fa-tshirt mr-1"></i> Este producto es liso (sin bordado)
-                        </label>
-                    </div>
-                    <input type="text" class="form-control" style="width: 200px;" placeholder="Buscar diseño..." id="searchDesign">
-                </div>
-            </div>
-
-            <div class="design-grid-container">
-                <div class="row" id="designGrid">
-                    @forelse($designs as $design)
-                        @php
-                            $export = $design->generalExports->first();
-                            $stitches = $export ? number_format($export->stitches_count) : 'N/A';
-                            $stitchesRaw = $export->stitches_count ?? 0;
-                            $dimensions = $export ? ($export->width_mm . 'x' . $export->height_mm . ' mm') : 'N/A';
-                            $colors = $export ? $export->colors_count : 0;
-                            $appType = $export->application_type ?? 'General';
-                            $image = $design->primaryImage ? $design->primaryImage->url : null;
-                        @endphp
-                        <div class="col-md-3 col-sm-6 mb-4">
-                            <div class="card h-100 design-card"
-                                 onclick='toggleDesign(this, {{ $design->id }}, "{{ addslashes($design->name) }}", {{ $stitchesRaw }}, "{{ $image ? addslashes(asset("storage/" . $image)) : "" }}", "{{ $dimensions }}", {{ $colors }}, @json($design->variants))'
-                                 data-design-id="{{ $design->id }}"
-                                 data-app-type="{{ strtolower($appType) }}">
-                                <div class="card-img-top design-thumb d-flex align-items-center justify-content-center bg-light" style="height: 140px;">
-                                    @if($image)
-                                        <img src="{{ asset('storage/' . $image) }}" style="max-height: 120px; max-width: 100%;">
-                                    @elseif($design->variants->isNotEmpty() && $design->variants->first()->primaryImage)
-                                        <img src="{{ asset('storage/' . $design->variants->first()->primaryImage->url) }}" style="max-height: 120px; max-width: 100%;">
-                                    @else
-                                        <i class="fas fa-image fa-3x text-muted"></i>
-                                    @endif
-                                </div>
-                                <div class="card-body p-3 text-center">
-                                    <h5 class="text-truncate mb-2 font-weight-bold" title="{{ $design->name }}" style="font-size: 1.25rem;">
-                                        {{ $design->name }}
-                                        @if($design->variants->isNotEmpty())
-                                            <span class="badge badge-light text-muted ml-1" style="font-size: 0.7rem;">+{{ $design->variants->count() }} var</span>
-                                        @endif
-                                    </h5>
-                                    <div class="mb-2 d-flex justify-content-center">
-                                        <span class="badge badge-secondary" style="font-size: 0.95rem;">Lugar de aplicación: {{ ucfirst($appType) }}</span>
-                                    </div>
-                                    <div class="row text-center small">
-                                        <div class="col-4">
-                                            <i class="fas fa-ruler-combined text-primary d-block mb-1"></i>
-                                            <strong class="d-block" style="font-size: 1rem;">{{ $dimensions }}</strong>
-                                        </div>
-                                        <div class="col-4">
-                                            <i class="fas fa-palette text-info d-block mb-1"></i>
-                                            <strong class="d-block" style="font-size: 1rem;">{{ $colors }} col</strong>
-                                        </div>
-                                        <div class="col-4">
-                                            <i class="fas fa-th text-success d-block mb-1"></i>
-                                            <strong class="d-block" style="font-size: 1rem;">{{ $stitches }}</strong>
-                                        </div>
-                                    </div>
-
-                                    <div class="usage-status mt-3 badge badge-light border w-100 py-2 d-none text-left" style="font-size: 0.9rem;">
-                                        <i class="fas fa-link mr-1 text-muted"></i> <span class="usage-text font-weight-bold text-dark"></span>
-                                    </div>
-                                </div>
-                                <div class="check-overlay"><i class="fas fa-check-circle"></i></div>
-                            </div>
-                        </div>
-                    @empty
-                        <div class="col-12 text-center text-muted">No hay diseños disponibles</div>
-                    @endforelse
-                </div>
-            </div>
-        </div>
-    </div>
-</script>
-            --}}
 
     {{-- STEP 5: SERVICIOS EXTRAS (DOS COLUMNAS) --}}
     <script type="text/template" id="tpl_step5">
@@ -958,20 +813,20 @@
                                         </div>
                                         <div class="calc-stitch-grid">
                                             <div class="calc-stitch-box">
-                                                <div class="stitch-label">Total Puntadas</div>
+                                                <div class="stitch-label"><i class="fas fa-lock text-muted mr-1" title="Calculado"></i>Total Puntadas</div>
                                                 <div class="stitch-value" id="finTotalStitches">0</div>
                                             </div>
                                             <div class="calc-arrow"><i class="fas fa-arrow-right"></i></div>
                                             <div class="calc-stitch-box">
-                                                <div class="stitch-label">Millares</div>
+                                                <div class="stitch-label"><i class="fas fa-lock text-muted mr-1" title="Calculado"></i>Millares</div>
                                                 <div class="stitch-value text-info" id="finMillares">0.000</div>
                                             </div>
                                             <div class="calc-arrow"><i class="fas fa-times"></i></div>
-                                            <div class="calc-stitch-box calc-input-box">
-                                                <div class="stitch-label">Precio / Millar</div>
+                                            <div class="calc-stitch-box calc-input-box" style="border: 2px solid #27ae60; background: #f0fff4;">
+                                                <div class="stitch-label"><i class="fas fa-edit text-success mr-1" title="Editable"></i>Precio / Millar</div>
                                                 <div class="input-group input-group-sm">
                                                     <div class="input-group-prepend"><span class="input-group-text">$</span></div>
-                                                    <input type="number" class="form-control text-center font-weight-bold" id="finStitchRate" value="1.00" step="0.01" min="0" onchange="recalcFinance()" oninput="recalcFinance()">
+                                                    <input type="number" class="form-control text-center font-weight-bold" id="finStitchRate" value="1.00" step="0.01" min="0.01" onchange="recalcFinance()" oninput="recalcFinance()">
                                                 </div>
                                             </div>
                                         </div>
@@ -994,9 +849,9 @@
                                     </div>
                                     
                                     {{-- MANO DE OBRA --}}
-                                    <div class="calc-section">
+                                    <div class="calc-section" style="border: 2px solid #27ae60; background: #f0fff4; border-radius: 8px;">
                                         <div class="calc-section-header">
-                                            <span class="calc-section-title"><i class="fas fa-hand-holding-usd mr-2"></i>Mano de Obra</span>
+                                            <span class="calc-section-title"><i class="fas fa-edit text-success mr-1" title="Editable"></i><i class="fas fa-hand-holding-usd mr-2"></i>Mano de Obra</span>
                                             <span class="calc-section-value text-primary" id="finLaborCostDisplay">$0.00</span>
                                         </div>
                                         <div class="row align-items-center">
@@ -1039,27 +894,27 @@
                             <i class="fas fa-calculator mr-2"></i> Resumen Financiero
                         </div>
                         <div class="review-finance-body">
-                            {{-- Cost Breakdown --}}
+                            {{-- Cost Breakdown - CALCULADOS (read-only) --}}
                             <div class="review-cost-row-lg">
-                                <span>Materiales</span>
+                                <span><i class="fas fa-lock text-muted mr-1" style="font-size: 0.7rem;"></i>Materiales</span>
                                 <span id="revMatCost">$0.00</span>
                             </div>
                             <div class="review-cost-row-lg">
-                                <span>Bordados</span>
+                                <span><i class="fas fa-lock text-muted mr-1" style="font-size: 0.7rem;"></i>Bordados</span>
                                 <span id="revEmbCost">$0.00</span>
                             </div>
                             <div class="review-cost-row-lg">
-                                <span>Mano de Obra</span>
+                                <span><i class="fas fa-edit text-success mr-1" style="font-size: 0.7rem;" title="Editable arriba"></i>Mano de Obra</span>
                                 <span id="revLaborCost">$0.00</span>
                             </div>
                             <div class="review-cost-row-lg">
-                                <span>Servicios Extras</span>
+                                <span><i class="fas fa-lock text-muted mr-1" style="font-size: 0.7rem;"></i>Servicios Extras</span>
                                 <span id="revExtraCost">$0.00</span>
                             </div>
-                            
+
                             {{-- Total Cost Line --}}
                             <div class="review-total-row">
-                                <span>COSTO TOTAL PRODUCCIÓN</span>
+                                <span><i class="fas fa-lock mr-1" style="font-size: 0.8rem;"></i>COSTO TOTAL</span>
                                 <span id="revTotalCost">$0.00</span>
                             </div>
                         </div>
@@ -1092,28 +947,29 @@
                         <div class="review-finance-header rounded-top">
                             <span class="mb-0 font-weight-bold"><i class="fas fa-hand-holding-usd mr-2"></i>Rentabilidad y Precio</span>
                         </div>
-                        <div class="review-pricing-controls px-3 py-3 border border-top-0 rounded-bottom" style="background: white;">
+                        <div class="review-pricing-controls px-3 py-3 border border-top-0 rounded-bottom" style="background: #f0fff4; border-color: #27ae60 !important;">
                              <div class="row mb-3">
                                 <div class="col-12 mb-2">
-                                    <label class="small text-uppercase font-weight-bold mb-1">Margen de Ganancia</label>
+                                    <label class="small text-uppercase font-weight-bold mb-1"><i class="fas fa-edit text-success mr-1"></i>Margen de Ganancia</label>
                                     <div class="input-group">
-                                        <input type="number" class="form-control font-weight-bold text-center" id="revMarginInput" value="35" min="0" max="90" step="1" onchange="recalcReviewPrice()" oninput="recalcReviewPrice()" style="height: 48px; font-size: 1.1rem;">
+                                        <input type="number" class="form-control font-weight-bold text-center" id="revMarginInput" name="profit_margin" min="0" max="100" step="1" onchange="recalcReviewPrice()" oninput="recalcReviewPrice()" style="height: 48px; font-size: 1.1rem; border-color: #27ae60;">
                                         <div class="input-group-append"><span class="input-group-text font-weight-bold">%</span></div>
                                     </div>
                                 </div>
                                 <div class="col-12">
-                                    <div class="bg-success text-white rounded p-1 d-flex align-items-center justify-content-between shadow-sm" style="height: 48px;">
-                                        <span class="small font-weight-bold px-3 text-uppercase">Precio Sugerido:</span>
+                                    <div class="bg-secondary text-white rounded p-1 d-flex align-items-center justify-content-between shadow-sm" style="height: 48px;">
+                                        <span class="small font-weight-bold px-3 text-uppercase"><i class="fas fa-lock mr-1"></i>Precio Sugerido:</span>
                                         <span class="h3 mb-0 font-weight-bold px-3" id="revSuggestedPrice">$0.00</span>
                                     </div>
                                 </div>
                             </div>
                             <div class="form-group mb-0">
-                                <label class="small text-uppercase mb-1">Precio Final (Personalizado)</label>
+                                <label class="small text-uppercase mb-1"><i class="fas fa-edit text-success mr-1"></i>Precio Final (Override)</label>
                                 <div class="input-group">
                                     <div class="input-group-prepend"><span class="input-group-text">$</span></div>
-                                    <input type="number" class="form-control" id="revFinalPrice" name="base_price" step="0.01" placeholder="Igual al sugerido" onchange="updateHeaderPrice()">
+                                    <input type="number" class="form-control" id="revFinalPrice" name="base_price" step="0.01" min="0" placeholder="Igual al sugerido" onchange="validateAndUpdatePrice()" style="border-color: #27ae60;">
                                 </div>
+                                <small class="text-muted mt-1 d-block">Deja vacío para usar el precio sugerido</small>
                             </div>
                             {{-- ================================================================ --}}
                             {{-- REGLA UX SELLADA: PRECIO CONGELADO POST-ORDEN --}}
@@ -1159,120 +1015,10 @@
             gap: 1rem;
         }
 
-        /* ========================================= */
-        /* PRODUCT TYPE SELECTOR (Visual Radio Cards) */
-        /* ========================================= */
-        .product-type-selector {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 12px;
-        }
-
-        /* Responsive: 2 columns on tablet, 1 on mobile */
-        @media (max-width: 768px) {
-            .product-type-selector {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 480px) {
-            .product-type-selector {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .product-type-card {
-            position: relative;
-            border: 2px solid #e9ecef;
-            border-radius: 12px;
-            padding: 16px 12px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            background: #fff;
-            min-height: 160px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-        }
-
-        .product-type-card:hover {
-            border-color: #007bff;
-            background: #f8f9ff;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
-        }
-
-        .product-type-card.selected {
-            border-color: #007bff;
-            background: linear-gradient(135deg, #f0f7ff 0%, #e8f4fd 100%);
-            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.25);
-        }
-
-        .product-type-card.selected .type-check {
-            display: flex;
-        }
-
-        .product-type-card .type-icon {
-            font-size: 2rem;
-            margin-bottom: 8px;
-            opacity: 0.85;
-        }
-
-        .product-type-card .type-name {
-            font-weight: 700;
-            font-size: 0.95rem;
-            color: #2c3e50;
-            margin-bottom: 4px;
-            line-height: 1.2;
-        }
-
-        .product-type-card .type-description {
-            font-size: 0.75rem;
-            color: #6c757d;
-            line-height: 1.3;
-            margin-bottom: 8px;
-            flex-grow: 1;
-        }
-
-        .product-type-card .type-badge {
-            font-size: 0.7rem;
-            padding: 3px 8px;
-            border-radius: 20px;
-            font-weight: 600;
-        }
-
-        .product-type-card .badge-measurements {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .product-type-card .badge-standard {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .product-type-card .type-check {
-            display: none;
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            width: 24px;
-            height: 24px;
-            background: #007bff;
-            border-radius: 50%;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 12px;
-            box-shadow: 0 2px 5px rgba(0, 123, 255, 0.4);
-        }
-
-        /* Error state */
-        .product-type-selector.is-invalid .product-type-card {
-            border-color: #dc3545;
-        }
+        /* PRODUCT TYPE SELECTOR - REMOVED
+                                         * La decisión de medidas pertenece al PEDIDO, no al producto
+                                         * product_type_id se asigna automáticamente via default o categoría
+                                         */
 
         /* ========================================= */
         /* DESIGN MODAL CARDS STYLES                */
@@ -1287,7 +1033,7 @@
         .design-modal-card:hover {
             border-color: #007bff;
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,123,255,0.15);
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
         }
 
         .design-modal-card.border-primary {
@@ -2419,6 +2165,43 @@
             display: block;
         }
 
+        /* DISEÑOS ASIGNADOS - Cards más legibles */
+        .design-assigned-card {
+            font-size: 1rem;
+        }
+
+        .design-assigned-card h6 {
+            font-size: 1.1rem !important;
+            line-height: 1.3;
+        }
+
+        .design-assigned-card .badge {
+            font-size: 0.85rem;
+            padding: 0.4em 0.7em;
+        }
+
+        .design-assigned-card .row.text-center .col-4 {
+            font-size: 0.95rem;
+        }
+
+        .design-assigned-card .row.text-center .col-4 i {
+            font-size: 1.1rem;
+            margin-bottom: 3px;
+        }
+
+        .design-assigned-card .row.text-center .col-4 .font-weight-bold {
+            font-size: 1rem !important;
+        }
+
+        .design-assigned-card .text-muted {
+            font-size: 0.9rem !important;
+        }
+
+        .design-assigned-card .design-thumb {
+            width: 90px !important;
+            height: 80px !important;
+        }
+
         .stop-propagation {
             cursor: not-allowed !important;
             pointer-events: none !important;
@@ -2877,70 +2660,103 @@
 
                 // Variantes: copiar estructura SIN db_id (serán nuevas)
                 $varIndex = 0;
-                $varData = json_encode($cloneProduct->variants->map(function ($v) use (&$varIndex) {
-                    $sizeVal = $v->attributeValues->first(fn($av) => ($av->attribute?->slug ?? '') === 'talla');
-                    $colorVal = $v->attributeValues->first(fn($av) => ($av->attribute?->slug ?? '') === 'color');
-                    $varIndex++;
-                    return [
-                        'temp_id' => 'clone_' . $varIndex, // ID temporal nuevo
-                        // SIN db_id - variantes son nuevas
-                        'sku' => '', // SKU vacío - se generará automático
-                        'size' => $sizeVal?->value ?? '', 'size_id' => $sizeVal?->id ?? null,
-                        'color' => $colorVal?->value ?? '', 'color_id' => $colorVal?->id ?? null,
-                        'price' => (float) $v->price,
-                    ];
-                })->values()->toArray());
+                $varData = json_encode(
+                    $cloneProduct->variants
+                        ->map(function ($v) use (&$varIndex) {
+                            $sizeVal = $v->attributeValues->first(fn($av) => ($av->attribute?->slug ?? '') === 'talla');
+                            $colorVal = $v->attributeValues->first(fn($av) => ($av->attribute?->slug ?? '') === 'color');
+                            $varIndex++;
+                            return [
+                                'temp_id' => 'clone_' . $varIndex, // ID temporal nuevo
+                                // SIN db_id - variantes son nuevas
+                                'sku' => '', // SKU vacío - se generará automático
+                                'size' => $sizeVal?->value ?? '',
+                                'size_id' => $sizeVal?->id ?? null,
+                                'color' => $colorVal?->value ?? '',
+                                'color_id' => $colorVal?->id ?? null,
+                                'price' => (float) $v->price,
+                                'stock_alert' => (int) ($v->stock_alert ?? 0),
+                            ];
+                        })
+                        ->values()
+                        ->toArray(),
+                );
 
                 // Diseños: copiar con export_id (son referencias, no se duplican)
-                $desData = json_encode($cloneProduct->designs->map(function ($d) {
-                    $exp = $d->generalExports()->where('status','aprobado')->first() ?? $d->exports()->where('status','aprobado')->first();
-                    $appT = \App\Models\Application_types::find($d->pivot->application_type_id ?? 1);
-                    return [
-                        'export_id' => $exp?->id, 'design_id' => $d->id,
-                        'name' => $exp?->application_label ?? $d->name, 'design_name' => $d->name,
-                        'variant_name' => $exp?->variant?->name ?? null,
-                        'app_type_slug' => $appT?->slug ?? 'general', 'app_type_name' => $appT?->nombre_aplicacion ?? 'General',
-                        'stitches' => $exp?->stitches_count ?? 0, 'colors' => $exp?->colors_count ?? 0,
-                        'dimensions' => $exp ? ($exp->width_mm.'x'.$exp->height_mm.' mm') : '',
-                        'file_format' => strtoupper($exp?->file_format ?? ''),
-                        'svg_content' => $exp?->svg_content ?? null, 'image' => $exp?->image?->display_url ?? null,
-                        'scope' => 'global', 'target_variant' => null,
-                    ];
-                })->values()->toArray());
+                $desData = json_encode(
+                    $cloneProduct->designs
+                        ->map(function ($d) {
+                            $exp = $d->generalExports()->where('status', 'aprobado')->first() ?? $d->exports()->where('status', 'aprobado')->first();
+                            $appT = \App\Models\Application_types::find($d->pivot->application_type_id ?? 1);
+                            return [
+                                'export_id' => $exp?->id,
+                                'design_id' => $d->id,
+                                'name' => $exp?->application_label ?? $d->name,
+                                'design_name' => $d->name,
+                                'variant_name' => $exp?->variant?->name ?? null,
+                                'app_type_slug' => $appT?->slug ?? 'general',
+                                'app_type_name' => $appT?->nombre_aplicacion ?? 'General',
+                                'stitches' => $exp?->stitches_count ?? 0,
+                                'colors' => $exp?->colors_count ?? 0,
+                                'dimensions' => $exp ? $exp->width_mm . 'x' . $exp->height_mm . ' mm' : '',
+                                'file_format' => strtoupper($exp?->file_format ?? ''),
+                                'svg_content' => $exp?->svg_content ?? null,
+                                'image' => $exp?->image?->display_url ?? null,
+                                'scope' => 'global',
+                                'target_variant' => null,
+                            ];
+                        })
+                        ->values()
+                        ->toArray(),
+                );
 
                 // BOM: copiar materiales con cantidades y costos
-                $bomData = json_encode($cloneProduct->materials->map(function ($m) {
-                    $activeForVariants = $m->pivot->active_for_variants ?? null;
-                    $targets = [];
-                    $scope = 'global';
-                    if ($activeForVariants) {
-                        $decoded = is_string($activeForVariants) ? json_decode($activeForVariants, true) : $activeForVariants;
-                        if (is_array($decoded) && count($decoded) > 0) {
-                            $scope = 'specific';
-                            // Convertir IDs a formato temp_id para clone mode
-                            $targets = array_map(fn($id) => 'clone_' . $id, $decoded);
-                        }
-                    }
-                    return [
-                        'material_id' => $m->id, 'family_name' => $m->material?->name ?? '',
-                        'variant_name' => $m->name ?? '',
-                        'name' => ($m->material?->name ?? '').' - '.($m->name ?? ''),
-                        'qty' => (float) $m->pivot->quantity, 'cost' => (float) $m->pivot->unit_cost,
-                        'calculated_total' => (float) $m->pivot->total_cost,
-                        'unit' => $m->material?->consumptionUnit?->symbol ?? $m->material?->baseUnit?->symbol ?? 'unid',
-                        'scope' => $scope, 'targets' => $targets,
-                    ];
-                })->values()->toArray());
+                $bomData = json_encode(
+                    $cloneProduct->materials
+                        ->map(function ($m) {
+                            $activeForVariants = $m->pivot->active_for_variants ?? null;
+                            $targets = [];
+                            $scope = 'global';
+                            if ($activeForVariants) {
+                                $decoded = is_string($activeForVariants) ? json_decode($activeForVariants, true) : $activeForVariants;
+                                if (is_array($decoded) && count($decoded) > 0) {
+                                    $scope = 'specific';
+                                    // Convertir IDs a formato temp_id para clone mode
+                                    $targets = array_map(fn($id) => 'clone_' . $id, $decoded);
+                                }
+                            }
+                            return [
+                                'material_id' => $m->id,
+                                'family_name' => $m->material?->name ?? '',
+                                'variant_name' => $m->color ?? '',
+                                'name' => ($m->material?->name ?? '') . ($m->color ? ' - ' . $m->color : ''),
+                                'qty' => (float) $m->pivot->quantity,
+                                'cost' => (float) $m->pivot->unit_cost,
+                                'calculated_total' => (float) $m->pivot->total_cost,
+                                'unit' => $m->material?->consumptionUnit?->symbol ?? ($m->material?->baseUnit?->symbol ?? 'unid'),
+                                'scope' => $scope,
+                                'targets' => $targets,
+                            ];
+                        })
+                        ->values()
+                        ->toArray(),
+                );
 
                 // Extras: copiar servicios extra
-                $extData = json_encode($cloneProduct->extras->map(function ($e) {
-                    return [
-                        'id' => $e->id, 'name' => $e->name,
-                        'cost' => (float) ($e->pivot->snapshot_price ?? $e->price_addition ?? 0),
-                        'price' => (float) ($e->pivot->snapshot_price ?? $e->price_addition ?? 0),
-                        'time' => (int) ($e->pivot->snapshot_time ?? $e->minutes_addition ?? 0),
-                    ];
-                })->values()->toArray());
+                $extData = json_encode(
+                    $cloneProduct->extras
+                        ->map(function ($e) {
+                            return [
+                                'id' => $e->id,
+                                'name' => $e->name,
+                                'cost' => (float) ($e->pivot->snapshot_price ?? ($e->price_addition ?? 0)),
+                                'price' => (float) ($e->pivot->snapshot_price ?? ($e->price_addition ?? 0)),
+                                'time' => (int) ($e->pivot->snapshot_time ?? ($e->minutes_addition ?? 0)),
+                            ];
+                        })
+                        ->values()
+                        ->toArray(),
+                );
 
                 // Financials: copiar costos y precios
                 $finData = json_encode([
@@ -2949,7 +2765,7 @@
                     'extras_cost' => (float) ($cloneProduct->extra_services_cost ?? 0),
                     'labor_cost' => (float) ($cloneProduct->labor_cost ?? 0),
                     'total_cost' => (float) ($cloneProduct->production_cost ?? 0),
-                    'margin' => (float) ($cloneProduct->profit_margin ?? 35),
+                    'margin' => (float) ($cloneProduct->profit_margin ?? 30),
                     'price' => (float) ($cloneProduct->base_price ?? 0),
                     'lead_time' => (int) ($cloneProduct->production_lead_time ?? 7),
                 ]);
@@ -2965,67 +2781,102 @@
                     'production_lead_time' => $product->production_lead_time ?? 7,
                 ]);
 
-                $varData = json_encode($product->variants->map(function ($v) {
-                    $sizeVal = $v->attributeValues->first(fn($av) => ($av->attribute?->slug ?? '') === 'talla');
-                    $colorVal = $v->attributeValues->first(fn($av) => ($av->attribute?->slug ?? '') === 'color');
-                    return [
-                        'temp_id' => 'v_' . $v->id, 'db_id' => $v->id, 'sku' => $v->sku_variant,
-                        'size' => $sizeVal?->value ?? '', 'size_id' => $sizeVal?->id ?? null,
-                        'color' => $colorVal?->value ?? '', 'color_id' => $colorVal?->id ?? null,
-                        'price' => (float) $v->price,
-                    ];
-                })->values()->toArray());
+                $varData = json_encode(
+                    $product->variants
+                        ->map(function ($v) {
+                            $sizeVal = $v->attributeValues->first(fn($av) => ($av->attribute?->slug ?? '') === 'talla');
+                            $colorVal = $v->attributeValues->first(fn($av) => ($av->attribute?->slug ?? '') === 'color');
+                            return [
+                                'temp_id' => 'v_' . $v->id,
+                                'db_id' => $v->id,
+                                'sku' => $v->sku_variant,
+                                'size' => $sizeVal?->value ?? '',
+                                'size_id' => $sizeVal?->id ?? null,
+                                'color' => $colorVal?->value ?? '',
+                                'color_id' => $colorVal?->id ?? null,
+                                'price' => (float) $v->price,
+                                'stock_alert' => (int) ($v->stock_alert ?? 0),
+                            ];
+                        })
+                        ->values()
+                        ->toArray(),
+                );
 
-                $desData = json_encode($product->designs->map(function ($d) {
-                    $exp = $d->generalExports()->where('status','aprobado')->first() ?? $d->exports()->where('status','aprobado')->first();
-                    $appT = \App\Models\Application_types::find($d->pivot->application_type_id ?? 1);
-                    return [
-                        'export_id' => $exp?->id, 'design_id' => $d->id,
-                        'name' => $exp?->application_label ?? $d->name, 'design_name' => $d->name,
-                        'variant_name' => $exp?->variant?->name ?? null,
-                        'app_type_slug' => $appT?->slug ?? 'general', 'app_type_name' => $appT?->nombre_aplicacion ?? 'General',
-                        'stitches' => $exp?->stitches_count ?? 0, 'colors' => $exp?->colors_count ?? 0,
-                        'dimensions' => $exp ? ($exp->width_mm.'x'.$exp->height_mm.' mm') : '',
-                        'file_format' => strtoupper($exp?->file_format ?? ''),
-                        'svg_content' => $exp?->svg_content ?? null, 'image' => $exp?->image?->display_url ?? null,
-                        'scope' => 'global', 'target_variant' => null,
-                    ];
-                })->values()->toArray());
+                $desData = json_encode(
+                    $product->designs
+                        ->map(function ($d) {
+                            $exp = $d->generalExports()->where('status', 'aprobado')->first() ?? $d->exports()->where('status', 'aprobado')->first();
+                            $appT = \App\Models\Application_types::find($d->pivot->application_type_id ?? 1);
+                            return [
+                                'export_id' => $exp?->id,
+                                'design_id' => $d->id,
+                                'name' => $exp?->application_label ?? $d->name,
+                                'design_name' => $d->name,
+                                'variant_name' => $exp?->variant?->name ?? null,
+                                'app_type_slug' => $appT?->slug ?? 'general',
+                                'app_type_name' => $appT?->nombre_aplicacion ?? 'General',
+                                'stitches' => $exp?->stitches_count ?? 0,
+                                'colors' => $exp?->colors_count ?? 0,
+                                'dimensions' => $exp ? $exp->width_mm . 'x' . $exp->height_mm . ' mm' : '',
+                                'file_format' => strtoupper($exp?->file_format ?? ''),
+                                'svg_content' => $exp?->svg_content ?? null,
+                                'image' => $exp?->image?->display_url ?? null,
+                                'scope' => 'global',
+                                'target_variant' => null,
+                            ];
+                        })
+                        ->values()
+                        ->toArray(),
+                );
 
-                $bomData = json_encode($product->materials->map(function ($m) {
-                    $activeForVariants = $m->pivot->active_for_variants ?? null;
-                    $targets = [];
-                    $scope = 'global';
-                    if ($activeForVariants) {
-                        $decoded = is_string($activeForVariants) ? json_decode($activeForVariants, true) : $activeForVariants;
-                        if (is_array($decoded) && count($decoded) > 0) {
-                            $scope = 'specific';
-                            // Convertir IDs a formato temp_id para edit mode: 'v_' + id
-                            $targets = array_map(fn($id) => 'v_' . $id, $decoded);
-                        }
-                    }
-                    return [
-                        'material_id' => $m->id, 'family_name' => $m->material?->name ?? '',
-                        'variant_name' => $m->name ?? '',
-                        'name' => ($m->material?->name ?? '').' - '.($m->name ?? ''),
-                        'qty' => (float) $m->pivot->quantity, 'cost' => (float) $m->pivot->unit_cost,
-                        'calculated_total' => (float) $m->pivot->total_cost,
-                        'unit' => $m->material?->consumptionUnit?->symbol ?? $m->material?->baseUnit?->symbol ?? 'unid',
-                        'scope' => $scope, 'targets' => $targets,
-                    ];
-                })->values()->toArray());
+                $bomData = json_encode(
+                    $product->materials
+                        ->map(function ($m) {
+                            $activeForVariants = $m->pivot->active_for_variants ?? null;
+                            $targets = [];
+                            $scope = 'global';
+                            if ($activeForVariants) {
+                                $decoded = is_string($activeForVariants) ? json_decode($activeForVariants, true) : $activeForVariants;
+                                if (is_array($decoded) && count($decoded) > 0) {
+                                    $scope = 'specific';
+                                    // Convertir IDs a formato temp_id para edit mode: 'v_' + id
+                                    $targets = array_map(fn($id) => 'v_' . $id, $decoded);
+                                }
+                            }
+                            return [
+                                'material_id' => $m->id,
+                                'family_name' => $m->material?->name ?? '',
+                                'variant_name' => $m->color ?? '',
+                                'name' => ($m->material?->name ?? '') . ($m->color ? ' - ' . $m->color : ''),
+                                'qty' => (float) $m->pivot->quantity,
+                                'cost' => (float) $m->pivot->unit_cost,
+                                'calculated_total' => (float) $m->pivot->total_cost,
+                                'unit' => $m->material?->consumptionUnit?->symbol ?? ($m->material?->baseUnit?->symbol ?? 'unid'),
+                                'scope' => $scope,
+                                'targets' => $targets,
+                            ];
+                        })
+                        ->values()
+                        ->toArray(),
+                );
 
-                $extData = json_encode($product->extras->map(function ($e) {
-                    return [
-                        'id' => $e->id, 'name' => $e->name,
-                        'cost' => (float) ($e->pivot->snapshot_price ?? $e->price_addition ?? 0),
-                        'price' => (float) ($e->pivot->snapshot_price ?? $e->price_addition ?? 0),
-                        'time' => (int) ($e->pivot->snapshot_time ?? $e->minutes_addition ?? 0),
-                    ];
-                })->values()->toArray());
+                $extData = json_encode(
+                    $product->extras
+                        ->map(function ($e) {
+                            return [
+                                'id' => $e->id,
+                                'name' => $e->name,
+                                'cost' => (float) ($e->pivot->snapshot_price ?? ($e->price_addition ?? 0)),
+                                'price' => (float) ($e->pivot->snapshot_price ?? ($e->price_addition ?? 0)),
+                                'time' => (int) ($e->pivot->snapshot_time ?? ($e->minutes_addition ?? 0)),
+                            ];
+                        })
+                        ->values()
+                        ->toArray(),
+                );
             } else {
                 // CREATE mode o EDIT tras error de validación
-                $defData = json_encode(['name'=>old('name',''),'sku'=>old('sku',''),'category_id'=>old('product_category_id',''),'desc'=>old('description','')]);
+                $defData = json_encode(['name' => old('name', ''), 'sku' => old('sku', ''), 'category_id' => old('product_category_id', ''), 'desc' => old('description', '')]);
                 $varData = old('variants_json', '[]');
                 $desData = old('embroideries_json', '[]');
                 $bomData = old('materials_json', '[]');
@@ -3063,16 +2914,25 @@
                             'extras_cost' => (float) ($product->extra_services_cost ?? 0),
                             'labor_cost' => (float) ($product->labor_cost ?? 0),
                             'total_cost' => (float) ($product->production_cost ?? 0),
-                            'margin' => (float) ($product->profit_margin ?? 35),
+                            'margin' => (float) ($product->profit_margin ?? 30),
                             'price' => (float) ($product->base_price ?? 0),
                             'lead_time' => (int) ($product->production_lead_time ?? 7),
                         ]);
                     }
                 } elseif (!isset($finData)) {
-                    $finData = old('financials_json', json_encode([
-                        'material_cost' => 0, 'embroidery_cost' => 0, 'extras_cost' => 0,
-                        'labor_cost' => 0, 'total_cost' => 0, 'margin' => 35, 'price' => 0, 'lead_time' => 7,
-                    ]));
+                    $finData = old(
+                        'financials_json',
+                        json_encode([
+                            'material_cost' => 0,
+                            'embroidery_cost' => 0,
+                            'extras_cost' => 0,
+                            'labor_cost' => 0,
+                            'total_cost' => 0,
+                            'margin' => 30,
+                            'price' => 0,
+                            'lead_time' => 7,
+                        ]),
+                    );
                 }
             @endphp
             financials: {!! $finData !!}
@@ -3083,12 +2943,19 @@
 
         // === STEPPER NAVIGATION SYSTEM ===
         const TOTAL_STEPS = 6;
-        let maxVisitedStep = 1; // Track the furthest step visited
+        // En EDIT/CLONE mode, permitir navegación libre desde el inicio (datos ya cargados)
+        let maxVisitedStep = (isEditMode || isCloneMode) ? TOTAL_STEPS : 1;
 
         // Navigate directly to a specific step (clicking on step numbers)
         window.navigateToStep = function(targetStep) {
             if (targetStep < 1 || targetStep > TOTAL_STEPS) return;
             if (targetStep === State.step) return; // Already on this step
+
+            // En EDIT/CLONE mode, navegación libre sin validación (datos ya existen)
+            if (isEditMode || isCloneMode) {
+                goToStep(targetStep);
+                return;
+            }
 
             // Going BACKWARD is always allowed
             if (targetStep < State.step) {
@@ -3105,10 +2972,18 @@
         // Navigate by direction (-1 = prev, +1 = next)
         window.navigate = function(direction) {
             const newStep = State.step + direction;
-            if (newStep < 1 || newStep > TOTAL_STEPS) return;
+
+            // Don't go below step 1
+            if (newStep < 1) return;
 
             // Validate current step before moving forward
             if (direction > 0 && !validateStep(State.step)) {
+                return;
+            }
+
+            // On last step going forward, submit the form
+            if (newStep > TOTAL_STEPS) {
+                submitForm();
                 return;
             }
 
@@ -3163,80 +3038,26 @@
             });
         }
 
-        // Update prev/next button states
-        function updateButtons() {
-            // Prev button
-            if (State.step === 1) {
-                $('#btnPrev').prop('disabled', true);
-            } else {
-                $('#btnPrev').prop('disabled', false);
-            }
-
-            // Next button - on last step, change to submit mode
-            if (State.step === TOTAL_STEPS) {
-                $('#btnNext').addClass('btn-success-mode')
-                    .html('<i class="fas fa-check"></i>');
-                $('#btnNext').off('click').on('click', function() {
-                    submitForm();
-                });
-            } else {
-                $('#btnNext').removeClass('btn-success-mode')
-                    .html('<i class="fas fa-chevron-right"></i>');
-                $('#btnNext').off('click').on('click', function() {
-                    navigate(1);
-                });
-            }
-        }
-
-        // === PRODUCT TYPE SELECTOR ===
-        window.selectProductType = function(typeId, requiresMeasurements) {
-            // Update hidden input
-            $('#inpProductTypeId').val(typeId);
-
-            // Update visual state
-            $('.product-type-card').removeClass('selected');
-            $(`.product-type-card[data-type-id="${typeId}"]`).addClass('selected');
-
-            // Remove error state
-            $('#productTypeSelector').removeClass('is-invalid');
-            $('#productTypeError').hide();
-
-            // Store in state
-            State.definition.product_type_id = typeId;
-            State.definition.requires_measurements = requiresMeasurements;
-
-            // Feedback visual
-            const typeName = $(`.product-type-card[data-type-id="${typeId}"] .type-name`).text();
-            console.log(`[ProductType] Selected: ${typeName} (ID: ${typeId}, Requires Measurements: ${requiresMeasurements})`);
-        };
-
-        // Initialize product type from old() if exists
-        $(document).ready(function() {
-            const savedTypeId = $('#inpProductTypeId').val();
-            if (savedTypeId) {
-                const $card = $(`.product-type-card[data-type-id="${savedTypeId}"]`);
-                if ($card.length) {
-                    $card.addClass('selected');
-                    State.definition.product_type_id = parseInt(savedTypeId);
-                    State.definition.requires_measurements = $card.data('requires-measurements') === 1;
-                }
-            }
-        });
-
         // Step validation
         function validateStep(step) {
             switch (step) {
                 case 1:
-                    // Validate product definition
+                    // Validate product definition (SIMPLE: Categoría + Nombre + SKU)
                     const name = $('#inpName').val().trim();
-                    const sku = $('#inpSku').val().trim();
-                    const productTypeId = $('#inpProductTypeId').val();
+                    let sku = $('#inpSku').val().trim();
                     const categoryId = $('#inpCategory').val();
 
                     if (!name) {
                         Swal.fire('Error', 'El nombre del producto es requerido', 'error');
                         return false;
                     }
+
+                    // FAILSAFE: If name exists but SKU doesn't (cache edge case), try to generate it now
+                    if (name && !sku) {
+                        generateSKU();
+                        sku = $('#inpSku').val().trim();
+                    }
+
                     if (!sku) {
                         Swal.fire('Error', 'El SKU es requerido', 'error');
                         return false;
@@ -3245,25 +3066,15 @@
                         Swal.fire('Error', 'Debes seleccionar una categoría', 'error');
                         return false;
                     }
-                    if (!productTypeId) {
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Tipo de producto requerido',
-                            text: 'Debes seleccionar el tipo de producto para definir su comportamiento operativo',
-                            confirmButtonText: 'Entendido'
-                        });
-                        $('#productTypeSelector').addClass('is-invalid');
-                        $('#productTypeError').show();
-                        return false;
-                    }
 
                     // Save to state
                     State.definition.name = name;
                     State.definition.sku = sku;
                     State.definition.category = $('#inpCategory option:selected').text();
                     State.definition.category_id = categoryId;
-                    State.definition.product_type_id = parseInt(productTypeId);
+                    State.definition.desc = $('#inpDesc').val();
                     return true;
+
                 case 2:
                     // OBLIGATORIO: Al menos una presentación para continuar a Materiales
                     if (State.variants.length === 0) {
@@ -3276,16 +3087,41 @@
                         return false;
                     }
                     return true;
+
                 case 3:
-                    // BOM can be optional
+                    // Warning for empty BOM (Async handling with bypass flag)
+                    if (State.bom.length === 0 && !bypassBomValidation) {
+                        Swal.fire({
+                            title: '¿Continuar sin Materiales?',
+                            text: "El costo de materiales será $0.00. Use esto solo para servicios o productos intangibles.",
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonText: 'Sí, continuar',
+                            cancelButtonText: 'Revisar',
+                            reverseButtons: true,
+                            confirmButtonColor: '#28a745',
+                            cancelButtonColor: '#6c757d'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                bypassBomValidation = true;
+                                navigate(1);
+                                setTimeout(() => { bypassBomValidation = false; }, 500);
+                            }
+                        });
+                        return false;
+                    }
                     return true;
+
                 case 4:
-                    // Designs can be optional
+                    // Auto-check "Producto liso" if no designs selected
+                    if (State.designs.length === 0) {
+                        $('#toggleNoDesign').prop('checked', true);
+                    }
                     return true;
+
                 case 5:
-                case 5:
-                    // Validation for step 5 if needed (currently none)
                     return true;
+
                 default:
                     return true;
             }
@@ -3296,6 +3132,7 @@
             switch (step) {
                 case 2:
                     if (typeof renderVariantsTable === 'function') renderVariantsTable();
+                    if (typeof updateVariantCountBadge === 'function') updateVariantCountBadge();
                     break;
                 case 3:
                     // NUEVO: Verificar si hay presentaciones para mostrar/bloquear BOM
@@ -3312,6 +3149,7 @@
                 case 4:
                     // NUEVO: Diseño read-only - renderizar información
                     renderDesignReadOnly();
+                    if (typeof syncDesignCardsWithState === 'function') syncDesignCardsWithState();
                     break;
                 case 5:
                     recalcFinance();
@@ -3324,6 +3162,12 @@
                     validateMaterialPrices();
                     break;
             }
+
+            // Force AdminLTE layout recalculation after step change
+            setTimeout(() => {
+                $(window).trigger('resize');
+                if ($.fn.Layout) $('body').Layout('fix');
+            }, 300);
         }
 
         // Helper: Check Prices (Promise) - Enterprise JIT Validation
@@ -3445,18 +3289,10 @@
         }
 
         // ============================================================
-        // BOM DIVIDIDO: Materiales Comunes + Por Presentación
-        // Responsabilidad: Inicialización y manejo de selectores BOM
+        // BOM PASO 3: Materiales Comunes + Por Presentación
         // ============================================================
 
-        // ============================================================
-        // BOM PASO 3: INICIALIZACIÓN ROBUSTA
-        // ============================================================
-
-        // ------------------------------------------------------------
         // initBomSelectors: Punto de entrada principal para Paso 3
-        // RESPONSABILIDAD: Configurar todos los selectores del BOM
-        // ------------------------------------------------------------
         function initBomSelectors() {
             destroyBomSelect2Instances();
             populatePresentationSelector();
@@ -3603,7 +3439,8 @@
                 return;
             }
 
-            var url = '{{ route("admin.material-variants.conversiones", ["materialId" => "__ID__"]) }}'.replace('__ID__', familyId);
+            var url = '{{ route('admin.material-variants.conversiones', ['materialId' => '__ID__']) }}'.replace('__ID__',
+                familyId);
 
             $.ajax({
                 url: url,
@@ -3620,7 +3457,11 @@
                             .text(v.variant_name || v.text)
                             .attr('data-cost', v.cost_base || 0)
                             .attr('data-stock', v.stock_real || 0)
-                            .attr('data-unit', v.symbol || 'unid')
+                            .attr('data-unit', v.symbol || 'unid') // Unidad de CONSUMO (para recetas)
+                            .attr('data-unit-base', v.symbol_base || v.symbol ||
+                                'unid') // Unidad BASE (para stock)
+                            .attr('data-discrete', v.is_discrete ? '1' :
+                                '0') // Flag para validación de enteros
                             .attr('data-name', v.text || '')
                             .attr('data-family', v.family_name || '')
                             .attr('data-variant', v.variant_name || '')
@@ -3652,11 +3493,23 @@
 
             var stock = parseFloat(opt.data('stock')) || 0;
             var cost = parseFloat(opt.data('cost')) || 0;
-            var unit = opt.data('unit') || 'unid';
+            var unit = opt.data('unit') || 'unid'; // Unidad de CONSUMO (ya convertido desde backend)
+            var isDiscrete = opt.data('discrete') === '1' || opt.data('discrete') === 1;
 
+            // Stock y costo ya vienen en UNIDAD DE CONSUMO desde el backend
             $('#matStock' + suffix).text(stock.toLocaleString() + ' ' + unit);
-            $('#matCost' + suffix).text('$' + cost.toFixed(2));
+            $('#matCost' + suffix).text('$' + cost.toFixed(4));
+            // Etiqueta del campo cantidad
             $('#bomUnit' + suffix).text(unit);
+
+            // Ajustar step del input según si es unidad discreta
+            const step = isDiscrete ? '1' : '0.01';
+            const inputQty = $('#bomQty' + suffix);
+            inputQty.attr('step', step);
+            inputQty.attr('min', isDiscrete ? '1' : '0.01');
+            // Guardar flag para validación posterior
+            inputQty.data('is-discrete', isDiscrete);
+
             infoBox.removeClass('d-none');
         }
 
@@ -3664,6 +3517,23 @@
         // NOTA: Event handlers para BOM ahora se bindean en bindBomEventHandlers()
         // que se llama desde initBomSelectors() después de inicializar Select2
         // ------------------------------------------------------------
+
+        // Helper: Validar cantidad según unidad
+        // La validación se basa en measurement_family de la unidad (viene del backend):
+        // - DISCRETE = no admite decimales (piezas, bolsas, etc.)
+        // - LINEAR = admite decimales (metros, litros, etc.)
+        function validarCantidadMaterial(qty, unit, isDiscreteFlag) {
+            // isDiscreteFlag viene del backend basado en measurement_family de la unidad de consumo
+            if (isDiscreteFlag && !Number.isInteger(qty)) {
+                return {
+                    valido: false,
+                    mensaje: `La unidad '${unit}' no admite decimales. Ingrese un número entero.`
+                };
+            }
+            return {
+                valido: true
+            };
+        }
 
         // Agregar material COMÚN (scope: global)
         window.addMaterialCommon = function() {
@@ -3675,8 +3545,20 @@
                 return;
             }
 
+            const opt = $('#bomMaterialSelectorGlobal option:selected');
+            const unit = opt.data('unit') || 'unid';
+            const isDiscrete = opt.data('discrete') === '1' || opt.data('discrete') === 1;
+
+            // VALIDACIÓN DECIMALES usando flag del backend
+            const validacion = validarCantidadMaterial(qty, unit, isDiscrete);
+            if (!validacion.valido) {
+                Swal.fire('Error de Cantidad', validacion.mensaje, 'warning');
+                return;
+            }
+
             // VALIDACIÓN: No permitir duplicar material que ya existe en Específicos
-            const existsInSpecific = State.bom.some(m => m.material_id == matId && m.scope === 'specific');
+            // REGLA: targets.length > 0 = específico (inferido, sin campo scope)
+            const existsInSpecific = State.bom.some(m => m.material_id == matId && m.targets && m.targets.length > 0);
             if (existsInSpecific) {
                 Swal.fire({
                     icon: 'warning',
@@ -3687,9 +3569,7 @@
                 return;
             }
 
-            const opt = $('#bomMaterialSelectorGlobal option:selected');
             const cost = parseFloat(opt.data('cost')) || 0;
-            const unit = opt.data('unit') || 'unid';
 
             const material = {
                 material_id: matId,
@@ -3700,13 +3580,13 @@
                 cost: cost,
                 unit: unit,
                 qty: qty,
-                is_primary: $('#materialIsPrimaryGlobal').is(':checked'),
-                scope: 'global',
-                targets: []
+                is_discrete: isDiscrete, // Flag del backend para validación
+                is_primary: false,
+                targets: [] // Vacío = aplica a todas las presentaciones
             };
 
-            // Verificar si ya existe
-            const existingIdx = State.bom.findIndex(m => m.material_id == matId && m.scope === 'global');
+            // Verificar si ya existe (targets vacío = común/global)
+            const existingIdx = State.bom.findIndex(m => m.material_id == matId && (!m.targets || m.targets.length === 0));
             if (existingIdx > -1) {
                 State.bom[existingIdx].qty += qty;
                 State.bom[existingIdx].calculated_total = State.bom[existingIdx].cost * State.bom[existingIdx].qty;
@@ -3722,7 +3602,6 @@
             $('#bomQtyGlobal').val('');
             $('#bomMaterialSelectorGlobal').val(null).trigger('change');
             $('#materialInfoGlobal').addClass('d-none');
-            $('#materialIsPrimaryGlobal').prop('checked', false);
         };
 
         // Agregar material ESPECÍFICO (scope: specific)
@@ -3742,7 +3621,8 @@
             }
 
             // VALIDACIÓN: No permitir duplicar material que ya existe en Comunes
-            const existsInGlobal = State.bom.some(m => m.material_id == matId && m.scope === 'global');
+            // REGLA: targets vacío o undefined = común/global (inferido, sin campo scope)
+            const existsInGlobal = State.bom.some(m => m.material_id == matId && (!m.targets || m.targets.length === 0));
             if (existsInGlobal) {
                 Swal.fire({
                     icon: 'warning',
@@ -3754,8 +3634,17 @@
             }
 
             const opt = $('#bomMaterialSelectorSpecific option:selected');
-            const cost = parseFloat(opt.data('cost')) || 0;
             const unit = opt.data('unit') || 'unid';
+            const isDiscrete = opt.data('discrete') === '1' || opt.data('discrete') === 1;
+
+            // VALIDACIÓN DECIMALES usando flag del backend
+            const validacion = validarCantidadMaterial(qty, unit, isDiscrete);
+            if (!validacion.valido) {
+                Swal.fire('Error de Cantidad', validacion.mensaje, 'warning');
+                return;
+            }
+
+            const cost = parseFloat(opt.data('cost')) || 0;
 
             const material = {
                 material_id: matId,
@@ -3766,16 +3655,15 @@
                 cost: cost,
                 unit: unit,
                 qty: qty,
+                is_discrete: isDiscrete, // Flag del backend para validación
                 is_primary: false,
-                scope: 'specific',
-                targets: [targetVariant]
+                targets: [targetVariant] // Con targets = específico para esta presentación
             };
 
-            // Verificar si ya existe exactamente igual
+            // Verificar si ya existe exactamente igual (mismo material, misma presentación)
             const existingIdx = State.bom.findIndex(m =>
                 m.material_id == matId &&
-                m.scope === 'specific' &&
-                m.targets.length === 1 &&
+                m.targets && m.targets.length === 1 &&
                 m.targets[0] === targetVariant
             );
 
@@ -3797,9 +3685,10 @@
         };
 
         // Renderizar BOM dividido en dos tablas
+        // REGLA: targets vacío/undefined = común, targets con elementos = específico
         function renderBOMSplit() {
-            const globalMaterials = State.bom.filter(m => m.scope === 'global');
-            const specificMaterials = State.bom.filter(m => m.scope === 'specific');
+            const globalMaterials = State.bom.filter(m => !m.targets || m.targets.length === 0);
+            const specificMaterials = State.bom.filter(m => m.targets && m.targets.length > 0);
 
             // Renderizar tabla GLOBAL
             const tbodyGlobal = $('#bomTableBodyGlobal');
@@ -3816,16 +3705,21 @@
                 globalMaterials.forEach((m, idx) => {
                     const realIdx = State.bom.findIndex(x => x === m);
                     totalGlobal += m.calculated_total || 0;
+
+                    // Usar flag is_discrete del backend (basado en measurement_family de la unidad)
+                    const esDiscreto = m.is_discrete === true || m.is_discrete === 1;
+                    const stepAttr = esDiscreto ? '1' : '0.01';
+                    const minAttr = esDiscreto ? '1' : '0.01';
+
                     tbodyGlobal.append(`<tr>
                         <td>
                             <div class="font-weight-bold">${m.family_name || m.name}${m.variant_name ? ' - ' + m.variant_name : ''}</div>
                             <small class="text-muted">${m.sku || ''}</small>
-                            ${m.is_primary ? '<span class="badge badge-warning badge-sm ml-1">Principal</span>' : ''}
                         </td>
                         <td class="text-center" style="min-width: 120px;">
                             <div class="input-group input-group-sm">
                                 <input type="number" class="form-control form-control-sm text-center bom-qty-input"
-                                    value="${m.qty}" step="0.01" min="0.01"
+                                    value="${m.qty}" step="${stepAttr}" min="${minAttr}"
                                     data-bom-idx="${realIdx}"
                                     onchange="updateBomQty(${realIdx}, this.value)"
                                     style="max-width: 70px;">
@@ -3867,6 +3761,11 @@
                         return v ? `${v.size} / ${v.color}` : '';
                     }).filter(Boolean).join(', ');
 
+                    // Usar flag is_discrete del backend (basado en measurement_family de la unidad)
+                    const esDiscreto = m.is_discrete === true || m.is_discrete === 1;
+                    const stepAttr = esDiscreto ? '1' : '0.01';
+                    const minAttr = esDiscreto ? '1' : '0.01';
+
                     tbodySpecific.append(`<tr>
                         <td>
                             <div class="font-weight-bold">${m.family_name || m.name}${m.variant_name ? ' - ' + m.variant_name : ''}</div>
@@ -3876,7 +3775,7 @@
                         <td class="text-center" style="min-width: 120px;">
                             <div class="input-group input-group-sm">
                                 <input type="number" class="form-control form-control-sm text-center bom-qty-input"
-                                    value="${m.qty}" step="0.01" min="0.01"
+                                    value="${m.qty}" step="${stepAttr}" min="${minAttr}"
                                     data-bom-idx="${realIdx}"
                                     onchange="updateBomQty(${realIdx}, this.value)"
                                     style="max-width: 70px;">
@@ -3895,9 +3794,6 @@
                 });
             }
             $('#bomTotalSpecific').text('$' + totalSpecific.toFixed(2));
-
-            // Total general
-            $('#bomGrandTotal').text('$' + (totalGlobal + totalSpecific).toFixed(2));
         }
 
         // Actualizar cantidad de un material en el BOM
@@ -3910,8 +3806,17 @@
             }
 
             if (idx >= 0 && idx < State.bom.length) {
-                State.bom[idx].qty = qty;
-                State.bom[idx].calculated_total = (parseFloat(State.bom[idx].cost) || 0) * qty;
+                const material = State.bom[idx];
+
+                // Validar decimales si es unidad discreta
+                if (material.is_discrete && !Number.isInteger(qty)) {
+                    Swal.fire('Error de Cantidad', `La unidad '${material.unit}' no admite decimales. Ingrese un número entero.`, 'warning');
+                    renderBOMSplit(); // Re-render to reset input
+                    return;
+                }
+
+                material.qty = qty;
+                material.calculated_total = (parseFloat(material.cost) || 0) * qty;
                 renderBOMSplit();
                 recalcFinance();
             }
@@ -3955,29 +3860,33 @@
             State.designs.forEach((d, idx) => {
                 totalStitches += parseInt(d.stitches) || 0;
 
-                // Badge de alcance (scope)
-                const scopeBadge = d.scope === 'global'
-                    ? '<span class="badge badge-dark"><i class="fas fa-globe mr-1"></i>Todas</span>'
-                    : `<span class="badge badge-info"><i class="fas fa-tag mr-1"></i>${getVariantName(d.target_variant)}</span>`;
+                // Badge de alcance - INFERIDO desde target_variant/targets
+                // REGLA: target_variant vacío/null = aplica a todas | con valor = específico
+                const isGlobal = !d.target_variant && (!d.targets || d.targets.length === 0);
+                const scopeBadge = isGlobal ?
+                    '<span class="badge badge-dark"><i class="fas fa-globe mr-1"></i>Aplica a todas</span>' :
+                    `<span class="badge badge-info"><i class="fas fa-tag mr-1"></i>Aplica a: ${getVariantName(d.target_variant)}</span>`;
 
                 // Badge de tipo de aplicación (ubicación)
-                const appTypeBadge = d.app_type_name
-                    ? `<span class="badge badge-warning"><i class="fas fa-map-marker-alt mr-1"></i>${d.app_type_name}</span>`
-                    : '<span class="badge badge-secondary">General</span>';
+                const appTypeBadge = d.app_type_name ?
+                    `<span class="badge badge-warning"><i class="fas fa-map-marker-alt mr-1"></i>${d.app_type_name}</span>` :
+                    '<span class="badge badge-secondary">General</span>';
 
                 // Badge de formato de archivo
-                const formatBadge = d.file_format
-                    ? `<span class="badge badge-light border">${d.file_format}</span>`
-                    : '';
+                const formatBadge = d.file_format ?
+                    `<span class="badge badge-light border">${d.file_format}</span>` :
+                    '';
 
                 // Preview: Prioridad 1) SVG del archivo, 2) imagen referencia, 3) placeholder
                 // NUNCA usar imágenes de diseño/variante
                 let imgHtml;
                 if (d.svg_content) {
                     // SVG inline del archivo de bordado (preview REAL)
-                    imgHtml = `<div class="d-flex align-items-center justify-content-center bg-white h-100" style="overflow: hidden;">${d.svg_content}</div>`;
+                    imgHtml =
+                        `<div class="d-flex align-items-center justify-content-center bg-white h-100" style="overflow: hidden;">${d.svg_content}</div>`;
                 } else if (d.image) {
-                    imgHtml = `<img src="${d.image}" style="max-width: 100%; max-height: 70px; object-fit: contain;" alt="Imagen de referencia">`;
+                    imgHtml =
+                        `<img src="${d.image}" style="max-width: 100%; max-height: 70px; object-fit: contain;" alt="Imagen de referencia">`;
                 } else {
                     const fmt = (d.file_format || 'EMB').toUpperCase();
                     imgHtml = `<div class="d-flex flex-column align-items-center justify-content-center bg-secondary text-white h-100 rounded" title="Sin preview">
@@ -3988,9 +3897,9 @@
 
                 // Trazabilidad: Diseño → Variante (si existe)
                 const hasVariant = d.variant_name !== null && d.variant_name !== undefined && d.variant_name !== '';
-                const originHtml = hasVariant
-                    ? `<small class="text-muted d-block text-truncate" title="${d.design_name} → ${d.variant_name}"><i class="fas fa-sitemap mr-1"></i>${d.design_name} → ${d.variant_name}</small>`
-                    : `<small class="text-muted d-block text-truncate" title="${d.design_name || 'Sin diseño'}"><i class="fas fa-paint-brush mr-1"></i>${d.design_name || 'Sin diseño'}</small>`;
+                const originHtml = hasVariant ?
+                    `<small class="text-muted d-block text-truncate" title="${d.design_name} → ${d.variant_name}"><i class="fas fa-sitemap mr-1"></i>${d.design_name} → ${d.variant_name}</small>` :
+                    `<small class="text-muted d-block text-truncate" title="${d.design_name || 'Sin diseño'}"><i class="fas fa-paint-brush mr-1"></i>${d.design_name || 'Sin diseño'}</small>`;
 
                 grid.append(`
                     <div class="col-md-4 col-sm-6 mb-3">
@@ -4102,7 +4011,8 @@
                     // Presentaciones del producto
                     let variantOptionsHtml = '';
                     State.variants.forEach(v => {
-                        variantOptionsHtml += `<option value="${v.temp_id}">${v.size} / ${v.color}</option>`;
+                        variantOptionsHtml +=
+                            `<option value="${v.temp_id}">${v.size} / ${v.color}</option>`;
                     });
                     const hasVariants = State.variants.length > 0;
 
@@ -4159,24 +4069,13 @@
                                         <div class="col-md-7">
                                             <small class="text-muted d-block mb-1">Aplicar a:</small>
                                             <div class="d-flex align-items-center flex-wrap">
-                                                <div class="custom-control custom-radio mr-3">
-                                                    <input type="radio" id="scopeGlobal" name="designScope" class="custom-control-input" value="global" checked>
-                                                    <label class="custom-control-label" for="scopeGlobal">
-                                                        <i class="fas fa-globe-americas text-primary mr-1"></i> Todas las presentaciones
-                                                    </label>
-                                                </div>
                                                 ${hasVariants ? `
-                                                <div class="custom-control custom-radio">
-                                                    <input type="radio" id="scopeSpecific" name="designScope" class="custom-control-input" value="specific">
-                                                    <label class="custom-control-label" for="scopeSpecific">
-                                                        <i class="fas fa-bullseye text-warning mr-1"></i> Solo:
-                                                    </label>
-                                                </div>
-                                                <select id="swalVariantSelect" class="form-control form-control-sm ml-2" style="width: auto; min-width: 140px;" disabled>
-                                                    <option value="">Seleccione...</option>
-                                                    ${variantOptionsHtml}
-                                                </select>
-                                                ` : '<span class="text-muted small">(Defina presentaciones primero)</span>'}
+                                                    <select id="swalVariantSelect" class="form-control form-control-sm" style="width: auto; min-width: 200px;">
+                                                        <option value="">Todas las presentaciones</option>
+                                                        ${variantOptionsHtml}
+                                                    </select>
+                                                    <small class="text-muted ml-2"><i class="fas fa-info-circle"></i> Deja vacío para aplicar a todas</small>
+                                                ` : '<span class="text-muted small"><i class="fas fa-globe-americas text-primary mr-1"></i> Aplica a todas (defina presentaciones primero)</span>'}
                                             </div>
                                         </div>
                                     </div>
@@ -4191,47 +4090,58 @@
                             renderDesignModalCards(catalog);
                             $('#designSearchInput').on('input', filterDesignModal);
                             $('#filterAppType').on('change', filterDesignModal);
-                            $('input[name="designScope"]').on('change', function() {
-                                $('#swalVariantSelect').prop('disabled', $(this).val() !== 'specific');
-                                if ($(this).val() !== 'specific') $('#swalVariantSelect').val('');
-                            });
+                            // Ya no hay radio buttons - el selector de variante determina el alcance automáticamente
                         },
                         preConfirm: () => {
                             const exportId = $('#selectedDesignId').val();
                             if (!exportId) {
-                                Swal.showValidationMessage('Seleccione una producción haciendo clic en una tarjeta');
+                                Swal.showValidationMessage(
+                                    'Seleccione una producción haciendo clic en una tarjeta'
+                                );
                                 return false;
                             }
-                            const scope = $('input[name="designScope"]:checked').val() || 'global';
-                            let targetVariant = null;
-                            if (scope === 'specific') {
-                                targetVariant = $('#swalVariantSelect').val();
-                                if (!targetVariant) {
-                                    Swal.showValidationMessage('Seleccione la presentación destino');
-                                    return false;
-                                }
-                            }
-                            // Validar duplicados
-                            const existingGlobal = State.designs.find(d => d.export_id == exportId && d.scope === 'global');
-                            if (existingGlobal) {
-                                Swal.showValidationMessage('Esta producción ya está asignada a TODAS las presentaciones');
+                            // INFERIR alcance desde selector de variante
+                            // vacío = aplica a todas | con valor = específico
+                            const targetVariant = $('#swalVariantSelect').val() || null;
+
+                            // Validar duplicados - INFERIDO desde target_variant
+                            // existingGlobal = sin target_variant
+                            const existingGlobal = State.designs.find(d => d.export_id ==
+                                exportId && !d.target_variant);
+                            if (existingGlobal && !targetVariant) {
+                                Swal.showValidationMessage(
+                                    'Esta producción ya aplica a todas las presentaciones'
+                                );
                                 return false;
                             }
-                            const existingSpecific = State.designs.filter(d => d.export_id == exportId && d.scope === 'specific');
-                            if (scope === 'global' && existingSpecific.length > 0) {
-                                Swal.showValidationMessage('Esta producción tiene asignaciones específicas. Elimínelas primero.');
+                            // existingSpecific = con target_variant
+                            const existingSpecific = State.designs.filter(d => d.export_id ==
+                                exportId && d.target_variant);
+                            if (!targetVariant && existingSpecific.length > 0) {
+                                Swal.showValidationMessage(
+                                    'Esta producción tiene asignaciones específicas. Elimínelas primero.'
+                                );
                                 return false;
                             }
-                            if (scope === 'specific' && existingSpecific.some(d => d.target_variant === targetVariant)) {
+                            if (targetVariant && existingSpecific.some(d => d
+                                    .target_variant === targetVariant)) {
                                 Swal.showValidationMessage('Ya asignada a esa presentación');
                                 return false;
                             }
                             const sel = window._designCatalog.find(d => d.id == exportId);
-                            return { exportId, scope, targetVariant, sel };
+                            return {
+                                exportId,
+                                targetVariant,
+                                sel
+                            };
                         }
                     }).then((result) => {
                         if (result.isConfirmed && result.value) {
-                            const { exportId, scope, targetVariant, sel } = result.value;
+                            const {
+                                exportId,
+                                targetVariant,
+                                sel
+                            } = result.value;
                             State.designs.push({
                                 export_id: exportId,
                                 name: sel.export_name || 'Producción',
@@ -4246,7 +4156,7 @@
                                 svg_content: sel.svg_content || null,
                                 image: sel.image_url || null,
                                 file_format: sel.file_format || '',
-                                scope: scope,
+                                // ALCANCE INFERIDO: target_variant vacío = aplica a todas
                                 target_variant: targetVariant
                             });
                             $('#toggleNoDesign').prop('checked', false);
@@ -4280,17 +4190,21 @@
             productions.forEach(p => {
                 const isAssigned = State.designs.some(d => d.export_id == p.id);
                 const assignedClass = isAssigned ? 'border-warning' : '';
-                const assignedBadge = isAssigned ? '<span class="badge badge-warning position-absolute" style="top: 6px; right: 6px; font-size: 0.7rem; z-index: 5;">YA ASIGNADO</span>' : '';
+                const assignedBadge = isAssigned ?
+                    '<span class="badge badge-warning position-absolute" style="top: 6px; right: 6px; font-size: 0.7rem; z-index: 5;">YA ASIGNADO</span>' :
+                    '';
 
                 // Preview: Prioridad 1) SVG del archivo, 2) imagen referencia, 3) placeholder
                 // NUNCA usar imágenes de diseño/variante
                 let previewHtml;
                 if (p.svg_content) {
                     // SVG inline del archivo de bordado (preview REAL)
-                    previewHtml = `<div class="d-flex align-items-center justify-content-center bg-white border rounded" style="width: 70px; height: 70px; overflow: hidden; flex-shrink: 0;">${p.svg_content}</div>`;
+                    previewHtml =
+                        `<div class="d-flex align-items-center justify-content-center bg-white border rounded" style="width: 70px; height: 70px; overflow: hidden; flex-shrink: 0;">${p.svg_content}</div>`;
                 } else if (p.image_url) {
                     // Imagen de referencia subida
-                    previewHtml = `<img src="${p.image_url}" class="border rounded" style="width: 70px; height: 70px; object-fit: contain; flex-shrink: 0;" title="Imagen de referencia">`;
+                    previewHtml =
+                        `<img src="${p.image_url}" class="border rounded" style="width: 70px; height: 70px; object-fit: contain; flex-shrink: 0;" title="Imagen de referencia">`;
                 } else {
                     // Placeholder neutro con formato del archivo
                     const fmt = (p.file_format || 'EMB').toUpperCase();
@@ -4302,9 +4216,9 @@
 
                 // Trazabilidad (origen)
                 const hasVariant = p.variant_id !== null && p.variant_id !== undefined;
-                const originText = hasVariant
-                    ? `${p.design_name} → ${p.variant_name}`
-                    : p.design_name;
+                const originText = hasVariant ?
+                    `${p.design_name} → ${p.variant_name}` :
+                    p.design_name;
 
                 const cardHtml = `
                     <div class="col-lg-4 col-md-6 mb-3">
@@ -4618,9 +4532,16 @@
             initPlugins();
             updateButtons();
 
-            // ============================================================
-            // INICIALIZACIÓN: Renderizar estado desde BD (edit) o repoblado (error validación)
-            // ============================================================
+            // --- AUTO-RECOVERY FIX: Browser Back/Autocomplete ---
+            // Si el navegador restauró el nombre pero no el SKU (común en campos readonly),
+            // regenerar el SKU automáticamente al cargar.
+            setTimeout(() => {
+                const initialName = $('#inpName').val();
+                const initialSku = $('#inpSku').val();
+                if (initialName && !initialSku) {
+                    generateSKU();
+                }
+            }, 500); // Small delay to allow plugins/browser to settle
 
             // En modo EDIT o CLONE: precargar campos del formulario
             if ((isEditMode || isCloneMode) && State.definition) {
@@ -4633,32 +4554,49 @@
                 $('#finLeadTime, #productionLeadTime, #revLeadTime').val(leadTimeVal);
 
                 // Precargar imagen principal existente
-                @if(isset($editMode) && $editMode && isset($product) && $product->primary_image_url)
-                setTimeout(function() {
-                    const existingImg = '{{ $product->primary_image_url }}';
-                    if (existingImg) {
-                        $('#imgPreview').attr('src', existingImg);
-                        $('#dropzonePlaceholder').addClass('d-none');
-                        $('#dropzonePreview').removeClass('d-none').addClass('d-flex align-items-center justify-content-center');
-                    }
-                }, 100);
+                @if (isset($editMode) && $editMode && isset($product) && $product->primary_image_url)
+                    setTimeout(function() {
+                        const existingImg = '{{ $product->primary_image_url }}';
+                        if (existingImg) {
+                            $('#imgPreview').attr('src', existingImg);
+                            $('#dropzonePlaceholder').addClass('d-none');
+                            $('#dropzonePreview').removeClass('d-none').addClass(
+                                'd-flex align-items-center justify-content-center');
+                        }
+                    }, 100);
+                @elseif(session('product_temp_image'))
+                    // Recuperar imagen temporal tras error de validación
+                    setTimeout(function() {
+                        const tempImg = '{{ asset("storage/" . session("product_temp_image.path", "")) }}';
+                        if (tempImg && tempImg.indexOf('storage/tmp/product_images') > -1) {
+                            $('#imgPreview').attr('src', tempImg);
+                            $('#dropzonePlaceholder').addClass('d-none');
+                            $('#dropzonePreview').removeClass('d-none').addClass(
+                                'd-flex align-items-center justify-content-center');
+                        }
+                    }, 100);
                 @endif
             }
 
-            // En modo EDIT o CLONE: precargar campos financieros que existen en document ready
-            if ((isEditMode || isCloneMode) && State.financials) {
+            // Precargar campos financieros desde State (aplica a edit, clone, y error de validación)
+            if (State.financials) {
                 const fin = State.financials;
                 if (fin.labor_cost && fin.labor_cost > 0) {
                     $('#finLaborInput').val(parseFloat(fin.labor_cost).toFixed(2));
                 }
-                if (fin.margin && fin.margin > 0) {
-                    $('#revProfitMargin, #finProfitMargin').val(fin.margin);
-                }
+                // FORCE DEFAULT MARGIN 30 if not set
+                if (!fin.margin) fin.margin = 30;
+
+                $('#revProfitMargin, #finProfitMargin').val(fin.margin);
+
                 // Tiempo de producción desde financials
-                if (State.financials.lead_time > 0) {
-                    $('#revLeadTime').val(State.financials.lead_time);
+                if (fin.lead_time > 0) {
+                    $('#revLeadTime').val(fin.lead_time);
                 }
-                // NOTA: #revFinalPrice se precarga en renderReview() cuando se entra al paso 6
+            } else {
+                // If NO State.financials yet (New Product), init default
+                State.financials = {};
+                State.financials.margin = 30;
             }
 
             // Renderizar datos precargados
@@ -4675,7 +4613,8 @@
                 if (typeof renderExtrasTable === 'function') renderExtrasTable();
             }
             // Recalcular finanzas si hay datos
-            if ((State.bom && State.bom.length > 0) || (State.designs && State.designs.length > 0) || (State.extras && State.extras.length > 0)) {
+            if ((State.bom && State.bom.length > 0) || (State.designs && State.designs.length > 0) || (State
+                    .extras && State.extras.length > 0)) {
                 if (typeof recalcFinance === 'function') recalcFinance();
             }
 
@@ -4728,90 +4667,20 @@
             });
         });
 
-        // Scope selection toggle function
-        window.selectScope = function(scope) {
-            // Remove active from all buttons
-            $('.scope-toggle-btn').removeClass('active');
-
-            // Add active to clicked button
-            if (scope === 'global') {
-                $('#btnScopeGlobal').addClass('active');
-                $('#specificVariantsContainer').addClass('d-none');
-            } else {
-                $('#btnScopeSpecific').addClass('active');
-                $('#specificVariantsContainer').removeClass('d-none');
-            }
-
-            // Set value
-            $('#materialScopeValue').val(scope);
-        };
-
-        // --- INLINE SCOPE SELECTION (NEW - Replaces Modal for BOM) ---
-        window.setInlineScope = function(scope) {
-            $('.scope-inline-btn').removeClass('active btn-primary').addClass('btn-outline-secondary');
-            $(`.scope-inline-btn[data-scope="${scope}"]`).removeClass('btn-outline-secondary').addClass(
-                'active btn-primary');
-            $('#inlineScopeValue').val(scope);
-
-            if (scope === 'specific') {
-                $('#inlineVariantsContainer').removeClass('d-none');
-                // Populate variants selector
-                const vSel = $('#inlineTargetVariants');
-                vSel.empty();
-                State.variants.forEach(v => {
-                    vSel.append(`<option value="${v.temp_id}">${v.size} / ${v.color}</option>`);
-                });
-                // Initialize Select2 if not already
-                if (!vSel.hasClass('select2-hidden-accessible')) {
-                    vSel.select2({
-                        width: '100%',
-                        placeholder: 'Seleccione variantes...'
-                    });
-                }
-            } else {
-                $('#inlineVariantsContainer').addClass('d-none');
-            }
-        };
-
-        // Cost Preview for BOM
-        window.updateBomCostPreview = function() {
-            const opt = $('#bomMaterialSelector option:selected');
-            const qty = parseFloat($('#bomQty').val()) || 0;
-            const cost = parseFloat(opt.data('cost')) || 0;
-
-            if (qty > 0 && cost > 0) {
-                const total = qty * cost;
-                $('#bomCostPreviewValue').text(`$${total.toFixed(2)}`);
-                $('#bomCostPreview').removeClass('d-none');
-            } else {
-                $('#bomCostPreview').addClass('d-none');
-            }
-        };
-
-        // Direct Add Material (No Modal)
+        // Direct Add Material (No Modal) - LEGACY, actualizado para inferir scope desde targets
         window.addMaterialDirect = function() {
             let matId = $('#bomMaterialSelector').val();
             if (Array.isArray(matId)) matId = matId[0];
             const qty = parseFloat($('#bomQty').val());
-            const scope = $('#inlineScopeValue').val();
 
             if (!matId || !qty) {
                 Swal.fire('Error', 'Complete los datos del material', 'warning');
                 return;
             }
 
-            if (!scope) {
-                Swal.fire('Error', 'Seleccione un alcance (Global o Específico)', 'warning');
-                return;
-            }
-
-            let targets = [];
-            if (scope === 'specific') {
-                targets = $('#inlineTargetVariants').val() || [];
-                if (targets.length === 0) {
-                    Swal.fire('Error', 'Seleccione al menos una variante destino', 'warning');
-                    return;
-                }
+            // Obtener targets seleccionados (si hay)
+            let targets = $('#inlineTargetVariants').val() || [];
+            if (targets.length > 0) {
                 targets.sort();
             }
 
@@ -4825,13 +4694,13 @@
                 cost: parseFloat(opt.data('cost')),
                 unit: opt.data('unit'),
                 qty: qty,
-                is_primary: $('#materialIsPrimary').is(':checked')
+                is_primary: $('#materialIsPrimary').is(':checked'),
+                targets: targets // Vacío = aplica a todas, con elementos = específico
             };
 
-            // Check for existing entry
+            // Check for existing entry (mismo material, mismos targets)
             const existingIndex = State.bom.findIndex(item => {
                 if (item.material_id != material.material_id) return false;
-                if (item.scope !== scope) return false;
                 const itemTargets = (item.targets || []).sort().join(',');
                 const newTargets = targets.join(',');
                 return itemTargets === newTargets;
@@ -4852,12 +4721,8 @@
                 });
             } else {
                 // Add new
-                State.bom.push({
-                    ...material,
-                    scope,
-                    targets,
-                    calculated_total: material.cost * material.qty
-                });
+                material.calculated_total = material.cost * material.qty;
+                State.bom.push(material);
             }
 
             renderBOM();
@@ -4867,7 +4732,6 @@
             $('#bomQty').val('');
             $('#bomMaterialSelector').val(null).trigger('change');
             $('#bomCostPreview').addClass('d-none');
-            setInlineScope('global'); // Reset to global
             $('#inlineTargetVariants').val(null).trigger('change');
             $('#materialIsPrimary').prop('checked', false);
         };
@@ -4945,15 +4809,6 @@
             }
         }
 
-        // Clear all filters (Legacy UI) - NO sobrescribir window.clearDesignFilters del modal nuevo
-        // Esta función se mantiene para compatibilidad con el grid estático si existe
-        function clearDesignFiltersLegacy() {
-            $('#searchDesign').val('');
-            $('#filterDesignBase').val('');
-            $('#filterAppType').val('');
-            filterDesignExports();
-        }
-
         // View mode toggle (grid/list)
         window.setDesignViewMode = function(mode) {
             const $container = $('#designGrid');
@@ -4985,97 +4840,7 @@
             }
         };
 
-        // --- DESIGN ZOOM MODAL ---
-        window.showDesignZoom = function(imageUrl, title) {
-            if (!imageUrl || imageUrl === 'undefined' || imageUrl === '') {
-                Swal.fire({
-                    title: title || 'Diseño',
-                    text: 'No hay imagen disponible para este diseño.',
-                    icon: 'info',
-                    confirmButtonColor: '#3085d6'
-                });
-                return;
-            }
-
-            Swal.fire({
-                title: title || 'Vista Ampliada',
-                imageUrl: imageUrl,
-                imageAlt: title || 'Diseño',
-                width: 'auto',
-                padding: '1rem',
-                showCloseButton: true,
-                showConfirmButton: false,
-                customClass: {
-                    image: 'swal2-design-zoom-image'
-                }
-            });
-        };
-
-        // NOTE: loadTemplates() and initPlugins() are defined earlier in the file (around line 3094-3131)
-        // Do not duplicate them here
-
-        // --- NAVIGATION ---
-        window.navigate = function(direction) {
-            if (direction === 1 && !validateStep(State.step)) return;
-            const nextStep = State.step + direction;
-            if (nextStep > 6) {
-                submitForm();
-                return;
-            }
-            if (nextStep < 1) return;
-
-            $(`#step${State.step}-content`).addClass('d-none');
-
-            // Visual update based on direction
-            const currentStepItem = $(`.stepper-item[data-step="${State.step}"]`);
-            if (direction === 1) {
-                // Forward: Mark current as completed
-                currentStepItem.removeClass('active').addClass('completed');
-            } else {
-                // Backward: Reset current to default (not completed, not active)
-                currentStepItem.removeClass('active completed');
-            }
-
-            State.step = nextStep;
-
-            $(`#step${State.step}-content`).removeClass('d-none');
-            const newStepItem = $(`.stepper-item[data-step="${State.step}"]`);
-            newStepItem.addClass('active');
-
-            // When going back, the step we're returning to should NOT be green
-            if (direction === -1) {
-                newStepItem.removeClass('completed');
-            }
-
-            // Logic Hooks
-            if (State.step === 2) updateVariantCountBadge();
-            if (State.step === 3) {
-                // BOM: Verificar presentaciones y inicializar selectores
-                if (State.variants.length === 0) {
-                    $('#bomBlockedState').removeClass('d-none');
-                    $('#bomActiveState').addClass('d-none');
-                } else {
-                    $('#bomBlockedState').addClass('d-none');
-                    $('#bomActiveState').removeClass('d-none');
-                    initBomSelectors();
-                    renderBOMSplit();
-                }
-            }
-            if (State.step === 4) syncDesignCardsWithState(); // FIX-3: Re-apply selected state
-            if (State.step === 5) renderExtrasTable();
-            if (State.step === 6) renderReview();
-
-            updateButtons();
-            window.scrollTo(0, 0);
-
-            // Force AdminLTE layout recalculation
-            setTimeout(() => {
-                $(window).trigger('resize');
-                if ($.fn.Layout) $('body').Layout('fix');
-            }, 300);
-        };
-
-        // FIX-3: Sync design card visual state with State.designs
+        // Sync design card visual state with State.designs
         // Updated for new flat UI structure using export_id
         function syncDesignCardsWithState() {
             // Reset all first - support both old and new card classes
@@ -5113,75 +4878,7 @@
             }
         }
 
-        function validateStep(step) {
-            if (step === 1) {
-                const name = $('#inpName').val();
-                const categoryId = $('#inpCategory').val();
-                if (!name || !categoryId) {
-                    Swal.fire('Falta información', 'Nombre y Categoría son obligatorios', 'warning');
-                    return false;
-                }
-                State.definition = {
-                    name,
-                    sku: $('#inpSku').val() || '', // SKU is now optional
-                    category_id: categoryId,
-                    category: $('#inpCategory option:selected').text(),
-                    desc: $('#inpDesc').val()
-                };
-            }
-            if (step === 2) {
-                // OBLIGATORIO: Al menos una presentación para continuar a Materiales
-                if (State.variants.length === 0) {
-                    Swal.fire({
-                        title: 'Presentaciones requeridas',
-                        html: 'Debes agregar al menos <strong>una presentación</strong> (talla y color) antes de continuar.<br><br>Los materiales se asignan a las presentaciones del producto.',
-                        icon: 'warning',
-                        confirmButtonText: 'Entendido'
-                    });
-                    return false;
-                }
-            }
-            if (step === 3) {
-                // FIX: Blocking Warning for empty BOM (Async handling)
-                if (State.bom.length === 0 && !bypassBomValidation) {
-                    Swal.fire({
-                        title: '¿Continuar sin Materiales?',
-                        text: "El costo de materiales será $0.00. Use esto solo para servicios o productos intangibles.",
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonText: 'Sí, continuar',
-                        cancelButtonText: 'Revisar',
-                        reverseButtons: true, // Forces "Revisar" (Cancel) to Left, "Sí" (Confirm) to Right
-                        confirmButtonColor: '#28a745',
-                        cancelButtonColor: '#6c757d'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            bypassBomValidation = true;
-                            navigate(1); // Retry navigation
-                            // Reset flag after small delay or not needed if we change step
-                            setTimeout(() => {
-                                bypassBomValidation = false;
-                            }, 500);
-                        }
-                    });
-
-                    // BLOCK navigation immediately so the stepper doesn't update to "Completed"
-                    return false;
-                }
-            }
-            if (step === 4) {
-                // SIMPLIFICADO: Diseño es read-only, siempre permite continuar
-                // El toggle se marca automáticamente si no hay diseños
-                if (State.designs.length === 0) {
-                    $('#toggleNoDesign').prop('checked', true);
-                }
-                return true;
-            }
-            return true;
-        }
-
-        // Feature: Toggle No Design Mode
-        // Updated to disable all filter controls in new UI
+        // Toggle No Design Mode - disables all filter controls
         window.toggleNoDesignMode = function() {
             const isChecked = $('#toggleNoDesign').is(':checked');
             if (isChecked) {
@@ -5219,13 +4916,13 @@
         // (navigateToStep function is defined earlier in the stepper navigation section)
         // --- REVOLUTIONARY: Dynamic badges in stepper ---
         function updateStepperBadges() {
-            // Badge for Step 2 (Presentaciones/Variants count)
-            const variantCount = State.variants.length;
-            if (variantCount > 0) {
-                $('#badgeStep2').text(variantCount).removeClass('d-none');
-            } else {
-                $('#badgeStep2').addClass('d-none');
-            }
+            // Badge for Step 2 (Presentaciones/Variants count) - REMOVED
+            // const variantCount = State.variants.length;
+            // if (variantCount > 0) {
+            //     $('#badgeStep2').text(variantCount).removeClass('d-none');
+            // } else {
+            //     $('#badgeStep2').addClass('d-none');
+            // }
 
             // Badge for Step 3 (Receta/BOM cost)
             const bomCost = State.bom.reduce((sum, m) => sum + (m.cost || 0), 0);
@@ -5288,15 +4985,40 @@
             $('#btnConfirmGenerateVariants').prop('disabled', combinations === 0);
         }
 
-        // Reset modal on open
+        // Reset modal on open (SYNC WITH STATE)
         $('#modalGenerarVariantes').on('show.bs.modal', function() {
             $('.variant-toggle-item').removeClass('selected');
-            modalSelectedSizes = [];
-            modalSelectedColors = [];
+
+            // Get currently active IDs from State
+            const activeSizeIds = [...new Set(State.variants.map(v => v.size_id))];
+            const activeColorIds = [...new Set(State.variants.map(v => v.color_id))];
+
+            // Sync UI: Select Sizes
+            $('#sizesToggleList .variant-toggle-item').each(function() {
+                if (activeSizeIds.includes($(this).data('id'))) {
+                    $(this).addClass('selected');
+                }
+            });
+
+            // Sync UI: Select Colors
+            $('#colorsToggleList .variant-toggle-item').each(function() {
+                if (activeColorIds.includes($(this).data('id'))) {
+                    $(this).addClass('selected');
+                }
+            });
+
+            // Update internal modal state
             updateModalSelectionCounts();
+
+            // Update button text
+            if (State.variants.length > 0) {
+                $('#btnConfirmGenerateVariants').html('<i class="fas fa-sync mr-1"></i> Actualizar');
+            } else {
+                $('#btnConfirmGenerateVariants').html('<i class="fas fa-bolt mr-1"></i> Generar');
+            }
         });
 
-        // Generate variants from modal
+        // Generate variants from modal (SYNC LOGIC: ADD/REMOVE)
         window.generateVariantsFromModal = function() {
             const baseSku = $('#inpSku').val();
 
@@ -5310,36 +5032,56 @@
                 return;
             }
 
-            let addedCount = 0;
-            let duplicateCount = 0;
-
+            // 1. Calculate Desired Matrix (Set of "sizeId_colorId")
+            const desiredSet = new Set();
             modalSelectedSizes.forEach(s => {
                 modalSelectedColors.forEach(c => {
-                    // Check duplicate
-                    const exists = State.variants.find(v =>
-                        v.size_id == s.id && v.color_id == c.id
-                    );
-
-                    if (exists) {
-                        duplicateCount++;
-                        return;
-                    }
-
-                    const sku = `${baseSku}-${s.text.charAt(0)}-${c.text.substring(0,3)}`.toUpperCase();
-                    const tempId = Math.random().toString(36).substr(2, 9);
-
-                    State.variants.push({
-                        temp_id: tempId,
-                        sku,
-                        size: s.text,
-                        color: c.text,
-                        size_id: s.id,
-                        color_id: c.id,
-                        stock_alert: 0 // Default stock mínimo
-                    });
-
-                    addedCount++;
+                    desiredSet.add(`${s.id}_${c.id}`);
                 });
+            });
+
+            // 2. Identify Variants to Remove (Present in State but NOT in Desired)
+            const toRemove = State.variants.filter(v =>
+                !desiredSet.has(`${v.size_id}_${v.color_id}`)
+            );
+
+            // 3. Identify Variants to Add (In Desired but NOT in State)
+            const toAdd = [];
+            modalSelectedSizes.forEach(s => {
+                modalSelectedColors.forEach(c => {
+                    const exists = State.variants.some(v => v.size_id == s.id && v.color_id == c.id);
+                    if (!exists) {
+                        toAdd.push({
+                            s,
+                            c
+                        });
+                    }
+                });
+            });
+
+            // Execute Removals
+            let removedCount = 0;
+            toRemove.forEach(v => {
+                deleteVariantData(v.temp_id);
+                removedCount++;
+            });
+
+            // Execute Additions
+            let addedCount = 0;
+            toAdd.forEach(item => {
+                const sku = `${baseSku}-${item.s.text.charAt(0)}-${item.c.text.substring(0,3)}`.toUpperCase();
+                const tempId = Math.random().toString(36).substr(2, 9);
+
+                State.variants.push({
+                    temp_id: tempId,
+                    sku,
+                    size: item.s.text,
+                    color: item.c.text,
+                    size_id: item.s.id,
+                    color_id: item.c.id,
+                    stock_alert: 0
+                });
+                addedCount++;
             });
 
             // Close modal
@@ -5350,20 +5092,20 @@
             updateStepperBadges();
 
             // Feedback
-            if (duplicateCount > 0 && addedCount > 0) {
+            if (addedCount > 0 || removedCount > 0) {
                 Swal.fire({
-                    icon: 'info',
-                    title: 'Variantes generadas',
-                    html: `<b>${addedCount}</b> variantes nuevas.<br><b>${duplicateCount}</b> duplicadas omitidas.`,
-                    timer: 2500,
+                    icon: 'success',
+                    title: 'Actualizado',
+                    html: `Variantes agregadas: <b>${addedCount}</b><br>Variantes eliminadas: <b>${removedCount}</b>`,
+                    timer: 2000,
                     showConfirmButton: false
                 });
-            } else if (duplicateCount > 0 && addedCount === 0) {
+            } else {
                 Swal.fire({
-                    icon: 'warning',
+                    icon: 'info',
                     title: 'Sin cambios',
-                    text: 'Todas las combinaciones ya existen.',
-                    timer: 2000,
+                    text: 'La configuración actual ya coincide con la selección.',
+                    timer: 1500,
                     showConfirmButton: false
                 });
             }
@@ -5414,7 +5156,7 @@
                         </td>
                     </tr>`);
             });
-            $('#variantCountBadge').text(State.variants.length);
+            // $('#variantCountBadge').text(State.variants.length);
 
             // Tooltips
             $('[data-toggle="tooltip"]').tooltip();
@@ -5434,98 +5176,14 @@
             $('#modalGenerarVariantes').modal('show');
         };
 
-        // LEGACY generateMatrix backup (mantener para pruebas):
-        window.generateMatrixLegacy = function() {
-            const sizes = $('#selSizes').select2('data');
-            const colors = $('#selColors').select2('data');
-            const baseSku = $('#inpSku').val();
-
-            if (!sizes.length || !colors.length || !baseSku) {
-                Swal.fire('Error', 'Verifique SKU base, tallas y colores', 'error');
-                return;
-            }
-
-            let addedCount = 0;
-            let duplicateCount = 0;
-
-            sizes.forEach(s => {
-                colors.forEach(c => {
-                    const exists = State.variants.find(v =>
-                        v.size_id == s.id && v.color_id == c.id
-                    );
-
-                    if (exists) {
-                        duplicateCount++;
-                        return;
-                    }
-
-                    const sku = `${baseSku}-${s.text.charAt(0)}-${c.text.substring(0,3)}`.toUpperCase();
-                    const tempId = Math.random().toString(36).substr(2, 9);
-
-                    State.variants.push({
-                        temp_id: tempId,
-                        sku,
-                        size: s.text,
-                        color: c.text,
-                        size_id: s.id,
-                        color_id: c.id,
-                        stock_alert: 0
-                    });
-
-                    addedCount++;
-                });
-            });
-
-            renderVariantsTable();
-            updateStepperBadges();
-            $('#selSizes').val(null).trigger('change');
-            $('#selColors').val(null).trigger('change');
-
-            if (duplicateCount > 0 && addedCount > 0) {
-                Swal.fire({
-                    icon: 'info',
-                    title: 'Variantes generadas',
-                    html: `<b>${addedCount}</b> variantes nuevas agregadas.<br><b>${duplicateCount}</b> duplicadas omitidas.`,
-                    timer: 2500,
-                    showConfirmButton: false
-                });
-            } else if (duplicateCount > 0 && addedCount === 0) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Sin cambios',
-                    text: 'Todas las combinaciones ya existen.',
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-            } else if (addedCount > 0) {
-                /* Swal.fire({
-                    icon: 'success',
-                    title: '¡Generado!',
-                    text: `${addedCount} variantes agregadas.`,
-                    timer: 1500,
-                    showConfirmButton: false
-                }); */
-            }
-
-            // Hide placeholder row and update count badge
-            $('#noVariantsRow').hide();
-            $('#variantCountBadge').text(State.variants.length);
-
-            // Clear selections after generating
-            $('#selSizes').val(null).trigger('change');
-            $('#selColors').val(null).trigger('change');
-        };
-
-        window.removeVariant = function(id, btn) {
-            const variantToRemove = State.variants.find(v => v.temp_id === id);
-
+        // Helper to remove variant data cleanly
+        function deleteVariantData(id) {
             // Remove the variant
             State.variants = State.variants.filter(v => v.temp_id !== id);
-            $(btn).closest('tr').remove();
 
             // CASCADE DELETE: Clean BOM items that targeted this variant
+            // REGLA: targets vacío/undefined = aplica a todas (no eliminar)
             State.bom = State.bom.filter(m => {
-                if (m.scope === 'global') return true;
                 if (!m.targets || m.targets.length === 0) return true;
 
                 // Remove this variant from targets
@@ -5536,8 +5194,8 @@
             });
 
             // CASCADE DELETE: Clean Designs that targeted this variant
+            // REGLA: targets vacío/undefined = aplica a todas (no eliminar)
             State.designs = State.designs.filter(d => {
-                if (d.scope === 'global') return true;
                 if (!d.targets || d.targets.length === 0) return true;
 
                 // Remove this variant from targets
@@ -5546,6 +5204,18 @@
                 // If no targets left, remove the design entry
                 return d.targets.length > 0;
             });
+        }
+
+        window.removeVariant = function(id, btn) {
+            const variantToRemove = State.variants.find(v => v.temp_id === id);
+
+            // Perform deletion
+            deleteVariantData(id);
+
+            // Update UI
+            if (btn) {
+                $(btn).closest('tr').remove();
+            }
 
             // Re-render BOM table and recalculate
             renderBOM();
@@ -5577,12 +5247,14 @@
             }
 
             // URL original que usabas para traer conversiones/variantes
-            const url = '{{ route('admin.material-variants.conversiones', ['materialId' => ':id']) }}'.replace(':id',
+            const url = '{{ route('admin.material-variants.conversiones', ['materialId' => ':id']) }}'.replace(
+                ':id',
                 familyId);
 
             $.get(url, function(data) {
                 const sel = $('#bomMaterialSelector');
-                sel.empty().prop('disabled', false); // Removed dummy option for Multiple Select2 compatibility
+                sel.empty().prop('disabled',
+                    false); // Removed dummy option for Multiple Select2 compatibility
 
                 data.forEach(v => {
                     // Adaptar según la respuesta JSON real de tu controlador
@@ -5663,54 +5335,57 @@
                 targets.sort();
             }
 
-            // --- SMART MERGE ALGORITHM ---
+            // --- SMART MERGE ALGORITHM (sin campo scope, inferido desde targets) ---
             const matId = tempMaterial.material_id;
+            const isGlobalAddition = targets.length === 0;
 
-            // CASE 1: GLOBAL ADDITION
-            if (scope === 'global') {
-                // Find existing global
-                const existingGlobalIdx = State.bom.findIndex(m => m.material_id == matId && m.scope === 'global');
+            // CASE 1: GLOBAL ADDITION (targets vacío)
+            if (isGlobalAddition) {
+                // Find existing global (targets vacío)
+                const existingGlobalIdx = State.bom.findIndex(m =>
+                    m.material_id == matId && (!m.targets || m.targets.length === 0));
 
                 // Remove ANY specific instances of this material (Global overrides specific)
-                const specificsRemoved = State.bom.filter(m => m.material_id == matId && m.scope === 'specific').length;
-                State.bom = State.bom.filter(m => !(m.material_id == matId && m.scope === 'specific'));
+                const specificsRemoved = State.bom.filter(m =>
+                    m.material_id == matId && m.targets && m.targets.length > 0).length;
+                State.bom = State.bom.filter(m =>
+                    !(m.material_id == matId && m.targets && m.targets.length > 0));
 
                 if (existingGlobalIdx > -1) {
                     // Update existing Global
                     const existing = State.bom[existingGlobalIdx];
-                    // Logic: If user adds global again, do we sum? Yes, usually implies adding more qty.
                     existing.qty = (parseFloat(existing.qty) * 100 + parseFloat(tempMaterial.qty) * 100) / 100;
                     existing.calculated_total = existing.cost * existing.qty;
 
                     Swal.fire('Info',
-                        `Se actualizó la cantidad Global (Anteriores específicos removidos: ${specificsRemoved})`,
+                        `Se actualizó la cantidad (Anteriores específicos removidos: ${specificsRemoved})`,
                         'info');
                 } else {
                     // Create new Global
                     const costTotal = tempMaterial.cost * tempMaterial.qty;
                     State.bom.push({
                         ...tempMaterial,
-                        scope: 'global',
-                        targets: [],
+                        targets: [], // Vacío = aplica a todas
                         calculated_total: costTotal
                     });
                     if (specificsRemoved > 0) {
                         Swal.fire('Info',
-                            `Se aplicó Globalmente. (Se absorbieron ${specificsRemoved} asignaciones específicas)`,
+                            `Aplica a todas las presentaciones. (Se absorbieron ${specificsRemoved} asignaciones específicas)`,
                             'success');
                     } else {
-                        Swal.fire('Agregado', 'Material agregado globalmente', 'success');
+                        Swal.fire('Agregado', 'Material aplica a todas las presentaciones', 'success');
                     }
                 }
             }
 
-            // CASE 2: SPECIFIC ADDITION
+            // CASE 2: SPECIFIC ADDITION (targets con elementos)
             else {
-                // Check if GLOBAL exists
-                const hasGlobal = State.bom.some(m => m.material_id == matId && m.scope === 'global');
+                // Check if GLOBAL exists (targets vacío)
+                const hasGlobal = State.bom.some(m =>
+                    m.material_id == matId && (!m.targets || m.targets.length === 0));
                 if (hasGlobal) {
                     Swal.fire('Conflicto',
-                        'Este material ya está asignado GLOBALMENTE. Elimínelo primero si desea asignarlo específicamente.',
+                        'Este material ya aplica a todas las presentaciones. Elimínelo primero si desea asignarlo a presentaciones específicas.',
                         'warning');
                     return;
                 }
@@ -5718,7 +5393,7 @@
                 // Clean Overlaps: If any existing specific entry targets the same variants, remove those targets from the old entry
                 let overlapped = 0;
                 State.bom.forEach((m, idx) => {
-                    if (m.material_id == matId && m.scope === 'specific' && m.targets) {
+                    if (m.material_id == matId && m.targets && m.targets.length > 0) {
                         // Find intersection
                         const intersection = m.targets.filter(t => targets.includes(t));
                         if (intersection.length > 0) {
@@ -5729,44 +5404,31 @@
                     }
                 });
 
-                // Cleanup: Remove entries that became empty
+                // Cleanup: Remove entries that became empty (tenían targets pero ya no)
                 State.bom = State.bom.filter(m => {
-                    if (m.scope === 'specific' && (!m.targets || m.targets.length === 0)) return false;
+                    // Si tenía targets y ahora está vacío, eliminar
+                    if (m.targets && m.targets.length === 0) return false;
                     return true;
                 });
-
-                // Now Add/Update the current request
-                // Search for exact match of targets? Or just add new entry?
-                // Logic: "New wins". Since we stripped overlaps, we can just add a new entry for these targets.
-                // BUT, if there was an EXACT match previously (now empty), we might want to sum.
-                // However, since we just stripped it, it's safer to just push a new entry.
-                // Or: Check if there is an existing entry with EXACTLY these targets (that wasn't stripped)?
-
-                // Simple approach: Always push new entry (the "Strip" phase ensures no duplicates).
-                // Wait, if I add [A] Qty 1, then add [A] Qty 1 again? 
-                // The strip phase would remove [A] from the first entry, making it empty. Then we add new [A] Qty 1.
-                // This means valid Overwrite (Replace), not Sum.
-                // The user said: "si ya esta se actualiza". Update implies SUM or REPLACE?
-                // In BOM, usually you correct the value. So REPLACE is safer than obscure summing.
 
                 const costTotal = tempMaterial.cost * tempMaterial.qty;
                 State.bom.push({
                     ...tempMaterial,
-                    scope: 'specific',
                     targets: targets,
                     calculated_total: costTotal
                 });
 
                 if (overlapped > 0) {
-                    Swal.fire('Actualizado', `Se reasignaron ${overlapped} variantes a esta nueva regla.`, 'success');
+                    Swal.fire('Actualizado', `Se reasignaron ${overlapped} variantes a esta nueva regla.`,
+                        'success');
                 } else {
-                    Swal.fire('Agregado', 'Material agregado a variantes seleccionadas', 'success');
+                    Swal.fire('Agregado', 'Material agregado a presentaciones seleccionadas', 'success');
                 }
             }
 
             $('#materialScopeModal').modal('hide');
 
-            renderBOM();
+            renderBOMSplit();
             recalcFinance();
 
             // Reset form
@@ -5776,83 +5438,20 @@
             $('#targetVariantsSelect').val(null).trigger('change');
         };
 
+        // Legacy alias - redirects to unified renderBOMSplit
         function renderBOM() {
-            const tbody = $('#bomTableBody');
-            tbody.empty();
-            let total = 0;
-
-            State.bom.forEach((m, idx) => {
-                total += m.calculated_total;
-
-                let badge = '';
-                let variantInfo = '';
-
-                if (m.scope === 'global') {
-                    badge = '<span class="badge badge-pill badge-secondary">Global</span>';
-                    variantInfo = '<span class="text-muted small">Aplica a todas</span>';
-                } else {
-                    badge = '<span class="badge badge-pill badge-info">Específico</span>';
-
-                    if (m.targets && m.targets.length > 0) {
-                        const targetNames = m.targets.map(tid => {
-                            const v = State.variants.find(va => va.temp_id === tid);
-                            // ONLY Name/Color, NO SKU
-                            return v ? `${v.size} (${v.color})` : '';
-                        }).filter(Boolean).join(', ');
-
-                        variantInfo =
-                            `<div class="font-weight-bold text-dark" style="font-size: 0.95em;">${targetNames}</div>`;
-                    } else {
-                        variantInfo =
-                            '<span class="text-danger small"><i class="fas fa-exclamation-triangle"></i> Sin asignación</span>';
-                    }
-                }
-
-                tbody.append(`<tr>
-                <td class="align-middle border-right">
-                    <div class="font-weight-bold text-dark" style="font-size: 1rem;">
-                        ${m.family_name || m.name} ${m.variant_name ? `- ${m.variant_name}` : ''}
-                    </div>
-                    <div class="text-muted text-uppercase" style="font-size: 0.9rem;">
-                        ${m.sku || 'N/A'}
-                    </div>
-                    ${m.is_primary ? '<span class="badge badge-warning text-white mt-1"><i class="fas fa-star text-white"></i> Principal</span>' : ''}
-                </td>
-                <td class="align-middle border-right" style="max-width: 300px;">
-                    ${variantInfo}
-                </td>
-                <td class="align-middle text-center border-right" style="width: 150px;">
-                    <div class="input-group input-group-sm">
-                        <input type="number" class="form-control text-center font-weight-bold" 
-                               value="${m.qty}" step="0.01" min="0.01" 
-                               onchange="updateBomQty(${idx}, this.value)"
-                               style="font-size: 1rem;">
-                        <div class="input-group-append">
-                            <span class="input-group-text small">${m.unit}</span>
-                        </div>
-                    </div>
-                </td>
-                <td class="align-middle text-center border-right">${badge}</td>
-                <td class="align-middle font-weight-bold text-center border-right" style="font-size: 1.1rem;">$${m.calculated_total.toFixed(2)}</td>
-                <td class="align-middle text-center"><button class="btn btn-sm btn-outline-danger btn-icon rounded-circle" onclick="removeBOM(${idx})"><i class="fas fa-trash"></i></button></td>
-            </tr>`);
-            });
-            State.financials.material_cost = total;
-            $('#bomTotalCostBadge').text(`Total: $${total.toFixed(2)}`);
+            if (typeof renderBOMSplit === 'function') {
+                renderBOMSplit();
+            }
         }
 
+        // Legacy alias - uses removeBomItem
         window.removeBOM = function(idx) {
-            State.bom.splice(idx, 1);
-            renderBOM();
-            recalcFinance();
-        };
-
-        window.updateBomQty = function(idx, newQty) {
-            const qty = parseFloat(newQty);
-            if (qty > 0 && State.bom[idx]) {
-                State.bom[idx].qty = qty;
-                State.bom[idx].calculated_total = (State.bom[idx].cost * qty);
-                renderBOM(); // Re-render to update cost column
+            if (typeof window.removeBomItem === 'function') {
+                window.removeBomItem(idx);
+            } else {
+                State.bom.splice(idx, 1);
+                renderBOMSplit();
                 recalcFinance();
             }
         };
@@ -5894,7 +5493,8 @@
 
             // Fallback: Construct preview URL from export ID
             if (!capturedImageUrl && exportData.id) {
-                capturedImageUrl = "{{ route('admin.production.preview', ['export' => '__ID__']) }}".replace('__ID__',
+                capturedImageUrl = "{{ route('admin.production.preview', ['export' => '__ID__']) }}".replace(
+                    '__ID__',
                     exportData.id);
             }
 
@@ -5920,7 +5520,8 @@
 
             // Populate modal - NEW STRUCTURE
             $('#designModalLabel').text(appLabel.toUpperCase()); // Title = Label name in UPPERCASE
-            $('#designModalOrigin').html(`<i class="fas fa-sitemap mr-1"></i>${originText}`); // Subtitle = Origin
+            $('#designModalOrigin').html(
+                `<i class="fas fa-sitemap mr-1"></i>${originText}`); // Subtitle = Origin
 
             // Format position name: replace underscores/hyphens with spaces and capitalize
             const positionFormatted = appType.replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -5941,8 +5542,8 @@
             // Show configured positions
             showConfiguredPositions(exportData.design_id, exportData.id);
 
-            // Reset modal state
-            selectDesignScope('global');
+            // Reset modal state - limpiar selector de variantes
+            selectDesignScope(false); // Ocultar selector, limpiar valores
             $('#justAddedFeedback').addClass('d-none');
 
             // Populate product variants selector
@@ -5964,18 +5565,13 @@
         };
 
         // NEW: Confirm add design directly (position already defined from production)
+        // ALCANCE INFERIDO: targets vacío = aplica a todas
         window.confirmAddDesignDirect = function() {
             if (!tempDesign) return;
 
-            const scope = $('#designScopeValue').val();
-            let targets = [];
-
-            if (scope === 'specific') {
-                targets = $('#designTargetVariants').val() || [];
-                if (targets.length === 0) {
-                    Swal.fire('Error', 'Seleccione al menos una variante', 'warning');
-                    return;
-                }
+            // Obtener targets seleccionados (vacío = aplica a todas)
+            let targets = $('#designTargetVariants').val() || [];
+            if (targets.length > 0) {
                 targets.sort();
             }
 
@@ -5986,10 +5582,9 @@
                 'General';
             const positionSlug = tempDesign.application_type || 'general';
 
-            // Check for duplicate
+            // Check for duplicate (mismo diseño, mismos targets)
             const existingIndex = State.designs.findIndex(d => {
                 if (d.export_id !== tempDesign.export_id) return false;
-                if (d.scope !== scope) return false;
                 const dTargets = (d.targets || []).sort().join(',');
                 const newTargets = targets.join(',');
                 return dTargets === newTargets;
@@ -6000,7 +5595,7 @@
                 return;
             }
 
-            // Add design to state
+            // Add design to state - ALCANCE INFERIDO desde targets
             State.designs.push({
                 id: tempDesign.id,
                 export_id: tempDesign.export_id,
@@ -6009,8 +5604,7 @@
                 position_id: null, // No position ID needed - using application_type
                 position_name: positionName,
                 position_slug: positionSlug,
-                scope,
-                targets,
+                targets, // Vacío = aplica a todas, con elementos = específico
                 variant_id: tempDesign.variant_id || null,
                 variant_name: tempDesign.variant_name || null,
                 dimensions: tempDesign.dimensions || null,
@@ -6032,153 +5626,6 @@
             showConfiguredPositions(tempDesign.id, tempDesign.export_id);
         };
 
-        // OLD: Toggle Design (for backup/old UI compatibility)
-        window.toggleDesign = function(el, id, name, stitches, imageUrl, dimensions, colors, variants = []) {
-            const card = $(el);
-            const appType = card.data('app-type') || ''; // Capture Application Type
-
-            // ROBUST IMAGE CAPTURE V2: Scan all images in card
-            let robustImage = imageUrl || '';
-            let foundBestImage = null;
-
-            // 1. Prioritize image that is NOT placeholder and has substantial length
-            card.find('img').each(function() {
-                const src = $(this).attr('src');
-                if (src && src.length > 15 && !src.includes('placeholder') && !src.includes('data:image')) {
-                    foundBestImage = src;
-                    return false; // Break loop
-                }
-            });
-
-            // 2. If found better image, use it.
-            if (foundBestImage) {
-                robustImage = foundBestImage;
-            } else if (!robustImage || robustImage.includes('placeholder')) {
-                // FALLBACK 1: Try img src (any)
-                const anyImg = card.find('img').attr('src');
-                if (anyImg) robustImage = anyImg;
-
-                // FALLBACK 2: Check for background-image (common in galleries)
-                if (!robustImage || robustImage.includes('placeholder')) {
-                    const bgDiv = card.find('[style*="background-image"]');
-                    if (bgDiv.length > 0) {
-                        const style = bgDiv.css('background-image');
-                        // Extract url(...) content: url("...") or url('...')
-                        if (style && style.includes('url')) {
-                            const match = style.match(/url\(["']?([^"']*)["']?\)/);
-                            if (match && match[1]) robustImage = match[1];
-                        }
-                    }
-                }
-            }
-
-            // ALWAYS open config modal - whether already selected or not
-            // User removes positions from INSIDE the modal using X buttons
-            tempDesign = {
-                id,
-                name,
-                stitches: stitches || 0,
-                imageUrl: robustImage, // Use robust image
-                element: el,
-                variants: variants // Store loaded variants
-            };
-
-            // Populate modal basics
-            $('#designModalName').text(name);
-            $('#designModalStitches').text(stitches ? stitches.toLocaleString() : 0);
-            $('#designModalDimensions').text(dimensions || '-');
-            $('#designModalColors').text(colors ? colors + ' col' : '0 col');
-
-            // Show App Type Badge
-            if (appType) {
-                $('#designModalAppType').text(
-                    `Lugar de aplicación: ${appType.charAt(0).toUpperCase() + appType.slice(1)}`).removeClass(
-                    'd-none');
-            } else {
-                $('#designModalAppType').addClass('d-none');
-            }
-
-            // Primary Image Logic (Default to parent, override if variant selected logic later)
-            if (robustImage) {
-                $('#designModalImage').attr('src', robustImage).show();
-            } else {
-                $('#designModalImage').hide();
-            }
-
-            // --- VARIANT SELECTOR LOGIC ---
-            const variantSelect = $('#designVariantSelect');
-            const variantContainer = $('#designVariantContainer');
-
-            variantSelect.empty();
-
-            if (variants && variants.length > 0) {
-                variantSelect.append('<option value="">Seleccione Versión...</option>');
-                variants.forEach(v => {
-                    let vImg = v.primary_image ? "{{ asset('storage') }}/" + v.primary_image.url : imageUrl;
-                    variantSelect.append(
-                        `<option value="${v.id}" data-image="${vImg}" data-code="${v.sku}">${v.name}</option>`
-                    );
-                });
-                variantContainer.removeClass('d-none');
-            } else {
-                variantContainer.addClass('d-none');
-            }
-
-            // Show already configured positions for THIS design
-            showConfiguredPositions(id);
-
-            // Reset modal state
-            $('#designPositionSelect').val(null).trigger('change');
-            selectDesignScope('global');
-            $('#justAddedFeedback').addClass('d-none');
-
-            // Initialize Select2 for Position (with search)
-            if (!$('#designPositionSelect').hasClass('select2-hidden-accessible')) {
-                $('#designPositionSelect').select2({
-                    dropdownParent: $('#designConfigModal'),
-                    width: '100%',
-                    placeholder: 'Buscar posición...',
-                    allowClear: true
-                });
-            }
-
-            // AUTO-SELECT POSITION based on App Type (Smart Match)
-            if (appType) {
-                // Try to find an option that matches the App Type
-                // We iterate options to match text content roughly
-                let foundVal = null;
-                $('#designPositionSelect option').each(function() {
-                    const optText = $(this).text().toLowerCase();
-                    // Loose matching: if option text contains the app type (e.g. "Pecho" in "Pecho Izquierdo")
-                    // OR if app type contains the option text
-                    if (optText.includes(appType) || appType.includes(optText)) {
-                        foundVal = $(this).val();
-                        return false; // Break loop
-                    }
-                });
-
-                if (foundVal) {
-                    $('#designPositionSelect').val(foundVal).trigger('change');
-                }
-            }
-
-            // Populate variants selector
-            const vSel = $('#designTargetVariants');
-            vSel.empty();
-            State.variants.forEach(v => {
-                vSel.append(`<option value="${v.temp_id}">${v.sku} (${v.size}/${v.color})</option>`);
-            });
-            if (!vSel.hasClass('select2-hidden-accessible')) {
-                vSel.select2({
-                    dropdownParent: $('#designConfigModal'),
-                    width: '100%',
-                    placeholder: 'Seleccione variantes...'
-                });
-            }
-
-            $('#designConfigModal').modal('show');
-        };
-
         // Show already configured positions for this design WITH VARIANT TRACEABILITY + DELETE
         // Updated to support filtering by export_id for flat UI
         function showConfiguredPositions(designId, exportId = null) {
@@ -6195,21 +5642,24 @@
                 list.empty();
                 configured.forEach((d, idx) => {
                     // Find the actual index in State.designs
+                    // ALCANCE INFERIDO: comparar targets en lugar de scope
                     const stateIndex = State.designs.findIndex(sd =>
                         sd.id === d.id &&
                         sd.position_id === d.position_id &&
-                        sd.scope === d.scope
+                        JSON.stringify(sd.targets || []) === JSON.stringify(d.targets || [])
                     );
 
+                    // ALCANCE INFERIDO: targets con elementos = específico
                     let variantInfo = '';
-                    if (d.scope === 'specific' && d.targets && d.targets.length > 0) {
+                    const hasTargets = d.targets && d.targets.length > 0;
+                    if (hasTargets) {
                         const variantNames = d.targets.map(tid => {
                             const v = State.variants.find(va => va.temp_id === tid);
                             return v ? `${v.size} (${v.color})` : '';
                         }).filter(Boolean).join(', ');
                         variantInfo = `<small class="d-block text-dark">→ ${variantNames}</small>`;
                     } else {
-                        variantInfo = `<small class="d-block text-muted">→ Todas las variantes</small>`;
+                        variantInfo = `<small class="d-block text-muted">→ Aplica a todas</small>`;
                     }
 
                     list.append(`
@@ -6247,7 +5697,8 @@
 
                 // Show feedback
                 if (removed) {
-                    $('#justAddedText').html(`<span class="text-danger">Eliminado: ${removed.position_name}</span>`);
+                    $('#justAddedText').html(
+                        `<span class="text-danger">Eliminado: ${removed.position_name}</span>`);
                     $('#justAddedFeedback').removeClass('d-none alert-success').addClass('alert-warning');
                 }
             }
@@ -6268,10 +5719,14 @@
             // Find card - try export_id first, then design_id (support both card classes)
             let card;
             if (exportId) {
-                card = $(`.design-export-card[data-export-id="${exportId}"], .design-card[data-export-id="${exportId}"]`);
+                card = $(
+                    `.design-export-card[data-export-id="${exportId}"], .design-card[data-export-id="${exportId}"]`
+                );
             }
             if (!card || !card.length) {
-                card = $(`.design-export-card[data-design-id="${designId}"], .design-card[data-design-id="${designId}"]`);
+                card = $(
+                    `.design-export-card[data-design-id="${designId}"], .design-card[data-design-id="${designId}"]`
+                );
             }
 
             if (count > 0) {
@@ -6303,16 +5758,13 @@
             }
         }
 
-        window.selectDesignScope = function(scope) {
-            $('.design-scope-btn').removeClass('active btn-info').addClass('btn-outline-secondary');
-            $(`.design-scope-btn[data-scope="${scope}"]`).removeClass('btn-outline-secondary').addClass(
-                'active btn-info');
-            $('#designScopeValue').val(scope);
-
-            if (scope === 'specific') {
+        // Toggle design variants selector visibility
+        window.selectDesignScope = function(showVariants) {
+            if (showVariants === 'specific' || showVariants === true) {
                 $('#designVariantsContainer').removeClass('d-none');
             } else {
                 $('#designVariantsContainer').addClass('d-none');
+                $('#designTargetVariants').val(null).trigger('change');
             }
         };
 
@@ -6322,39 +5774,36 @@
             const positionId = $('#designPositionSelect').val();
             const positionName = $('#designPositionSelect option:selected').text();
             const positionSlug = $('#designPositionSelect option:selected').data('slug');
-            const scope = $('#designScopeValue').val();
 
             if (!positionId) {
                 Swal.fire('Error', 'Seleccione una posición para el bordado', 'warning');
                 return;
             }
 
-            let targets = [];
-            if (scope === 'specific') {
-                targets = $('#designTargetVariants').val() || [];
-                if (targets.length === 0) {
-                    Swal.fire('Error', 'Seleccione al menos una variante', 'warning');
-                    return;
-                }
+            // Obtener targets seleccionados (vacío = aplica a todas)
+            let targets = $('#designTargetVariants').val() || [];
+            if (targets.length > 0) {
                 targets.sort();
             }
 
-            // Check for duplicate (same design + position + scope + targets)
+            // Check for duplicate (same design + position + targets)
+            // ALCANCE INFERIDO desde targets
             const existingIndex = State.designs.findIndex(d => {
                 if (d.id !== tempDesign.id) return false;
                 if (d.position_id != positionId) return false;
-                if (d.scope !== scope) return false;
                 const dTargets = (d.targets || []).sort().join(',');
                 const newTargets = targets.join(',');
                 return dTargets === newTargets;
             });
 
             if (existingIndex > -1) {
-                Swal.fire('Atención', 'Este diseño ya está configurado con la misma posición y alcance', 'info');
+                Swal.fire('Atención', 'Este diseño ya está configurado con la misma posición y alcance',
+                    'info');
                 return;
             }
 
             // Add design to state (SEPARATE RECORD per position)
+            // ALCANCE INFERIDO: targets vacío = aplica a todas
             State.designs.push({
                 id: tempDesign.id,
                 export_id: tempDesign.export_id || null, // NEW: Store export_id for flat UI
@@ -6363,8 +5812,7 @@
                 position_id: positionId,
                 position_name: positionName,
                 position_slug: positionSlug,
-                scope,
-                targets,
+                targets, // Vacío = aplica a todas, con elementos = específico
                 variant_id: tempDesign.variant_id || null, // Store if from variant
                 variant_name: tempDesign.variant_name || null,
                 dimensions: tempDesign.dimensions || null // Store dimensions for reference
@@ -6389,11 +5837,6 @@
         function renderDesignsSummary() {
             updateDesignsAddedCount();
         }
-
-        window.updateDesignPosition = function(id, pos) {
-            const d = State.designs.find(d => d.id === id);
-            if (d) d.position = pos;
-        };
 
         // --- STEP 5: EXTRAS & FINANCE ---
         window.addExtra = function() {
@@ -6474,7 +5917,8 @@
                 let thumbContent;
                 if (d.svg_content) {
                     // SVG inline del archivo de bordado
-                    thumbContent = `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; overflow:hidden;">${d.svg_content}</div>`;
+                    thumbContent =
+                        `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; overflow:hidden;">${d.svg_content}</div>`;
                 } else if (d.image || d.image_url) {
                     const imgSrc = d.image || d.image_url;
                     thumbContent = `
@@ -6537,21 +5981,24 @@
                     }
                     matCost += subTotal;
 
-                    let matName = m.name || (m.family_name ? `${m.family_name} - ${m.variant_name}` : 'Material');
+                    let matName = m.name || (m.family_name ? `${m.family_name} - ${m.variant_name}` :
+                        'Material');
 
-                    // Badge según scope (solo visual, ambos suman)
-                    let scopeBadge = m.scope === 'global'
-                        ? `<span class="badge badge-dark custom-scope-badge mr-1" style="font-size: 0.8rem;">Base</span>`
-                        : `<span class="badge badge-info custom-scope-badge mr-1" style="font-size: 0.8rem;">Específico</span>`;
+                    // Badge según alcance inferido (targets vacío = aplica a todas)
+                    const isGlobal = !m.targets || m.targets.length === 0;
+                    let scopeBadge = isGlobal ?
+                        `<span class="badge badge-dark custom-scope-badge mr-1" style="font-size: 0.8rem;">Aplica a todas</span>` :
+                        `<span class="badge badge-info custom-scope-badge mr-1" style="font-size: 0.8rem;">Aplica a:</span>`;
 
                     // Info de presentaciones para materiales específicos
                     let targetInfo = '';
-                    if (m.scope === 'specific' && m.targets && m.targets.length > 0) {
+                    if (!isGlobal && m.targets && m.targets.length > 0) {
                         const targetNames = m.targets.map(tid => {
                             const v = State.variants.find(va => va.temp_id === tid);
                             return v ? `${v.size}-${v.color}` : tid;
                         }).join(', ');
-                        targetInfo = `<br><small class="text-info"><i class="fas fa-tag mr-1"></i>${targetNames}</small>`;
+                        targetInfo =
+                            `<br><small class="text-info"><i class="fas fa-tag mr-1"></i>${targetNames}</small>`;
                     }
 
                     html += `<div class="calc-mat-item border-bottom pb-2 mb-2">
@@ -6675,7 +6122,13 @@
 
             // CRÍTICO: Preservar price y margin existentes al recalcular
             const existingPrice = State.financials.price || 0;
-            const existingMargin = State.financials.margin || 35;
+            const existingMargin = State.financials.margin || 30; // UPDATED: Default 30%
+
+            // Calcular precio sugerido
+            let suggestedPrice = 0;
+            if (existingMargin < 100 && totalCost > 0) {
+                suggestedPrice = totalCost / (1 - (existingMargin / 100));
+            }
 
             State.financials = {
                 material_cost: matCost,
@@ -6685,7 +6138,8 @@
                 total_cost: totalCost,
                 lead_time: leadTime,
                 price: existingPrice,
-                margin: existingMargin
+                margin: existingMargin,
+                suggested_price: suggestedPrice
             };
 
             recalcReviewPrice();
@@ -6782,7 +6236,7 @@
             $('#revTotalCost').text(`$${f.total_cost.toFixed(2)}`);
 
             // Initialize pricing controls
-            $('#revMarginInput').val(f.margin || 35);
+            $('#revMarginInput').val(f.margin || 30); // UPDATED: Default 30%
 
             // CRÍTICO: Precargar precio personalizado ANTES de recalcular
             if (f.price > 0) {
@@ -6807,30 +6261,57 @@
             $('#revSuggestedPrice').text(`$${suggestedPrice.toFixed(2)}`);
             $('#revFinalPrice').attr('placeholder', suggestedPrice.toFixed(2));
 
-            // CRÍTICO: NO sobreescribir precio personalizado si ya existe
-            // Solo establecer si no hay precio o es el primer cálculo
-            const currentInputPrice = parseFloat($('#revFinalPrice').val()) || 0;
-            if (currentInputPrice <= 0 && f.price <= 0) {
-                f.price = suggestedPrice;
-            }
+            // CRÍTICO: Solo sugerir vía placeholder, NO rellenar valor automáticamente
+            // El usuario debe escribir explícitamente el precio final para confirmar
+            // const currentInputPrice = parseFloat($('#revFinalPrice').val()) || 0;
+            // if (currentInputPrice <= 0 && f.price <= 0) {
+            //     f.price = suggestedPrice; 
+            // }
         };
 
-        // Update header when manual price is entered
-        window.updateHeaderPrice = function() {
+        // VALIDACIÓN: Precio final >= costo total
+        window.validateAndUpdatePrice = function() {
             const customPrice = parseFloat($('#revFinalPrice').val());
-            if (customPrice > 0) {
+            const totalCost = State.financials.total_cost || 0;
+
+            if (customPrice > 0 && customPrice < totalCost) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Precio menor al costo',
+                    html: `El precio ingresado (<strong>$${customPrice.toFixed(2)}</strong>) es menor al costo total (<strong>$${totalCost.toFixed(2)}</strong>).<br><br>Esto generará pérdidas. ¿Desea continuar?`,
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, usar este precio',
+                    cancelButtonText: 'Corregir',
+                    confirmButtonColor: '#dc3545'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        State.financials.price = customPrice;
+                    } else {
+                        $('#revFinalPrice').val('').focus();
+                    }
+                });
+            } else if (customPrice > 0) {
                 State.financials.price = customPrice;
             }
         };
 
         // Design Zoom Modal
         window.showDesignZoom = function(imageUrl, designName) {
+            if (!imageUrl || imageUrl === 'undefined' || imageUrl === '') {
+                Swal.fire({
+                    title: designName || 'Diseño',
+                    text: 'No hay imagen disponible para este diseño.',
+                    icon: 'info',
+                    confirmButtonColor: '#3085d6'
+                });
+                return;
+            }
             Swal.fire({
-                title: designName,
+                title: designName || 'Vista Ampliada',
                 imageUrl: imageUrl,
                 imageWidth: 400,
                 imageHeight: 400,
-                imageAlt: designName,
+                imageAlt: designName || 'Diseño',
                 showConfirmButton: false,
                 showCloseButton: true,
                 customClass: {
@@ -6845,6 +6326,33 @@
             // VALIDACIONES CRÍTICAS ANTES DE GUARDAR
             // ============================================================
 
+            // 0. Precio por Millar (obligatorio > 0 si hay diseños)
+            const stitchRate = parseFloat($('#finStitchRate').val()) || 0;
+            const hasDesigns = State.designs && State.designs.length > 0;
+            if (hasDesigns && stitchRate <= 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Precio por Millar Requerido',
+                    text: 'Tiene diseños asignados. Debe especificar el precio por millar de puntadas (mayor a $0).',
+                    confirmButtonText: 'Entendido'
+                });
+                $('#finStitchRate').focus();
+                return;
+            }
+
+            // 0b. Margen de Ganancia (0-100)
+            const margin = parseFloat($('#revMarginInput').val()) || 0;
+            if (margin < 0 || margin > 100) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Margen Inválido',
+                    text: 'El margen de ganancia debe estar entre 0% y 100%.',
+                    confirmButtonText: 'Entendido'
+                });
+                $('#revMarginInput').focus();
+                return;
+            }
+
             // 1. Tiempo de Producción (obligatorio > 0)
             const leadTime = parseInt($('#revLeadTime').val()) || parseInt(State.financials.lead_time) || 0;
             if (leadTime < 1) {
@@ -6858,7 +6366,8 @@
             }
 
             // 2. Mano de Obra (obligatorio > 0)
-            const laborCost = parseFloat($('#finLaborInput').val()) || parseFloat(State.financials.labor_cost) || 0;
+            const laborCost = parseFloat($('#finLaborInput').val()) || parseFloat(State.financials
+                .labor_cost) || 0;
             if (laborCost <= 0) {
                 Swal.fire({
                     icon: 'warning',
@@ -6870,8 +6379,12 @@
             }
 
             // 3. Precio Final (obligatorio > 0)
-            // CRÍTICO: Sincronizar valor del input ANTES de validar
-            const inputFinalPrice = parseFloat($('#revFinalPrice').val()) || 0;
+            // CRÍTICO: Si no hay precio custom, usar el sugerido
+            let inputFinalPrice = parseFloat($('#revFinalPrice').val()) || 0;
+            if (inputFinalPrice <= 0) {
+                // Usar precio sugerido si no hay override
+                inputFinalPrice = State.financials.suggested_price || 0;
+            }
             if (inputFinalPrice > 0) {
                 State.financials.price = inputFinalPrice;
             }
@@ -6953,8 +6466,10 @@
                 const term = String($(this).val() || '').toLowerCase();
                 $('#designGrid .design-export-item, #designGrid .col-md-3').each(function() {
                     const card = $(this).find('.design-card');
-                    const name = String($(this).data('name') || card.find('h5, h6').text() || '').toLowerCase();
-                    const appType = String($(this).data('app-type') || card.data('app-type') || '').toLowerCase();
+                    const name = String($(this).data('name') || card.find('h5, h6').text() || '')
+                        .toLowerCase();
+                    const appType = String($(this).data('app-type') || card.data('app-type') || '')
+                        .toLowerCase();
 
                     if (name.includes(term) || appType.includes(term) || term === '') {
                         $(this).show();
@@ -7003,14 +6518,24 @@
             if (State.designs.length > 0) renderDesignCards();
             if (State.extras.length > 0) renderExtrasTable();
 
-            // Always recalc finance if we have data
-            if (State.financials.total_cost > 0 || State.financials.price > 0) {
-                // Restore UI values from State
-                $('#revLeadTime').val(State.financials.lead_time || 1);
-                $('#revMarginInput').val(State.financials.margin || 35);
-                $('#revFinalPrice').val(State.financials.price || 0);
+            // Restore financial UI values from State (incluyendo labor_cost)
+            if (State.financials) {
+                if (State.financials.labor_cost > 0) {
+                    $('#finLaborInput').val(parseFloat(State.financials.labor_cost).toFixed(2));
+                }
+                if (State.financials.lead_time > 0) {
+                    $('#revLeadTime').val(State.financials.lead_time);
+                }
+                // Siempre restaurar margin (default 30)
+                $('#revMarginInput').val(State.financials.margin || 30);
+                if (State.financials.price > 0) {
+                    $('#revFinalPrice').val(State.financials.price);
+                }
 
-                recalcFinance();
+                // Recalcular si hay cualquier dato financiero
+                if (State.financials.total_cost > 0 || State.financials.price > 0 || State.financials.labor_cost > 0) {
+                    recalcFinance();
+                }
             }
 
             // Re-bind on modal event to ensure width is correct
@@ -7102,7 +6627,8 @@
                                 }
                             });
                         } else {
-                            Swal.fire('Error', data.message || 'No se pudo guardar el borrador', 'error');
+                            Swal.fire('Error', data.message || 'No se pudo guardar el borrador',
+                                'error');
                         }
                     })
                     .catch(error => {
@@ -7114,12 +6640,33 @@
             // === EXIT CONFIRMATION (Unsaved Changes) ===
             let formSubmitting = false;
 
+            // Store initial state for comparison (to detect actual changes)
+            const initialStateSnapshot = {
+                name: State.definition.name || '',
+                variantsCount: State.variants.length,
+                bomCount: State.bom.length,
+                designsCount: State.designs.length,
+                extrasCount: State.extras.length
+            };
+
             function hasUnsavedData() {
-                return State.variants.length > 0 ||
-                    State.bom.length > 0 ||
-                    State.designs.length > 0 ||
-                    State.extras.length > 0 ||
-                    State.definition.name;
+                // In create mode: check if user has entered any data
+                if (!isEditMode && !isCloneMode) {
+                    const currentName = $('#inpName').val() || State.definition.name || '';
+                    return currentName.trim().length > 0 ||
+                        State.variants.length > 0 ||
+                        State.bom.length > 0 ||
+                        State.designs.length > 0 ||
+                        State.extras.length > 0;
+                }
+
+                // In edit/clone mode: check if anything has changed from initial state
+                const currentName = $('#inpName').val() || State.definition.name || '';
+                return currentName !== initialStateSnapshot.name ||
+                    State.variants.length !== initialStateSnapshot.variantsCount ||
+                    State.bom.length !== initialStateSnapshot.bomCount ||
+                    State.designs.length !== initialStateSnapshot.designsCount ||
+                    State.extras.length !== initialStateSnapshot.extrasCount;
             }
 
             // Native browser beforeunload (backup)
@@ -7174,20 +6721,22 @@
             });
 
             // === BROWSER BACK BUTTON HANDLER ===
-            // Push initial state
-            if (history.state === null) {
-                history.pushState({
-                    page: 'product-create'
-                }, '', window.location.href);
-            }
+            // Solo activar en CREATE mode (no en Edit/Clone donde datos ya están guardados)
+            if (!isEditMode && !isCloneMode) {
+                // Push initial state only once
+                if (history.state === null || history.state.page !== 'product-create') {
+                    history.pushState({ page: 'product-create' }, '', window.location.href);
+                }
 
-            // Handle browser back button
-            window.addEventListener('popstate', function(e) {
-                if (hasUnsavedData() && !formSubmitting) {
-                    // Push state back to prevent navigation
-                    history.pushState({
-                        page: 'product-create'
-                    }, '', window.location.href);
+                // Handle browser back button
+                window.addEventListener('popstate', function(e) {
+                    // If no unsaved data, allow normal navigation
+                    if (!hasUnsavedData() || formSubmitting) {
+                        return; // Let browser handle navigation normally
+                    }
+
+                    // Push state back to prevent navigation while showing modal
+                    history.pushState({ page: 'product-create' }, '', window.location.href);
 
                     Swal.fire({
                         title: '¿Salir sin guardar?',
@@ -7202,60 +6751,40 @@
                         denyButtonColor: '#dc3545'
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            window.saveAsDraft(null); // No redirect URL, just history.back() logic?
-                            // Actually, saveAsDraft needs to handle the redirect or callback.
-                            // Let's modify saveAsDraft to accept a callback or handle history.
-                            // For simplicity, we can just pass 'BACK' and handle it or pass nothing and do history.back() in the promise.
-                            // However, since saveAsDraft is async, we can't easily pause the popstate.
-                            // But we already pushed state. So we just need to go back after save.
-
-                            // Re-implementing explicitly here for clarity or modifying saveAsDraft?
-                            // Let's modify saveAsDraft usage here to use a custom callback if possible, 
-                            // OR just duplicate the fetch logic? No, let's reuse.
-
-                            // Hack: pass a special string or function?
-                            // Let's just define a specialized callback.
-                            window.saveAsDraftAction(() => {
-                                history.back();
-                                // We need to create a wrapper or modify saveAsDraft to take a function.
+                            // Save draft and then go back
+                            window.saveAsDraft(function() {
+                                formSubmitting = true;
+                                history.go(-2); // Go back past the pushed state
                             });
                         } else if (result.isDenied) {
                             formSubmitting = true;
-                            history.back();
+                            history.go(-2); // Go back past the pushed state
                         }
                         // Dismiss = stay on page (state already pushed back)
                     });
-                }
-            });
+                });
+            }
         });
 
-        // ============================================================
-        // NOTA: Lógica de imagen dropzone está en líneas ~3335-3409
-        // Este bloque duplicado fue eliminado para evitar doble click
-        // ============================================================
-
-        // ============================================================
         // MANEJO DE ERRORES DE VALIDACIÓN (Server-side)
-        // Responsabilidad: Mostrar errores de Laravel al usuario
-        // ============================================================
         @if ($errors->any())
-        (function() {
-            var errorList = @json($errors->all());
-            var errorHtml = '<ul class="text-left text-danger mb-0">';
-            errorList.forEach(function(err) {
-                errorHtml += '<li>' + err + '</li>';
-            });
-            errorHtml += '</ul>';
-
-            document.addEventListener('DOMContentLoaded', function() {
-                Swal.fire({
-                    title: '¡Atención!',
-                    html: errorHtml,
-                    icon: 'error',
-                    confirmButtonText: 'Revisar'
+            (function() {
+                var errorList = @json($errors->all());
+                var errorHtml = '<ul class="text-left text-danger mb-0">';
+                errorList.forEach(function(err) {
+                    errorHtml += '<li>' + err + '</li>';
                 });
-            });
-        })();
+                errorHtml += '</ul>';
+
+                document.addEventListener('DOMContentLoaded', function() {
+                    Swal.fire({
+                        title: '¡Atención!',
+                        html: errorHtml,
+                        icon: 'error',
+                        confirmButtonText: 'Revisar'
+                    });
+                });
+            })();
         @endif
     </script>
 @stop

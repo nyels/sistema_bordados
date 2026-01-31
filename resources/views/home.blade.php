@@ -574,7 +574,12 @@
                             })
                             .catch(function(e) {
                                 console.error(e);
-                                alert('Error al cargar datos');
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: 'Error al cargar datos',
+                                    confirmButtonColor: '#3085d6'
+                                });
                             })
                             .finally(function() {
                                 sel.disabled = false;

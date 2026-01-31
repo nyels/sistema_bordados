@@ -80,6 +80,28 @@ class InventoryMovement extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /**
+     * Relación polimórfica para obtener el modelo de referencia
+     */
+    public function reference()
+    {
+        return $this->morphTo('reference', 'reference_type', 'reference_id');
+    }
+
+    /**
+     * Obtener la compra asociada (si aplica)
+     */
+    public function getPurchaseAttribute(): ?Purchase
+    {
+        if ($this->reference_type === 'App\Models\PurchaseItem') {
+            return $this->reference?->purchase;
+        }
+        if ($this->reference_type === 'App\Models\Purchase') {
+            return $this->reference;
+        }
+        return null;
+    }
+
     /*
     |--------------------------------------------------------------------------
     | SCOPES
@@ -152,5 +174,25 @@ class InventoryMovement extends Model
     public function getFormattedTotalCostAttribute(): string
     {
         return '$' . number_format($this->total_cost, 2);
+    }
+
+    /**
+     * Obtiene una etiqueta legible para el tipo de referencia
+     */
+    public function getReferenceLabelAttribute(): string
+    {
+        $labels = [
+            'App\Models\PurchaseItem' => 'Recepción compra',
+            'App\Models\Purchase' => 'Compra',
+            'App\Models\Order' => 'Pedido',
+            'App\Models\OrderItem' => 'Item de pedido',
+            'App\Models\Production' => 'Producción',
+            'App\Models\InventoryAdjustment' => 'Ajuste de inventario',
+            'App\Models\ProductionOrder' => 'Orden de producción',
+            'App\Models\WasteEvent' => 'Merma',
+            'Manual' => 'Ajuste manual',
+        ];
+
+        return $labels[$this->reference_type] ?? class_basename($this->reference_type);
     }
 }

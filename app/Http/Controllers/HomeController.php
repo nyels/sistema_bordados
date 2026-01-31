@@ -76,7 +76,9 @@ class HomeController extends Controller
         $inicioMes = $mesActual->copy()->startOfMonth();
         $finMes = $mesActual->copy()->endOfMonth();
 
+        // PASO 6: Solo ventas CON cliente (excluye producción para stock)
         $ventasDelMes = Order::where('status', Order::STATUS_DELIVERED)
+            ->whereNotNull('cliente_id')
             ->whereBetween('created_at', [$inicioMes, $finMes])
             ->sum('total');
 
@@ -153,8 +155,9 @@ class HomeController extends Controller
         $year = (int) $request->year;
         $month = (int) $request->month;
 
-        // Verificar que el mes tiene ventas reales
+        // Verificar que el mes tiene ventas reales (excluye producción para stock)
         $tieneVentas = Order::where('status', Order::STATUS_DELIVERED)
+            ->whereNotNull('cliente_id')
             ->whereYear('created_at', $year)
             ->whereMonth('created_at', $month)
             ->exists();
@@ -184,7 +187,9 @@ class HomeController extends Controller
      */
     private function getMesesConVentas(): \Illuminate\Support\Collection
     {
+        // PASO 6: Solo meses con ventas reales (excluye producción para stock)
         return Order::where('status', Order::STATUS_DELIVERED)
+            ->whereNotNull('cliente_id')
             ->selectRaw('YEAR(created_at) as year, MONTH(created_at) as month')
             ->groupBy('year', 'month')
             ->orderByDesc('year')
@@ -227,7 +232,9 @@ class HomeController extends Controller
             $inicioMes = Carbon::createFromDate($mes['year'], $mes['month'], 1)->startOfMonth();
             $finMes = Carbon::createFromDate($mes['year'], $mes['month'], 1)->endOfMonth();
 
+            // PASO 6: Solo ventas CON cliente (excluye producción para stock)
             $total = Order::where('status', Order::STATUS_DELIVERED)
+                ->whereNotNull('cliente_id')
                 ->whereBetween('created_at', [$inicioMes, $finMes])
                 ->sum('total');
 
@@ -275,7 +282,9 @@ class HomeController extends Controller
         $inicioMes = Carbon::createFromDate($year, $month, 1)->startOfMonth();
         $finMes = Carbon::createFromDate($year, $month, 1)->endOfMonth();
 
+        // PASO 6: Solo ventas CON cliente (excluye producción para stock)
         return Order::where('status', Order::STATUS_DELIVERED)
+            ->whereNotNull('cliente_id')
             ->whereBetween('created_at', [$inicioMes, $finMes])
             ->selectRaw('WEEK(created_at, 1) as week_num, MIN(created_at) as first_day, SUM(total) as total')
             ->groupBy('week_num')
@@ -298,8 +307,10 @@ class HomeController extends Controller
         $inicioMes = Carbon::createFromDate($year, $month, 1)->startOfMonth();
         $finMes = Carbon::createFromDate($year, $month, 1)->endOfMonth();
 
+        // PASO 6: Solo ventas CON cliente (excluye producción para stock)
         return OrderItem::join('orders', 'order_items.order_id', '=', 'orders.id')
             ->where('orders.status', Order::STATUS_DELIVERED)
+            ->whereNotNull('orders.cliente_id')
             ->whereBetween('orders.created_at', [$inicioMes, $finMes])
             ->selectRaw('order_items.product_name, SUM(order_items.quantity) as cantidad, SUM(order_items.total) as valor')
             ->groupBy('order_items.product_name')

@@ -75,6 +75,14 @@ class InventoryService
 
     /**
      * Registrar ajuste de inventario
+     *
+     * @param int $variantId ID de la variante de material
+     * @param float $quantity Cantidad a ajustar
+     * @param float $unitCost Costo unitario
+     * @param bool $isPositive true = entrada, false = salida
+     * @param string|null $notes Notas del ajuste
+     * @param int|null $userId Usuario que realiza el ajuste
+     * @return InventoryMovement
      */
     public function registerAdjustment(
         int $variantId,

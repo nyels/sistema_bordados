@@ -77,34 +77,35 @@
         <div class="card-header py-2" style="background: #263238; color: white;">
             <span class="font-weight-bold">Historial de Mermas</span>
         </div>
-        <div class="card-body p-0">
-            <table id="wasteTable" class="table table-hover table-sm mb-0" style="font-size: 15px;">
-                <thead style="background-color: #343a40; color: #fff;">
+        <div class="card-body p-0 table-responsive">
+            <table id="wasteTable" class="table table-hover table-sm mb-0" style="font-size: 16px;">
+                <thead style="background-color: #000; color: #fff;">
                     <tr>
-                        <th>Fecha</th>
-                        <th>Tipo</th>
-                        <th>Descripción</th>
-                        <th class="text-right">Costo Est.</th>
-                        <th>Motivo</th>
-                        <th>Registrado por</th>
+                        <th class="text-center">Fecha</th>
+                        <th class="text-center">Tipo</th>
+                        <th class="text-center">Material</th>
+                        <th class="text-center">Cantidad</th>
+                        <th class="text-center">Costo Est.</th>
+                        <th class="text-center">Motivo</th>
+                        <th class="text-center">Registrado por</th>
                         <th class="text-center" style="width: 80px;">Ver</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($wasteEvents as $event)
                         <tr>
-                            <td>
-                                <span class="text-muted">{{ $event->created_at->format('d/m/Y') }}</span>
+                            <td class="text-center">
+                                {{ $event->created_at->format('d/m/Y') }}
                                 <br>
-                                <small class="text-muted">{{ $event->created_at->format('H:i') }}</small>
+                                <span class="text-muted">{{ $event->created_at->format('H:i') }}</span>
                             </td>
-                            <td>
-                                <span class="badge badge-{{ $event->type_color }}">
+                            <td class="text-center">
+                                <span class="badge badge-{{ $event->type_color }}" style="font-size: 14px; padding: 6px 10px;">
                                     <i class="{{ $event->type_icon }} mr-1"></i>
                                     {{ $event->type_label }}
                                 </span>
                             </td>
-                            <td>
+                            <td class="text-center">
                                 @if($event->isMaterialWaste())
                                     @php $firstItem = $event->materialItems->first(); @endphp
                                     @if($firstItem)
@@ -124,22 +125,33 @@
                                 @else
                                     @if($event->productVariant)
                                         <strong>{{ $event->productVariant->product?->name ?? 'Producto' }}</strong>
-                                        <br>
-                                        <small class="text-muted">{{ $event->formatted_quantity }} unidades</small>
                                     @else
                                         <span class="text-muted">Producto no especificado</span>
                                     @endif
                                 @endif
                             </td>
-                            <td class="text-right">
+                            <td class="text-center">
+                                @if($event->isMaterialWaste() && $event->materialItems->count() > 0)
+                                    @php $firstItem = $event->materialItems->first(); @endphp
+                                    <strong>{{ $firstItem->formatted_quantity }}</strong>
+                                    @if($event->materialItems->count() > 1)
+                                        <span class="text-muted">+ más</span>
+                                    @endif
+                                @elseif($event->isFinishedProductWaste())
+                                    <strong>{{ $event->formatted_quantity }} unidades</strong>
+                                @else
+                                    <span class="text-muted">-</span>
+                                @endif
+                            </td>
+                            <td class="text-center">
                                 <strong style="color: #c62828;">{{ $event->formatted_total_cost }}</strong>
                             </td>
-                            <td>
+                            <td class="text-center">
                                 <span title="{{ $event->reason }}" style="cursor: help;">
                                     {{ Str::limit($event->reason, 30) }}
                                 </span>
                             </td>
-                            <td>
+                            <td class="text-center">
                                 @if($event->creator)
                                     {{ $event->creator->name }}
                                 @else
@@ -148,14 +160,14 @@
                             </td>
                             <td class="text-center">
                                 <a href="{{ route('admin.waste.show', $event) }}"
-                                   class="btn btn-xs btn-outline-info" title="Ver detalle">
+                                   class="btn btn-sm btn-info" title="Ver detalle">
                                     <i class="fas fa-eye"></i>
                                 </a>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center py-4 text-muted">
+                            <td colspan="8" class="text-center py-4 text-muted">
                                 <i class="fas fa-inbox fa-2x mb-2"></i><br>
                                 No hay eventos de merma registrados
                             </td>
@@ -186,34 +198,96 @@
         font-size: 70px;
         top: 20px;
     }
+
+    /* DataTables - Botones de exportación (igual que inventario) */
+    #wasteTable_wrapper .dt-buttons {
+        background-color: transparent;
+        box-shadow: none;
+        border: none;
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+
+    #wasteTable_wrapper .dt-buttons .btn {
+        color: #fff;
+        border-radius: 4px;
+        padding: 5px 15px;
+        font-size: 14px;
+    }
+
+    .btn-default {
+        background-color: #6e7176;
+        color: #fff;
+        border: none;
+    }
 </style>
 @stop
 
 @section('js')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // DataTable simple si hay muchos registros
-    if (document.querySelectorAll('#wasteTable tbody tr').length > 10) {
-        $('#wasteTable').DataTable({
-            "pageLength": 25,
-            "order": [[0, 'desc']],
-            "language": {
-                "emptyTable": "No hay eventos de merma",
-                "info": "Mostrando _START_ a _END_ de _TOTAL_ eventos",
-                "infoEmpty": "Mostrando 0 a 0 de 0 eventos",
-                "infoFiltered": "(Filtrado de _MAX_ total eventos)",
-                "lengthMenu": "Mostrar _MENU_ eventos",
-                "search": "Buscar:",
-                "zeroRecords": "Sin resultados",
-                "paginate": {
-                    "first": "Primero",
-                    "last": "Último",
-                    "next": "Siguiente",
-                    "previous": "Anterior"
-                }
+    // DataTable con botones de exportación (igual que inventario)
+    var table = $('#wasteTable').DataTable({
+        "pageLength": 25,
+        "order": [[0, 'desc']],
+        "language": {
+            "emptyTable": "No hay eventos de merma",
+            "info": "Mostrando _START_ a _END_ de _TOTAL_ eventos",
+            "infoEmpty": "Mostrando 0 a 0 de 0 eventos",
+            "infoFiltered": "(Filtrado de _MAX_ total eventos)",
+            "lengthMenu": "Mostrar _MENU_ eventos",
+            "search": "Buscador:",
+            "zeroRecords": "Sin resultados",
+            "paginate": {
+                "first": "Primero",
+                "last": "Último",
+                "next": "Siguiente",
+                "previous": "Anterior"
             }
-        });
-    }
+        },
+        "responsive": true,
+        "lengthChange": true,
+        "autoWidth": false,
+        buttons: [
+            {
+                text: '<i class="fas fa-copy"></i> COPIAR',
+                extend: 'copy',
+                className: 'btn btn-default'
+            },
+            {
+                text: '<i class="fas fa-file-pdf"></i> PDF',
+                extend: 'pdf',
+                className: 'btn btn-danger',
+                title: 'Registro de Mermas',
+                exportOptions: { columns: ':not(:last-child)' }
+            },
+            {
+                text: '<i class="fas fa-file-csv"></i> CSV',
+                extend: 'csv',
+                className: 'btn btn-info',
+                title: 'Registro de Mermas',
+                exportOptions: { columns: ':not(:last-child)' }
+            },
+            {
+                text: '<i class="fas fa-file-excel"></i> EXCEL',
+                extend: 'excel',
+                className: 'btn btn-success',
+                title: 'Registro de Mermas',
+                exportOptions: { columns: ':not(:last-child)' }
+            },
+            {
+                text: '<i class="fas fa-print"></i> IMPRIMIR',
+                extend: 'print',
+                className: 'btn btn-default',
+                title: 'Registro de Mermas',
+                exportOptions: { columns: ':not(:last-child)' }
+            }
+        ]
+    });
+    table.buttons().container().appendTo('#wasteTable_wrapper .row:eq(0)');
 });
 </script>
 @stop

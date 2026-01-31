@@ -41,13 +41,14 @@ class MaterialCatalogSeeder extends Seeder
         }
 
         // =========================================================================
-        // TELAS
+        // TELAS (base_unit_id = metro, porque se mide en metros)
         // =========================================================================
         $telaAlgodon = Material::updateOrCreate(
             ['slug' => 'algodon-manta-blanca'],
             [
                 'uuid' => (string) Str::uuid(),
                 'material_category_id' => $catTelas->id,
+                'base_unit_id' => $metro->id,
                 'name' => 'Algodón Manta Blanca',
                 'composition' => '100% Algodón',
                 'description' => 'Manta blanca para hipiles tradicionales.',
@@ -75,6 +76,7 @@ class MaterialCatalogSeeder extends Seeder
             [
                 'uuid' => (string) Str::uuid(),
                 'material_category_id' => $catTelas->id,
+                'base_unit_id' => $metro->id,
                 'name' => 'Tela Yute Natural',
                 'composition' => '100% Yute',
                 'description' => 'Tela de yute natural para bolsas artesanales.',
@@ -102,6 +104,7 @@ class MaterialCatalogSeeder extends Seeder
             [
                 'uuid' => (string) Str::uuid(),
                 'material_category_id' => $catTelas->id,
+                'base_unit_id' => $metro->id,
                 'name' => 'Popelina Forro',
                 'composition' => '65% Polyester 35% Algodón',
                 'description' => 'Tela popelina para forro de bolsas.',
@@ -125,13 +128,14 @@ class MaterialCatalogSeeder extends Seeder
         );
 
         // =========================================================================
-        // HILOS BORDADO
+        // HILOS BORDADO (base_unit_id = cono, se compra en conos pero se consume en metros)
         // =========================================================================
         $hiloBordado = Material::updateOrCreate(
             ['slug' => 'hilo-bordado-polyester'],
             [
                 'uuid' => (string) Str::uuid(),
                 'material_category_id' => $catHilos->id,
+                'base_unit_id' => $cono->id,
                 'name' => 'Hilo Bordado Polyester 120D/2',
                 'composition' => '100% Polyester',
                 'description' => 'Hilo industrial para bordado. Cono 5000m.',
@@ -177,13 +181,14 @@ class MaterialCatalogSeeder extends Seeder
         }
 
         // =========================================================================
-        // HILO COSTURA
+        // HILO COSTURA (base_unit_id = cono)
         // =========================================================================
         $hiloCostura = Material::updateOrCreate(
             ['slug' => 'hilo-costura-algodon'],
             [
                 'uuid' => (string) Str::uuid(),
                 'material_category_id' => $catHilos->id,
+                'base_unit_id' => $cono->id,
                 'name' => 'Hilo Costura Algodón',
                 'composition' => '100% Algodón',
                 'description' => 'Hilo de costura para prendas. Cono 3000m.',
@@ -234,7 +239,7 @@ class MaterialCatalogSeeder extends Seeder
         );
 
         // =========================================================================
-        // AVÍOS
+        // AVÍOS (base_unit_id = pieza, se cuentan por unidades)
         // =========================================================================
         if ($catAvios) {
             $listonSatin = Material::updateOrCreate(
@@ -242,6 +247,7 @@ class MaterialCatalogSeeder extends Seeder
                 [
                     'uuid' => (string) Str::uuid(),
                     'material_category_id' => $catAvios->id,
+                    'base_unit_id' => $pieza->id,
                     'name' => 'Listón Satín 25mm',
                     'composition' => '100% Polyester',
                     'description' => 'Listón satinado 2.5cm para moños decorativos.',
@@ -269,6 +275,7 @@ class MaterialCatalogSeeder extends Seeder
                 [
                     'uuid' => (string) Str::uuid(),
                     'material_category_id' => $catAvios->id,
+                    'base_unit_id' => $pieza->id,
                     'name' => 'Asas Algodón Acolchadas 50cm',
                     'composition' => '100% Algodón',
                     'description' => 'Par de asas acolchadas para bolsas.',
@@ -296,6 +303,7 @@ class MaterialCatalogSeeder extends Seeder
                 [
                     'uuid' => (string) Str::uuid(),
                     'material_category_id' => $catAvios->id,
+                    'base_unit_id' => $pieza->id,
                     'name' => 'Etiqueta Bordada Marca',
                     'composition' => 'Tejido bordado',
                     'description' => 'Etiqueta con logo de marca.',
@@ -323,6 +331,7 @@ class MaterialCatalogSeeder extends Seeder
                 [
                     'uuid' => (string) Str::uuid(),
                     'material_category_id' => $catAvios->id,
+                    'base_unit_id' => $pieza->id,
                     'name' => 'Bolsa Celofán 35x35cm',
                     'composition' => 'Celofán transparente',
                     'description' => 'Bolsa para empaque de productos.',
@@ -347,7 +356,7 @@ class MaterialCatalogSeeder extends Seeder
         }
 
         // =========================================================================
-        // PELONES / ESTABILIZADORES
+        // PELONES / ESTABILIZADORES (base_unit_id = metro, se mide en metros)
         // =========================================================================
         if ($catPelones) {
             $pelonRecortable = Material::updateOrCreate(
@@ -355,6 +364,7 @@ class MaterialCatalogSeeder extends Seeder
                 [
                     'uuid' => (string) Str::uuid(),
                     'material_category_id' => $catPelones->id,
+                    'base_unit_id' => $metro->id,
                     'name' => 'Pelón Recortable',
                     'composition' => 'No tejido',
                     'description' => 'Estabilizador recortable para bordado.',

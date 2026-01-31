@@ -19,13 +19,12 @@
             <form action="{{ route('admin.waste.store-material') }}" method="POST" id="formWasteMaterial">
                 @csrf
                 <div class="modal-body">
-                    {{-- ADVERTENCIA CANÓNICA --}}
+                    {{-- ADVERTENCIA --}}
                     <div class="alert mb-3" style="background: #fff3e0; border-left: 4px solid #f57c00;">
                         <div class="d-flex align-items-start">
                             <i class="fas fa-exclamation-triangle mr-2 mt-1" style="color: #e65100;"></i>
                             <div style="font-size: 14px; color: #5d4037;">
                                 <strong>Registro Irreversible</strong><br>
-                                La merma es un registro contable definitivo. <strong>NO ajusta inventario automáticamente.</strong>
                                 Una vez registrada, no podrá editarse ni eliminarse.
                             </div>
                         </div>
@@ -55,42 +54,46 @@
                         </div>
                     </div>
 
-                    {{-- CANTIDAD --}}
-                    <div class="form-group">
-                        <label for="wasteMaterialQuantity" class="font-weight-bold">
-                            Cantidad de Merma <span class="text-danger">*</span>
-                        </label>
-                        <div class="input-group">
-                            <input type="number"
-                                   name="materials[0][quantity]"
-                                   id="wasteMaterialQuantity"
-                                   class="form-control"
-                                   step="0.01"
-                                   min="0.01"
-                                   required
-                                   placeholder="Ej: 5.00">
-                            <div class="input-group-append">
-                                <span class="input-group-text" id="wasteMaterialUnit">unidades</span>
+                    {{-- CANTIDAD Y MOTIVO EN LA MISMA FILA --}}
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="wasteMaterialQuantity" class="font-weight-bold">
+                                    Cantidad de Merma <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <input type="number"
+                                           name="materials[0][quantity]"
+                                           id="wasteMaterialQuantity"
+                                           class="form-control"
+                                           step="0.01"
+                                           min="0.01"
+                                           required
+                                           placeholder="Ej: 5.00">
+                                    <div class="input-group-append">
+                                        <span class="input-group-text" id="wasteMaterialUnit">unidades</span>
+                                    </div>
+                                </div>
+                                <small class="text-muted">Material perdido/dañado</small>
                             </div>
                         </div>
-                        <small class="text-muted">Cantidad de material perdido/dañado</small>
-                    </div>
-
-                    {{-- MOTIVO --}}
-                    <div class="form-group">
-                        <label for="wasteMaterialReason" class="font-weight-bold">
-                            <i class="fas fa-comment-alt mr-1"></i>
-                            Motivo de la Merma <span class="text-danger">*</span>
-                        </label>
-                        <textarea name="reason"
-                                  id="wasteMaterialReason"
-                                  class="form-control"
-                                  rows="3"
-                                  required
-                                  minlength="5"
-                                  maxlength="255"
-                                  placeholder="Ej: Material dañado por humedad, defecto de fábrica, material caducado..."></textarea>
-                        <small class="text-muted">Mínimo 5 caracteres. Este motivo quedará registrado permanentemente.</small>
+                        <div class="col-md-8">
+                            <div class="form-group">
+                                <label for="wasteMaterialReason" class="font-weight-bold">
+                                    <i class="fas fa-comment-alt mr-1"></i>
+                                    Motivo de la Merma <span class="text-danger">*</span>
+                                </label>
+                                <textarea name="reason"
+                                          id="wasteMaterialReason"
+                                          class="form-control"
+                                          rows="2"
+                                          required
+                                          minlength="5"
+                                          maxlength="255"
+                                          placeholder="Ej: Material dañado por humedad, defecto de fábrica, material caducado..."></textarea>
+                                <small class="text-muted">Mínimo 5 caracteres. Este motivo quedará registrado permanentemente.</small>
+                            </div>
+                        </div>
                     </div>
 
                     {{-- NOTAS ADICIONALES --}}
@@ -110,7 +113,7 @@
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">
                         <i class="fas fa-times mr-1"></i> Cancelar
                     </button>
-                    <button type="submit" class="btn btn-warning" id="btnConfirmWasteMaterial">
+                    <button type="submit" class="btn text-white" id="btnConfirmWasteMaterial" style="background: #e65100;">
                         <i class="fas fa-trash-alt mr-1"></i> Registrar Merma
                     </button>
                 </div>

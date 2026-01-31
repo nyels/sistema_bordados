@@ -84,17 +84,23 @@
                     <div class="col-md-6" style="padding-left: 30px;">
                         <div style="border-bottom: 3px solid #28a745; padding-bottom: 8px; margin-bottom: 20px;">
                             <h5 style="color: #28a745; font-weight: 600;">
-                                <i class="fas fa-balance-scale"></i> Unidades y Presentación
+                                <i class="fas fa-shopping-cart"></i> Compra y Conversiones
                             </h5>
                         </div>
 
                         <div class="row">
                             <div class="col-12">
                                 <div class="form-group">
-                                    <label>Unidad de Inventario (No editable)</label>
+                                    <label>Unidad de Compra (No editable)</label>
                                     <div class="input-group">
+                                        @php
+                                            // Obtener unidad: primero del material, luego de la categoría como fallback
+                                            $displayUnit = $material->baseUnit
+                                                ?? $material->category?->defaultInventoryUnit
+                                                ?? null;
+                                        @endphp
                                         <input type="text" class="form-control bg-light"
-                                            value="{{ $material->baseUnit->name }} ({{ $material->baseUnit->symbol }})"
+                                            value="{{ $displayUnit ? $displayUnit->name . ' (' . $displayUnit->symbol . ')' : 'Sin unidad asignada' }}"
                                             readonly>
                                         <div class="input-group-append">
                                             <span class="input-group-text bg-light">
@@ -102,7 +108,7 @@
                                             </span>
                                         </div>
                                     </div>
-                                    <small class="text-muted">La unidad de inventario no se puede cambiar una vez creado el
+                                    <small class="text-muted">La unidad de compra no se puede cambiar una vez creado el
                                         material.</small>
                                     <input type="hidden" name="base_unit_id" value="{{ $material->base_unit_id }}">
                                     <input type="hidden" name="consumption_unit_id"

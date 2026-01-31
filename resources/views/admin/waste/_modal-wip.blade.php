@@ -24,14 +24,13 @@
             <form action="{{ route('admin.waste.store-wip', $orderId) }}" method="POST" id="formWasteWip">
                 @csrf
                 <div class="modal-body">
-                    {{-- ADVERTENCIA CANÓNICA --}}
+                    {{-- ADVERTENCIA --}}
                     <div class="alert mb-3" style="background: #ffebee; border-left: 4px solid #c62828;">
                         <div class="d-flex align-items-start">
                             <i class="fas fa-exclamation-triangle mr-2 mt-1" style="color: #c62828;"></i>
                             <div style="font-size: 14px; color: #5d4037;">
-                                <strong>Registro Irreversible de Merma en Proceso</strong><br>
-                                Este registro documenta materiales perdidos durante la producción.
-                                <strong>NO revierte el pedido ni ajusta inventario automáticamente.</strong>
+                                <strong>Registro Irreversible</strong><br>
+                                Una vez registrada, no podrá editarse ni eliminarse.
                             </div>
                         </div>
                     </div>

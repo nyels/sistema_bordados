@@ -181,7 +181,7 @@
                             <i class="fas fa-boxes mr-1"></i> Inventario insuficiente
                         </strong>
                         @if($blockedAt)
-                            <small class="text-muted ml-2">(Detectado: {{ $blockedAt->format('d/m/Y H:i') }})</small>
+                            <small style="color: #212529;" class="ml-2">(Detectado: {{ $blockedAt->format('d/m/Y H:i') }})</small>
                         @endif
 
                         <div class="mt-2 p-2 rounded" style="background: #ffecb3; font-size: 14px; color: #5d4037;">
@@ -189,7 +189,7 @@
                             <strong>Este pedido NO puede avanzar hasta resolver el inventario.</strong>
                         </div>
 
-                        <p class="mt-2 mb-2" style="color: #495057; font-size: 14px;">
+                        <p class="mt-2 mb-2" style="color: #212529; font-size: 14px;">
                             Al intentar iniciar producción, el sistema detectó materiales faltantes:
                         </p>
 
@@ -203,7 +203,7 @@
                                     </div>
                                 @endforeach
                             @else
-                                <div class="text-muted" style="font-size: 14px;">
+                                <div style="font-size: 14px; color: #212529;">
                                     <i class="fas fa-info-circle mr-1"></i>
                                     {{ $inventoryBlockDetails['message'] ?? 'Inventario insuficiente para este pedido.' }}
                                 </div>

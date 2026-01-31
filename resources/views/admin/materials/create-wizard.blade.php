@@ -149,23 +149,23 @@
                     </div>
 
                     <div class="row">
-                        <div class="col-md-8 offset-md-2">
+                        <div class="col-md-10 offset-md-1">
                             <div class="card bg-light">
                                 <div class="card-header">
                                     <strong>Categoría:</strong> <span id="display-category-name">-</span>
                                 </div>
                                 <div class="card-body">
-                                    <div class="form-group">
+                                    <div class="form-group mb-0">
                                         <label><strong>Selecciona la unidad de inventario:</strong></label>
-                                        <div id="inventory-units-container">
-                                            {{-- Las opciones se cargarán dinámicamente --}}
-                                            <div class="text-muted">Selecciona una categoría primero...</div>
+                                        <div id="inventory-units-container" class="row">
+                                            {{-- Las opciones se cargarán dinámicamente en 2 columnas --}}
+                                            <div class="col-12 text-muted">Selecciona una categoría primero...</div>
                                         </div>
                                         <input type="hidden" name="consumption_unit_id" id="consumption_unit_id"
                                             value="{{ old('consumption_unit_id') }}">
                                     </div>
 
-                                    <div id="unit-override-warning" class="alert alert-warning" style="display: none;">
+                                    <div id="unit-override-warning" class="alert alert-warning mt-3 mb-0" style="display: none;">
                                         <i class="fas fa-exclamation-triangle"></i>
                                         <strong>Nota:</strong> Esta categoría no permite cambiar la unidad de inventario.
                                         Se usará la unidad por defecto.
@@ -480,14 +480,16 @@
             font-size: 1rem;
         }
 
-        /* Radio buttons estilizados */
+        /* Radio buttons estilizados - Compactos */
         .unit-option {
             border: 2px solid #dee2e6;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 10px;
+            border-radius: 6px;
+            padding: 8px 10px;
             cursor: pointer;
             transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         .unit-option:hover {
@@ -506,20 +508,21 @@
 
         .unit-option .unit-name {
             font-weight: 600;
-            font-size: 1.1rem;
+            font-size: 0.9rem;
         }
 
         .unit-option .unit-symbol {
             color: #666;
+            font-size: 0.85rem;
         }
 
         .unit-option .recommended-badge {
             background: #28a745;
             color: #fff;
-            font-size: 0.75rem;
-            padding: 2px 8px;
-            border-radius: 4px;
-            margin-left: 10px;
+            font-size: 0.65rem;
+            padding: 1px 5px;
+            border-radius: 3px;
+            margin-left: 4px;
         }
     </style>
 @stop
@@ -576,11 +579,22 @@
                     var name = $('#material_name').val().trim();
 
                     if (!categoryId) {
-                        alert('Debe seleccionar una categoría');
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Campo requerido',
+                            text: 'Debe seleccionar una categoría',
+                            confirmButtonColor: '#3085d6'
+                        });
                         return false;
                     }
                     if (!name) {
-                        alert('Debe ingresar el nombre del material');
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Campo requerido',
+                            text: 'Debe ingresar el nombre del material',
+                            confirmButtonColor: '#3085d6'
+                        });
+                        $('#material_name').focus();
                         return false;
                     }
 
@@ -598,7 +612,12 @@
 
                 if (step === 2) {
                     if (!selectedInventoryUnitId) {
-                        alert('Debe seleccionar una unidad de inventario');
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Campo requerido',
+                            text: 'Debe seleccionar una unidad de inventario',
+                            confirmButtonColor: '#3085d6'
+                        });
                         return false;
                     }
 
@@ -647,12 +666,21 @@
                 var allowOverride = category.allow_unit_override;
 
                 // Si no permite override y tiene default, mostrar solo esa
-                var unitsToShow = inventoryUnits;
+                var unitsToShow = inventoryUnits.slice(); // Copia del array
                 if (!allowOverride && defaultUnitId) {
                     unitsToShow = unitsToShow.filter(u => u.id == defaultUnitId);
                     $('#unit-override-warning').show();
                 } else {
                     $('#unit-override-warning').hide();
+                }
+
+                // Ordenar: recomendada primero
+                if (defaultUnitId) {
+                    unitsToShow.sort(function(a, b) {
+                        if (a.id == defaultUnitId) return -1;
+                        if (b.id == defaultUnitId) return 1;
+                        return 0;
+                    });
                 }
 
                 unitsToShow.forEach(function(unit) {
@@ -667,15 +695,14 @@
                         $('#consumption_unit_id').val(unit.id);
                     }
 
+                    var $col = $('<div class="col-lg-3 col-md-4 col-6 mb-2"></div>');
                     var $option = $(`
-                        <label class="unit-option d-flex align-items-center ${isSelected ? 'selected' : ''}">
+                        <label class="unit-option ${isSelected ? 'selected' : ''}">
                             <input type="radio" name="inventory_unit_radio" value="${unit.id}"
                                 ${isSelected ? 'checked' : ''}>
-                            <div class="ml-3">
-                                <span class="unit-name">${unit.name}</span>
-                                <span class="unit-symbol">(${unit.symbol})</span>
-                                ${isDefault ? '<span class="recommended-badge">Recomendada</span>' : ''}
-                            </div>
+                            <span class="unit-name">${unit.name}</span>
+                            <span class="unit-symbol">(${unit.symbol})</span>
+                            ${isDefault ? '<span class="recommended-badge">Recomendada</span>' : ''}
                         </label>
                     `);
 
@@ -688,7 +715,8 @@
                         $('#consumption_unit_id').val(unit.id);
                     });
 
-                    $container.append($option);
+                    $col.append($option);
+                    $container.append($col);
                 });
             }
 
@@ -914,7 +942,12 @@
                 var unitSymbol = $selected.data('symbol');
 
                 if (!unitId) {
-                    alert('Debe seleccionar una presentación de compra.');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Campo requerido',
+                        text: 'Debe seleccionar una presentación de compra',
+                        confirmButtonColor: '#3085d6'
+                    });
                     return;
                 }
 
@@ -932,19 +965,32 @@
                     var val = parseFloat($('#wizard-inter-value').val());
 
                     if (!label) {
-                        alert(
-                            '¡Error de Validación!\nDebe asignar una Etiqueta (ej. Caja24) para identificar este contenedor en el inventario.'
-                        );
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Etiqueta requerida',
+                            text: 'Debe asignar una Etiqueta (ej. Caja24) para identificar este contenedor en el inventario',
+                            confirmButtonColor: '#3085d6'
+                        });
                         $('#wizard-label-input').focus();
                         return;
                     }
                     if (!qty || qty <= 0) {
-                        alert('Ingrese la cantidad de unidades internas.');
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Campo requerido',
+                            text: 'Ingrese la cantidad de unidades internas',
+                            confirmButtonColor: '#3085d6'
+                        });
                         $('#wizard-inter-qty').focus();
                         return;
                     }
                     if (!val || val <= 0) {
-                        alert('Ingrese el contenido de cada unidad interna.');
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Campo requerido',
+                            text: 'Ingrese el contenido de cada unidad interna',
+                            confirmButtonColor: '#3085d6'
+                        });
                         $('#wizard-inter-value').focus();
                         return;
                     }
@@ -959,7 +1005,12 @@
                     // --- VALIDACIÓN MODO DIRECTO ---
                     factor = parseFloat($('#modal-conversion-factor').val());
                     if (!factor || factor <= 0) {
-                        alert('Ingrese el contenido total de la unidad.');
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Campo requerido',
+                            text: 'Ingrese el contenido total de la unidad',
+                            confirmButtonColor: '#3085d6'
+                        });
                         $('#modal-conversion-factor').focus();
                         return;
                     }
@@ -998,7 +1049,12 @@
                 // Validación final
                 if (!selectedInventoryUnitId) {
                     e.preventDefault();
-                    alert('Debe seleccionar una unidad de inventario');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Campo requerido',
+                        text: 'Debe seleccionar una unidad de inventario',
+                        confirmButtonColor: '#3085d6'
+                    });
                     currentStep = 2;
                     updateWizardUI();
                     return false;

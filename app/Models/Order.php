@@ -490,6 +490,19 @@ class Order extends Model
     }
 
     /**
+     * CANÓNICO: Verifica si el pedido es "Producción para stock".
+     * REGLA DE NEGOCIO:
+     * - Pedido SIN cliente (cliente_id = null)
+     * - Se produce para inventario, NO para un cliente específico
+     *
+     * @return bool TRUE si es producción para stock
+     */
+    public function isStockProduction(): bool
+    {
+        return $this->cliente_id === null;
+    }
+
+    /**
      * FASE v2.3: Verifica si el pedido puede ser entregado.
      * REGLAS:
      * - Solo pedidos READY pueden entregarse
@@ -907,10 +920,13 @@ class Order extends Model
 
     /**
      * FASE 3.5: Calcula el total de puntadas del pedido.
-     * Suma todas las puntadas de los diseños vinculados a cada item × cantidad.
+     *
+     * FUENTES DE PUNTADAS (en orden de prioridad):
+     * 1. DesignExports vinculados al item (personalización)
+     * 2. Diseños estándar del producto (Product->designs->stitch_count)
      *
      * FÓRMULA:
-     * total_stitches = Σ (item.designExports.stitches_count × item.quantity)
+     * total_stitches = Σ (puntadas_item × item.quantity)
      *
      * @return int Total de puntadas
      */
@@ -919,42 +935,43 @@ class Order extends Model
         $totalStitches = 0;
 
         foreach ($this->items as $item) {
-            if (!$item->requiresTechnicalDesigns()) {
-                continue;
+            $itemStitches = 0;
+
+            // PRIORIDAD 1: DesignExports vinculados (personalización)
+            if ($item->requiresTechnicalDesigns() && $item->designExports->isNotEmpty()) {
+                foreach ($item->designExports as $designExport) {
+                    $itemStitches += $designExport->stitches_count ?? 0;
+                }
+            }
+            // PRIORIDAD 2: Diseños estándar del producto
+            elseif ($item->product && $item->product->designs->isNotEmpty()) {
+                $itemStitches = $item->product->total_stitches ?? 0;
             }
 
-            foreach ($item->designExports as $designExport) {
-                $stitches = $designExport->stitches_count ?? 0;
-                $totalStitches += $stitches * $item->quantity;
-            }
+            $totalStitches += $itemStitches * $item->quantity;
         }
 
         return $totalStitches;
     }
 
     /**
-     * FASE 3.5: Calcula el costo de bordado basado en puntadas.
+     * FASE 3.5: Calcula el costo de bordado sumando el embroidery_cost de cada producto.
      *
-     * FÓRMULA CANÓNICA:
-     * costo_bordado = (total_puntadas / 1000) × costo_por_millar
+     * FUENTE: Product.embroidery_cost (definido al dar de alta el producto)
      *
-     * @param float|null $costPerThousand Tarifa por millar (null = usar configuración)
      * @return float Costo de bordado en MXN
      */
-    public function calculateEmbroideryCost(?float $costPerThousand = null): float
+    public function calculateEmbroideryCost(): float
     {
-        $totalStitches = $this->calculateTotalStitches();
+        $totalCost = 0.0;
 
-        if ($totalStitches <= 0) {
-            return 0.0;
+        foreach ($this->items as $item) {
+            if ($item->product && $item->product->embroidery_cost > 0) {
+                $totalCost += (float) $item->product->embroidery_cost * $item->quantity;
+            }
         }
 
-        // Obtener tarifa: parámetro > configuración > default
-        if ($costPerThousand === null) {
-            $costPerThousand = $this->getEmbroideryCostPerThousand();
-        }
-
-        return round(($totalStitches / 1000) * $costPerThousand, 4);
+        return round($totalCost, 4);
     }
 
     /**
@@ -971,11 +988,22 @@ class Order extends Model
     /**
      * FASE 3.5: Costo de bordado persistido (snapshot).
      * FUENTE CANÓNICA: embroidery_cost_snapshot
+     * FALLBACK: Si snapshot es 0/null y pedido en producción, recalcula en tiempo real.
      *
      * @return float|null Costo en MXN o null si no calculado
      */
     public function getEmbroideryCostAttribute(): ?float
     {
+        // Si hay snapshot válido, usarlo
+        if ($this->embroidery_cost_snapshot !== null && $this->embroidery_cost_snapshot > 0) {
+            return (float) $this->embroidery_cost_snapshot;
+        }
+
+        // FALLBACK: Recalcular si el pedido está en producción o posterior
+        if (in_array($this->status, [self::STATUS_IN_PRODUCTION, self::STATUS_READY, self::STATUS_DELIVERED])) {
+            return $this->calculateEmbroideryCost();
+        }
+
         return $this->embroidery_cost_snapshot !== null
             ? (float) $this->embroidery_cost_snapshot
             : null;
@@ -986,14 +1014,25 @@ class Order extends Model
      */
     public function getHasEmbroideryCostAttribute(): bool
     {
-        return $this->embroidery_cost_snapshot !== null;
+        return $this->embroidery_cost !== null;
     }
 
     /**
      * FASE 3.5: Total de puntadas persistido (snapshot).
+     * FALLBACK: Si snapshot es 0/null y pedido en producción, recalcula en tiempo real.
      */
     public function getTotalStitchesAttribute(): ?int
     {
+        // Si hay snapshot válido, usarlo
+        if ($this->total_stitches_snapshot !== null && $this->total_stitches_snapshot > 0) {
+            return $this->total_stitches_snapshot;
+        }
+
+        // FALLBACK: Recalcular si el pedido está en producción o posterior
+        if (in_array($this->status, [self::STATUS_IN_PRODUCTION, self::STATUS_READY, self::STATUS_DELIVERED])) {
+            return $this->calculateTotalStitches();
+        }
+
         return $this->total_stitches_snapshot;
     }
 
@@ -1002,10 +1041,12 @@ class Order extends Model
      */
     public function getFormattedTotalStitchesAttribute(): string
     {
-        if ($this->total_stitches_snapshot === null) {
-            return 'N/A';
+        $stitches = $this->total_stitches;
+
+        if ($stitches === null || $stitches === 0) {
+            return '0';
         }
-        return number_format($this->total_stitches_snapshot);
+        return number_format($stitches);
     }
 
     /**
@@ -1013,10 +1054,12 @@ class Order extends Model
      */
     public function getFormattedEmbroideryCostAttribute(): string
     {
-        if ($this->embroidery_cost_snapshot === null) {
+        $cost = $this->embroidery_cost;
+
+        if ($cost === null) {
             return 'No calculado';
         }
-        return '$' . number_format($this->embroidery_cost_snapshot, 2);
+        return '$' . number_format($cost, 2);
     }
 
     /**
@@ -1030,13 +1073,14 @@ class Order extends Model
      */
     public function getTotalManufacturingCostAttribute(): ?float
     {
-        // Solo disponible si ambos snapshots existen
+        // Solo disponible si el snapshot de materiales existe
         if ($this->materials_cost_snapshot === null) {
             return null;
         }
 
         $materialsCost = (float) $this->materials_cost_snapshot;
-        $embroideryCost = (float) ($this->embroidery_cost_snapshot ?? 0);
+        // Usar el accessor embroidery_cost que tiene fallback
+        $embroideryCost = (float) ($this->embroidery_cost ?? 0);
 
         return $materialsCost + $embroideryCost;
     }

@@ -363,9 +363,9 @@
                     '<div>' +
                         '<span class="history-source ' + sourceClass + '">' + escapeHtml(item.source_label) + '</span>' +
                         (item.order_number ? ' <span class="badge badge-light ml-1" style="font-size: 11px;">' + escapeHtml(item.order_number) + '</span>' : '') +
-                        (item.product_name ? '<br><small style="color: #757575;"><i class="fas fa-box mr-1"></i>' + escapeHtml(item.product_name) + '</small>' : '') +
+                        (item.product_name ? '<br><small style="color: #212529;"><i class="fas fa-box mr-1"></i>' + escapeHtml(item.product_name) + '</small>' : '') +
                     '</div>' +
-                    '<small style="color: #9e9e9e; font-size: 12px;">' + escapeHtml(item.captured_at_relative || item.captured_at) + '</small>' +
+                    '<small style="color: #212529; font-size: 12px;">' + escapeHtml(item.captured_at_relative || item.captured_at) + '</small>' +
                 '</div>' +
                 '<div class="mt-2" style="font-size: 14px; color: #212529;">' +
                     '<i class="fas fa-ruler-combined mr-1" style="color: #6f42c1;"></i>' +
@@ -420,7 +420,7 @@
         for (var key in labels) {
             if (measurements[key]) {
                 container.innerHTML += '<div class="col-4 mb-1">' +
-                    '<span style="color: #757575;">' + labels[key] + ':</span> ' +
+                    '<span style="color: #212529;">' + labels[key] + ':</span> ' +
                     '<strong style="color: #6a1b9a;">' + measurements[key] + ' cm</strong>' +
                 '</div>';
             }

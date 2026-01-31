@@ -535,7 +535,12 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!cart.item) {
                 e.preventDefault();
                 e.stopPropagation();
-                alert('Agrega un producto al carrito primero.');
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Carrito vacío',
+                    text: 'Agrega un producto al carrito primero',
+                    confirmButtonColor: '#3085d6'
+                });
                 return;
             }
 

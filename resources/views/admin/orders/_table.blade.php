@@ -53,8 +53,13 @@
                                 {{ $order->urgency_label }}
                             </span>
                         </td>
-                        <td class="text-center align-middle" style="color: #212529;">{{ $order->cliente->nombre }}
-                            {{ $order->cliente->apellidos }}</td>
+                        <td class="text-center align-middle" style="color: #212529;">
+                            @if($order->cliente)
+                                {{ $order->cliente->nombre }} {{ $order->cliente->apellidos }}
+                            @else
+                                <span style="color: #212529;"><i class="fas fa-warehouse mr-1"></i> Stock</span>
+                            @endif
+                        </td>
                         <td class="text-center align-middle">
                             <a href="{{ route('admin.orders.show', $order) }}" class="font-weight-bold"
                                 style="font-size: 16px;">
@@ -75,12 +80,12 @@
                         </td>
                         <td class="text-center align-middle">
                             @if ($order->isCustomOrder())
-                                <span style="font-size: 16px; color: #495057;"
+                                <span style="font-size: 16px; color: #212529;"
                                     title="Pedido con personalización (diseño, texto o medidas)">
                                     <i class="fas fa-palette"></i> Personalizado
                                 </span>
                             @else
-                                <span style="font-size: 16px; color: #495057;"
+                                <span style="font-size: 16px; color: #212529;"
                                     title="Producto estándar sin personalización">
                                     <i class="fas fa-box"></i> Estándar
                                 </span>
@@ -91,9 +96,13 @@
                         <td class="text-center align-middle font-weight-bold" style="font-size: 17px;">
                             ${{ number_format($order->total, 2) }}</td>
                         <td class="text-center align-middle">
-                            <span class="badge badge-{{ $order->payment_status_color }}" style="font-size: 16px;">
-                                {{ $order->payment_status_label }}
-                            </span>
+                            @if($order->isStockProduction())
+                                <span style="font-size: 14px; color: #212529;">N/A</span>
+                            @else
+                                <span class="badge badge-{{ $order->payment_status_color }}" style="font-size: 16px;">
+                                    {{ $order->payment_status_label }}
+                                </span>
+                            @endif
                         </td>
                         <td class="text-center align-middle">
                             @if ($isBlocked)
@@ -164,7 +173,7 @@
                                     <span style="color: #212529;">{{ $order->promised_date->format('d/m/Y') }}</span>
                                 @endif
                             @else
-                                <span style="color: #495057;">—</span>
+                                <span style="color: #212529;">—</span>
                             @endif
                         </td>
                         <td class="text-left align-middle text-nowrap">
@@ -187,7 +196,8 @@
                                 </a>
                             @endif
 
-                            @if ($order->balance > 0 && $order->status !== \App\Models\Order::STATUS_CANCELLED)
+                            {{-- Botón pago rápido: Solo ventas (NO stock_production), solo CONFIRMED o IN_PRODUCTION --}}
+                            @if ($order->balance > 0 && !$order->isStockProduction() && in_array($order->status, [\App\Models\Order::STATUS_CONFIRMED, \App\Models\Order::STATUS_IN_PRODUCTION]))
                                 <button type="button" class="btn btn-sm btn-success btn-quick-payment"
                                     data-order-id="{{ $order->id }}" data-order-number="{{ $order->order_number }}"
                                     data-balance="{{ $order->balance }}" title="Registrar Pago">
@@ -213,7 +223,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="11" class="text-center py-4" style="color: #495057; font-size: 15px;">
+                        <td colspan="11" class="text-center py-4" style="color: #212529; font-size: 15px;">
                             No hay pedidos que coincidan con los filtros.
                         </td>
                     </tr>
@@ -247,7 +257,7 @@
             <span>
                 <span class="badge badge-dark" style="font-size: 14px;">Entregado</span>
             </span>
-            <span style="color: #495057;">|</span>
+            <span style="color: #212529;">|</span>
             <span>
                 <span class="badge badge-danger" style="font-size: 14px;"><i class="fas fa-ban"></i></span>
                 Bloqueado
@@ -257,7 +267,7 @@
                         class="fas fa-boxes"></i></span>
                 Falta Material
             </span>
-            <span style="color: #495057;">|</span>
+            <span style="color: #212529;">|</span>
             <span>
                 <i class="fas fa-square text-warning mr-1"></i> Fila bloqueada
             </span>

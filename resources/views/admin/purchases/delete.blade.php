@@ -199,14 +199,33 @@
             $('#deleteForm').on('submit', function(e) {
                 if (!$confirmCheck.is(':checked')) {
                     e.preventDefault();
-                    alert('Debe confirmar que entiende que esta acción es permanente');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Confirmación requerida',
+                        text: 'Debe confirmar que entiende que esta acción es permanente',
+                        confirmButtonColor: '#3085d6'
+                    });
                     return false;
                 }
 
-                return confirm('¿Está COMPLETAMENTE SEGURO de eliminar esta orden de compra?\n\n' +
-                    'Orden: {{ $purchase->purchase_number }}\n' +
-                    'Total: {{ $purchase->formatted_total }}\n\n' +
-                    'Esta acción NO se puede deshacer.');
+                e.preventDefault();
+                var form = this;
+                Swal.fire({
+                    icon: 'warning',
+                    title: '¿Está COMPLETAMENTE SEGURO?',
+                    html: '<strong>Orden:</strong> {{ $purchase->purchase_number }}<br>' +
+                          '<strong>Total:</strong> {{ $purchase->formatted_total }}<br><br>' +
+                          '<span class="text-danger">Esta acción NO se puede deshacer.</span>',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Sí, eliminar',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        form.submit();
+                    }
+                });
             });
         });
     </script>

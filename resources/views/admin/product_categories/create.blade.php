@@ -79,6 +79,24 @@
                             {{-- Estado Activo (Hidden: Default True) --}}
                             <input type="hidden" name="is_active" value="1">
 
+                            {{-- Soporte de Medidas --}}
+                            <div class="form-group">
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox"
+                                        class="custom-control-input"
+                                        id="supports_measurements"
+                                        name="supports_measurements"
+                                        value="1"
+                                        {{ old('supports_measurements') ? 'checked' : '' }}>
+                                    <label class="custom-control-label" for="supports_measurements">
+                                        Esta categoria admite productos con medidas personalizadas
+                                    </label>
+                                </div>
+                                <small class="form-text text-muted">
+                                    Ej: Vestidos, faldas, prendas a medida. Si se activa, los pedidos podran solicitar medidas.
+                                </small>
+                            </div>
+
                             {{-- Botones --}}
                             <div class="d-flex justify-content-end align-items-center mt-4">
                                 <a href="{{ route('admin.product_categories.index') }}" class="btn btn-secondary mr-2">

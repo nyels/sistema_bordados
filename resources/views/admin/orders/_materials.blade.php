@@ -24,7 +24,7 @@
         foreach ($order->items as $item) {
             $product = $item->product;
             if (!$product || !$product->relationLoaded('materials')) {
-                $product?->load('materials');
+                $product?->load('materials.material.consumptionUnit');
             }
             if (!$product) continue;
 
@@ -33,6 +33,18 @@
                 $variantId = $materialVariant->id;
 
                 if (!isset($materialsSummary[$variantId])) {
+                    // Asegurar que la relación material con sus unidades esté cargada
+                    if (!$materialVariant->relationLoaded('material')) {
+                        $materialVariant->load('material.consumptionUnit', 'material.baseUnit');
+                    } elseif ($materialVariant->material) {
+                        if (!$materialVariant->material->relationLoaded('consumptionUnit')) {
+                            $materialVariant->material->load('consumptionUnit');
+                        }
+                        if (!$materialVariant->material->relationLoaded('baseUnit')) {
+                            $materialVariant->material->load('baseUnit');
+                        }
+                    }
+
                     $reservations = InventoryReservation::where('order_id', $order->id)
                         ->where('material_variant_id', $variantId)
                         ->get();
@@ -46,12 +58,18 @@
                     // Identificador de variante: solo COLOR
                     $variantLabel = $materialVariant->color ?: null;
 
+                    // Obtener unidad de consumo del material (consumptionUnit, si no existe usar baseUnit)
+                    $material = $materialVariant->material;
+                    $consumptionUnitSymbol = $material?->consumptionUnit?->symbol
+                        ?? $material?->baseUnit?->symbol
+                        ?? 'u';
+
                     $materialsSummary[$variantId] = [
                         'material_name' => $materialVariant->material->name ?? 'N/A',
                         'variant_label' => $variantLabel,
                         'variant_color' => $materialVariant->color,
                         'variant_sku' => $materialVariant->sku,
-                        'unit' => $materialVariant->material->consumptionUnit->symbol ?? 'u',
+                        'unit' => $consumptionUnitSymbol,
                         'required' => 0,
                         'reserved' => $reserved,
                         'consumed' => $consumed,
@@ -75,6 +93,9 @@
 
     // Color del header segun estado
     $headerBgClass = $isHistorical ? 'bg-dark' : 'bg-secondary';
+
+    // Ordenar materiales alfabéticamente por nombre
+    uasort($materialsSummary, fn($a, $b) => strcasecmp($a['material_name'], $b['material_name']));
 @endphp
 
 @if($showMaterialsSummary && count($materialsSummary) > 0)
@@ -127,18 +148,20 @@
                             <td>
                                 <strong style="color: #212529;">{{ $mat['material_name'] }}</strong>
                                 @if($mat['variant_label'])
-                                    <span style="color: #495057;"> — {{ $mat['variant_label'] }}</span>
+                                    <span style="color: #212529;"> — {{ $mat['variant_label'] }}</span>
                                 @endif
                             </td>
                             <td class="text-right">
                                 <span style="color: #212529; font-weight: 600;">{{ number_format($mat['required'], 2) }}</span>
-                                <small style="color: #495057;">{{ $mat['unit'] }}</small>
+                                <small style="color: #212529;">{{ $mat['unit'] }}</small>
                             </td>
-                            <td class="text-right {{ $mat['reserved'] > 0 ? 'text-info font-weight-bold' : '' }}" style="{{ $mat['reserved'] == 0 ? 'color: #495057;' : '' }}">
+                            <td class="text-right {{ $mat['reserved'] > 0 ? 'text-info font-weight-bold' : '' }}" style="{{ $mat['reserved'] == 0 ? 'color: #212529;' : '' }}">
                                 {{ number_format($mat['reserved'], 2) }}
+                                <small style="color: #212529;">{{ $mat['unit'] }}</small>
                             </td>
-                            <td class="text-right {{ $mat['consumed'] > 0 ? 'text-success font-weight-bold' : '' }}" style="{{ $mat['consumed'] == 0 ? 'color: #495057;' : '' }}">
+                            <td class="text-right {{ $mat['consumed'] > 0 ? 'text-success font-weight-bold' : '' }}" style="{{ $mat['consumed'] == 0 ? 'color: #212529;' : '' }}">
                                 {{ number_format($mat['consumed'], 2) }}
+                                <small style="color: #212529;">{{ $mat['unit'] }}</small>
                             </td>
                             <td class="text-center">
                                 @if($isFullyConsumed)
@@ -155,8 +178,8 @@
             </table>
         </div>
         <div class="card-footer py-2" style="font-size: 14px; background: #f8f9fa;">
-            <i class="fas fa-layer-group mr-1" style="color: #495057;"></i>
-            <span style="color: #495057;">
+            <i class="fas fa-layer-group mr-1" style="color: #212529;"></i>
+            <span style="color: #212529;">
                 Este es un resumen agregado. El detalle por producto y variante esta en "Inventario del Pedido".
             </span>
         </div>

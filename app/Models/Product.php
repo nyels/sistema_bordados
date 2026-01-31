@@ -109,7 +109,7 @@ class Product extends Model
     public function designs()
     {
         return $this->belongsToMany(Design::class, 'product_design', 'product_id', 'design_id')
-            ->withPivot('application_type_id')
+            ->withPivot('application_type_id', 'design_export_id')
             ->withTimestamps();
     }
 
@@ -198,11 +198,35 @@ class Product extends Model
         return $this->status === 'active';
     }
 
+    /**
+     * Total de puntadas del producto.
+     * FUENTE: DesignExport específico asignado en product_design.design_export_id
+     */
     public function getTotalStitchesAttribute(): int
     {
         $total = 0;
         foreach ($this->designs as $design) {
-            $total += $design->stitch_count ?? 0;
+            // PRIORIDAD 1: Export específico asignado en el pivot
+            if ($design->pivot->design_export_id) {
+                $export = DesignExport::find($design->pivot->design_export_id);
+                if ($export) {
+                    $total += $export->stitches_count ?? 0;
+                    continue;
+                }
+            }
+
+            // FALLBACK: Si no hay export específico, usar exports aprobados del diseño
+            $designTotal = 0;
+            foreach ($design->exports as $export) {
+                if ($export->status === 'aprobado') {
+                    $designTotal += $export->stitches_count ?? 0;
+                }
+            }
+            // Si no hay aprobados, usar el primero disponible
+            if ($designTotal === 0 && $design->exports->count() > 0) {
+                $designTotal = $design->exports->first()->stitches_count ?? 0;
+            }
+            $total += $designTotal;
         }
         return $total;
     }
@@ -248,15 +272,17 @@ class Product extends Model
     }
 
     /**
-     * Indica si este producto requiere medidas del cliente
+     * Indica si este producto PUEDE requerir medidas (según su categoría).
+     * NOTA: La decisión de usar medidas la toma el PEDIDO, no el producto.
+     * Este accessor solo indica CAPACIDAD, no obligación.
      */
-    public function getRequiresMeasurementsAttribute(): bool
+    public function getSupportsMeasurementsAttribute(): bool
     {
-        return $this->productType?->requires_measurements ?? false;
+        return $this->category?->supports_measurements ?? false;
     }
 
     /**
-     * Indica si el producto tiene tipo asignado
+     * Indica si el producto tiene tipo asignado (metadata histórica)
      */
     public function getHasProductTypeAttribute(): bool
     {

@@ -71,7 +71,8 @@ class ProductCategoryController extends Controller
                 'max:500',
                 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ0-9\s\-\_\.\,\!\?\(\)\:\;]+$/'
             ],
-            'is_active' => ['boolean']
+            'is_active' => ['boolean'],
+            'supports_measurements' => ['nullable', 'boolean'],
         ], [
             'name.required' => 'El nombre de la categoría es obligatorio.',
             'name.min' => 'El nombre debe tener al menos 2 caracteres.',
@@ -87,6 +88,7 @@ class ProductCategoryController extends Controller
             $category->name = mb_strtoupper(trim($validated['name']), 'UTF-8');
             $category->description = isset($validated['description']) ? trim($validated['description']) : null;
             $category->is_active = $request->has('is_active') ? true : false;
+            $category->supports_measurements = $request->boolean('supports_measurements');
             $category->save();
 
             Log::info('[ProductCategory@store] Categoría creada exitosamente', [
@@ -174,7 +176,8 @@ class ProductCategoryController extends Controller
                 'max:500',
                 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ0-9\s\-\_\.\,\!\?\(\)\:\;]+$/'
             ],
-            'is_active' => ['boolean']
+            'is_active' => ['boolean'],
+            'supports_measurements' => ['nullable', 'boolean'],
         ], [
             'name.required' => 'El nombre de la categoría es obligatorio.',
             'name.min' => 'El nombre debe tener al menos 2 caracteres.',
@@ -189,6 +192,7 @@ class ProductCategoryController extends Controller
             $category->name = mb_strtoupper(trim($validated['name']), 'UTF-8');
             $category->description = isset($validated['description']) ? trim($validated['description']) : null;
             $category->is_active = $request->has('is_active') ? true : false;
+            $category->supports_measurements = $request->boolean('supports_measurements');
 
             if (!$category->isDirty()) {
                 return redirect()->route('admin.product_categories.index')

@@ -144,19 +144,25 @@
             @include('adminlte::partials.sidebar.right-sidebar')
         @endif
 
+        {{-- Message Drawer Global (FASE 1) --}}
+        @auth
+            @include('partials.message-drawer')
+        @endauth
+
     </div>
 @stop
 
 @section('adminlte_js')
     @stack('js')
     @yield('js')
+
     {{-- Bloque para ÉXITO --}}
     @if (session('success'))
         <script>
             Swal.fire({
                 icon: 'success',
                 title: '¡Éxito!',
-                text: "{{ session('success') }}",
+                text: {!! json_encode(session('success')) !!},
                 timer: 3500,
                 showConfirmButton: false,
                 customClass: {
@@ -172,7 +178,7 @@
             Swal.fire({
                 icon: 'error',
                 title: '¡Error!',
-                text: "{{ session('error') }}",
+                text: {!! json_encode(session('error')) !!},
                 showConfirmButton: true,
                 confirmButtonColor: '#2563eb',
                 customClass: {

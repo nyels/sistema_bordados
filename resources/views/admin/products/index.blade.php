@@ -28,16 +28,16 @@
                 </div>
                 <div class="card-body py-3">
                     <div class="row align-items-end">
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <label for="category_filter" class="mb-1 font-weight-bold">Categoría</label>
                             <select class="form-control border" id="category_filter">
                                 <option value="">Todas</option>
                                 @foreach ($categories as $category)
-                                    <option value="{{ $category->id }}">{{ $category->name }}</option>
+                                    <option value="{{ $category->name }}">{{ $category->name }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-md-4">
                             <label for="status_filter" class="mb-1 font-weight-bold">Estado</label>
                             <select class="form-control border" id="status_filter">
                                 <option value="">Todos</option>
@@ -46,16 +46,9 @@
                                 <option value="Descontinuado">Descontinuado</option>
                             </select>
                         </div>
-                        <div class="col-md-4">
-                            <label for="search_filter" class="mb-1 font-weight-bold">Búsqueda</label>
-                            <input type="text" class="form-control border" id="search_filter" placeholder="Buscar por nombre o SKU...">
-                        </div>
-                        <div class="col-md-3 d-flex align-items-end justify-content-end">
-                            <button type="button" id="btn_filter" class="btn btn-primary">
-                                <i class="fas fa-search mr-1"></i> Filtrar
-                            </button>
-                            <button type="button" id="btn_reset" class="btn btn-outline-secondary ml-2">
-                                <i class="fas fa-undo mr-1"></i> Limpiar
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="button" id="btn_reset" class="btn btn-outline-secondary">
+                                <i class="fas fa-undo mr-1"></i> Limpiar Filtros
                             </button>
                         </div>
                     </div>
@@ -69,11 +62,11 @@
                             <tr>
                                 <th>#</th>
                                 <th>Imagen</th>
-                                <th>SKU</th>
                                 <th>Nombre</th>
-                                <th>Categoría</th>
                                 <th>Variantes</th>
+                                <th>Categoría</th>
                                 <th>Estado</th>
+                                <th>Costo Prod.</th>
                                 <th>Precio Base</th>
                                 <th>Creado</th>
                                 <th style="text-align: center;">Acciones</th>
@@ -93,19 +86,12 @@
                                             </div>
                                         @endif
                                     </td>
-                                    <td class="text-center">
-                                        <span class="badge badge-dark">{{ $product->sku }}</span>
-                                    </td>
-                                    <td class="text-center">
+                                    <td>
                                         <strong>{{ $product->name }}</strong>
+                                        <br><span class="badge badge-dark">{{ $product->sku }}</span>
                                         @if ($product->description)
-                                            <br><small
-                                                class="text-muted">{{ Str::limit($product->description, 50) }}</small>
+                                            <br><small class="text-muted">{{ Str::limit($product->description, 40) }}</small>
                                         @endif
-                                    </td>
-                                    <td class="text-center">
-                                        <span
-                                            class="badge badge-info">{{ $product->category->name ?? 'Sin categoría' }}</span>
                                     </td>
                                     <td class="text-center">
                                         @if ($product->variants->count() > 0)
@@ -129,6 +115,9 @@
                                         @endif
                                     </td>
                                     <td class="text-center">
+                                        <span class="badge badge-info">{{ $product->category->name ?? 'Sin categoría' }}</span>
+                                    </td>
+                                    <td class="text-center">
                                         @if ($product->status === 'active')
                                             <span class="badge badge-success">{{ $product->status_label }}</span>
                                         @elseif($product->status === 'draft')
@@ -138,11 +127,20 @@
                                         @endif
                                     </td>
                                     <td class="text-center">
+                                        <span class="text-dark">${{ number_format($product->production_cost ?? 0, 2) }}</span>
+                                    </td>
+                                    <td class="text-center">
                                         <span class="font-weight-bold">{{ $product->formatted_base_price }}</span>
                                     </td>
                                     <td class="text-center">{{ $product->created_at->format('d/m/Y') }}</td>
                                     <td class="text-center">
                                         <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-primary btn-view-bom"
+                                                data-product-id="{{ $product->id }}"
+                                                data-product-name="{{ $product->name }}"
+                                                title="Ver BOM">
+                                                <i class="fas fa-clipboard-list"></i>
+                                            </button>
                                             <a href="{{ route('admin.products.show', $product->id) }}" class="btn btn-info"
                                                 title="Ver">
                                                 <i class="fas fa-eye"></i>
@@ -151,6 +149,15 @@
                                                 class="btn btn-warning" title="Editar">
                                                 <i class="fas fa-edit"></i>
                                             </a>
+                                            <form action="{{ route('admin.products.duplicate', $product->id) }}"
+                                                method="POST" style="display: inline-block;"
+                                                data-confirm="¿Duplicar este producto?">
+                                                @csrf
+                                                <button type="submit" class="btn btn-dark" title="Duplicar"
+                                                    style="border-radius: 0;">
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </form>
 
                                             @if ($product->status === 'active')
                                                 <form action="{{ route('admin.products.toggle_status', $product->id) }}"
@@ -348,42 +355,24 @@
                 // Añadir los botones al contenedor
                 table.buttons().container().appendTo('#products-table_wrapper .row:eq(0)');
 
-                // Filtrar por categoría
+                // Filtrar por categoría (automático al cambiar) - columna índice 4
                 $('#category_filter').on('change', function() {
                     table.column(4).search(this.value).draw();
                 });
 
-                // Filtrar por estado
+                // Filtrar por estado (automático al cambiar) - columna índice 5
                 $('#status_filter').on('change', function() {
-                    table.column(6).search(this.value).draw();
+                    table.column(5).search(this.value).draw();
                 });
 
-                // Búsqueda general
-                $('#search_filter').on('keyup', function() {
-                    table.search(this.value).draw();
-                });
+                // Aplicar filtro de estado inicial (Activo por defecto)
+                table.column(5).search('Activo').draw();
 
-                // Botón de filtrar
-                $('#btn_filter').on('click', function() {
-                    // FIX: Usar texto del option, no el ID (DataTables busca en contenido visible)
-                    let categoryText = $('#category_filter option:selected').text().trim();
-                    if (categoryText === 'Todas') categoryText = '';
-                    let status = $('#status_filter').val();
-                    let search = $('#search_filter').val();
-
-                    table.column(4).search(categoryText);
-                    table.column(6).search(status);
-                    table.search(search).draw();
-                });
-
-                // Botón de resetear filtros
+                // Botón de limpiar filtros
                 $('#btn_reset').on('click', function() {
-                    $('#category_filter').val('').trigger('change');
-                    $('#status_filter').val('').trigger('change');
-                    $('#search_filter').val('');
-
-                    table.columns().search('');
-                    table.search('').draw();
+                    $('#category_filter').val('');
+                    $('#status_filter').val('');
+                    table.columns().search('').draw();
                 });
 
                 // SweetAlert para confirmaciones
@@ -406,6 +395,203 @@
                         }
                     });
                 });
+
+                // ========== MODAL BOM ==========
+                $(document).on('click', '.btn-view-bom', function() {
+                    const productId = $(this).data('product-id');
+                    const productName = $(this).data('product-name');
+                    const $btn = $(this);
+
+                    // Loading state
+                    $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
+                    // Fetch BOM data
+                    $.ajax({
+                        url: `/admin/products/${productId}/bom`,
+                        method: 'GET',
+                        dataType: 'json',
+                        success: function(data) {
+                            renderBomModal(data);
+                            $('#modalBom').modal('show');
+                        },
+                        error: function(xhr) {
+                            Swal.fire('Error', 'No se pudo cargar la información del producto', 'error');
+                        },
+                        complete: function() {
+                            $btn.prop('disabled', false).html('<i class="fas fa-clipboard-list"></i>');
+                        }
+                    });
+                });
+
+                function renderBomModal(data) {
+                    // Header
+                    $('#bom_product_name').text(data.name);
+                    $('#bom_sku').text(data.sku);
+                    $('#bom_category').text(data.category);
+                    $('#bom_lead_time').text(data.lead_time + ' días');
+
+                    // Estructura de Costos
+                    const grandTotal = data.costs.total || 0;
+                    let costsHtml = `
+                        <table class="table table-sm mb-0">
+                            <thead class="text-dark font-weight-bold">
+                                <tr>
+                                    <th>Concepto</th>
+                                    <th class="text-right">Costo</th>
+                                    <th class="text-right">%</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><i class="fas fa-boxes text-primary mr-2"></i>Materiales</td>
+                                    <td class="text-right font-weight-bold">$${data.costs.materials.toFixed(2)}</td>
+                                    <td class="text-right">${grandTotal > 0 ? ((data.costs.materials / grandTotal) * 100).toFixed(1) : 0}%</td>
+                                </tr>
+                                <tr>
+                                    <td><i class="fas fa-tshirt text-info mr-2"></i>Bordado</td>
+                                    <td class="text-right font-weight-bold">$${data.costs.embroidery.toFixed(2)}</td>
+                                    <td class="text-right">${grandTotal > 0 ? ((data.costs.embroidery / grandTotal) * 100).toFixed(1) : 0}%</td>
+                                </tr>
+                                <tr>
+                                    <td><i class="fas fa-hand-holding-usd text-warning mr-2"></i>Mano de Obra</td>
+                                    <td class="text-right font-weight-bold">$${data.costs.labor.toFixed(2)}</td>
+                                    <td class="text-right">${grandTotal > 0 ? ((data.costs.labor / grandTotal) * 100).toFixed(1) : 0}%</td>
+                                </tr>
+                                <tr>
+                                    <td><i class="fas fa-concierge-bell text-secondary mr-2"></i>Servicios Extras</td>
+                                    <td class="text-right font-weight-bold">$${data.costs.extras.toFixed(2)}</td>
+                                    <td class="text-right">${grandTotal > 0 ? ((data.costs.extras / grandTotal) * 100).toFixed(1) : 0}%</td>
+                                </tr>
+                                <tr class="bg-light border-top">
+                                    <td class="font-weight-bold">TOTAL COSTO</td>
+                                    <td class="text-right font-weight-bold text-success">$${grandTotal.toFixed(2)}</td>
+                                    <td class="text-right font-weight-bold">100%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    `;
+                    $('#bom_costs_table').html(costsHtml);
+
+                    // Receta de Materiales
+                    let materialsHtml = '';
+                    if (data.materials && data.materials.length > 0) {
+                        materialsHtml = `
+                            <table class="table table-sm table-hover mb-0">
+                                <thead class="bg-light text-uppercase small">
+                                    <tr>
+                                        <th>Material</th>
+                                        <th>Categoría</th>
+                                        <th class="text-center">Consumo</th>
+                                        <th class="text-right">Costo Unit.</th>
+                                        <th class="text-right">Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                        `;
+                        data.materials.forEach(function(mat) {
+                            const subtotal = mat.quantity * mat.unit_cost;
+                            materialsHtml += `
+                                <tr>
+                                    <td class="font-weight-bold">${mat.name}${mat.color ? ' <span class="text-dark">- ' + mat.color + '</span>' : ''}</td>
+                                    <td><span class="badge badge-light border small">${mat.category}</span></td>
+                                    <td class="text-center font-weight-bold">${parseFloat(mat.quantity)} <span class="text-dark">${mat.unit}</span></td>
+                                    <td class="text-right">$${mat.unit_cost.toFixed(4)}</td>
+                                    <td class="text-right font-weight-bold">$${subtotal.toFixed(2)}</td>
+                                </tr>
+                            `;
+                        });
+                        materialsHtml += `
+                                </tbody>
+                                <tfoot class="bg-dark text-white">
+                                    <tr>
+                                        <td colspan="4" class="font-weight-bold">TOTAL MATERIALES</td>
+                                        <td class="text-right font-weight-bold">$${data.costs.materials.toFixed(2)}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        `;
+                    } else {
+                        materialsHtml = '<div class="text-center py-4 text-dark"><i class="fas fa-box-open fa-2x mb-2"></i><p class="mb-0">Sin materiales registrados</p></div>';
+                    }
+                    $('#bom_materials_table').html(materialsHtml);
+
+                    // Precios
+                    $('#bom_base_price').text('$' + data.base_price.toFixed(2));
+                    $('#bom_suggested_price').text('$' + data.suggested_price.toFixed(2));
+                    $('#bom_margin').text(data.margin.toFixed(1) + '%');
+                }
             });
         </script>
+
+        {{-- Modal BOM --}}
+        <div class="modal fade" id="modalBom" tabindex="-1" aria-labelledby="modalBomLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="modalBomLabel">
+                            <i class="fas fa-clipboard-list mr-2"></i>Ficha Técnica del Producto
+                        </h5>
+                        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body p-0">
+                        {{-- Header Info --}}
+                        <div class="bg-light p-3 border-bottom">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <h4 class="font-weight-bold mb-1" id="bom_product_name">-</h4>
+                                    <span class="badge badge-dark mr-2" id="bom_sku">-</span>
+                                    <span class="badge badge-info" id="bom_category">-</span>
+                                </div>
+                                <div class="col-md-6 text-md-right">
+                                    <div class="d-inline-block text-center px-3 py-2 bg-warning rounded">
+                                        <i class="fas fa-clock mr-1"></i>
+                                        <span>Tiempo estimado de producción = </span>
+                                        <span class="font-weight-bold" id="bom_lead_time">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Estructura de Costos --}}
+                        <div class="p-3">
+                            <h6 class="font-weight-bold text-dark mb-3">
+                                <i class="fas fa-chart-pie mr-2 text-secondary"></i>Estructura de Costos
+                            </h6>
+                            <div id="bom_costs_table"></div>
+                        </div>
+
+                        {{-- Precios --}}
+                        <div class="bg-light p-3 border-top border-bottom">
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <small class="text-dark d-block">Margen</small>
+                                    <span class="font-weight-bold h5 text-success" id="bom_margin">-</span>
+                                </div>
+                                <div class="col-4">
+                                    <small class="text-dark d-block">Precio Sugerido</small>
+                                    <span class="font-weight-bold h5 text-primary" id="bom_suggested_price">-</span>
+                                </div>
+                                <div class="col-4">
+                                    <small class="text-dark d-block">Precio Base</small>
+                                    <span class="font-weight-bold h5" id="bom_base_price">-</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Receta de Materiales --}}
+                        <div class="p-3">
+                            <h6 class="font-weight-bold text-dark mb-3">
+                                <i class="fas fa-scroll mr-2 text-primary"></i>Receta de Materiales (BOM)
+                            </h6>
+                            <div id="bom_materials_table"></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     @stop

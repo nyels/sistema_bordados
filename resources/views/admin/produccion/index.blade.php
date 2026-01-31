@@ -1,6 +1,7 @@
 ﻿@extends('adminlte::page')
 
-@section('title', 'PRODUCCIONES')
+{{-- BEFORE: 'PRODUCCIONES' --}}
+@section('title', 'Exportaciones Técnicas')
 
 @section('content_header')
 @stop
@@ -12,8 +13,9 @@
         {{-- Card Unificada: Filtros + Tabla --}}
         <div class="card card-primary" bis_skin_checked="1">
             <div class="card-header d-flex flex-column align-items-start" bis_skin_checked="1">
+                {{-- BEFORE: 'Gestion de Producciones' --}}
                 <h3 class="card-title mb-1" style="font-weight: bold; font-size: 20px;">
-                    <i class="fas fa-industry text-white mr-2"></i>Gestion de Producciones
+                    <i class="fas fa-file-export text-white mr-2"></i>Exportaciones Técnicas
                 </h3>
             </div>
 
@@ -21,9 +23,10 @@
                 {{-- Filtros --}}
                 <div class="row align-items-end mb-3">
                     {{-- ACCIONES --}}
+                    {{-- BEFORE: 'Nueva Producción' --}}
                     <div class="col-12">
                         <a href="{{ route('admin.designs.index') }}" class="btn btn-primary">
-                            <i class="fas fa-plus"></i> Nueva Producción
+                            <i class="fas fa-plus"></i> Nueva Exportación (desde Diseño)
                         </a>
                     </div>
                     <div class="col-md-3">
@@ -81,23 +84,27 @@
 
                                     {{-- Diseño / Linaje --}}
                                     <td style="padding: 16px; vertical-align: middle;">
+                                        {{-- Nombre/Etiqueta de la producción (application_label) --}}
+                                        @if($export->application_label)
+                                            <div style="font-weight: 700; color: #111827; font-size: 17px; margin-bottom: 4px;">
+                                                {{ $export->application_label }}
+                                            </div>
+                                        @endif
+
                                         @if ($export->variant)
                                             <span class="badge"
-                                                style="background: #f3e8ff; color: #6b21a8; font-size: 13px; padding: 5px 10px; border-radius: 6px; font-weight: 700; margin-bottom: 6px; display: inline-block;">
+                                                style="background: #f3e8ff; color: #6b21a8; font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 600; display: inline-block;">
                                                 VARIANTE
                                             </span>
-                                            <div style="font-weight: 700; color: #111827; font-size: 17px;">
-                                                {{ $export->variant->name }}
-                                            </div>
                                             <div style="font-size: 14px; color: #6b7280; font-weight: 500;">
-                                                Padre: {{ $export->design->name ?? 'N/A' }}
+                                                {{ $export->variant->name }} <span style="color: #9ca3af;">·</span> {{ $export->design->name ?? 'N/A' }}
                                             </div>
                                         @else
                                             <span class="badge"
-                                                style="background: #dbeafe; color: #1e40af; font-size: 13px; padding: 5px 10px; border-radius: 6px; font-weight: 700; margin-bottom: 6px; display: inline-block;">
+                                                style="background: #dbeafe; color: #1e40af; font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 600; display: inline-block;">
                                                 DISEÑO
                                             </span>
-                                            <div style="font-weight: 700; color: #111827; font-size: 17px;">
+                                            <div style="font-size: 14px; color: #6b7280; font-weight: 500;">
                                                 {{ $export->design->name ?? 'Sin diseño' }}
                                             </div>
                                         @endif

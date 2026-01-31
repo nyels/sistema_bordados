@@ -22,7 +22,6 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Application_types;
 use App\Models\MaterialVariant;
 use App\Models\Material;
-use App\Models\ProductType;
 
 class ProductController extends Controller
 {
@@ -223,15 +222,12 @@ class ProductController extends Controller
                 });*/
 
             // 4. Materiales (Familias) - Esto alimenta el primer Select
-            $materials = Material::with('baseUnit')  // baseUnit está en material, no en category
+            $materials = Material::with(['baseUnit', 'consumptionUnit'])  // consumptionUnit es la unidad de consumo para recetas
                 ->where('activo', true)
                 ->orderBy('name')
                 ->get();
 
-            // 5. Tipos de Producto (para selector visual en Step 1)
-            $productTypes = ProductType::where('active', true)
-                ->orderBy('sort_order')
-                ->get();
+            // productTypes REMOVED - La decisión de medidas pertenece al PEDIDO, no al producto
 
             return view('admin.products.create', compact(
                 'categories',
@@ -242,7 +238,6 @@ class ProductController extends Controller
                 'sizeAttribute',
                 'colorAttribute',
                 'materials',
-                'productTypes', // NEW: Product types for visual selector
                 'cloneMode',
                 'cloneProduct'
             ));
@@ -271,7 +266,9 @@ class ProductController extends Controller
 
             $product = $this->productService->createProduct($validated);
 
-            // Handle Image Upload
+            // Handle Image Upload (desde request o desde temporal)
+            $imageUploaded = false;
+
             if ($request->hasFile('primary_image')) {
                 try {
                     $this->imageService->uploadImage(
@@ -280,11 +277,44 @@ class ProductController extends Controller
                         $product->id,
                         ['is_primary' => true, 'alt_text' => $product->name]
                     );
+                    $imageUploaded = true;
                 } catch (\Exception $e) {
                     Log::error('Error saving image for product ' . $product->id . ': ' . $e->getMessage());
-                    // Don't fail the whole request, just log
                 }
             }
+
+            // Si no hay imagen en request, intentar recuperar de temporal
+            if (!$imageUploaded && session()->has('product_temp_image')) {
+                $tempData = session('product_temp_image');
+                $tempPath = storage_path('app/public/' . $tempData['path']);
+
+                if (file_exists($tempPath)) {
+                    try {
+                        $uploadedFile = new \Illuminate\Http\UploadedFile(
+                            $tempPath,
+                            $tempData['original_name'],
+                            mime_content_type($tempPath),
+                            null,
+                            true
+                        );
+
+                        $this->imageService->uploadImage(
+                            $uploadedFile,
+                            Product::class,
+                            $product->id,
+                            ['is_primary' => true, 'alt_text' => $product->name]
+                        );
+
+                        // Limpiar archivo temporal
+                        @unlink($tempPath);
+                    } catch (\Exception $e) {
+                        Log::error('Error saving temp image for product ' . $product->id . ': ' . $e->getMessage());
+                    }
+                }
+            }
+
+            // Limpiar sesión de imagen temporal
+            session()->forget('product_temp_image');
 
             return redirect()->route('admin.products.show', $product->id)
                 ->with('success', "Producto '{$product->name}' creado exitosamente");
@@ -337,17 +367,20 @@ class ProductController extends Controller
             ];
 
             // Materials
+            // REGLA: scope inferido desde targets (vacío = global, con elementos = específico)
             if (!empty($validated['materials_json'])) {
                 $bomData = json_decode($validated['materials_json'], true);
                 if (is_array($bomData)) {
                     $data['materials'] = array_map(function ($item) {
+                        $targets = $item['targets'] ?? [];
                         return [
-                            'material_variant_id' => $item['id'] ?? null,
+                            'material_variant_id' => $item['material_id'] ?? $item['id'] ?? null,
                             'quantity' => $item['qty'] ?? 0,
                             'is_primary' => $item['is_primary'] ?? false,
                             'notes' => $item['notes'] ?? null,
-                            'scope' => $item['scope'] ?? 'global',
-                            'targets' => $item['targets'] ?? [],
+                            'targets' => $targets,
+                            // scope inferido: vacío = global, con elementos = específico
+                            'price' => $item['cost'] ?? null,
                         ];
                     }, $bomData);
                 }
@@ -485,7 +518,7 @@ class ProductController extends Controller
             $attributes = Attribute::with('values')->orderBy('name')->get();
 
             // Materiales para selector (Paso 3)
-            $materials = Material::with('baseUnit')
+            $materials = Material::with(['baseUnit', 'consumptionUnit'])  // consumptionUnit es la unidad de consumo para recetas
                 ->where('activo', true)
                 ->orderBy('name')
                 ->get();
@@ -494,10 +527,7 @@ class ProductController extends Controller
             $sizeAttribute = \App\Models\Attribute::with(['values' => fn($q) => $q->orderBy('value')])->where('slug', 'talla')->first();
             $colorAttribute = \App\Models\Attribute::with(['values' => fn($q) => $q->orderBy('value')])->where('slug', 'color')->first();
 
-            // Tipos de producto (para selector visual)
-            $productTypes = ProductType::where('active', true)
-                ->orderBy('sort_order')
-                ->get();
+            // productTypes REMOVED - La decisión de medidas pertenece al PEDIDO, no al producto
 
             // === PRECARGAR DATOS PARA EL STATE ===
             // Usamos la MISMA vista que create, con editMode=true
@@ -511,7 +541,6 @@ class ProductController extends Controller
                 'materials' => $materials,
                 'sizeAttribute' => $sizeAttribute,
                 'colorAttribute' => $colorAttribute,
-                'productTypes' => $productTypes,
             ]);
         } catch (ModelNotFoundException $e) {
             return redirect()->route('admin.products.index')
@@ -1044,7 +1073,7 @@ class ProductController extends Controller
     {
         $term = $request->get('q');
 
-        $materials = MaterialVariant::with(['material.baseUnit'])  // baseUnit está en material
+        $materials = MaterialVariant::with(['material.baseUnit', 'material.consumptionUnit'])
             ->whereHas('material', function ($q) use ($term) {
                 $q->where('name', 'like', "%{$term}%");
             })
@@ -1054,13 +1083,16 @@ class ProductController extends Controller
             ->get();
 
         $results = $materials->map(function ($variant) {
-            $unitSymbol = $variant->material->baseUnit->symbol ?? '';
+            $baseUnitSymbol = $variant->material->baseUnit->symbol ?? 'unid';
+            // La unidad de consumo es la que se usa en recetas de productos
+            $consumptionUnitSymbol = $variant->material->consumptionUnit->symbol ?? $baseUnitSymbol;
             return [
                 'id' => $variant->id,
-                'text' => $variant->display_name . " (Stock: {$variant->current_stock} {$unitSymbol})",
+                'text' => $variant->display_name . " (Stock: {$variant->current_stock} {$baseUnitSymbol})",
                 'sku' => $variant->sku,
-                'unit' => $variant->material->baseUnit->name ?? 'Unidad',
-                'symbol' => $unitSymbol,
+                'unit' => $variant->material->consumptionUnit->name ?? ($variant->material->baseUnit->name ?? 'Unidad'),
+                'symbol' => $consumptionUnitSymbol, // Unidad de CONSUMO para recetas
+                'symbol_base' => $baseUnitSymbol,   // Unidad BASE para stock
                 'cost' => $variant->average_cost > 0 ? $variant->average_cost : $variant->last_purchase_cost,
                 'stock' => $variant->current_stock
             ];
@@ -1110,6 +1142,68 @@ class ProductController extends Controller
                 'request' => $request->all()
             ]);
             return response()->json(['error' => 'Error al validar precios'], 500);
+        }
+    }
+
+    /**
+     * Obtener BOM (Ficha Técnica) del producto en formato JSON
+     */
+    public function getBom($id)
+    {
+        try {
+            $product = Product::with([
+                'category',
+                'materials.material.category',
+                'materials.material.consumptionUnit',
+                'materials.material.baseUnit',
+                'extras',
+            ])->findOrFail((int) $id);
+
+            // Calcular costos
+            $materialsCost = $product->materials_cost > 0
+                ? $product->materials_cost
+                : $product->materials->sum(fn($m) => $m->pivot->quantity * $m->pivot->unit_cost);
+
+            $embroideryCost = (float) ($product->embroidery_cost ?? 0);
+            $laborCost = (float) ($product->labor_cost ?? 0);
+            $extrasCost = $product->extras->sum(fn($e) => $e->pivot->snapshot_cost > 0 ? $e->pivot->snapshot_cost : $e->cost_addition);
+            $totalCost = $materialsCost + $embroideryCost + $laborCost + $extrasCost;
+
+            // Materiales para la tabla (ordenados alfabéticamente por nombre)
+            $materials = $product->materials->map(function ($mat) {
+                return [
+                    'name' => $mat->material->name ?? 'N/A',
+                    'color' => $mat->color ?? null,
+                    'category' => $mat->material->category->name ?? 'N/A',
+                    'quantity' => (float) $mat->pivot->quantity,
+                    'unit' => $mat->material->consumptionUnit->symbol ?? ($mat->material->baseUnit->symbol ?? 'unid'),
+                    'unit_cost' => (float) $mat->pivot->unit_cost,
+                ];
+            })->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values();
+
+            return response()->json([
+                'id' => $product->id,
+                'name' => $product->name,
+                'sku' => $product->sku,
+                'category' => $product->category->name ?? 'Sin categoría',
+                'lead_time' => $product->production_lead_time ?? 0,
+                'costs' => [
+                    'materials' => (float) $materialsCost,
+                    'embroidery' => (float) $embroideryCost,
+                    'labor' => (float) $laborCost,
+                    'extras' => (float) $extrasCost,
+                    'total' => (float) $totalCost,
+                ],
+                'materials' => $materials,
+                'base_price' => (float) ($product->base_price ?? 0),
+                'suggested_price' => (float) ($product->suggested_price ?? 0),
+                'margin' => (float) ($product->profit_margin ?? 0),
+            ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['error' => 'Producto no encontrado'], 404);
+        } catch (\Exception $e) {
+            Log::error('Error al obtener BOM: ' . $e->getMessage());
+            return response()->json(['error' => 'Error al cargar información'], 500);
         }
     }
 }

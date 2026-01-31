@@ -1,7 +1,6 @@
 {{-- 2. PRODUCTOS --}}
 @php
-    // Calcular totales técnicos globales del pedido (solo para items personalizados con diseños)
-    $costoPorMillarGlobal = 1.0; // Default $1.00 MXN por millar
+    // Calcular totales técnicos globales del pedido
     $totalDisenosGlobal = 0;
     $totalPuntadasGlobal = 0;
     $totalEstimadoGlobal = 0;
@@ -9,14 +8,23 @@
     $complejidadTotal = 'Baja';
 
     foreach ($order->items as $itm) {
+        // Items con personalización (designExports vinculados)
         if ($itm->requiresTechnicalDesigns() && $itm->designExports->count() > 0) {
             $itemsConDisenos++;
             foreach ($itm->designExports as $de) {
                 $totalDisenosGlobal++;
                 $puntadas = $de->stitches_count ?? 0;
                 $totalPuntadasGlobal += $puntadas;
-                $totalEstimadoGlobal += ($puntadas / 1000) * $costoPorMillarGlobal * $itm->quantity;
             }
+            // Usar embroidery_cost del producto si existe
+            if ($itm->product && $itm->product->embroidery_cost > 0) {
+                $totalEstimadoGlobal += $itm->product->embroidery_cost * $itm->quantity;
+            }
+        }
+        // Productos estándar con diseño predefinido
+        elseif ($itm->product && $itm->product->embroidery_cost > 0) {
+            $totalPuntadasGlobal += $itm->product->total_stitches * $itm->quantity;
+            $totalEstimadoGlobal += $itm->product->embroidery_cost * $itm->quantity;
         }
     }
 
@@ -74,9 +82,12 @@
                         $requiresDesigns = $item->requiresTechnicalDesigns();
                         $hasLinkedDesigns = $linkedDesigns->count() > 0;
 
-                        // Calcular estimado técnico del item
-                        $itemPuntadas = $linkedDesigns->sum('stitches_count');
-                        $itemEstimado = ($itemPuntadas / 1000) * $costoPorMillarGlobal * $item->quantity;
+                        // Calcular puntadas y costo del item
+                        $itemPuntadas = $linkedDesigns->count() > 0
+                            ? $linkedDesigns->sum('stitches_count')
+                            : ($item->product?->total_stitches ?? 0);
+                        // Usar embroidery_cost del producto
+                        $itemEstimado = ($item->product?->embroidery_cost ?? 0) * $item->quantity;
 
                         // Obtener variante del producto (Talla/Color)
                         $variantDisplay = $item->variant?->attributes_display;
@@ -290,17 +301,15 @@
                                         @endforeach
 
                                         {{-- Estimado técnico inline (solo en CONFIRMED) --}}
-                                        @if ($order->status === \App\Models\Order::STATUS_CONFIRMED)
+                                        @if ($order->status === \App\Models\Order::STATUS_CONFIRMED && $itemEstimado > 0)
                                             <div class="mt-2 pt-2" style="border-top: 1px dashed #bdbdbd;">
                                                 <div class="d-flex justify-content-between align-items-center"
                                                     style="font-size: 14px;">
                                                     <span style="color: #7b1fa2;">
                                                         <i class="fas fa-calculator mr-1"></i>
-                                                        {{ number_format($itemPuntadas) }} pts ×
-                                                        ${{ number_format($costoPorMillarGlobal, 2) }}/millar ×
-                                                        {{ $item->quantity }} pz
+                                                        {{ number_format($itemPuntadas) }} pts × {{ $item->quantity }} pz
                                                     </span>
-                                                    <strong style="color: #7b1fa2;">Est.
+                                                    <strong style="color: #7b1fa2;">Costo bordado:
                                                         ${{ number_format($itemEstimado, 2) }}</strong>
                                                 </div>
                                             </div>

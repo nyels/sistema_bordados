@@ -379,7 +379,7 @@
                             </div>
                             <div class="table-responsive">
                                 <table class="table table-sm table-hover mb-0">
-                                    <thead class="bg-light text-uppercase small">
+                                    <thead class="bg-light text-uppercase small" style="color: #212529;">
                                         <tr>
                                             <th class="pl-4">Material</th>
                                             <th>Categoría</th>
@@ -388,21 +388,19 @@
                                             <th class="text-right pr-4">Subtotal</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody style="color: #212529;">
                                         @foreach($globalMaterials->sortBy('material.category.name') as $mat)
                                             <tr>
                                                 <td class="pl-4">
-                                                    <span class="font-weight-bold">{{ $mat->material->name ?? 'N/A' }}</span>
+                                                    <span class="font-weight-bold text-uppercase">{{ $mat->material->name ?? 'N/A' }}</span>
                                                     @if ($mat->color)
-                                                        <span class="text-muted">- {{ $mat->color }}</span>
+                                                        - {{ $mat->color }}
                                                     @endif
                                                 </td>
-                                                <td>
-                                                    <span class="badge badge-light border small">{{ $mat->material->category->name ?? 'N/A' }}</span>
-                                                </td>
-                                                <td class="text-center font-weight-bold">
+                                                <td>{{ $mat->material->category->name ?? 'N/A' }}</td>
+                                                <td class="text-center">
                                                     {{ floatval($mat->pivot->quantity) }}
-                                                    <span class="text-muted">{{ $mat->material->consumptionUnit->symbol ?? ($mat->material->baseUnit->symbol ?? 'unid') }}</span>
+                                                    {{ $mat->material->consumptionUnit->symbol ?? ($mat->material->baseUnit->symbol ?? 'unid') }}
                                                 </td>
                                                 <td class="text-right">${{ number_format($mat->pivot->unit_cost, 4) }}</td>
                                                 <td class="text-right pr-4 font-weight-bold">${{ number_format($mat->pivot->quantity * $mat->pivot->unit_cost, 2) }}</td>
@@ -433,7 +431,7 @@
                                 </div>
                                 <div class="table-responsive">
                                     <table class="table table-sm table-hover mb-0">
-                                        <thead class="bg-light text-uppercase small">
+                                        <thead class="bg-light text-uppercase small" style="color: #212529;">
                                             <tr>
                                                 <th class="pl-4">Material</th>
                                                 <th>Categoría</th>
@@ -442,21 +440,19 @@
                                                 <th class="text-right pr-4">Subtotal</th>
                                             </tr>
                                         </thead>
-                                        <tbody>
+                                        <tbody style="color: #212529;">
                                             @foreach($data['materials']->sortBy('material.category.name') as $mat)
                                                 <tr>
                                                     <td class="pl-4">
-                                                        <span class="font-weight-bold">{{ $mat->material->name ?? 'N/A' }}</span>
+                                                        <span class="font-weight-bold text-uppercase">{{ $mat->material->name ?? 'N/A' }}</span>
                                                         @if ($mat->color)
-                                                            <span class="text-muted">- {{ $mat->color }}</span>
+                                                            - {{ $mat->color }}
                                                         @endif
                                                     </td>
-                                                    <td>
-                                                        <span class="badge badge-light border small">{{ $mat->material->category->name ?? 'N/A' }}</span>
-                                                    </td>
-                                                    <td class="text-center font-weight-bold">
+                                                    <td>{{ $mat->material->category->name ?? 'N/A' }}</td>
+                                                    <td class="text-center">
                                                         {{ floatval($mat->pivot->quantity) }}
-                                                        <span class="text-muted">{{ $mat->material->consumptionUnit->symbol ?? ($mat->material->baseUnit->symbol ?? 'unid') }}</span>
+                                                        {{ $mat->material->consumptionUnit->symbol ?? ($mat->material->baseUnit->symbol ?? 'unid') }}
                                                     </td>
                                                     <td class="text-right">${{ number_format($mat->pivot->unit_cost, 4) }}</td>
                                                     <td class="text-right pr-4 font-weight-bold">${{ number_format($mat->pivot->quantity * $mat->pivot->unit_cost, 2) }}</td>
@@ -630,12 +626,15 @@
                                 <div class="mr-3 text-center bg-light rounded p-1 d-flex align-items-center justify-content-center border"
                                     style="width: 80px; height: 80px; overflow: hidden;">
                                     @php
-                                        // Prioritize the latest export for preview
-                                        $previewExport =
-                                            $design->exports->count() > 0
-                                                ? $design->exports->sortByDesc('created_at')->first()
-                                                : null;
-                                        // Specific general export (non-variant) logic if needed, but exports relation covers all
+                                        // PRIORIDAD 1: Export específico asignado en product_design
+                                        $previewExport = null;
+                                        if ($design->pivot->design_export_id) {
+                                            $previewExport = \App\Models\DesignExport::find($design->pivot->design_export_id);
+                                        }
+                                        // FALLBACK: Si no hay export específico, usar el más reciente del diseño
+                                        if (!$previewExport && $design->exports->count() > 0) {
+                                            $previewExport = $design->exports->sortByDesc('created_at')->first();
+                                        }
                                     @endphp
 
                                     @if ($previewExport && $previewExport->svg_content)

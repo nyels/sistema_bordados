@@ -365,6 +365,12 @@ return [
             'active' => ['admin/designs*', 'admin/production', 'admin/production/create*', 'admin/visualizer*'],
             'submenu' => [
                 [
+                    'text' => 'Categorías de Diseño',
+                    'url' => 'admin/categories',
+                    'icon' => 'fas fa-fw fa-folder-open',
+                    'active' => ['admin/categories*'],
+                ],
+                [
                     'text' => 'Catálogo de Diseños',
                     'url' => 'admin/designs',
                     'icon' => 'fas fa-fw fa-images',
@@ -404,6 +410,12 @@ return [
                     'active' => ['admin/inventory'],
                 ],
                 [
+                    'text' => 'Categorías de Material',
+                    'url' => 'admin/material-categories',
+                    'icon' => 'fas fa-fw fa-layer-group',
+                    'active' => ['admin/material-categories*'],
+                ],
+                [
                     'text' => 'Catálogo de Materiales',
                     'url' => 'admin/materials',
                     'icon' => 'fas fa-fw fa-boxes',
@@ -433,16 +445,9 @@ return [
 
         [
             'text' => 'Stock Prod. Terminado',
+            'url' => 'admin/finished-goods-stock',
             'icon' => 'fas fa-fw fa-boxes',
             'active' => ['admin/finished-goods-stock*'],
-            'submenu' => [
-                [
-                    'text' => 'Vista General',
-                    'url' => 'admin/finished-goods-stock',
-                    'icon' => 'fas fa-fw fa-th-list',
-                    'active' => ['admin/finished-goods-stock'],
-                ],
-            ],
         ],
 
         /*
@@ -473,12 +478,8 @@ return [
             'icon' => 'fas fa-fw fa-shopping-cart',
             'active' => ['admin/purchases*'],
         ],
-        [
-            'text' => 'Proveedores',
-            'url' => 'proveedores',
-            'icon' => 'fas fa-fw fa-truck',
-            'active' => ['proveedores*'],
-        ],
+        // BEFORE: Proveedores estaba aquí bajo COMPRAS
+        // AFTER: Movido a CATÁLOGOS (después de Clientes)
 
         /*
         |--------------------------------------------------------------------------
@@ -493,23 +494,31 @@ return [
             'icon' => 'fas fa-fw fa-users',
             'active' => ['clientes*'],
         ],
+        // AFTER: Proveedores movido aquí desde COMPRAS
+        [
+            'text' => 'Proveedores',
+            'url' => 'proveedores',
+            'icon' => 'fas fa-fw fa-truck',
+            'active' => ['proveedores*'],
+        ],
         [
             'text' => 'Productos',
             'icon' => 'fas fa-fw fa-box-open',
             'active' => ['admin/products*', 'admin/product-categories*', 'product_extras*'],
             'submenu' => [
                 [
-                    'text' => 'Catálogo de Productos',
-                    'url' => 'admin/products',
-                    'icon' => 'fas fa-fw fa-th-list',
-                    'active' => ['admin/products*'],
-                ],
-                [
                     'text' => 'Categorías de Producto',
                     'url' => 'admin/product-categories',
                     'icon' => 'fas fa-fw fa-tags',
                     'active' => ['admin/product-categories*'],
                 ],
+                [
+                    'text' => 'Catálogo de Productos',
+                    'url' => 'admin/products',
+                    'icon' => 'fas fa-fw fa-th-list',
+                    'active' => ['admin/products*'],
+                ],
+
                 [
                     'text' => 'Servicios Extras',
                     'url' => 'product_extras',
@@ -518,32 +527,14 @@ return [
                 ],
             ],
         ],
-        [
-            'text' => 'Materiales',
-            'icon' => 'fas fa-fw fa-cubes',
-            'active' => ['admin/material-categories*'],
-            'submenu' => [
-                [
-                    'text' => 'Categorías de Material',
-                    'url' => 'admin/material-categories',
-                    'icon' => 'fas fa-fw fa-layer-group',
-                    'active' => ['admin/material-categories*'],
-                ],
-            ],
-        ],
-        [
-            'text' => 'Diseños',
-            'icon' => 'fas fa-fw fa-palette',
-            'active' => ['admin/categories*'],
-            'submenu' => [
-                [
-                    'text' => 'Categorías de Diseño',
-                    'url' => 'admin/categories',
-                    'icon' => 'fas fa-fw fa-folder-open',
-                    'active' => ['admin/categories*'],
-                ],
-            ],
-        ],
+
+        /* [
+            'text' => 'Conversiones de Material',
+            'url' => 'admin/material-conversions',
+            'icon' => 'fas fa-fw fa-exchange-alt',
+            'active' => ['admin/material-conversions*'],
+        ],*/
+
         [
             'text' => 'Parámetros',
             'icon' => 'fas fa-fw fa-database',
@@ -556,7 +547,8 @@ return [
                     'active' => ['attributes*', 'attribute-values*'],
                 ],
                 [
-                    'text' => 'Estados (Ubicación)',
+                    // BEFORE: 'Estados (Ubicación)'
+                    'text' => 'Estados Geográficos',
                     'url' => 'estados',
                     'icon' => 'fas fa-fw fa-map-marker-alt',
                     'active' => ['estados*'],
@@ -568,7 +560,8 @@ return [
                     'active' => ['giros*'],
                 ],
                 [
-                    'text' => 'Recomendaciones',
+                    // BEFORE: 'Recomendaciones'
+                    'text' => 'Fuentes de Referencia',
                     'url' => 'recomendaciones',
                     'icon' => 'fas fa-fw fa-lightbulb',
                     'active' => ['recomendaciones*'],
@@ -801,6 +794,7 @@ return [
                     'asset' => true,
                     'location' => 'js/notifications.js',
                 ],
+                // echo-notifications.js desactivado - ahora integrado en menu-item-messages.blade.php
             ],
         ],
         'Pace' => [

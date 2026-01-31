@@ -23,7 +23,9 @@ class MaterialCategoryRequest extends FormRequest
                 'min:2',
                 'max:50',
                 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/u',
-                Rule::unique('material_categories', 'name')->ignore($categoryId),
+                Rule::unique('material_categories', 'name')
+                    ->where('activo', true)
+                    ->ignore($categoryId),
             ],
             'description' => [
                 'nullable',

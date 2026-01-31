@@ -365,31 +365,49 @@ class MaterialVariantController extends Controller
                 ->where('activo', true)
                 ->with([
                     'material.baseUnit',
-                    'material.consumptionUnit'
+                    'material.consumptionUnit',
+                    'material.category.defaultInventoryUnit.compatibleBaseUnit',
+                    'material.unitConversions'
                 ])
                 ->ordered()
                 ->get();
 
             $results = $variants->map(function ($v) {
-                // El material ahora tiene la info de unidades directo
                 $material = $v->material;
-                $baseUnit = $material->baseUnit;
+
+                // =====================================================
+                // RESOLVER UNIDAD DE CONSUMO (para recetas de productos)
+                // =====================================================
+                // El stock y costo ya están almacenados en UNIDAD DE CONSUMO
+                // Prioridad para determinar cuál es esa unidad:
+                // 1. material.consumption_unit_id (si existe)
+                // 2. category.defaultInventoryUnit.compatible_base_unit_id (unidad canónica)
+                // 3. category.defaultInventoryUnit (fallback)
                 $consumoUnit = $material->consumptionUnit;
+                if (!$consumoUnit && $material->category) {
+                    if ($material->category->defaultInventoryUnit) {
+                        // Intentar la unidad canónica compatible (ej: CONO -> METRO)
+                        $consumoUnit = $material->category->defaultInventoryUnit->compatibleBaseUnit;
+                        // Si no hay compatible, usar la unidad de inventario directamente
+                        if (!$consumoUnit) {
+                            $consumoUnit = $material->category->defaultInventoryUnit;
+                        }
+                    }
+                }
 
-                // Factor de conversión (ej: 1 Cono = 5000 Metros)
-                // Si base y consumo son diferentes, usar el factor del material
-                // conversión: base_qty * factor = consumption_qty
-                $factor = (float) $material->conversion_factor ?: 1.0;
+                // Stock y costo ya están en unidad de consumo (así se almacenan)
+                $stock = (float) $v->current_stock;
+                $cost = (float) $v->average_cost;
 
-                // Datos crudos
-                $stockBase = (float) $v->current_stock; // Stock en unidad base (ej: Conos)
-                $costBase = (float) $v->average_cost;   // Costo por unidad base
+                // Símbolo de la unidad de consumo
+                $simbolo = $consumoUnit->symbol ?? 'unid';
 
-                // Calcular equivalentes en unidad de consumo si es necesario
-                // OJO: La lógica de negocio depende de cómo quieran VER el stock
-                // Por ahora devolvemos el stock base, y el símbolo base
-
-                $simbolo = $baseUnit->symbol ?? 'unid';
+                // Determinar si la unidad de consumo admite decimales usando measurement_family
+                // DISCRETE = no admite decimales (piezas, bolsas, etc.)
+                // LINEAR = admite decimales (metros, etc.)
+                $esDiscreta = !$consumoUnit ||
+                              $consumoUnit->measurement_family === null ||
+                              $consumoUnit->measurement_family === \App\Enums\MeasurementFamily::DISCRETE;
 
                 return [
                     'id' => $v->id,
@@ -397,12 +415,12 @@ class MaterialVariantController extends Controller
                     'family_name' => $material->name,
                     'variant_name' => $v->color,
                     'sku' => $v->sku,
-                    'stock_real' => number_format($stockBase, 4, '.', ''),
-                    'cost_base' => number_format($costBase, 4, '.', ''),
+                    'stock_real' => number_format($stock, 4, '.', ''),
+                    'cost_base' => number_format($cost, 4, '.', ''),
                     'symbol' => $simbolo,
-                    'factor' => $factor,
-                    'consumption_symbol' => $consumoUnit->symbol ?? $simbolo,
-                    'stock_display' => "Stock: " . number_format($stockBase, 2) . " {$simbolo}"
+                    'consumption_symbol' => $simbolo,
+                    'is_discrete' => $esDiscreta,
+                    'stock_display' => "Stock: " . number_format($stock, 2) . " {$simbolo}"
                 ];
             });
 
@@ -410,6 +428,66 @@ class MaterialVariantController extends Controller
         } catch (\Exception $e) {
             Log::error('Error en getByMaterial: ' . $e->getMessage());
             return response()->json(['error' => 'Error al procesar datos'], 500);
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | AJAX: Obtener variantes para modal (vista rápida)
+    |--------------------------------------------------------------------------
+    */
+
+    public function getVariantsForModal($materialId)
+    {
+        try {
+            if (!is_numeric($materialId) || $materialId < 1) {
+                return response()->json(['error' => 'Material no válido'], 400);
+            }
+
+            $material = Material::with(['baseUnit', 'consumptionUnit', 'category'])
+                ->find((int) $materialId);
+
+            if (!$material) {
+                return response()->json(['error' => 'Material no encontrado'], 404);
+            }
+
+            $variants = MaterialVariant::where('material_id', $material->id)
+                ->where('activo', true)
+                ->ordered()
+                ->get();
+
+            // Determinar símbolo de unidad
+            $unitSymbol = $material->consumptionUnit->symbol
+                ?? $material->baseUnit->symbol
+                ?? 'u';
+
+            $data = $variants->map(function ($v) use ($unitSymbol) {
+                return [
+                    'id' => $v->id,
+                    'sku' => $v->sku,
+                    'color' => $v->color ?? 'Sin color',
+                    'current_stock' => (float) $v->current_stock,
+                    'min_stock_alert' => (float) $v->min_stock_alert,
+                    'average_cost' => (float) $v->average_cost,
+                    'current_value' => (float) $v->current_value,
+                    'stock_status' => $v->current_stock <= $v->min_stock_alert ? 'low' : 'ok',
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'material' => [
+                    'id' => $material->id,
+                    'name' => $material->name,
+                    'category' => $material->category->name ?? 'N/A',
+                    'unit_symbol' => $unitSymbol,
+                ],
+                'variants' => $data,
+                'total' => $variants->count(),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error AJAX getVariantsForModal: ' . $e->getMessage());
+            return response()->json(['error' => 'Error al obtener variantes'], 500);
         }
     }
 

@@ -6,8 +6,11 @@ use App\Models\MaterialVariant;
 use App\Models\InventoryMovement;
 use App\Models\InventoryReservation;
 use App\Models\Material;
+use App\Models\Purchase;
+use App\Models\PurchaseItem;
 use App\Services\InventoryService;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
@@ -194,5 +197,67 @@ class InventoryController extends Controller
         $reservations = $query->paginate(50)->withQueryString();
 
         return view('admin.inventory.reservations-history', compact('reservations'));
+    }
+
+    // === DETALLES DE COMPRA PARA MODAL EN KARDEX ===
+    public function getPurchaseDetails(Request $request): JsonResponse
+    {
+        $referenceType = $request->input('reference_type');
+        $referenceId = $request->input('reference_id');
+
+        $purchase = null;
+        $purchaseItem = null;
+
+        if ($referenceType === 'App\Models\PurchaseItem') {
+            $purchaseItem = PurchaseItem::with(['purchase.proveedor', 'purchase.creator', 'purchase.receiver', 'materialVariant.material', 'unit'])
+                ->find($referenceId);
+            $purchase = $purchaseItem?->purchase;
+        } elseif ($referenceType === 'App\Models\Purchase') {
+            $purchase = Purchase::with(['proveedor', 'creator', 'receiver', 'items.materialVariant.material', 'items.unit'])
+                ->find($referenceId);
+        }
+
+        if (!$purchase) {
+            return response()->json(['error' => 'Compra no encontrada'], 404);
+        }
+
+        return response()->json([
+            'purchase' => [
+                'id' => $purchase->id,
+                'purchase_number' => $purchase->purchase_number,
+                'reference' => $purchase->reference,
+                'status' => $purchase->status_label,
+                'status_color' => $purchase->status_color,
+                'ordered_at' => $purchase->ordered_at?->format('d/m/Y'),
+                'received_at' => $purchase->received_at?->format('d/m/Y H:i'),
+                'subtotal' => number_format($purchase->subtotal, 2),
+                'tax_amount' => number_format($purchase->tax_amount, 2),
+                'discount_amount' => number_format($purchase->discount_amount, 2),
+                'total' => number_format($purchase->total, 2),
+                'notes' => $purchase->notes,
+                'proveedor' => $purchase->proveedor ? [
+                    'name' => $purchase->proveedor->name,
+                    'contact' => $purchase->proveedor->contact_name,
+                    'phone' => $purchase->proveedor->phone,
+                    'email' => $purchase->proveedor->email,
+                ] : null,
+                'creator' => $purchase->creator?->name,
+                'receiver' => $purchase->receiver?->name,
+            ],
+            'highlighted_item_id' => $purchaseItem?->id,
+            'items' => $purchase->items->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'material' => $item->materialVariant?->material?->name ?? 'N/A',
+                    'variant' => $item->materialVariant?->color ?? '-',
+                    'sku' => $item->materialVariant?->sku ?? '-',
+                    'quantity' => number_format($item->quantity, 2),
+                    'unit' => $item->unit?->symbol ?? '-',
+                    'unit_price' => number_format($item->unit_price, 2),
+                    'subtotal' => number_format($item->subtotal, 2),
+                    'quantity_received' => number_format($item->quantity_received, 2),
+                ];
+            }),
+        ]);
     }
 }

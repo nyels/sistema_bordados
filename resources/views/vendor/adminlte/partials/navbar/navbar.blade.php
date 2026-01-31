@@ -24,6 +24,11 @@
         {{-- Configured right links --}}
         @each('adminlte::partials.navbar.menu-item', $adminlte->menu('navbar-right'), 'item')
 
+        {{-- Messages dropdown (WebSocket notifications) --}}
+        @if(Auth::user())
+            @include('adminlte::partials.navbar.menu-item-messages')
+        @endif
+
         {{-- User menu link --}}
         @if(Auth::user())
             @if(config('adminlte.usermenu_enabled'))

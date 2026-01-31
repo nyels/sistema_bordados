@@ -655,6 +655,87 @@ class PurchaseController extends Controller
 
     /*
     |--------------------------------------------------------------------------
+    | RECEIVE COMPLETE (Recibir todo lo pendiente de una vez)
+    |--------------------------------------------------------------------------
+    */
+
+    public function receiveComplete($id)
+    {
+        try {
+            if (!is_numeric($id) || $id < 1 || $id > 999999999) {
+                return redirect()->route('admin.purchases.index')
+                    ->with('error', 'Compra no válida');
+            }
+
+            $purchase = Purchase::with('items')->where('activo', true)->findOrFail((int) $id);
+
+            if (!$purchase->can_receive) {
+                return redirect()->route('admin.purchases.show', $id)
+                    ->with('error', "No se puede recibir la compra en estado: {$purchase->status->label()}");
+            }
+
+            // Verificar que hay items pendientes
+            $hasPending = $purchase->items->where('pending_quantity', '>', 0)->count() > 0;
+            if (!$hasPending) {
+                return redirect()->route('admin.purchases.show', $id)
+                    ->with('info', 'No hay items pendientes de recibir');
+            }
+
+            $receptionService = app(ReceptionService::class);
+
+            // Preparar todos los items pendientes
+            $itemsData = [];
+            foreach ($purchase->items as $item) {
+                if ($item->pending_quantity > 0) {
+                    $itemsData[] = [
+                        'item_id' => $item->id,
+                        'quantity' => $item->pending_quantity,
+                    ];
+                }
+            }
+
+            $reception = $receptionService->createReception(
+                purchase: $purchase,
+                itemsData: $itemsData,
+                deliveryNote: null,
+                notes: 'Recepción completa desde vista de orden'
+            );
+
+            return redirect()->route('admin.purchases.show', $purchase->id)
+                ->with('success', "Recepción {$reception->reception_number} registrada - Orden completamente recibida");
+        } catch (PurchaseException $e) {
+            Log::warning('Error de negocio al recibir compra completa: ' . $e->getMessage(), [
+                'context' => $e->getContext(),
+                'user_id' => Auth::id(),
+            ]);
+
+            return redirect()->route('admin.purchases.show', $id)
+                ->with('error', $e->getMessage());
+        } catch (InventoryException $e) {
+            Log::error('Error de inventario al recibir compra completa: ' . $e->getMessage(), [
+                'purchase_id' => $id,
+                'user_id' => Auth::id(),
+            ]);
+
+            return redirect()->route('admin.purchases.show', $id)
+                ->with('error', 'Error de inventario: ' . $e->getMessage());
+        } catch (ModelNotFoundException $e) {
+            return redirect()->route('admin.purchases.index')
+                ->with('error', 'Compra no encontrada');
+        } catch (\Exception $e) {
+            Log::error('Error al recibir compra completa: ' . $e->getMessage(), [
+                'purchase_id' => $id,
+                'user_id' => Auth::id(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return redirect()->route('admin.purchases.show', $id)
+                ->with('error', 'Error al procesar la recepción completa');
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | CANCEL
     |--------------------------------------------------------------------------
     */
@@ -895,16 +976,19 @@ class PurchaseController extends Controller
 
             // Unidades de compra con conversión configurada para este material
             $conversions = MaterialUnitConversion::where('material_id', $material->id)
-                ->with('fromUnit')
+                ->with(['fromUnit', 'toUnit'])
                 ->get();
 
             foreach ($conversions as $conversion) {
                 if ($conversion->fromUnit) {
+                    $baseSymbol = $conversion->toUnit->symbol ?? $material->baseUnit->symbol ?? '';
                     $units->push([
                         'id' => $conversion->from_unit_id,
                         'name' => $conversion->fromUnit->name,
                         'symbol' => $conversion->fromUnit->symbol,
                         'conversion_factor' => $conversion->conversion_factor,
+                        'label' => $conversion->label,
+                        'conversion_display' => number_format($conversion->conversion_factor, 0) . ' ' . $baseSymbol,
                         'is_base' => false,
                     ]);
                 }
@@ -926,10 +1010,154 @@ class PurchaseController extends Controller
     }
 
     /**
+     * AJAX: Buscar materiales y variantes para el modal de compras
+     * Optimizado con paginación server-side para alto volumen
+     */
+    public function searchMaterialsForModal(Request $request)
+    {
+        try {
+            $categoryId = $request->input('category_id');
+            $search = trim($request->input('search', ''));
+            $page = (int) $request->input('page', 1);
+            $perPage = 50; // Items por página
+
+            // Query base para variantes (más eficiente que cargar materiales primero)
+            $variantsQuery = MaterialVariant::query()
+                ->select('material_variants.*')
+                ->join('materials', 'materials.id', '=', 'material_variants.material_id')
+                ->where('material_variants.activo', true)
+                ->where('materials.activo', true)
+                // Solo materiales con conversiones configuradas
+                ->whereExists(function ($query) {
+                    $query->select(DB::raw(1))
+                        ->from('material_unit_conversions')
+                        ->whereColumn('material_unit_conversions.material_id', 'materials.id');
+                })
+                ->with([
+                    'material.category',
+                    'material.baseUnit',
+                    'material.unitConversions.fromUnit',
+                    'material.unitConversions.toUnit'
+                ]);
+
+            // Filtrar por categoría
+            if ($categoryId) {
+                $variantsQuery->where('materials.material_category_id', $categoryId);
+            }
+
+            // Búsqueda server-side robusta en múltiples campos
+            if ($search) {
+                // Generar todas las variantes de búsqueda
+                $searchTerms = $this->generateSearchVariants($search);
+
+                $variantsQuery->where(function ($q) use ($searchTerms) {
+                    foreach ($searchTerms as $term) {
+                        $q->orWhere('materials.name', 'like', "%{$term}%")
+                          ->orWhere('materials.composition', 'like', "%{$term}%")
+                          ->orWhere('material_variants.sku', 'like', "%{$term}%")
+                          ->orWhere('material_variants.color', 'like', "%{$term}%");
+                    }
+                });
+            }
+
+            // Ordenar por nombre de material y luego por color
+            $variantsQuery->orderBy('materials.name', 'asc')
+                          ->orderBy('material_variants.color', 'asc');
+
+            // Contar total antes de paginar
+            $totalCount = $variantsQuery->count();
+
+            // Aplicar paginación
+            $variants = $variantsQuery->skip(($page - 1) * $perPage)->take($perPage)->get();
+
+            // Construir resultados
+            $results = [];
+            $materialConversionsCache = []; // Cache para no recalcular conversiones
+
+            foreach ($variants as $variant) {
+                $material = $variant->material;
+                if (!$material) continue;
+
+                // Usar cache de conversiones por material
+                if (!isset($materialConversionsCache[$material->id])) {
+                    $unitOptions = [];
+                    $baseSymbol = $material->baseUnit->symbol ?? '';
+
+                    // Unidad base
+                    if ($material->baseUnit) {
+                        $unitOptions[] = [
+                            'id' => $material->baseUnit->id,
+                            'name' => $material->baseUnit->name,
+                            'symbol' => $material->baseUnit->symbol,
+                            'conversion_factor' => 1,
+                            'display' => $material->baseUnit->name . ' (' . $material->baseUnit->symbol . ') (Base)',
+                            'is_base' => true,
+                        ];
+                    }
+
+                    // Conversiones
+                    foreach ($material->unitConversions as $conversion) {
+                        if ($conversion->fromUnit) {
+                            $conversionDisplay = number_format($conversion->conversion_factor, 0) . ' ' . $baseSymbol;
+                            $labelPart = $conversion->label ? ' [' . $conversion->label . ']' : '';
+                            $unitOptions[] = [
+                                'id' => $conversion->from_unit_id,
+                                'name' => $conversion->fromUnit->name,
+                                'symbol' => $conversion->fromUnit->symbol,
+                                'conversion_factor' => (float) $conversion->conversion_factor,
+                                'display' => $conversion->fromUnit->name . $labelPart . ' - ' . $conversionDisplay,
+                                'is_base' => false,
+                            ];
+                        }
+                    }
+
+                    $materialConversionsCache[$material->id] = [
+                        'unit_options' => $unitOptions,
+                        'base_symbol' => $baseSymbol,
+                    ];
+                }
+
+                $cache = $materialConversionsCache[$material->id];
+
+                $results[] = [
+                    'type' => $material->has_color ? 'variant' : 'material',
+                    'material_id' => $material->id,
+                    'material_name' => $material->name,
+                    'material_composition' => $material->composition,
+                    'category_id' => $material->material_category_id,
+                    'category_name' => $material->category->name ?? 'N/A',
+                    'variant_id' => $variant->id,
+                    'variant_color' => $material->has_color ? ($variant->color ?? 'Sin color') : null,
+                    'variant_sku' => $variant->sku,
+                    'current_stock' => (float) $variant->current_stock,
+                    'min_stock_alert' => (float) $variant->min_stock_alert,
+                    'is_low_stock' => $variant->current_stock <= $variant->min_stock_alert,
+                    'base_unit_symbol' => $cache['base_symbol'],
+                    'unit_options' => $cache['unit_options'],
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'results' => $results,
+                'total' => $totalCount,
+                'page' => $page,
+                'per_page' => $perPage,
+                'has_more' => ($page * $perPage) < $totalCount,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error AJAX searchMaterialsForModal: ' . $e->getMessage());
+            return response()->json(['error' => 'Error al buscar materiales'], 500);
+        }
+    }
+
+    /**
      * Anular una recepción
      */
     public function voidReception(Request $request, $id, $receptionId)
     {
+        $isAjax = $request->ajax() || $request->wantsJson();
+
         try {
             $validated = $request->validate([
                 'void_reason' => [
@@ -950,12 +1178,44 @@ class PurchaseController extends Controller
             $receptionService = app(ReceptionService::class);
             $receptionService->voidReception($reception, strip_tags(trim($validated['void_reason'])));
 
+            $successMessage = "Recepción {$reception->reception_number} anulada exitosamente";
+
+            if ($isAjax) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $successMessage,
+                    'reception_number' => $reception->reception_number,
+                ]);
+            }
+
             return redirect()->route('admin.purchases.show', $purchase->id)
-                ->with('success', "Recepción {$reception->reception_number} anulada exitosamente");
+                ->with('success', $successMessage);
+        } catch (ValidationException $e) {
+            if ($isAjax) {
+                return response()->json([
+                    'success' => false,
+                    'message' => collect($e->errors())->flatten()->first(),
+                    'errors' => $e->errors(),
+                ], 422);
+            }
+            return redirect()->route('admin.purchases.show', $id)
+                ->withErrors($e->errors());
         } catch (InventoryException $e) {
+            if ($isAjax) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                ], 400);
+            }
             return redirect()->route('admin.purchases.show', $id)
                 ->with('error', $e->getMessage());
         } catch (PurchaseException $e) {
+            if ($isAjax) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                ], 400);
+            }
             return redirect()->route('admin.purchases.show', $id)
                 ->with('error', $e->getMessage());
         } catch (\Exception $e) {
@@ -964,6 +1224,13 @@ class PurchaseController extends Controller
                 'reception_id' => $receptionId,
                 'user_id' => Auth::id(),
             ]);
+
+            if ($isAjax) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al anular la recepción',
+                ], 500);
+            }
 
             return redirect()->route('admin.purchases.show', $id)
                 ->with('error', 'Error al anular la recepción');
@@ -992,5 +1259,117 @@ class PurchaseController extends Controller
             return redirect()->route('admin.purchases.show', $id)
                 ->with('error', 'Error al recalcular el estado');
         }
+    }
+
+    /**
+     * Genera variantes de búsqueda robustas para un término
+     * Incluye: original, singular, plural, sin acentos, raíz
+     */
+    private function generateSearchVariants(string $term): array
+    {
+        $term = mb_strtolower(trim($term));
+        $variants = [$term];
+
+        // 1. Sin acentos
+        $noAccents = $this->removeAccents($term);
+        if ($noAccents !== $term) {
+            $variants[] = $noAccents;
+        }
+
+        // 2. Singular (si es plural)
+        $singular = $this->toSingular($term);
+        if ($singular !== $term) {
+            $variants[] = $singular;
+            $variants[] = $this->removeAccents($singular);
+        }
+
+        // 3. Plural (si es singular)
+        $plural = $this->toPlural($term);
+        if ($plural !== $term) {
+            $variants[] = $plural;
+        }
+
+        // 4. Raíz de la palabra (stem básico - primeros 70% de caracteres si >= 4)
+        if (mb_strlen($term) >= 4) {
+            $stemLength = (int) ceil(mb_strlen($term) * 0.7);
+            $stem = mb_substr($term, 0, max(3, $stemLength));
+            $variants[] = $stem;
+            $variants[] = $this->removeAccents($stem);
+        }
+
+        return array_unique(array_filter($variants));
+    }
+
+    /**
+     * Remueve acentos de una cadena
+     */
+    private function removeAccents(string $str): string
+    {
+        $map = [
+            'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u',
+            'Á' => 'A', 'É' => 'E', 'Í' => 'I', 'Ó' => 'O', 'Ú' => 'U',
+            'ñ' => 'n', 'Ñ' => 'N', 'ü' => 'u', 'Ü' => 'U'
+        ];
+        return strtr($str, $map);
+    }
+
+    /**
+     * Convierte plural a singular en español
+     */
+    private function toSingular(string $word): string
+    {
+        $rules = [
+            '/ces$/i' => 'z',       // lápices -> lápiz
+            '/iones$/i' => 'ión',   // acciones -> acción
+            '/ones$/i' => 'ón',     // botones -> botón
+            '/ajes$/i' => 'aje',    // encajes -> encaje
+            '/eses$/i' => 'és',     // franceses -> francés
+            '/anes$/i' => 'án',     // alemanes -> alemán
+            '/enes$/i' => 'én',     // orígenes -> origen (parcial)
+            '/es$/i' => '',         // colores -> color
+            '/s$/i' => '',          // hilos -> hilo
+        ];
+
+        foreach ($rules as $pattern => $replacement) {
+            if (preg_match($pattern, $word)) {
+                $result = preg_replace($pattern, $replacement, $word);
+                if (mb_strlen($result) >= 3) {
+                    return $result;
+                }
+            }
+        }
+
+        return $word;
+    }
+
+    /**
+     * Convierte singular a plural en español
+     */
+    private function toPlural(string $word): string
+    {
+        // Palabras que terminan en vocal -> agregar 's'
+        if (preg_match('/[aeiouáéíóú]$/i', $word)) {
+            return $word . 's';
+        }
+
+        // Palabras que terminan en consonante -> agregar 'es'
+        if (preg_match('/[bcdfghjklmnpqrstvwxyz]$/i', $word)) {
+            // Excepciones: z -> ces
+            if (preg_match('/z$/i', $word)) {
+                return preg_replace('/z$/i', 'ces', $word);
+            }
+            return $word . 'es';
+        }
+
+        return $word . 's';
+    }
+
+    /**
+     * Normaliza término de búsqueda (legacy - mantener por compatibilidad)
+     */
+    private function normalizeSearchTerm(string $term): string
+    {
+        $variants = $this->generateSearchVariants($term);
+        return $variants[1] ?? $term; // Retorna primera variante alternativa
     }
 }

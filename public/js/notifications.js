@@ -1,26 +1,26 @@
 /**
- * Sistema de Notificaciones en Tiempo Real
+ * Sistema de Notificaciones - Funciones Helper
  * ERP Sistema de Bordados
  *
- * Implementa polling AJAX con notificaciones toast
- * para cambios en pedidos, bloqueos y mensajes operativos.
+ * Proporciona funciones globales para mostrar toasts de notificación.
+ * Las notificaciones en tiempo real se reciben via WebSocket (Laravel Echo/Reverb).
+ * Ver: echo-notifications.js
  */
 
 (function() {
     'use strict';
 
-    // Configuración
-    const POLL_INTERVAL = 30000; // 30 segundos
     const NOTIFICATION_DURATION = 5000;
-
-    // Estado local para detectar cambios
-    let lastCheck = null;
-    let notificationCount = 0;
 
     /**
      * Mostrar toast de notificación
      */
     function showToast(options) {
+        if (typeof Swal === 'undefined') {
+            console.log('[Toast]', options.title, options.html);
+            return;
+        }
+
         const Toast = Swal.mixin({
             toast: true,
             position: 'top-end',
@@ -37,41 +37,6 @@
             icon: options.icon || 'info',
             title: options.title || 'Notificación',
             html: options.html || options.text || ''
-        });
-    }
-
-    /**
-     * Verificar nuevas notificaciones
-     */
-    function checkNotifications() {
-        // Solo ejecutar si hay una ruta de notificaciones disponible
-        if (typeof window.notificationsUrl === 'undefined') {
-            return;
-        }
-
-        fetch(window.notificationsUrl, {
-            method: 'GET',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json'
-            },
-            credentials: 'same-origin'
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.notifications && data.notifications.length > 0) {
-                data.notifications.forEach(notification => {
-                    showToast({
-                        icon: notification.type || 'info',
-                        title: notification.title,
-                        html: notification.message
-                    });
-                });
-            }
-            lastCheck = new Date();
-        })
-        .catch(error => {
-            console.log('Error checking notifications:', error);
         });
     }
 
@@ -139,7 +104,7 @@
     /**
      * Actualizar badge de notificaciones
      */
-    function updateNotificationBadge(count) {
+    window.updateNotificationBadge = function(count) {
         const badge = document.getElementById('notification-badge');
         if (badge) {
             if (count > 0) {
@@ -149,33 +114,11 @@
                 badge.style.display = 'none';
             }
         }
-    }
+    };
 
-    /**
-     * Inicializar sistema de notificaciones
-     */
-    function init() {
-        // Verificar soporte de notificaciones del navegador
-        if ('Notification' in window && Notification.permission === 'default') {
-            // Podríamos pedir permiso para notificaciones del sistema
-            // Notification.requestPermission();
-        }
+    // Exponer showToast para uso directo
+    window.showNotificationToast = showToast;
 
-        // Iniciar polling si está configurado
-        if (window.enableNotificationPolling) {
-            setInterval(checkNotifications, POLL_INTERVAL);
-            // Primera verificación después de 5 segundos
-            setTimeout(checkNotifications, 5000);
-        }
-
-        console.log('Sistema de notificaciones inicializado');
-    }
-
-    // Inicializar cuando el DOM esté listo
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
+    console.log('[Notifications] Funciones de notificación cargadas');
 
 })();

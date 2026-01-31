@@ -22,12 +22,15 @@ class ProductService
             // Preparar especificaciones
             $specifications = $this->prepareSpecifications($data['specifications'] ?? []);
 
+            // RESOLVER product_type_id desde categoría (Zero-Trust - NO confiar en frontend)
+            $productTypeId = $this->resolveProductTypeId($data['product_category_id']);
+
             // Crear producto
             $product = Product::create([
                 'uuid' => (string) Str::uuid(),
                 'tenant_id' => $data['tenant_id'] ?? 1,
                 'product_category_id' => $data['product_category_id'],
-                'product_type_id' => $data['product_type_id'] ?? null, // Tipo de producto (comportamiento operativo)
+                'product_type_id' => $productTypeId, // Resuelto por dominio desde categoría
                 'name' => $data['name'],
                 'sku' => $data['sku'],
                 'description' => $data['description'] ?? null,
@@ -144,7 +147,7 @@ class ProductService
 
             $product->update([
                 'product_category_id' => $data['product_category_id'],
-                'product_type_id' => $data['product_type_id'] ?? $product->product_type_id,
+                'product_type_id' => $data['product_type_id'] ?? $product->product_type_id, // UPDATE: mantener existente si no viene
                 'name' => $data['name'],
                 'sku' => $data['sku'],
                 'description' => $data['description'] ?? null,
@@ -456,6 +459,37 @@ class ProductService
     }
 
     /**
+     * RESOLUCIÓN DE DOMINIO: Obtiene product_type_id desde la categoría.
+     *
+     * ZERO-TRUST: Ignora cualquier product_type_id del request.
+     * El backend es la ÚNICA autoridad.
+     *
+     * @throws \InvalidArgumentException Si la categoría no existe o el tipo no se puede resolver
+     */
+    protected function resolveProductTypeId(int $categoryId): int
+    {
+        $category = ProductCategory::find($categoryId);
+
+        if (!$category) {
+            throw new \InvalidArgumentException(
+                "La categoría con ID {$categoryId} no existe."
+            );
+        }
+
+        $productType = $category->resolveProductType();
+
+        Log::info('ProductType resuelto por dominio', [
+            'category_id' => $categoryId,
+            'category_name' => $category->name,
+            'supports_measurements' => $category->supports_measurements,
+            'resolved_type_id' => $productType->id,
+            'resolved_type_code' => $productType->code,
+        ]);
+
+        return $productType->id;
+    }
+
+    /**
      * Preparar especificaciones desde array de key-value
      */
     protected function prepareSpecifications(array $specs): array
@@ -501,10 +535,12 @@ class ProductService
             $appType = \App\Models\Application_types::where('slug', $appTypeSlug)->first();
             $appTypeId = $appType ? $appType->id : 1;
 
-            // Guardar en product_design (vincula Design, no Export - arquitectura legacy)
-            // Esto es porque la tabla product_design usa design_id
+            // Guardar en product_design con design_id Y design_export_id
             $product->designs()->syncWithoutDetaching([
-                $export->design_id => ['application_type_id' => $appTypeId]
+                $export->design_id => [
+                    'application_type_id' => $appTypeId,
+                    'design_export_id' => $export->id
+                ]
             ]);
 
             // Si scope=specific, también guardar en product_variant_design
@@ -593,9 +629,15 @@ class ProductService
             $materialVariantId = $material['material_variant_id'];
 
             // Logica de Trazabilidad por Variante (Enterprise)
+            // REGLA: scope inferido desde targets
+            // - targets vacío/null = aplica a todas (global)
+            // - targets con elementos = aplica solo a esas variantes (específico)
             $activeForVariants = null;
-            if (isset($material['scope']) && $material['scope'] === 'specific' && !empty($material['targets'])) {
-                $activeForVariants = json_encode($material['targets']);
+            $targets = $material['targets'] ?? [];
+
+            // Compatibilidad legacy: si viene scope='specific', también usarlo
+            if (!empty($targets) || (isset($material['scope']) && $material['scope'] === 'specific' && !empty($material['targets']))) {
+                $activeForVariants = json_encode($targets);
             }
 
             $syncData[$materialVariantId] = [

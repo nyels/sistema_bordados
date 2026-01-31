@@ -7,11 +7,11 @@ use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class OrderMessageCreated implements ShouldBroadcast
+class OrderMessageCreated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -58,7 +58,11 @@ class OrderMessageCreated implements ShouldBroadcast
      */
     public function broadcastWith(): array
     {
-        return [
+        // Recargar el modelo para asegurar que todos los campos estén disponibles
+        $this->message->refresh();
+        $this->message->load(['order', 'creator']);
+
+        $data = [
             'id' => $this->message->id,
             'order_id' => $this->message->order_id,
             'order_number' => $this->message->order->order_number ?? 'N/A',
@@ -66,8 +70,17 @@ class OrderMessageCreated implements ShouldBroadcast
             'visibility' => $this->message->visibility,
             'visibility_label' => $this->message->visibility_label,
             'creator' => $this->message->creator?->name ?? 'Sistema',
+            'created_by' => (int) $this->message->created_by,
             'created_at' => $this->message->created_at->format('d/m/Y H:i'),
             'time_ago' => $this->message->created_at->diffForHumans(),
         ];
+
+        // Log para debug (remover en producción)
+        \Illuminate\Support\Facades\Log::info('[WS] Broadcasting message', [
+            'message_id' => $data['id'],
+            'created_by' => $data['created_by'],
+        ]);
+
+        return $data;
     }
 }

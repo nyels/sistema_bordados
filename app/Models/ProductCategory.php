@@ -19,10 +19,12 @@ class ProductCategory extends Model
         'slug',
         'description',
         'is_active',
+        'supports_measurements',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'supports_measurements' => 'boolean',
     ];
 
     /*
@@ -124,5 +126,53 @@ class ProductCategory extends Model
     public function getSkuPrefix(): string
     {
         return Str::upper(Str::substr(Str::slug($this->name, ''), 0, 3));
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | SOPORTE DE MEDIDAS (CANÓNICO)
+    |--------------------------------------------------------------------------
+    | Determina si los productos de esta categoría pueden requerir medidas
+    | en pedidos. La decisión final la toma el PEDIDO, no el producto.
+    */
+
+    /**
+     * Indica si esta categoría soporta productos con medidas personalizadas.
+     *
+     * REGLA CANÓNICA:
+     * - supports_measurements = true → el checkbox "requiere medidas" APARECE en pedido
+     * - supports_measurements = false → el checkbox "requiere medidas" NO aparece
+     * - La decisión de usar medidas la toma el PEDIDO, no el producto
+     */
+    public function supportsMeasurements(): bool
+    {
+        return (bool) $this->supports_measurements;
+    }
+
+    /**
+     * RESOLUCIÓN DE DOMINIO: Determina el ProductType basado en la categoría.
+     *
+     * REGLA ERP CANÓNICA:
+     * - supports_measurements = true  → GARMENT_CUSTOM (prenda a medida)
+     * - supports_measurements = false → GARMENT_STANDARD (prenda estándar)
+     *
+     * @throws \InvalidArgumentException Si no se puede resolver el tipo
+     */
+    public function resolveProductType(): ProductType
+    {
+        $code = $this->supports_measurements ? 'GARMENT_CUSTOM' : 'GARMENT_STANDARD';
+
+        $productType = ProductType::where('code', $code)
+            ->where('active', true)
+            ->first();
+
+        if (!$productType) {
+            throw new \InvalidArgumentException(
+                "No se puede determinar el tipo de producto para la categoría '{$this->name}'. " .
+                "El tipo '{$code}' no existe o está inactivo. Contacte al administrador."
+            );
+        }
+
+        return $productType;
     }
 }

@@ -94,21 +94,8 @@
                                     @enderror
                                 </div>
 
-                                <div class="form-group">
-                                    <div class="custom-control custom-checkbox">
-                                        <input type="hidden" name="allow_unit_override" value="0">
-                                        <input type="checkbox" class="custom-control-input" id="allow_unit_override"
-                                            name="allow_unit_override" value="1"
-                                            {{ old('allow_unit_override', true) ? 'checked' : '' }}>
-                                        <label class="custom-control-label" for="allow_unit_override">
-                                            Permitir que materiales usen una unidad diferente
-                                        </label>
-                                    </div>
-                                    <small class="text-muted">
-                                        Si desmarcas esto, todos los materiales de esta categoría usarán obligatoriamente
-                                        la unidad por defecto.
-                                    </small>
-                                </div>
+                                {{-- Campo oculto: funcionalidad pendiente de implementar en formularios tradicionales --}}
+                                <input type="hidden" name="allow_unit_override" value="1">
 
                                 {{-- INFO: Configuración de Presentaciones --}}
                                 <div class="alert alert-info mt-3">
@@ -141,6 +128,22 @@
     <script>
         $(function() {
             $('[data-toggle="tooltip"]').tooltip();
+
+            // Actualizar texto de ayuda según estado del checkbox (oculto por ahora)
+            function updateOverrideHelp() {
+                const isChecked = $('#allow_unit_override').is(':checked');
+                const $help = $('#allow_unit_override_help');
+
+                if (isChecked) {
+                    $help.html('<i class="fas fa-check-circle text-success"></i> Cada material podrá elegir su propia unidad de inventario.');
+                } else {
+                    $help.html('<i class="fas fa-lock text-warning"></i> Todos los materiales de esta categoría usarán obligatoriamente la unidad por defecto.');
+                }
+            }
+
+            // Ejecutar al cargar y al cambiar
+            updateOverrideHelp();
+            $('#allow_unit_override').on('change', updateOverrideHelp);
         });
     </script>
 @stop

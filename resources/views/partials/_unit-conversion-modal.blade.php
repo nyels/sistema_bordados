@@ -13,7 +13,18 @@
        - callback: function(materialId, conversion) - ejecuta al aplicar
 --}}
 
-<div class="modal fade" id="unitConversionModal" tabindex="-1" aria-labelledby="unitConversionModalLabel" aria-hidden="true">
+<style>
+/* Z-index alto para que este modal aparezca sobre otros modales */
+#unitConversionModal {
+    z-index: 1060 !important;
+}
+#unitConversionModal + .modal-backdrop,
+.modal-backdrop.show + #unitConversionModal ~ .modal-backdrop {
+    z-index: 1055 !important;
+}
+</style>
+
+<div class="modal fade" id="unitConversionModal" tabindex="-1" aria-labelledby="unitConversionModalLabel" aria-hidden="true" data-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white py-2">
@@ -144,6 +155,17 @@
         // Limpiar al cerrar modal
         $(modal).on('hidden.bs.modal', function() {
             resetModal();
+            // Si hay otro modal abierto, restaurar el scroll en body
+            if ($('.modal.show').length > 0) {
+                $('body').addClass('modal-open');
+            }
+        });
+
+        // Cuando se muestra este modal, asegurar z-index correcto del backdrop
+        $(modal).on('shown.bs.modal', function() {
+            // Obtener el ultimo backdrop creado y ajustar su z-index
+            var $backdrop = $('.modal-backdrop').last();
+            $backdrop.css('z-index', 1055);
         });
     }
 

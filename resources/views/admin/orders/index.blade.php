@@ -274,6 +274,26 @@
                     $(tableId).DataTable().destroy();
                 }
 
+                // Verificar que la tabla tenga filas válidas (no solo la fila vacía con colspan)
+                var tbody = table.querySelector('tbody');
+                var rows = tbody ? tbody.querySelectorAll('tr') : [];
+                var hasValidRows = false;
+
+                for (var i = 0; i < rows.length; i++) {
+                    var cells = rows[i].querySelectorAll('td');
+                    // Si tiene 11 celdas (todas las columnas), es una fila válida
+                    if (cells.length === 11) {
+                        hasValidRows = true;
+                        break;
+                    }
+                }
+
+                // Si no hay filas válidas, no inicializar DataTables para evitar error
+                if (!hasValidRows) {
+                    console.log('[DataTable] Sin filas válidas, omitiendo inicialización');
+                    return;
+                }
+
                 // Inicializar DataTable igual que proveedores
                 // Nota: paging:false porque usamos paginación del servidor via AJAX
                 $(tableId).DataTable({

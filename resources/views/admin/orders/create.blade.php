@@ -1201,7 +1201,7 @@
                                             <div class="form-group" id="variantGroup">
                                                 <label class="font-weight-bold">Variante</label>
                                                 <select id="modalVariantSelect" class="form-control">
-                                                    <option value="">-- Producto base --</option>
+                                                    <option value="">-- Seleccionar el producto --</option>
                                                 </select>
                                             </div>
 
@@ -1304,14 +1304,14 @@
                                                 style="display: none;">
                                                 <label class="font-weight-bold mb-1">
                                                     <i class="fas fa-plus-circle mr-1 text-success"></i> Extras
+                                                    <span class="ml-2 text-info font-weight-bold"
+                                                        id="extrasSubtotalDisplay">+$0.00</span>
                                                 </label>
                                                 <div class="d-flex align-items-center mb-2">
                                                     <button type="button" class="btn btn-outline-success btn-sm"
                                                         id="btnOpenExtrasModal">
                                                         <i class="fas fa-list-ul mr-1"></i> Seleccionar Extras
                                                     </button>
-                                                    <span class="ml-2 text-info font-weight-bold"
-                                                        id="extrasSubtotalDisplay">+$0.00</span>
                                                 </div>
                                                 <div id="selectedExtrasList" class="border rounded"
                                                     style="display: none; max-height: 150px; overflow-y: auto;">
@@ -2158,7 +2158,7 @@
                 updatePriceComparison();
 
                 const $variantSelect = $('#modalVariantSelect');
-                $variantSelect.empty().append('<option value="">-- Producto base --</option>');
+                $variantSelect.empty().append('<option value="">-- Seleccionar el producto --</option>');
 
                 if (selectedProduct.variants && selectedProduct.variants.length > 0) {
                     selectedProduct.variants.forEach(v => {
@@ -2281,13 +2281,13 @@
                 // Abrir modal inmediatamente
                 $('#extrasSelectionModal').modal('show');
 
-                // Cargar extras por AJAX
+                // Cargar TODOS los extras activos del catálogo
                 $.ajax({
-                    url: `/admin/orders/ajax/product/${selectedProduct.id}/extras`,
+                    url: `/product_extras/ajax/all-active`,
                     method: 'GET',
                     dataType: 'json',
                     success: function(response) {
-                        // Actualizar extras del producto con datos frescos de BD
+                        // Guardar todos los extras disponibles
                         selectedProduct.extras = response.extras || [];
 
                         if (selectedProduct.extras.length === 0) {
@@ -2295,7 +2295,7 @@
                                 <tr>
                                     <td colspan="3" class="text-center py-4 text-muted">
                                         <i class="fas fa-box-open fa-2x mb-2 d-block"></i>
-                                        Este producto no tiene extras configurados
+                                        No hay extras disponibles en el catálogo
                                     </td>
                                 </tr>
                             `);
@@ -3035,7 +3035,7 @@
                 tempSelectedExtras = [];
                 // Reset cantidad y variante
                 $('#modalQuantity').val(1);
-                $('#modalVariantSelect').empty().append('<option value="">-- Producto base --</option>');
+                $('#modalVariantSelect').empty().append('<option value="">-- Seleccionar el producto --</option>');
 
 
                 // === D4: RESET VARIABLES DE ESTADO ===
@@ -3726,7 +3726,7 @@
                         // Cargar TODAS las variantes y preseleccionar la actual
                         const $variantSelect = $('#modalVariantSelect');
                         $variantSelect.empty().append(
-                            '<option value="">-- Producto base --</option>');
+                            '<option value="">-- Seleccionar el producto --</option>');
 
                         if (selectedProduct.variants && selectedProduct.variants.length > 0) {
                             selectedProduct.variants.forEach(v => {
@@ -4333,6 +4333,10 @@
                     });
                     return false;
                 }
+
+                // === BLOQUEAR BOTÓN PARA EVITAR DOBLE SUBMIT ===
+                const $submitBtn = $('button[type="submit"][form="orderForm"]');
+                $submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i> Procesando...');
             });
 
             // ==========================================

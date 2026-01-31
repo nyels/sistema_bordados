@@ -119,7 +119,7 @@
                 }
             }
 
-            // Agrupar materiales por material_name (material base)
+            // Agrupar materiales por material_name (material base) y ordenar alfabéticamente
             $groupedMaterials = collect($materials)->groupBy('material_name')->map(function($variants, $materialName) {
                 $groupCost = $variants->sum('line_cost');
                 $hasGroupCost = $variants->contains(fn($v) => $v['line_cost'] !== null);
@@ -137,7 +137,7 @@
                     'all_consumed' => $variants->every(fn($v) => $v['status'] === 'consumed'),
                     'all_reserved' => $variants->every(fn($v) => in_array($v['status'], ['reserved', 'consumed'])),
                 ];
-            })->values()->all();
+            })->sortBy('material_name', SORT_NATURAL | SORT_FLAG_CASE)->values()->all();
 
             // Obtener variante del producto (Talla/Color) si existe
             $productVariantDisplay = null;
@@ -675,7 +675,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 const materials = getUniqueMaterials();
 
                 if (materials.length === 0) {
-                    alert('No hay materiales en esta seccion');
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Sin materiales',
+                        text: 'No hay materiales en esta sección',
+                        confirmButtonColor: '#3085d6'
+                    });
                     return;
                 }
 

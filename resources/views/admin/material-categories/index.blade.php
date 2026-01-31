@@ -33,8 +33,9 @@
                     <a href="{{ route('admin.material-categories.create') }}" class="btn btn-primary">
                         Nuevo <i class="fas fa-plus"></i>
                     </a>
-                    <button type="button" class="btn btn-info" data-toggle="modal" data-target="#manageUnitsModal">
-                        <i class="fas fa-link"></i> Gestionar Unidades Permitidas
+                    <button type="button" class="btn btn-info" data-toggle="modal" data-target="#manageUnitsModal"
+                        title="Define qué empaques de compra están disponibles para cada categoría">
+                        <i class="fas fa-box"></i> Empaques por Categoría
                     </button>
                 </div>
             </div>
@@ -157,13 +158,23 @@
             <div class="modal-content shadow-lg" style="border-radius: 15px; border: none;">
                 <div class="modal-header bg-info text-white">
                     <h5 class="modal-title font-weight-bold" id="manageUnitsModalLabel">
-                        <i class="fas fa-link mr-2"></i> Gestión de Unidades Permitidas
+                        <i class="fas fa-box mr-2"></i> Empaques de Compra Permitidos
                     </h5>
                     <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
                 <div class="modal-body bg-light">
+                    {{-- EXPLICACIÓN DEL MÓDULO --}}
+                    <div class="alert alert-light border-left border-info mb-3" style="border-left-width: 4px !important;">
+                        <small>
+                            <i class="fas fa-info-circle text-info"></i>
+                            <strong>¿Qué son los empaques permitidos?</strong><br>
+                            Controlan qué tipos de empaque (Cono, Caja, Rollo, etc.) puede usar cada categoría al crear materiales.
+                            <br>
+                            <span class="text-muted">Ejemplo: Categoría "Hilos" permite comprar en CONO o CARRETE.</span>
+                        </small>
+                    </div>
                     {{-- SECCIÓN SUPERIOR: FORMULARIO DE ASIGNACIÓN --}}
                     <div class="card shadow-sm border-0 mb-4">
                         <div class="card-header bg-white border-bottom-0">

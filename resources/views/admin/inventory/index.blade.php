@@ -263,7 +263,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // INICIALIZAR DATATABLE (igual que proveedores)
     // =====================================================
     var table = $('#inventoryTable').DataTable({
-        "pageLength": 10,
+        "pageLength": 50,
         "language": {
             "emptyTable": "No hay materiales en inventario",
             "info": "Mostrando _START_ a _END_ de _TOTAL_ Materiales",
@@ -432,7 +432,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 const materials = getUniqueMaterials();
 
                 if (materials.length === 0) {
-                    alert('No hay materiales en la tabla');
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Sin materiales',
+                        text: 'No hay materiales en la tabla',
+                        confirmButtonColor: '#3085d6'
+                    });
                     return;
                 }
 

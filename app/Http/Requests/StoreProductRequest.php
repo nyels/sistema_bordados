@@ -22,12 +22,8 @@ class StoreProductRequest extends FormRequest
                 'min:1',
                 Rule::exists('product_categories', 'id')->where('is_active', true),
             ],
-            'product_type_id' => [
-                'required',
-                'integer',
-                'min:1',
-                Rule::exists('product_types', 'id')->where('active', true),
-            ],
+            // product_type_id: RESUELTO EN BACKEND desde categoría (Zero-Trust)
+            // NO se acepta del frontend - se ignora cualquier valor enviado
             'name' => [
                 'required',
                 'string',
@@ -165,8 +161,7 @@ class StoreProductRequest extends FormRequest
         return [
             'product_category_id.required' => 'La categoría es obligatoria.',
             'product_category_id.exists' => 'La categoría seleccionada no existe o está inactiva.',
-            'product_type_id.required' => 'El tipo de producto es obligatorio.',
-            'product_type_id.exists' => 'El tipo de producto seleccionado no existe o está inactivo.',
+            // product_type_id: mensajes eliminados - se resuelve en backend
             'name.required' => 'El nombre del producto es obligatorio.',
             'name.min' => 'El nombre debe tener al menos 3 caracteres.',
             'name.max' => 'El nombre no puede exceder 200 caracteres.',
@@ -212,23 +207,38 @@ class StoreProductRequest extends FormRequest
             ]);
         }
 
+        // === PERSISTENCIA DE IMAGEN PARA ERRORES DE VALIDACIÓN ===
+        // Guardar imagen en temporal ANTES de validación para recuperarla tras error
+        if ($this->hasFile('primary_image') && $this->file('primary_image')->isValid()) {
+            $file = $this->file('primary_image');
+            $tempName = 'product_tmp_' . (auth()->id() ?? 0) . '_' . time() . '.' . $file->getClientOriginalExtension();
+            $tempPath = $file->storeAs('tmp/product_images', $tempName, 'public');
+
+            session()->put('product_temp_image', [
+                'path' => $tempPath,
+                'original_name' => $file->getClientOriginalName(),
+                'created_at' => now()->toDateTimeString(),
+            ]);
+        }
+
         // --- JSON DECODING FOR WIZARD INPUTS ---
 
         // 1. Materials (BOM)
+        // REGLA: scope inferido desde targets (vacío = global, con elementos = específico)
         if ($this->has('materials_json')) {
             $bomData = json_decode($this->input('materials_json'), true);
             if (is_array($bomData)) {
                 $formattedMaterials = array_map(function ($item) {
                     // Map Frontend keys to Backend Validation keys
+                    $targets = $item['targets'] ?? [];
                     return [
                         'material_variant_id' => $item['material_id'] ?? null,
                         'quantity' => $item['qty'] ?? 0,
                         'is_primary' => $item['is_primary'] ?? false,
                         'notes' => $item['notes'] ?? null,
-                        'price' => $item['price'] ?? null, // Snapshot cost from frontend
-                        // Enterprise fields
-                        'scope' => $item['scope'] ?? 'global',
-                        'targets' => $item['targets'] ?? [],
+                        'price' => $item['cost'] ?? $item['price'] ?? null, // Snapshot cost from frontend
+                        // scope inferido desde targets (vacío = global, con elementos = específico)
+                        'targets' => $targets,
                     ];
                 }, $bomData);
                 $this->merge(['materials' => $formattedMaterials]);
@@ -245,7 +255,8 @@ class StoreProductRequest extends FormRequest
         }
 
         // 3. Embroideries (Producciones de bordado)
-        // Frontend envía: export_id, app_type_slug, scope, target_variant
+        // Frontend envía: export_id, app_type_slug, target_variant, targets
+        // REGLA: scope inferido desde target_variant/targets (vacío = aplica a todas)
         if ($this->has('embroideries_json')) {
             $designsData = json_decode($this->input('embroideries_json'), true);
             if (is_array($designsData)) {
@@ -254,8 +265,9 @@ class StoreProductRequest extends FormRequest
                     return [
                         'export_id' => $d['export_id'] ?? $d['id'] ?? null,
                         'app_type_slug' => $d['app_type_slug'] ?? null,
-                        'scope' => $d['scope'] ?? 'global',
+                        // Alcance inferido: target_variant vacío = aplica a todas
                         'target_variant' => $d['target_variant'] ?? null,
+                        'targets' => $d['targets'] ?? [],
                     ];
                 }, array_filter($designsData, fn($d) => !empty($d['export_id']) || !empty($d['id'])));
 

@@ -16,28 +16,34 @@ class OrderMessageController extends Controller
     }
 
     /**
-     * Almacenar nuevo mensaje operativo
+     * Almacenar nuevo mensaje operativo (puede ser respuesta a otro mensaje)
      */
     public function store(Request $request, Order $order)
     {
         $validated = $request->validate([
             'message' => 'required|string|max:1000',
             'visibility' => 'required|in:admin,production,both',
+            'parent_message_id' => 'nullable|exists:order_messages,id',
         ]);
 
         $message = OrderMessage::create([
             'order_id' => $order->id,
+            'parent_message_id' => $validated['parent_message_id'] ?? null,
             'message' => $validated['message'],
             'visibility' => $validated['visibility'],
             'created_by' => Auth::id(),
         ]);
 
         // Disparar evento para notificaciones en tiempo real
+        // Usar broadcast()->toOthers() para excluir al remitente del mensaje
         if (class_exists(OrderMessageCreated::class)) {
-            event(new OrderMessageCreated($message));
+            broadcast(new OrderMessageCreated($message))->toOthers();
         }
 
         if ($request->ajax() || $request->wantsJson()) {
+            // Cargar relación con mensaje padre si existe
+            $message->load('parent.creator');
+
             return response()->json([
                 'success' => true,
                 'message' => 'Mensaje agregado correctamente.',
@@ -47,7 +53,15 @@ class OrderMessageController extends Controller
                     'visibility' => $message->visibility,
                     'visibility_label' => $message->visibility_label,
                     'creator' => $message->creator?->name ?? 'Sistema',
+                    'created_by' => $message->created_by,
+                    'is_own' => true,
                     'created_at' => $message->created_at->format('d/m/Y H:i'),
+                    'time_ago' => $message->created_at->diffForHumans(),
+                    'parent_message_id' => $message->parent_message_id,
+                    'parent_preview' => $message->parent
+                        ? mb_substr($message->parent->message, 0, 50) . (mb_strlen($message->parent->message) > 50 ? '...' : '')
+                        : null,
+                    'parent_creator' => $message->parent?->creator?->name ?? null,
                 ],
             ]);
         }
@@ -56,14 +70,15 @@ class OrderMessageController extends Controller
     }
 
     /**
-     * Obtener mensajes de un pedido (API)
+     * Obtener mensajes de un pedido (API) - lista plana estilo chat
      */
     public function index(Order $order)
     {
+        // Obtener TODOS los mensajes ordenados por fecha (estilo chat)
         $messages = $order->messages()
-            ->with('creator')
-            ->latest()
-            ->take(50)
+            ->with(['creator', 'parent.creator'])
+            ->orderBy('created_at', 'asc')
+            ->take(100)
             ->get()
             ->map(fn($m) => [
                 'id' => $m->id,
@@ -72,8 +87,16 @@ class OrderMessageController extends Controller
                 'visibility_label' => $m->visibility_label,
                 'visibility_icon' => $m->visibility_icon,
                 'creator' => $m->creator?->name ?? 'Sistema',
+                'created_by' => $m->created_by,
+                'is_own' => $m->created_by === Auth::id(),
                 'created_at' => $m->created_at->format('d/m/Y H:i'),
                 'time_ago' => $m->created_at->diffForHumans(),
+                // Info del mensaje padre si es respuesta
+                'parent_message_id' => $m->parent_message_id,
+                'parent_creator' => $m->parent?->creator?->name ?? null,
+                'parent_preview' => $m->parent
+                    ? mb_substr($m->parent->message, 0, 50) . (mb_strlen($m->parent->message) > 50 ? '...' : '')
+                    : null,
             ]);
 
         return response()->json([

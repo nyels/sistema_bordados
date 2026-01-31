@@ -479,15 +479,30 @@
                         $('#modalCancelSale').modal('hide');
 
                         if (data.success) {
-                            alert('Venta cancelada correctamente.\nStock revertido: ' + data
-                                .data.quantity_returned + ' unidades.');
-                            window.location.reload();
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Venta cancelada',
+                                text: 'Stock revertido: ' + data.data.quantity_returned + ' unidades',
+                                confirmButtonColor: '#3085d6'
+                            }).then(() => {
+                                window.location.reload();
+                            });
                         } else {
-                            alert('Error: ' + data.error);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: data.error,
+                                confirmButtonColor: '#3085d6'
+                            });
                         }
 
                     } catch (error) {
-                        alert('Error de conexion: ' + error.message);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error de conexión',
+                            text: error.message,
+                            confirmButtonColor: '#3085d6'
+                        });
                     }
 
                     this.disabled = false;

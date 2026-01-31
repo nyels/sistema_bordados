@@ -60,12 +60,12 @@
         <div class="card-body">
             {{-- ACCIONES --}}
             <div class="row mb-3">
-                <div class="col-md-6">
+                <div class="col-12 text-right">
                     <a href="{{ route('admin.materials.index') }}" class="btn btn-secondary">
                         <i class="fas fa-arrow-left"></i> Volver a Materiales
                     </a>
                     <a href="{{ route('admin.material-conversions.create', $material->id) }}" class="btn btn-info">
-                        Nueva Conversión <i class="fas fa-plus"></i>
+                        <i class="fas fa-plus"></i> Nueva Conversión
                     </a>
                 </div>
             </div>

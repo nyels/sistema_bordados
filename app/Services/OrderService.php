@@ -15,6 +15,7 @@ use App\Models\ProductVariantReservation;
 use App\Models\ClientMeasurementHistory;
 use App\Models\PersonalizationTimeMultiplier;
 use App\Enums\MovementType;
+use App\Events\OrderStatusChanged;
 use App\Exceptions\InsufficientInventoryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -124,16 +125,17 @@ class OrderService
             $orderMeasurementId = $order->client_measurement_id;
 
             foreach ($items as $itemData) {
-                $product = Product::with(['primaryImage', 'productType'])->find($itemData['product_id']);
+                $product = Product::with(['primaryImage', 'category'])->find($itemData['product_id']);
                 $variant = isset($itemData['product_variant_id']) && $itemData['product_variant_id']
                     ? $product->variants->find($itemData['product_variant_id'])
                     : null;
 
                 $subtotal = $itemData['unit_price'] * $itemData['quantity'];
 
-                // LÓGICA DE MEDIDAS POR TIPO DE PRODUCTO
-                $requiresMeasurements = $product->productType?->requires_measurements ?? false;
-                $itemMeasurementId = $requiresMeasurements ? $orderMeasurementId : null;
+                // LÓGICA DE MEDIDAS: Decisión del PEDIDO, capacidad de CATEGORÍA
+                // El item requiere medidas si el frontend las envió (decisión tomada en pedido)
+                $requiresMeasurements = !empty($itemData['measurements']);
+                $itemMeasurementId = null; // Legacy FK - medidas ahora son inline
 
                 $item = OrderItem::create([
                     'order_id' => $order->id,
@@ -285,6 +287,13 @@ class OrderService
                 ];
 
                 OrderEvent::logProductionStarted($order, $eventMetadata);
+
+                // === BROADCAST: Notificar cambio de estado en tiempo real ===
+                event(new OrderStatusChanged(
+                    $order,
+                    Order::STATUS_CONFIRMED,
+                    Order::STATUS_IN_PRODUCTION
+                ));
             });
         } catch (\Exception $e) {
             // === PERSISTENCIA DE BLOQUEO POR INVENTARIO (FUERA DE TRANSACCIÓN) ===
@@ -403,6 +412,13 @@ class OrderService
                     'consumed_products' => $consumedProducts,
                 ]
             );
+
+            // === BROADCAST: Notificar producción completada ===
+            event(new OrderStatusChanged(
+                $order,
+                Order::STATUS_IN_PRODUCTION,
+                Order::STATUS_READY
+            ));
         });
     }
 
@@ -558,6 +574,13 @@ class OrderService
             if ($order->isFinanciallyClosed()) {
                 OrderEvent::logFinanciallyClosed($order);
             }
+
+            // === BROADCAST: Notificar entrega ===
+            event(new OrderStatusChanged(
+                $order,
+                Order::STATUS_READY,
+                Order::STATUS_DELIVERED
+            ));
         });
     }
 
@@ -630,6 +653,13 @@ class OrderService
                     'reverts_inventory' => false,
                 ]
             );
+
+            // === BROADCAST: Notificar cancelación ===
+            event(new OrderStatusChanged(
+                $order,
+                $previousStatus,
+                Order::STATUS_CANCELLED
+            ));
         });
     }
 
@@ -959,29 +989,20 @@ class OrderService
         $orderMeasurementId = $order->client_measurement_id;
 
         foreach ($items as $itemData) {
-            $product = Product::with(['primaryImage', 'productType'])->find($itemData['product_id']);
+            $product = Product::with(['primaryImage', 'category'])->find($itemData['product_id']);
             $variant = isset($itemData['product_variant_id']) && $itemData['product_variant_id']
                 ? $product->variants->find($itemData['product_variant_id'])
                 : null;
 
             $subtotal = $itemData['unit_price'] * $itemData['quantity'];
 
-            // LÓGICA DE MEDIDAS POR TIPO DE PRODUCTO
-            $requiresMeasurements = $product->productType?->requires_measurements ?? false;
+            // LÓGICA DE MEDIDAS: Decisión del PEDIDO, capacidad de CATEGORÍA
+            // El item requiere medidas si el frontend las envió (decisión tomada en pedido)
+            $inlineMeasurements = !empty($itemData['measurements']) ? $itemData['measurements'] : null;
+            $requiresMeasurements = !empty($inlineMeasurements);
 
-            // MEDIDAS INLINE (prioridad sobre FK)
-            // Si vienen medidas inline del frontend, usarlas
-            $inlineMeasurements = null;
-            if ($requiresMeasurements && !empty($itemData['measurements'])) {
-                $inlineMeasurements = $itemData['measurements'];
-            }
-
-            // FK a client_measurements (legacy/fallback)
-            // Solo usar si requiere medidas Y NO hay medidas inline
+            // FK a client_measurements (legacy - ya no se usa)
             $itemMeasurementId = null;
-            if ($requiresMeasurements && empty($inlineMeasurements) && $orderMeasurementId) {
-                $itemMeasurementId = $orderMeasurementId;
-            }
 
             // FASE 2: Calcular estado inicial basado en medidas
             // REGLA: requires_measurements=true Y measurements=NULL → PENDING
@@ -1031,8 +1052,10 @@ class OrderService
 
             // === HISTORIAL DE MEDIDAS ===
             // Si tiene medidas inline y el usuario solicitó guardar en perfil del cliente
+            // CANÓNICO: Solo si hay cliente (producción para stock NO guarda historial de cliente)
             $saveToClient = $inlineMeasurements['save_to_client'] ?? false;
-            if ($requiresMeasurements && !empty($inlineMeasurements) && $saveToClient) {
+            $hasCliente = $order->cliente_id !== null;
+            if ($requiresMeasurements && !empty($inlineMeasurements) && $saveToClient && $hasCliente) {
                 $measurementHistory = $this->saveMeasurementHistory(
                     $order,
                     $orderItem,

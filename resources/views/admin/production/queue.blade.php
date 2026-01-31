@@ -25,9 +25,9 @@
 
     {{-- RESUMEN DE COLA --}}
     <div class="row mb-3">
-        {{-- 1. TOTAL (Info/Cyan) --}}
+        {{-- 1. TOTAL (Info/Cyan) - Clickeable para mostrar todos --}}
         <div class="col-lg-2 col-6">
-            <div class="small-box bg-info mb-0">
+            <div class="small-box bg-info mb-0 kpi-filter" data-show-all="1" style="cursor: pointer;">
                 <div class="inner">
                     <h3>{{ $summary['total_queue'] }}</h3>
                     <p>Total Cola</p>
@@ -210,7 +210,6 @@
 @stop
 
 @section('js')
-    @include('partials.notifications-config')
     <script>
         (function() {
             'use strict';
@@ -350,7 +349,12 @@
                             const materials = getUniqueMaterials();
 
                             if (materials.length === 0) {
-                                alert('No hay materiales en este modal');
+                                Swal.fire({
+                                    icon: 'info',
+                                    title: 'Sin materiales',
+                                    text: 'No hay materiales en este modal',
+                                    confirmButtonColor: '#3085d6'
+                                });
                                 return;
                             }
 
@@ -541,6 +545,11 @@
                         if (blockedInput) blockedInput.checked = false;
 
                         // Aplicar filtro del KPI
+                        if (this.dataset.showAll) {
+                            // "Total Cola" - mostrar todos sin filtros
+                            loadTable({});
+                            return;
+                        }
                         if (this.dataset.status) {
                             filters.status = this.dataset.status;
                             var statusSelect = document.getElementById('filter-status');

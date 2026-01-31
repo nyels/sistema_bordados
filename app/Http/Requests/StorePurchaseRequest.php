@@ -268,28 +268,32 @@ class StorePurchaseRequest extends FormRequest
                 continue;
             }
 
-            // Verificar si existe conversión o es unidad compatible
-            $unit = Unit::find($unitId);
-            if ($unit && $unit->compatible_base_unit_id && $unit->compatible_base_unit_id != $baseUnitId) {
-                $validator->errors()->add(
-                    "items.{$index}.unit_id",
-                    "La unidad '{$unit->name}' no es compatible con el material seleccionado."
-                );
-            }
-
-            // Verificar si existe conversión configurada
+            // Verificar si existe conversión configurada para este material
             $hasConversion = MaterialUnitConversion::where('material_id', $variant->material_id)
                 ->where('from_unit_id', $unitId)
                 ->exists();
 
-            $isBaseUnit = $unitId == $baseUnitId;
-
-            if (!$hasConversion && !$isBaseUnit) {
-                $validator->errors()->add(
-                    "items.{$index}.unit_id",
-                    "No existe conversión configurada para esta unidad en el material seleccionado."
-                );
+            // Si tiene conversión configurada, es válido
+            if ($hasConversion) {
+                continue;
             }
+
+            // Si no tiene conversión, verificar compatibilidad de unidad base
+            $unit = Unit::find($unitId);
+            if ($unit && $unit->compatible_base_unit_id && $unit->compatible_base_unit_id == $baseUnitId) {
+                // Unidad compatible con la base del material (ej: cm compatible con m)
+                continue;
+            }
+
+            // No es unidad base, no tiene conversión y no es compatible
+            $materialName = $variant->material->name ?? 'desconocido';
+            $variantColor = $variant->color ? " ({$variant->color})" : '';
+            $unitName = $unit->name ?? 'desconocida';
+
+            $validator->errors()->add(
+                "items.{$index}.unit_id",
+                "La unidad '{$unitName}' no tiene conversión configurada para '{$materialName}{$variantColor}'. Configure la conversión primero."
+            );
         }
     }
 }

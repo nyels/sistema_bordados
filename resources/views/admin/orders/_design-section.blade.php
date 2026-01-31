@@ -307,11 +307,11 @@
                     {{-- Tab: Todos --}}
                     <div class="tab-pane fade show active" id="tabAllDesigns">
                         <div class="p-4 text-center" style="background: #f5f5f5; border-radius: 8px;">
-                            <i class="fas fa-folder-open fa-3x mb-3" style="color: #9e9e9e;"></i>
-                            <p style="color: #616161; font-size: 15px;">
+                            <i class="fas fa-folder-open fa-3x mb-3" style="color: #6c757d;"></i>
+                            <p style="color: #212529; font-size: 15px;">
                                 El repositorio de diseños personalizados estará disponible próximamente.
                             </p>
-                            <p style="color: #9e9e9e; font-size: 13px;">
+                            <p style="color: #212529; font-size: 13px;">
                                 Aquí podrá buscar y reutilizar diseños de pedidos anteriores.
                             </p>
                         </div>
@@ -371,7 +371,7 @@
                         <div class="p-4 text-center" style="background: #fff3e0; border-radius: 8px;">
                             <i class="fas fa-font fa-3x mb-3" style="color: #ff9800;"></i>
                             <p style="color: #e65100; font-size: 15px;">Textos y Nombres Personalizados</p>
-                            <p style="color: #9e9e9e; font-size: 13px;">
+                            <p style="color: #212529; font-size: 13px;">
                                 Nombres, iniciales, frases, fechas especiales...
                             </p>
                         </div>
@@ -382,7 +382,7 @@
                         <div class="p-4 text-center" style="background: #e3f2fd; border-radius: 8px;">
                             <i class="fas fa-image fa-3x mb-3" style="color: #1976d2;"></i>
                             <p style="color: #0d47a1; font-size: 15px;">Logos Personalizados</p>
-                            <p style="color: #9e9e9e; font-size: 13px;">
+                            <p style="color: #212529; font-size: 13px;">
                                 Logos modificados, adaptaciones, versiones para prendas específicas...
                             </p>
                         </div>
@@ -390,7 +390,7 @@
                 </div>
             </div>
             <div class="modal-footer" style="background: #f5f5f5;">
-                <div class="mr-auto" style="font-size: 13px; color: #616161;">
+                <div class="mr-auto" style="font-size: 13px; color: #212529;">
                     <i class="fas fa-info-circle mr-1"></i>
                     Los diseños personalizados NO aparecen en el catálogo maestro.
                 </div>
@@ -563,7 +563,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <div class="mr-auto" style="font-size: 13px; color: #616161;">
+                <div class="mr-auto" style="font-size: 13px; color: #212529;">
                     <i class="fas fa-shield-alt mr-1"></i>
                     Los diseños personalizados NO van al catálogo maestro.
                 </div>

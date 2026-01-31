@@ -550,7 +550,12 @@ $(document).ready(function() {
     $('#annexForm').on('submit', function(e) {
         if (orderItems.length === 0) {
             e.preventDefault();
-            alert('Debe agregar al menos un producto al anexo.');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Anexo vacío',
+                text: 'Debe agregar al menos un producto al anexo',
+                confirmButtonColor: '#3085d6'
+            });
             return false;
         }
     });

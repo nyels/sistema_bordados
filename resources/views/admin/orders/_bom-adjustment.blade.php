@@ -57,6 +57,8 @@
         }
 
         if (!empty($itemBom['materials'])) {
+            // Ordenar materiales alfabéticamente por nombre
+            usort($itemBom['materials'], fn($a, $b) => strcasecmp($a['name'], $b['name']));
             $bomData[] = $itemBom;
         }
     }
@@ -71,7 +73,7 @@
     <div class="card-header py-2 d-flex justify-content-between align-items-center"
          style="background: #5c6bc0; color: white; cursor: pointer;"
          data-toggle="collapse" data-target="#collapseBomAdjustment"
-         aria-expanded="false" aria-controls="collapseBomAdjustment">
+         aria-expanded="true" aria-controls="collapseBomAdjustment">
         <h5 class="mb-0" style="font-size: 16px;">
             <i class="fas fa-ruler-combined mr-2"></i>
             Ajuste de Materiales (Pre-producción)
@@ -95,7 +97,7 @@
         </div>
     </div>
 
-    <div class="collapse" id="collapseBomAdjustment">
+    <div class="collapse show" id="collapseBomAdjustment">
         {{-- Nota informativa --}}
         <div class="px-3 py-2" style="background: #e8eaf6; border-bottom: 1px solid #c5cae9;">
             <div style="font-size: 14px; color: #3949ab;">
@@ -129,7 +131,7 @@
                                     <i class="fas fa-ruler mr-1"></i> Con medidas
                                 </span>
                             @else
-                                <span class="badge badge-light" style="font-size: 12px; color: #757575;">
+                                <span class="badge badge-light" style="font-size: 12px; color: #212529;">
                                     <i class="fas fa-box mr-1"></i> Estándar
                                 </span>
                             @endif
@@ -158,11 +160,11 @@
                     <table class="table table-sm mb-0" style="font-size: 14px;">
                         <thead style="background: #eeeeee;">
                             <tr>
-                                <th style="width: 35%; color: #424242; font-weight: 600; padding: 8px 12px;">Material</th>
-                                <th style="width: 15%; color: #424242; font-weight: 600; padding: 8px 12px; text-align: center;">BOM Base</th>
-                                <th style="width: 20%; color: #424242; font-weight: 600; padding: 8px 12px; text-align: center;">Ajustado</th>
-                                <th style="width: 15%; color: #424242; font-weight: 600; padding: 8px 12px; text-align: right;">Costo Unit.</th>
-                                <th style="width: 15%; color: #424242; font-weight: 600; padding: 8px 12px; text-align: right;">Subtotal</th>
+                                <th style="width: 35%; color: #212529; font-weight: 600; padding: 8px 12px;">Material</th>
+                                <th style="width: 15%; color: #212529; font-weight: 600; padding: 8px 12px; text-align: center;">BOM Base</th>
+                                <th style="width: 20%; color: #212529; font-weight: 600; padding: 8px 12px; text-align: center;">Ajustado</th>
+                                <th style="width: 15%; color: #212529; font-weight: 600; padding: 8px 12px; text-align: right;">Costo Unit.</th>
+                                <th style="width: 15%; color: #212529; font-weight: 600; padding: 8px 12px; text-align: right;">Subtotal</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -184,10 +186,10 @@
                                                 <span class="badge badge-warning ml-1" style="font-size: 10px;">Variable</span>
                                             @endif
                                         </div>
-                                        <small style="color: #757575;">{{ $mat['category'] }}</small>
+                                        <small style="color: #212529;">{{ $mat['category'] }}</small>
                                     </td>
                                     <td style="padding: 10px 12px; text-align: center; vertical-align: middle;">
-                                        <span style="color: #616161; font-size: 14px;">
+                                        <span style="color: #212529; font-size: 14px;">
                                             {{ number_format($mat['base_quantity'], 2) }} {{ $mat['unit'] }}
                                         </span>
                                     </td>
@@ -206,14 +208,14 @@
                                                 </div>
                                             </div>
                                         @else
-                                            <span style="color: #9e9e9e; font-size: 14px;">
+                                            <span style="color: #212529; font-size: 14px;">
                                                 {{ number_format($mat['base_quantity'], 2) }} {{ $mat['unit'] }}
                                             </span>
                                             <span class="badge badge-light ml-1" style="font-size: 10px;">Fijo</span>
                                         @endif
                                     </td>
                                     <td style="padding: 10px 12px; text-align: right; vertical-align: middle;">
-                                        <span style="color: #616161; font-size: 14px;">
+                                        <span style="color: #212529; font-size: 14px;">
                                             ${{ number_format($mat['average_cost'], 2) }}
                                         </span>
                                     </td>
@@ -233,7 +235,7 @@
             <div class="px-3 py-3" style="background: #263238; color: white;">
                 <div class="row align-items-center">
                     <div class="col-md-4 mb-2 mb-md-0">
-                        <div style="font-size: 13px; color: #b0bec5; text-transform: uppercase; letter-spacing: 0.5px;">
+                        <div style="font-size: 13px; color: #eceff1; text-transform: uppercase; letter-spacing: 0.5px;">
                             Costo BOM Original
                         </div>
                         <div id="bomCostoOriginal" style="font-size: 20px; font-weight: 700;">
@@ -241,7 +243,7 @@
                         </div>
                     </div>
                     <div class="col-md-4 mb-2 mb-md-0 text-md-center">
-                        <div style="font-size: 13px; color: #b0bec5; text-transform: uppercase; letter-spacing: 0.5px;">
+                        <div style="font-size: 13px; color: #eceff1; text-transform: uppercase; letter-spacing: 0.5px;">
                             Costo BOM Ajustado
                         </div>
                         <div id="bomCostoAjustado" style="font-size: 20px; font-weight: 700; color: #ffc107;">
@@ -249,11 +251,11 @@
                         </div>
                     </div>
                     <div class="col-md-4 text-md-right">
-                        <div style="font-size: 13px; color: #b0bec5; text-transform: uppercase; letter-spacing: 0.5px;">
+                        <div style="font-size: 13px; color: #eceff1; text-transform: uppercase; letter-spacing: 0.5px;">
                             Diferencia
                         </div>
                         <div id="bomDiferencia" style="font-size: 20px; font-weight: 700;">
-                            $0.00 <span id="bomDiferenciaPct" style="font-size: 14px; color: #b0bec5;">(0%)</span>
+                            $0.00 <span id="bomDiferenciaPct" style="font-size: 14px; color: #eceff1;">(0%)</span>
                         </div>
                     </div>
                 </div>
@@ -277,7 +279,7 @@
                     <i class="fas fa-undo mr-1"></i> Restaurar BOM Original
                 </button>
                 <div>
-                    <span class="text-muted mr-2" style="font-size: 13px;">
+                    <span class="mr-2" style="font-size: 13px; color: #212529;">
                         <i class="fas fa-lock mr-1"></i> Persistencia pendiente
                     </span>
                     <button type="button" class="btn btn-success btn-sm" id="btnSaveBom" disabled>
@@ -408,7 +410,7 @@
             } else if (diferencia < -0.01) {
                 elDiferencia.style.color = '#4caf50';
             } else {
-                elDiferencia.style.color = '#b0bec5';
+                elDiferencia.style.color = '#eceff1';
             }
         }
 

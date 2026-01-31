@@ -21,16 +21,36 @@
     @endforeach
 
     <div class="card card-primary">
-        <div class="card-header">
+        <div class="card-header d-flex justify-content-between align-items-center">
             <h3 class="card-title" style="font-weight: bold;font-size: 20px;">
                 <i class="fas fa-link"></i> UNIDADES PERMITIDAS POR CATEGORÍA
             </h3>
+            <span class="badge badge-secondary" style="font-size: 0.9rem;">
+                <i class="fas fa-cog"></i> Configuración Avanzada
+            </span>
         </div>
 
         <div class="card-body">
+            {{-- NOTA DE VISTA AVANZADA --}}
+            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                <strong><i class="fas fa-shield-alt"></i> Configuración Solo Administradores</strong>
+                <p class="mb-0 mt-2">
+                    <i class="fas fa-exclamation-circle text-danger"></i>
+                    <strong>Cambios aquí afectan la creación de materiales.</strong>
+                    <br>
+                    Los empaques que configure aquí determinan qué opciones verán los usuarios al crear nuevos materiales en cada categoría.
+                    <br>
+                    <small class="text-muted">
+                        <i class="fas fa-lightbulb text-primary"></i>
+                        <strong>Acceso rápido:</strong> También puede usar el modal "Empaques por Categoría" desde la lista de categorías.
+                    </small>
+                </p>
+                <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+            </div>
+
             {{-- INFORMACIÓN DEL MÓDULO --}}
             <div class="alert alert-info alert-dismissible fade show" role="alert">
-                <strong><i class="fas fa-info-circle"></i> Presentaciones de Compra por Categoría</strong>
+                <strong><i class="fas fa-box"></i> Empaques de Compra por Categoría</strong>
                 <p class="mb-0 mt-2">
                     Define en qué <strong>empaques o contenedores</strong> (Caja, Cono, Rollo, Paquete) se compran los materiales de cada categoría.
                     <br>
@@ -331,7 +351,12 @@
                 var unitId = $('#modal-unit-select').val();
 
                 if (!unitId) {
-                    alert('Debe seleccionar una unidad.');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Campo requerido',
+                        text: 'Debe seleccionar una unidad',
+                        confirmButtonColor: '#3085d6'
+                    });
                     return;
                 }
 

@@ -10,6 +10,7 @@ use App\Models\Cliente;
 use App\Models\Product;
 use App\Models\ClientMeasurement;
 use App\Models\DesignExport;
+use App\Events\OrderStatusChanged;
 use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\StoreOrderPaymentRequest;
 use App\Http\Requests\CancelOrderRequest;
@@ -268,6 +269,8 @@ class OrderController extends Controller
             'items.product.productType',
             // FASE X-A: Cargar materiales del BOM para ajuste pre-producción
             'items.product.materials.material.category',
+            'items.product.materials.material.consumptionUnit',
+            'items.product.materials.material.baseUnit',
             'items.variant',
             'payments.receiver',
             'creator',
@@ -529,6 +532,13 @@ class OrderController extends Controller
             );
         }
 
+        // === BROADCAST: Notificar cambio de estado en tiempo real ===
+        event(new OrderStatusChanged(
+            $order->fresh(),
+            $previousStatus,
+            $newStatus
+        ));
+
         return redirect()->route('admin.orders.show', $order)
             ->with('success', 'Estado actualizado.');
     }
@@ -618,8 +628,10 @@ class OrderController extends Controller
                 'image_url' => $p->primary_image_url,
                 // Categoría del producto
                 'category_name' => $p->category?->name ?? null,
-                // Campos para lógica de medidas por tipo de producto
-                'requires_measurements' => $p->productType?->requires_measurements ?? false,
+                // CANÓNICO: La categoría decide si se pueden solicitar medidas en pedido
+                'category_supports_measurements' => $p->category?->supportsMeasurements() ?? false,
+                // requires_measurements ahora deriva de CATEGORÍA (no de ProductType)
+                'requires_measurements' => $p->category?->supportsMeasurements() ?? false,
                 'product_type_name' => $p->productType?->display_name ?? null,
                 // Extras del producto
                 'extras' => $p->extras->map(fn($e) => [
@@ -661,7 +673,10 @@ class OrderController extends Controller
             'lead_time' => $product->production_lead_time ?? 0,
             'image_url' => $product->primary_image_url,
             'category_name' => $product->category?->name ?? null,
-            'requires_measurements' => $product->productType?->requires_measurements ?? false,
+            // CANÓNICO: La categoría decide si se pueden solicitar medidas en pedido
+            'category_supports_measurements' => $product->category?->supportsMeasurements() ?? false,
+            // requires_measurements ahora deriva de CATEGORÍA (no de ProductType)
+            'requires_measurements' => $product->category?->supportsMeasurements() ?? false,
             'product_type_name' => $product->productType?->display_name ?? null,
             'extras' => $product->extras->map(fn($e) => [
                 'id' => $e->id,
@@ -697,7 +712,7 @@ class OrderController extends Controller
         }
 
         $products = Product::whereIn('id', $productIds)
-            ->with(['primaryImage', 'productType', 'variants.attributeValues'])
+            ->with(['primaryImage', 'productType', 'variants.attributeValues', 'category'])
             ->get()
             ->keyBy('id');
 
@@ -719,7 +734,11 @@ class OrderController extends Controller
                 'base_price' => $product->base_price,
                 'lead_time' => $product->production_lead_time ?? 0,
                 'image_url' => $product->primary_image_url,
-                'requires_measurements' => $product->productType?->requires_measurements ?? false,
+                'category_name' => $product->category?->name ?? null,
+                // CANÓNICO: La categoría decide si se pueden solicitar medidas en pedido
+                'category_supports_measurements' => $product->category?->supportsMeasurements() ?? false,
+                // requires_measurements ahora deriva de CATEGORÍA (no de ProductType)
+                'requires_measurements' => $product->category?->supportsMeasurements() ?? false,
                 'product_type_name' => $product->productType?->display_name ?? null,
                 'variant_sku' => $variant?->sku_variant ?? '',
                 'variant_display' => $variant?->attributes_display ?? '',

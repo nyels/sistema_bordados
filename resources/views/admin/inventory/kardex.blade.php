@@ -150,9 +150,20 @@
                             <td>
                                 <div class="d-flex flex-column">
                                     <div>
-                                        <strong>{{ $mov->reference_type }}</strong>
-                                        @if ($mov->reference_id)
-                                            <span class="ml-1">#{{ $mov->reference_id }}</span>
+                                        @if (in_array($mov->reference_type, ['App\Models\PurchaseItem', 'App\Models\Purchase']))
+                                            <a href="#" class="btn-purchase-details text-primary" style="cursor: pointer; text-decoration: underline;"
+                                               data-reference-type="{{ $mov->reference_type }}"
+                                               data-reference-id="{{ $mov->reference_id }}">
+                                                <strong>{{ $mov->reference_label }}</strong>
+                                                @if ($mov->reference_id)
+                                                    <span class="ml-1">#{{ $mov->reference_id }}</span>
+                                                @endif
+                                            </a>
+                                        @else
+                                            <strong>{{ $mov->reference_label }}</strong>
+                                            @if ($mov->reference_id)
+                                                <span class="ml-1">#{{ $mov->reference_id }}</span>
+                                            @endif
                                         @endif
                                     </div>
                                     @if ($mov->notes)
@@ -176,6 +187,31 @@
             </table>
         </div>
         {{-- Paginación manejada por DataTables --}}
+    </div>
+
+    {{-- Modal de Detalles de Compra --}}
+    <div class="modal fade" id="purchaseDetailsModal" tabindex="-1" role="dialog" aria-labelledby="purchaseDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title" id="purchaseDetailsModalLabel">
+                        <i class="fas fa-file-invoice mr-2"></i>Detalles de Orden de Compra
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="purchaseDetailsContent">
+                    <div class="text-center py-5">
+                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+                        <p class="mt-2">Cargando datos...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
     </div>
 @stop
 
@@ -214,6 +250,7 @@ $(function() {
     // Inicializar DataTable igual que proveedores
     var table = $('#kardexTable').DataTable({
         "pageLength": 10,
+        "order": [[0, 'desc']], // Ordenar por fecha descendente por defecto
         "language": {
             "emptyTable": "No hay movimientos registrados",
             "info": "Mostrando _START_ a _END_ de _TOTAL_ Movimientos",
@@ -316,6 +353,180 @@ $(function() {
         filterFrom.value = '';
         filterTo.value = '';
         table.search('').columns().search('').draw();
+    });
+
+    // =====================================================
+    // MODAL DE DETALLES DE COMPRA
+    // =====================================================
+    $(document).on('click', '.btn-purchase-details', function(e) {
+        e.preventDefault();
+        var referenceType = $(this).data('reference-type');
+        var referenceId = $(this).data('reference-id');
+
+        // Mostrar modal con loading
+        $('#purchaseDetailsContent').html(`
+            <div class="text-center py-5">
+                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                <p class="mt-2">Cargando datos...</p>
+            </div>
+        `);
+        $('#purchaseDetailsModal').modal('show');
+
+        // Cargar datos via AJAX
+        $.ajax({
+            url: '{{ route("admin.inventory.purchase.details") }}',
+            method: 'GET',
+            data: {
+                reference_type: referenceType,
+                reference_id: referenceId
+            },
+            success: function(response) {
+                var purchase = response.purchase;
+                var items = response.items;
+                var highlightedItemId = response.highlighted_item_id;
+
+                var html = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card card-outline card-primary mb-3">
+                                <div class="card-header py-2">
+                                    <h6 class="mb-0"><i class="fas fa-file-alt mr-1"></i>Orden de Compra</h6>
+                                </div>
+                                <div class="card-body py-2">
+                                    <table class="table table-sm table-borderless mb-0">
+                                        <tr>
+                                            <td class="text-muted" style="width: 40%;">Número:</td>
+                                            <td><strong>${purchase.purchase_number}</strong></td>
+                                        </tr>
+                                        ${purchase.reference ? `<tr><td class="text-muted">Referencia:</td><td>${purchase.reference}</td></tr>` : ''}
+                                        <tr>
+                                            <td class="text-muted">Estado:</td>
+                                            <td><span class="badge badge-${purchase.status_color}">${purchase.status}</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Fecha Orden:</td>
+                                            <td>${purchase.ordered_at || '-'}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Fecha Recepción:</td>
+                                            <td>${purchase.received_at || '-'}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Creado por:</td>
+                                            <td>${purchase.creator || '-'}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Recibido por:</td>
+                                            <td>${purchase.receiver || '-'}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card card-outline card-success mb-3">
+                                <div class="card-header py-2">
+                                    <h6 class="mb-0"><i class="fas fa-truck mr-1"></i>Proveedor</h6>
+                                </div>
+                                <div class="card-body py-2">
+                                    ${purchase.proveedor ? `
+                                        <table class="table table-sm table-borderless mb-0">
+                                            <tr>
+                                                <td class="text-muted" style="width: 40%;">Nombre:</td>
+                                                <td><strong>${purchase.proveedor.name}</strong></td>
+                                            </tr>
+                                            ${purchase.proveedor.contact ? `<tr><td class="text-muted">Contacto:</td><td>${purchase.proveedor.contact}</td></tr>` : ''}
+                                            ${purchase.proveedor.phone ? `<tr><td class="text-muted">Teléfono:</td><td>${purchase.proveedor.phone}</td></tr>` : ''}
+                                            ${purchase.proveedor.email ? `<tr><td class="text-muted">Email:</td><td>${purchase.proveedor.email}</td></tr>` : ''}
+                                        </table>
+                                    ` : '<p class="text-muted mb-0">Sin proveedor asignado</p>'}
+                                </div>
+                            </div>
+                            <div class="card card-outline card-warning">
+                                <div class="card-header py-2">
+                                    <h6 class="mb-0"><i class="fas fa-dollar-sign mr-1"></i>Totales</h6>
+                                </div>
+                                <div class="card-body py-2">
+                                    <table class="table table-sm table-borderless mb-0">
+                                        <tr>
+                                            <td class="text-muted">Subtotal:</td>
+                                            <td class="text-right">$${purchase.subtotal}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Impuestos:</td>
+                                            <td class="text-right">$${purchase.tax_amount}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Descuento:</td>
+                                            <td class="text-right text-danger">-$${purchase.discount_amount}</td>
+                                        </tr>
+                                        <tr class="border-top">
+                                            <td><strong>Total:</strong></td>
+                                            <td class="text-right"><strong>$${purchase.total}</strong></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${purchase.notes ? `
+                        <div class="alert alert-info py-2 mb-3">
+                            <i class="fas fa-sticky-note mr-1"></i><strong>Notas:</strong> ${purchase.notes}
+                        </div>
+                    ` : ''}
+
+                    <div class="card card-outline card-dark">
+                        <div class="card-header py-2">
+                            <h6 class="mb-0"><i class="fas fa-list mr-1"></i>Items de la Compra</h6>
+                        </div>
+                        <div class="card-body p-0">
+                            <table class="table table-sm table-striped mb-0">
+                                <thead class="bg-secondary text-white">
+                                    <tr>
+                                        <th>Material</th>
+                                        <th>SKU</th>
+                                        <th class="text-center">Cantidad</th>
+                                        <th class="text-center">P. Unit.</th>
+                                        <th class="text-center">Subtotal</th>
+                                        <th class="text-center">Recibido</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${items.map(function(item) {
+                                        var isHighlighted = highlightedItemId && item.id == highlightedItemId;
+                                        return `
+                                            <tr class="${isHighlighted ? 'table-warning' : ''}">
+                                                <td>
+                                                    ${item.material}
+                                                    ${item.variant && item.variant !== '-' ? `<br><small class="text-muted">${item.variant}</small>` : ''}
+                                                    ${isHighlighted ? '<i class="fas fa-arrow-left text-warning ml-2" title="Item de este movimiento"></i>' : ''}
+                                                </td>
+                                                <td><code>${item.sku}</code></td>
+                                                <td class="text-center">${item.quantity} ${item.unit}</td>
+                                                <td class="text-center">$${item.unit_price}</td>
+                                                <td class="text-center">$${item.subtotal}</td>
+                                                <td class="text-center">${item.quantity_received} ${item.unit}</td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+
+                $('#purchaseDetailsContent').html(html);
+            },
+            error: function(xhr) {
+                $('#purchaseDetailsContent').html(`
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        Error al cargar los detalles de la compra.
+                    </div>
+                `);
+            }
+        });
     });
 });
 </script>

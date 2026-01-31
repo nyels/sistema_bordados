@@ -151,14 +151,22 @@ class OrderEvent extends Model
     }
 
     // === HELPER: Registrar evento de creacion ===
+    // CANÓNICO: Soporta pedidos SIN cliente (producción para stock)
     public static function logCreated(Order $order): self
     {
+        // NULL-SAFE: Determinar destinatario del pedido
+        // Si is_stock_production = true O cliente_id = null → "Producción para stock"
+        $destinatario = $order->cliente_id && $order->cliente
+            ? "{$order->cliente->nombre} {$order->cliente->apellidos}"
+            : 'Producción para stock';
+
         return self::log(
             $order,
             self::TYPE_CREATED,
-            "Pedido {$order->order_number} creado para cliente {$order->cliente->nombre} {$order->cliente->apellidos}",
+            "Pedido {$order->order_number} creado para {$destinatario}",
             [
                 'cliente_id' => $order->cliente_id,
+                'is_stock_production' => $order->isStockProduction(),
                 'total' => $order->total,
                 'items_count' => $order->items()->count(),
             ]
@@ -282,12 +290,18 @@ class OrderEvent extends Model
     }
 
     // === HELPER: Registrar entrega (CIERRE FINAL v2.3) ===
+    // CANÓNICO: Soporta pedidos SIN cliente (producción para stock)
     public static function logDelivered(Order $order, array $consumedMaterials = []): self
     {
+        // NULL-SAFE: Mensaje diferenciado para producción para stock
+        $mensaje = $order->isStockProduction()
+            ? "Producción para stock completada. Ciclo operativo CERRADO."
+            : "Pedido entregado al cliente. Ciclo operativo CERRADO.";
+
         return self::log(
             $order,
             self::TYPE_DELIVERED,
-            "Pedido entregado al cliente. Ciclo operativo CERRADO.",
+            $mensaje,
             [
                 'delivered_date' => $order->delivered_date?->format('Y-m-d H:i:s'),
                 'delivered_timestamp' => now()->toIso8601String(),

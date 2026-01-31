@@ -86,14 +86,14 @@
                     <div class="col-md-6" style="padding-left: 30px;">
                         <div style="border-bottom: 3px solid #28a745; padding-bottom: 8px; margin-bottom: 20px;">
                             <h5 style="color: #28a745; font-weight: 600;">
-                                <i class="fas fa-balance-scale"></i> Unidades y Presentación
+                                <i class="fas fa-shopping-cart"></i> Compra y Conversiones
                             </h5>
                         </div>
 
                         <div class="row">
                             <div class="col-12">
                                 <div class="form-group">
-                                    <label>Unidad Base (Inventario/Consumo) <span class="text-danger">*</span></label>
+                                    <label>Unidad de Compra <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <select name="base_unit_id" id="base_unit_id"
                                             class="form-control @error('base_unit_id') is-invalid @enderror" required
@@ -107,7 +107,7 @@
                                             </button>
                                         </div>
                                     </div>
-                                    <small class="text-muted">Ej: Cono, Rollo, Pieza</small>
+                                    <small class="text-muted">Empaque en que llega del proveedor (Cono, Rollo, Bolsa...)</small>
                                 </div>
                             </div>
                         </div>
@@ -127,6 +127,15 @@
                             <label>Notas / Descripción</label>
                             <textarea name="description" class="form-control @error('description') is-invalid @enderror" rows="2"
                                 maxlength="500">{{ old('description') }}</textarea>
+                        </div>
+
+                        {{-- INFO: Conversiones --}}
+                        <div class="alert alert-light border-left border-info mt-3 mb-0" style="border-left-width: 4px !important;">
+                            <small>
+                                <i class="fas fa-info-circle text-info"></i>
+                                <strong>Siguiente paso:</strong> Después de guardar, configurarás las
+                                <em>conversiones específicas</em> de este material (ej: 1 CONO = 3000 metros).
+                            </small>
                         </div>
                     </div>
                 </div>

@@ -11,6 +11,7 @@
                         Prioridad</th>
                     <th>Cliente</th>
                     <th>Pedido</th>
+                    <th data-toggle="tooltip" data-placement="top" title="Producto/Diseño del pedido">Diseño / Linaje</th>
                     <th class="text-center">Estado</th>
                     <th class="text-center" data-toggle="tooltip" data-placement="top"
                         title="Fecha prometida al cliente.">Fecha
@@ -61,7 +62,13 @@
                                 {{ $order->urgency_label }}
                             </span>
                         </td>
-                        <td>{{ $order->cliente->nombre }} {{ $order->cliente->apellidos }}</td>
+                        <td>
+                            @if($order->cliente)
+                                {{ $order->cliente->nombre }} {{ $order->cliente->apellidos }}
+                            @else
+                                <span style="color: #212529;"><i class="fas fa-warehouse mr-1"></i> Stock</span>
+                            @endif
+                        </td>
                         <td>
                             <a href="{{ route('admin.orders.show', $order) }}?from=queue" class="font-weight-bold">
                                 {{ $order->order_number }}
@@ -69,6 +76,23 @@
                             @if ($order->isAnnex())
                                 <span class="badge badge-info ml-1" title="Pedido Anexo"><i
                                         class="fas fa-link"></i></span>
+                            @endif
+                        </td>
+                        <td>
+                            @php
+                                $firstItem = $order->items->first();
+                            @endphp
+                            @if($firstItem)
+                                <div class="font-weight-bold" style="color: #111827;">
+                                    {{ $firstItem->product_name }}
+                                </div>
+                                @if($order->items->count() > 1)
+                                    <small style="color: #6b7280;">
+                                        +{{ $order->items->count() - 1 }} más
+                                    </small>
+                                @endif
+                            @else
+                                <span style="color: #6b7280;">-</span>
                             @endif
                         </td>
                         <td class="text-center">
@@ -138,7 +162,7 @@
                                     <span class="badge badge-danger ml-1">RETRASADO</span>
                                 @endif
                             @else
-                                <span class="text-muted">-</span>
+                                <span style="color: #212529;">-</span>
                             @endif
                         </td>
                         <td class="text-center">
@@ -168,7 +192,7 @@
                                     <i class="fas fa-eye"></i>
                                 </button>
                             @else
-                                <span class="text-muted">Sin materiales</span>
+                                <span style="color: #212529;">Sin materiales</span>
                             @endif
                         </td>
                         <td class="text-center">
@@ -187,7 +211,7 @@
                                     <i class="fas fa-check-circle"></i> OK
                                 </span>
                             @else
-                                <span class="text-muted">-</span>
+                                <span style="color: #212529;">-</span>
                             @endif
                         </td>
                         <td class="text-left d-flex justify-content-start align-items-center gap-1">
@@ -230,7 +254,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="9" class="text-center py-4 text-muted">
+                        <td colspan="10" class="text-center py-4 text-muted">
                             <i class="fas fa-inbox fa-2x mb-2"></i>
                             <p class="mb-0">No hay pedidos en cola de produccion</p>
                         </td>
@@ -253,8 +277,8 @@
 @foreach ($orders as $order)
     @if (count($order->material_requirements) > 0)
         <div class="modal fade" id="materialsModal{{ $order->id }}" tabindex="-1">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
+            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                <div class="modal-content" style="max-height: 90vh;">
                     <div class="modal-header" style="background: #343a40; color: white;">
                         <h5 class="modal-title">
                             <i class="fas fa-boxes mr-2"></i>
@@ -262,7 +286,7 @@
                         </h5>
                         <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
                     </div>
-                    <div class="modal-body p-3">
+                    <div class="modal-body p-3" style="overflow-y: auto;">
                         {{-- Toggle de unidades --}}
                         <div class="d-flex justify-content-end mb-2">
                             <div class="btn-group btn-group-sm unit-toggle" role="group">
@@ -296,7 +320,7 @@
                                                 <small class="text-muted d-block"
                                                     style="line-height: 1.2;">{{ $mat['variant_sku'] ?? '' }}</small>
                                             @else
-                                                <small class="text-muted">{{ $mat['variant_sku'] ?? '-' }}</small>
+                                                <small style="color: #212529;">{{ $mat['variant_sku'] ?? '-' }}</small>
                                             @endif
                                         </td>
                                         <td class="text-center font-weight-bold unit-convertible"
@@ -379,7 +403,7 @@
                     </div>
                     <div class="modal-footer">
                         <div class="mr-auto">
-                            <small class="text-muted">
+                            <small style="color: #212529;">
                                 <strong>Stock:</strong> Cantidad en almacen |
                                 <strong>Reservado:</strong> Bloqueado para otros pedidos |
                                 <strong>Stock Disponible:</strong> Stock - Reservado

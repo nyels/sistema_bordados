@@ -39,7 +39,7 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <table class="table table-sm table-borderless mb-0" style="font-size: 15px;">
+                            <table class="table table-sm table-borderless mb-0" style="font-size: 16px;">
                                 <tr>
                                     <td class="text-muted" style="width: 140px;">UUID:</td>
                                     <td><code>{{ $wasteEvent->uuid }}</code></td>
@@ -71,7 +71,7 @@
                             </table>
                         </div>
                         <div class="col-md-6">
-                            <table class="table table-sm table-borderless mb-0" style="font-size: 15px;">
+                            <table class="table table-sm table-borderless mb-0" style="font-size: 16px;">
                                 @if($wasteEvent->order)
                                     <tr>
                                         <td class="text-muted" style="width: 140px;">Pedido:</td>
@@ -123,7 +123,7 @@
                 <div class="card-header py-2" style="background: #455a64; color: white;">
                     <h5 class="mb-0"><i class="fas fa-comment-alt mr-2"></i> Motivo de la Merma</h5>
                 </div>
-                <div class="card-body" style="font-size: 15px;">
+                <div class="card-body" style="font-size: 16px;">
                     <p class="mb-0">{{ $wasteEvent->reason }}</p>
                 </div>
             </div>
@@ -139,7 +139,7 @@
                         </h5>
                     </div>
                     <div class="card-body p-0">
-                        <table class="table table-sm mb-0" style="font-size: 15px;">
+                        <table class="table table-sm mb-0" style="font-size: 16px;">
                             <thead style="background: #eceff1;">
                                 <tr>
                                     <th>Material</th>

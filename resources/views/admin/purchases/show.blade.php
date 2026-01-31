@@ -253,9 +253,29 @@
                     @endif
 
                     @if ($purchase->can_receive)
-                        <a href="{{ route('admin.purchases.receive', $purchase->id) }}" class="btn btn-success">
-                            <i class="fas fa-truck-loading"></i> Recibir Mercancía
-                        </a>
+                        {{-- Dropdown Recibir Mercancía (hover) --}}
+                        <div class="btn-group dropdown-hover">
+                            <button type="button" class="btn btn-success dropdown-toggle">
+                                <i class="fas fa-truck-loading"></i> Recibir Mercancía
+                            </button>
+                            <div class="dropdown-menu">
+                                <button type="button" class="dropdown-item" id="btnReceiveComplete">
+                                    <i class="fas fa-truck-loading text-success mr-2"></i> Completa/Recibido
+                                    <small class="d-block text-muted">Recibir todo lo pendiente</small>
+                                </button>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="{{ route('admin.purchases.receive', $purchase->id) }}">
+                                    <i class="fas fa-clipboard-list text-primary mr-2"></i> Parcial
+                                    <small class="d-block text-muted">Especificar cantidades manualmente</small>
+                                </a>
+                            </div>
+                        </div>
+
+                        {{-- Form oculto para recepción completa --}}
+                        <form action="{{ route('admin.purchases.receive.complete', $purchase->id) }}" method="POST"
+                            class="d-none" id="formReceiveComplete">
+                            @csrf
+                        </form>
                     @endif
 
                     @if ($purchase->can_cancel)
@@ -298,8 +318,8 @@
                                     <th style="width: 50px;">#</th>
                                     <th>Material</th>
                                     <th>Color / SKU</th>
-                                    <th class="text-center">Cantidad</th>
                                     <th class="text-center">Unidad</th>
+                                    <th class="text-center">Cantidad</th>
                                     <th class="text-right">P. Unitario</th>
                                     <th class="text-right">Subtotal</th>
                                     @if ($purchase->status->value !== 'borrador')
@@ -309,6 +329,19 @@
                             </thead>
                             <tbody>
                                 @foreach ($purchase->items as $item)
+                                    @php
+                                        // Obtener símbolo de unidad base del material
+                                        $baseSymbol = $item->materialVariant->material->baseUnit->symbol ?? '';
+                                        $unitSymbol = $item->unit->symbol ?? 'N/A';
+                                        $factor = $item->conversion_factor ?? 1;
+
+                                        // Formato: unidad - factor (ej: paq - 100m)
+                                        if ($factor != 1 && $baseSymbol) {
+                                            $unitDisplay = $unitSymbol . ' - ' . number_format($factor, 0) . ' ' . $baseSymbol;
+                                        } else {
+                                            $unitDisplay = $unitSymbol;
+                                        }
+                                    @endphp
                                     <tr class="{{ $item->is_fully_received ? 'table-success' : '' }}">
                                         <td>{{ $loop->iteration }}</td>
                                         <td>
@@ -326,29 +359,28 @@
                                             <code>{{ $item->materialVariant->sku ?? 'N/A' }}</code>
                                         </td>
                                         <td class="text-center">
+                                            {{ $unitDisplay }}
+                                        </td>
+                                        <td class="text-center">
                                             {{ number_format($item->quantity, 2) }}
                                             @if ($item->conversion_factor != 1)
                                                 <br>
                                                 <small class="text-info">
-                                                    = {{ number_format($item->converted_quantity, 2) }}
-                                                    {{ $item->materialVariant->material->category->baseUnit->symbol ?? '' }}
+                                                    = {{ number_format($item->converted_quantity, 0, ',', '.') }} {{ $baseSymbol }}
                                                 </small>
                                             @endif
                                         </td>
-                                        <td class="text-center">
-                                            {{ $item->unit->symbol ?? 'N/A' }}
-                                        </td>
                                         <td class="text-right">
-                                            ${{ number_format($item->unit_price, 2) }}
+                                            ${{ number_format($item->unit_price, 2, ',', '.') }}
+                                        </td>
+                                        <td class="text-right font-weight-bold">
+                                            ${{ number_format($item->subtotal, 2, ',', '.') }}
                                             @if ($item->conversion_factor != 1 && $item->converted_quantity > 0)
                                                 <br>
                                                 <small class="text-muted">
-                                                    ${{ number_format($item->subtotal / $item->converted_quantity, 2) }}/{{ $item->materialVariant->material->category->baseUnit->symbol ?? '' }}
+                                                    ${{ number_format($item->subtotal / $item->converted_quantity, 4, ',', '.') }}/{{ $baseSymbol }}
                                                 </small>
                                             @endif
-                                        </td>
-                                        <td class="text-right font-weight-bold">
-                                            ${{ number_format($item->subtotal, 2) }}
                                         </td>
                                         @if ($purchase->status->value !== 'borrador')
                                             <td class="text-center">
@@ -375,22 +407,20 @@
                             </tbody>
                             <tfoot class="bg-light">
                                 <tr>
-                                    <td colspan="{{ $purchase->status->value !== 'borrador' ? 6 : 5 }}"
-                                        class="text-right">
+                                    <td colspan="6" class="text-right">
                                         <strong>Subtotal:</strong>
                                     </td>
-                                    <td class="text-right">${{ number_format($purchase->subtotal, 2) }}</td>
+                                    <td class="text-right">${{ number_format($purchase->subtotal, 2, ',', '.') }}</td>
                                     @if ($purchase->status->value !== 'borrador')
                                         <td></td>
                                     @endif
                                 </tr>
                                 @if ($purchase->tax_rate > 0)
                                     <tr>
-                                        <td colspan="{{ $purchase->status->value !== 'borrador' ? 6 : 5 }}"
-                                            class="text-right">
+                                        <td colspan="6" class="text-right">
                                             <strong>IVA ({{ number_format($purchase->tax_rate, 0) }}%):</strong>
                                         </td>
-                                        <td class="text-right">${{ number_format($purchase->tax_amount, 2) }}</td>
+                                        <td class="text-right">${{ number_format($purchase->tax_amount, 2, ',', '.') }}</td>
                                         @if ($purchase->status->value !== 'borrador')
                                             <td></td>
                                         @endif
@@ -398,25 +428,22 @@
                                 @endif
                                 @if ($purchase->discount_amount > 0)
                                     <tr>
-                                        <td colspan="{{ $purchase->status->value !== 'borrador' ? 6 : 5 }}"
-                                            class="text-right">
+                                        <td colspan="6" class="text-right">
                                             <strong>Descuento:</strong>
                                         </td>
                                         <td class="text-right text-danger">
-                                            -${{ number_format($purchase->discount_amount, 2) }}</td>
+                                            -${{ number_format($purchase->discount_amount, 2, ',', '.') }}</td>
                                         @if ($purchase->status->value !== 'borrador')
                                             <td></td>
                                         @endif
                                     </tr>
                                 @endif
                                 <tr class="table-primary">
-                                    <td colspan="{{ $purchase->status->value !== 'borrador' ? 6 : 5 }}"
-                                        class="text-right">
+                                    <td colspan="6" class="text-right">
                                         <strong style="font-size: 16px;">TOTAL:</strong>
                                     </td>
                                     <td class="text-right">
-                                        <strong
-                                            style="font-size: 16px;">${{ number_format($purchase->total, 2) }}</strong>
+                                        <strong style="font-size: 16px;">${{ number_format($purchase->total, 2, ',', '.') }}</strong>
                                     </td>
                                     @if ($purchase->status->value !== 'borrador')
                                         <td></td>
@@ -509,7 +536,7 @@
                                                                         <small class="text-info">
                                                                             =
                                                                             {{ number_format($item->converted_quantity, 2) }}
-                                                                            {{ $item->materialVariant->material->category->baseUnit->symbol ?? '' }}
+                                                                            {{ $item->materialVariant->material->baseUnit->symbol ?? '' }}
                                                                         </small>
                                                                     @endif
                                                                 </td>
@@ -546,44 +573,49 @@
 
     {{-- MODALES DE ANULACIÓN --}}
     @foreach ($receptions->where('status', \App\Enums\ReceptionStatus::COMPLETED) as $reception)
-        <div class="modal fade" id="voidModal{{ $reception->id }}" tabindex="-1" role="dialog">
+        <div class="modal fade" id="voidModal{{ $reception->id }}" tabindex="-1" role="dialog" data-backdrop="static">
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
-                    <form method="POST"
-                        action="{{ route('admin.purchases.receptions.void', [$purchase->id, $reception->id]) }}">
-                        @csrf
-                        <div class="modal-header bg-danger text-white">
-                            <h5 class="modal-title">
-                                <i class="fas fa-undo"></i> Anular Recepción
-                            </h5>
-                            <button type="button" class="close text-white" data-dismiss="modal">
-                                <span>&times;</span>
-                            </button>
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title">
+                            <i class="fas fa-undo"></i> Anular Recepción
+                        </h5>
+                        <button type="button" class="close text-white" data-dismiss="modal">
+                            <span>&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        {{-- Alerta de error (oculta por defecto) --}}
+                        <div class="alert alert-danger void-error-alert" style="display: none;">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <span class="void-error-message"></span>
                         </div>
-                        <div class="modal-body">
-                            <div class="alert alert-warning">
-                                <strong>Advertencia:</strong> Esta acción revertirá los movimientos de inventario
-                                asociados a la recepción <strong>{{ $reception->reception_number }}</strong>.
-                            </div>
 
-                            <p>
-                                <strong>Items afectados:</strong> {{ $reception->items->count() }}<br>
-                                <strong>Fecha recepción:</strong> {{ $reception->received_at->format('d/m/Y H:i') }}
-                            </p>
+                        <div class="alert alert-warning">
+                            <strong>Advertencia:</strong> Esta acción revertirá los movimientos de inventario
+                            asociados a la recepción <strong>{{ $reception->reception_number }}</strong>.
+                        </div>
 
-                            <div class="form-group">
-                                <label>Motivo de Anulación <span class="text-danger">*</span></label>
-                                <textarea name="void_reason" class="form-control" rows="3" required minlength="10" maxlength="500"
-                                    placeholder="Explique el motivo de la anulación (mínimo 10 caracteres)..."></textarea>
-                            </div>
+                        <p>
+                            <strong>Items afectados:</strong> {{ $reception->items->count() }}<br>
+                            <strong>Fecha recepción:</strong> {{ $reception->received_at->format('d/m/Y H:i') }}
+                        </p>
+
+                        <div class="form-group">
+                            <label>Motivo de Anulación <span class="text-danger">*</span></label>
+                            <textarea class="form-control void-reason-input" rows="3" minlength="10" maxlength="500"
+                                placeholder="Explique el motivo de la anulación (mínimo 10 caracteres)..."></textarea>
+                            <small class="text-muted">Mínimo 10 caracteres</small>
                         </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-                            <button type="button" class="btn btn-danger btn-void-reception">
-                                <i class="fas fa-undo"></i> Confirmar Anulación
-                            </button>
-                        </div>
-                    </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-danger btn-void-reception"
+                            data-url="{{ route('admin.purchases.receptions.void', [$purchase->id, $reception->id]) }}"
+                            data-reception-number="{{ $reception->reception_number }}">
+                            <i class="fas fa-undo"></i> Confirmar Anulación
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -666,20 +698,64 @@
                 });
             });
 
-            // Anular Recepción
+            // Recepción Completa (desde orden pendiente/parcial)
+            $('#btnReceiveComplete').on('click', function() {
+                Swal.fire({
+                    title: '¿Recibir toda la mercancía pendiente?',
+                    html: `
+                        <div class="text-center">
+                            <p>Esta acción registrará la recepción de <strong>todos los items pendientes</strong>.</p>
+                            <div class="alert alert-info py-2 mt-2">
+                                <i class="fas fa-info-circle"></i>
+                                El inventario se actualizará inmediatamente.
+                            </div>
+                        </div>
+                    `,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#28a745',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: '<i class="fas fa-check-double"></i> Sí, recibir todo',
+                    cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
+                    reverseButtons: true,
+                    focusCancel: true,
+                    customClass: {
+                        popup: 'swal2-popup-custom',
+                        title: 'swal2-title-custom',
+                        confirmButton: 'btn btn-success',
+                        cancelButton: 'btn btn-secondary'
+                    },
+                    buttonsStyling: false
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $('#formReceiveComplete').submit();
+                    }
+                });
+            });
+
+            // Anular Recepción via AJAX
+            var voidInProgress = false;
+
             $('.btn-void-reception').on('click', function() {
-                const $form = $(this).closest('form');
-                const $textarea = $form.find('textarea[name="void_reason"]');
+                // Prevenir múltiples clics
+                if (voidInProgress) return;
+
+                const $btn = $(this);
+                const $modal = $btn.closest('.modal');
+                const $textarea = $modal.find('.void-reason-input');
+                const $errorAlert = $modal.find('.void-error-alert');
+                const $errorMessage = $modal.find('.void-error-message');
                 const reason = $textarea.val().trim();
+                const url = $btn.data('url');
+                const receptionNumber = $btn.data('reception-number');
+                const originalText = $btn.html();
+
+                // Ocultar error previo
+                $errorAlert.hide();
 
                 if (reason.length < 10) {
-                    Swal.fire({
-                        title: 'Motivo requerido',
-                        text: 'Debe ingresar un motivo de al menos 10 caracteres.',
-                        icon: 'error',
-                        confirmButtonColor: '#dc3545',
-                        confirmButtonText: 'Entendido'
-                    });
+                    $errorMessage.text('El motivo debe tener al menos 10 caracteres.');
+                    $errorAlert.show();
                     $textarea.focus();
                     return;
                 }
@@ -710,9 +786,65 @@
                     buttonsStyling: false
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        $form.submit();
+                        // Bloquear inmediatamente para evitar múltiples solicitudes
+                        voidInProgress = true;
+                        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Procesando...');
+                        $modal.find('.close, [data-dismiss="modal"]').prop('disabled', true);
+
+                        $.ajax({
+                            url: url,
+                            type: 'POST',
+                            data: {
+                                _token: '{{ csrf_token() }}',
+                                void_reason: reason
+                            },
+                            dataType: 'json',
+                            success: function(response) {
+                                if (response.success) {
+                                    // Mantener botón deshabilitado - éxito, se recargará la página
+                                    $modal.modal('hide');
+                                    Swal.fire({
+                                        title: 'Recepción Anulada',
+                                        text: response.message,
+                                        icon: 'success',
+                                        confirmButtonColor: '#28a745',
+                                        confirmButtonText: 'Aceptar',
+                                        allowOutsideClick: false,
+                                        allowEscapeKey: false
+                                    }).then(() => {
+                                        window.location.reload();
+                                    });
+                                } else {
+                                    // Error - restaurar botón
+                                    voidInProgress = false;
+                                    $btn.prop('disabled', false).html(originalText);
+                                    $modal.find('.close, [data-dismiss="modal"]').prop('disabled', false);
+                                    $errorMessage.text(response.message || 'Error desconocido');
+                                    $errorAlert.show();
+                                }
+                            },
+                            error: function(xhr) {
+                                // Error - restaurar botón
+                                voidInProgress = false;
+                                $btn.prop('disabled', false).html(originalText);
+                                $modal.find('.close, [data-dismiss="modal"]').prop('disabled', false);
+                                let errorMsg = 'Error al procesar la solicitud';
+
+                                if (xhr.responseJSON && xhr.responseJSON.message) {
+                                    errorMsg = xhr.responseJSON.message;
+                                }
+
+                                $errorMessage.text(errorMsg);
+                                $errorAlert.show();
+                            }
+                        });
                     }
                 });
+            });
+
+            // Limpiar errores al cerrar modal
+            $('.modal').on('hidden.bs.modal', function() {
+                $(this).find('.void-error-alert').hide();
             });
         });
     </script>
@@ -871,6 +1003,19 @@
 
         .dropdown-hover .dropdown-divider {
             margin: 4px 0;
+        }
+
+        /* Hover en filas de la tabla de items */
+        #items .table tbody tr {
+            transition: background-color 0.15s ease;
+        }
+
+        #items .table tbody tr:hover {
+            background-color: #e8f4fd !important;
+        }
+
+        #items .table tbody tr.table-success:hover {
+            background-color: #c3e6cb !important;
         }
     </style>
 @stop

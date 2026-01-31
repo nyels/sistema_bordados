@@ -62,21 +62,29 @@
         </div>
 
         <div class="card-body">
-            {{-- ACCIONES --}}
-            <div class="row mb-3">
-                <div class="col-md-6">
+            {{-- ACCIONES Y EXPLICACIÓN EN LA MISMA FILA --}}
+            <div class="row mb-3 align-items-center">
+                <div class="col-md-8">
+                    <span class="text-muted">
+                        <i class="fas fa-palette text-info"></i>
+                        <strong>¿Qué son las variantes?</strong>
+                        Representan <strong>colores o atributos físicos</strong> del material, cada uno con stock independiente.
+                        <br>
+                        Ejemplo: Hilo Polyester → Variantes: Rojo, Azul, Negro (cada color tiene su propio inventario).
+                    </span>
+                </div>
+                <div class="col-md-4 text-right">
                     <a href="{{ route('admin.materials.index') }}" class="btn btn-secondary">
                         <i class="fas fa-arrow-left"></i> Volver a Materiales
                     </a>
                     <a href="{{ route('admin.material-variants.create', $material->id) }}" class="btn btn-info">
-                        Nueva Variante <i class="fas fa-plus"></i>
+                        <i class="fas fa-plus"></i> Nueva Variante
                     </a>
-
-                </div>
-                <div class="col-md-6 text-right">
-                    <span class="text-muted">
-                        Total variantes: <strong>{{ $variants->count() }}</strong>
-                    </span>
+                    <div class="mt-1">
+                        <span class="text-muted">
+                            Total variantes: <strong>{{ $variants->count() }}</strong>
+                        </span>
+                    </div>
                 </div>
             </div>
 

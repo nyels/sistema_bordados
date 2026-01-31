@@ -6,8 +6,8 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 use App\Models\Order;
 use App\Models\Product;
-use App\Models\ProductType;
 use App\Models\ProductVariant;
+use App\Models\ProductCategory;
 use App\Models\Cliente;
 use App\Models\ClientMeasurement;
 use Illuminate\Support\Carbon;
@@ -255,6 +255,7 @@ class StoreOrderRequest extends FormRequest
             $this->validateVariantsBelongToProducts($validator);
             $this->validateMeasurementBelongsToClient($validator);
             $this->validateMeasurementsPerProductType($validator);
+            $this->validateMeasurementsCategorySupportAuthoritative($validator);
             $this->validatePromisedDateVsLeadTime($validator);
             $this->validatePaymentAmount($validator);
             $this->validateRelatedOrderStatus($validator);
@@ -402,44 +403,14 @@ class StoreOrderRequest extends FormRequest
     }
 
     // === 2b. VALIDAR QUE TODOS LOS PRODUCTOS TENGAN TIPO ASIGNADO ===
-    // CRÍTICO: Rechaza pedidos con productos mal configurados
+    // NEUTRALIZADO: La decisión de medidas pertenece al PEDIDO, no al producto
+    // product_type_id es informativo, NO bloquea guardado de pedidos
     protected function validateProductsHaveType(Validator $validator): void
     {
-        $items = $this->input('items', []);
-        if (empty($items)) return;
-
-        $productIds = array_filter(array_column($items, 'product_id'));
-        if (empty($productIds)) return;
-
-        // Obtener productos con sus tipos
-        $products = Product::whereIn('id', $productIds)
-            ->with('productType')
-            ->get()
-            ->keyBy('id');
-
-        foreach ($items as $index => $item) {
-            $productId = $item['product_id'] ?? null;
-            if (!$productId) continue;
-
-            $product = $products->get($productId);
-            if (!$product) continue;
-
-            // REGLA DE NEGOCIO: Todo producto DEBE tener un tipo asignado
-            if ($product->product_type_id === null) {
-                $validator->errors()->add(
-                    "items.{$index}.product_id",
-                    "El producto \"{$product->name}\" no tiene tipo configurado. Contacte al administrador."
-                );
-            }
-
-            // Validar que el tipo esté activo
-            if ($product->productType && !$product->productType->active) {
-                $validator->errors()->add(
-                    "items.{$index}.product_id",
-                    "El producto \"{$product->name}\" tiene un tipo deshabilitado. Contacte al administrador."
-                );
-            }
-        }
+        // NEUTRALIZADO: No bloquear pedidos por product_type_id
+        // Los productos sin tipo funcionan normalmente
+        // La decisión de requerir medidas se toma en el PEDIDO (inline measurements)
+        return;
     }
 
     // === 3. VALIDAR QUE VARIANTES PERTENEZCAN AL PRODUCTO ===
@@ -502,6 +473,55 @@ class StoreOrderRequest extends FormRequest
         // NEUTRALIZADO: No bloquear guardado por falta de medidas
         // El pedido siempre se guarda, el estado del item refleja si tiene medidas o no
         return;
+    }
+
+    // ================================================================
+    // === 4c. VALIDACIÓN AUTORITARIA: MEDIDAS VS CATEGORÍA ===
+    // REGLA CANÓNICA:
+    // - Si item.requires_measurements = true
+    // - Y product.category.supports_measurements = false
+    // → ValidationException (NO se permite)
+    //
+    // NOTA: NO usa product_type_id. Usa category.supports_measurements
+    // ================================================================
+    protected function validateMeasurementsCategorySupportAuthoritative(Validator $validator): void
+    {
+        $items = $this->input('items', []);
+        if (empty($items)) return;
+
+        // Obtener IDs de productos para cargar con categoría
+        $productIds = array_filter(array_column($items, 'product_id'));
+        if (empty($productIds)) return;
+
+        // Cargar productos con su categoría
+        $products = Product::whereIn('id', $productIds)
+            ->with('category')
+            ->get()
+            ->keyBy('id');
+
+        foreach ($items as $index => $item) {
+            $productId = $item['product_id'] ?? null;
+            if (!$productId) continue;
+
+            $product = $products->get($productId);
+            if (!$product) continue;
+
+            // Verificar si el item solicita medidas
+            $itemRequiresMeasurements = !empty($item['measurements']);
+
+            // Si el item tiene medidas Y la categoría NO las soporta → ERROR
+            if ($itemRequiresMeasurements) {
+                $category = $product->category;
+
+                if (!$category || !$category->supportsMeasurements()) {
+                    $categoryName = $category?->name ?? 'Sin categoría';
+                    $validator->errors()->add(
+                        "items.{$index}.measurements",
+                        "El producto \"{$product->name}\" pertenece a la categoría \"{$categoryName}\" que no admite medidas personalizadas."
+                    );
+                }
+            }
+        }
     }
 
     // === 5. VALIDAR FECHA PROMETIDA VS LEAD TIME (CRÍTICO) ===

@@ -9,6 +9,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
+    {{-- ID usuario actual para WebSocket (DEBE estar en HEAD antes de cualquier script) --}}
+    @auth
+    <script>window.currentUserId = {{ auth()->id() ?? 0 }};</script>
+    @endauth
+
     {{-- Custom Meta Tags --}}
     @yield('meta_tags')
 
@@ -25,6 +30,35 @@
         body.iframe-mode .preloader {
             display: none !important;
         }
+        /* Preloader fade-out animation */
+        .preloader.preloader-hidden {
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        /* Failsafe: Force hide after animation */
+        .preloader.preloader-force-hide {
+            display: none !important;
+        }
+        /* ================================================
+           ESTÁNDAR VISUAL ERP: Texto negro #212529
+           Sobreescribe grises claros de Bootstrap/AdminLTE
+           ================================================ */
+        .text-muted,
+        small,
+        .small,
+        .form-text {
+            color: #212529 !important;
+        }
+        /* Excepción: mantener colores semánticos */
+        .text-danger { color: #dc3545 !important; }
+        .text-success { color: #28a745 !important; }
+        .text-warning { color: #ffc107 !important; }
+        .text-info { color: #17a2b8 !important; }
+        .text-primary { color: #007bff !important; }
+        .text-secondary { color: #6c757d !important; }
+        .text-white { color: #ffffff !important; }
     </style>
     <script>
         // Fix for AdminLTE IFrame mode crash when running in an iframe (e.g. Responsive Viewer)
@@ -35,6 +69,78 @@
                 autoDarkMode: false
             }));
         }
+
+        // ============================================
+        // ROBUST PRELOADER FAILSAFE SYSTEM
+        // Prevents preloader from getting "stuck"
+        // ============================================
+        (function() {
+            var PRELOADER_MAX_TIMEOUT = 8000; // 8 seconds max
+            var PRELOADER_NORMAL_TIMEOUT = 3000; // 3 seconds normal fallback
+
+            function hidePreloader() {
+                var preloader = document.querySelector('.preloader');
+                if (preloader && !preloader.classList.contains('preloader-force-hide')) {
+                    preloader.classList.add('preloader-hidden');
+                    // After transition, force display:none
+                    setTimeout(function() {
+                        preloader.classList.add('preloader-force-hide');
+                    }, 350);
+                }
+            }
+
+            // FAILSAFE 1: Maximum timeout (absolute limit)
+            setTimeout(function() {
+                hidePreloader();
+                console.warn('[Preloader] Force hidden by max timeout failsafe');
+            }, PRELOADER_MAX_TIMEOUT);
+
+            // FAILSAFE 2: Normal timeout after DOMContentLoaded
+            document.addEventListener('DOMContentLoaded', function() {
+                setTimeout(function() {
+                    hidePreloader();
+                }, PRELOADER_NORMAL_TIMEOUT);
+            });
+
+            // FAILSAFE 3: On window load (images, scripts loaded)
+            window.addEventListener('load', function() {
+                setTimeout(function() {
+                    hidePreloader();
+                }, 500);
+            });
+
+            // FAILSAFE 4: If jQuery available, use its ready
+            if (typeof jQuery !== 'undefined') {
+                jQuery(function() {
+                    setTimeout(function() {
+                        hidePreloader();
+                    }, 1000);
+                });
+            }
+
+            // FAILSAFE 5: Visibility change (user returns to tab)
+            document.addEventListener('visibilitychange', function() {
+                if (!document.hidden) {
+                    var preloader = document.querySelector('.preloader');
+                    if (preloader && !preloader.classList.contains('preloader-force-hide')) {
+                        // If preloader still visible when user returns, hide it
+                        setTimeout(hidePreloader, 200);
+                    }
+                }
+            });
+
+            // FAILSAFE 6: Any user interaction forces preloader hide
+            ['click', 'keydown', 'touchstart', 'scroll'].forEach(function(evt) {
+                document.addEventListener(evt, function handler() {
+                    var preloader = document.querySelector('.preloader');
+                    if (preloader && !preloader.classList.contains('preloader-force-hide')) {
+                        hidePreloader();
+                        // Remove listeners after first trigger
+                        document.removeEventListener(evt, handler);
+                    }
+                }, { once: true, passive: true });
+            });
+        })();
     </script>
 
     {{-- Custom stylesheets (pre AdminLTE) --}}
