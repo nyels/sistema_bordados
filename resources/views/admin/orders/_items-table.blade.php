@@ -77,9 +77,30 @@
                         $blocksR5 = $item->blocksProductionForTechnicalDesigns();
                         $hasBlocker = $blocksR2 || $blocksR3 || $blocksR4 || $blocksR5;
 
-                        // Datos de diseños vinculados
+                        // Datos de diseños vinculados (item o producto estándar)
                         $linkedDesigns = $item->designExports;
                         $requiresDesigns = $item->requiresTechnicalDesigns();
+                        $isStandardDesign = false; // Bandera: diseños vienen del producto, no del item
+
+                        // Para productos estándar: obtener diseños del producto si no hay del item
+                        if ($linkedDesigns->isEmpty() && $item->product) {
+                            $productDesigns = collect();
+                            $product = $item->product->load('designs.exports');
+                            foreach ($product->designs as $design) {
+                                if ($design->pivot->design_export_id) {
+                                    $export = \App\Models\DesignExport::find($design->pivot->design_export_id);
+                                    if ($export) $productDesigns->push($export);
+                                } else {
+                                    foreach ($design->exports as $export) {
+                                        if (!$productDesigns->contains('id', $export->id)) {
+                                            $productDesigns->push($export);
+                                        }
+                                    }
+                                }
+                            }
+                            $linkedDesigns = $productDesigns;
+                            $isStandardDesign = $productDesigns->isNotEmpty(); // Es estándar si tiene diseños del producto
+                        }
                         $hasLinkedDesigns = $linkedDesigns->count() > 0;
 
                         // Calcular puntadas y costo del item
@@ -194,11 +215,13 @@
                                 @endif
 
                                 {{-- DISEÑOS TÉCNICOS - Versión compacta inline --}}
-                                @if ($requiresDesigns)
+                                {{-- Mostrar si: requiere diseños O tiene diseños vinculados (productos estándar) --}}
+                                @if ($requiresDesigns || $hasLinkedDesigns)
                                     @if ($hasLinkedDesigns)
-                                        {{-- Diseños vinculados: línea compacta con toggle --}}
+                                        {{-- Diseños vinculados: línea compacta con toggle (todo clickeable) --}}
                                         <div class="d-inline-flex align-items-center"
-                                            style="background: #e8f5e9; border-radius: 4px; padding: 4px 8px; border: 1px solid #a5d6a7;">
+                                            style="background: #e8f5e9; border-radius: 4px; padding: 4px 8px; border: 1px solid #a5d6a7; cursor: pointer;"
+                                            data-toggle="collapse" data-target="#designDetails{{ $item->id }}">
                                             <i class="fas fa-check-circle mr-1"
                                                 style="color: #2e7d32; font-size: 14px;"></i>
                                             <span style="font-size: 14px; color: #1b5e20; font-weight: 600;">
@@ -207,27 +230,23 @@
                                             <span style="font-size: 14px; color: #388e3c; margin-left: 4px;">
                                                 · {{ number_format($itemPuntadas) }} pts
                                             </span>
-                                            @if ($order->status === \App\Models\Order::STATUS_CONFIRMED)
+                                            @if (in_array($order->status, [\App\Models\Order::STATUS_DRAFT, \App\Models\Order::STATUS_CONFIRMED, \App\Models\Order::STATUS_IN_PRODUCTION]))
                                                 <span
                                                     style="font-size: 14px; color: #7b1fa2; margin-left: 4px; font-weight: 600;">
                                                     · Est. ${{ number_format($itemEstimado, 2) }}
                                                 </span>
                                             @endif
-                                            <button type="button" class="btn btn-sm btn-link p-0 ml-2"
-                                                style="font-size: 14px; color: #1565c0;" data-toggle="collapse"
-                                                data-target="#designDetails{{ $item->id }}">
-                                                <i class="fas fa-chevron-down"></i>
-                                            </button>
-                                            @if (in_array($order->status, [\App\Models\Order::STATUS_DRAFT, \App\Models\Order::STATUS_CONFIRMED]))
-                                                <button type="button" class="btn btn-sm btn-link p-0 ml-1"
-                                                    style="font-size: 14px; color: #1565c0;"
-                                                    onclick="openDesignSelectorForItem({{ $item->id }}, '{{ addslashes($item->product_name) }}')">
-                                                    <i class="fas fa-plus"></i>
-                                                </button>
-                                            @endif
+                                            <i class="fas fa-chevron-down ml-2" style="font-size: 12px; color: #1565c0;"></i>
                                         </div>
-                                    @else
-                                        {{-- Sin diseños: alerta compacta --}}
+                                        @if (!$isStandardDesign && in_array($order->status, [\App\Models\Order::STATUS_DRAFT, \App\Models\Order::STATUS_CONFIRMED]))
+                                            <button type="button" class="btn btn-sm btn-link p-0 ml-1"
+                                                style="font-size: 14px; color: #1565c0;"
+                                                onclick="event.stopPropagation(); openDesignSelectorForItem({{ $item->id }}, '{{ addslashes($item->product_name) }}')">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        @endif
+                                    @elseif($requiresDesigns)
+                                        {{-- Sin diseños: alerta compacta (solo si REQUIERE diseños) --}}
                                         <div class="d-inline-flex align-items-center"
                                             style="background: #fff3cd; border-radius: 4px; padding: 4px 8px; border: 1px solid #ffc107;">
                                             <i class="fas fa-exclamation-triangle mr-1"
@@ -246,50 +265,33 @@
                                 @endif
                             </div>
 
-                            {{-- Panel colapsable de diseños (solo si tiene diseños) --}}
-                            @if ($requiresDesigns && $hasLinkedDesigns)
-                                <div class="collapse mt-2" id="designDetails{{ $item->id }}">
-                                    <div
-                                        style="background: #fafafa; border-radius: 6px; padding: 8px; border: 1px solid #e0e0e0;">
+                            {{-- Panel colapsable de diseños (si tiene diseños vinculados) --}}
+                            @if ($hasLinkedDesigns)
+                                <div class="collapse mt-1" id="designDetails{{ $item->id }}">
+                                    <div style="background: #fafafa; border-radius: 4px; padding: 6px; border: 1px solid #e0e0e0;">
                                         @foreach ($linkedDesigns as $design)
-                                            <div class="d-flex align-items-center justify-content-between {{ !$loop->last ? 'mb-2 pb-2' : '' }}"
+                                            <div class="d-flex align-items-center justify-content-between {{ !$loop->last ? 'mb-1 pb-1' : '' }}"
                                                 style="{{ !$loop->last ? 'border-bottom: 1px solid #e0e0e0;' : '' }}">
                                                 <div class="d-flex align-items-center">
                                                     @if ($design->svg_content)
-                                                        <div
-                                                            style="width: 28px; height: 28px; background: white; border-radius: 4px; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-right: 8px; border: 1px solid #e0e0e0;">
+                                                        <div style="width: 24px; height: 24px; background: white; border-radius: 3px; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-right: 6px; border: 1px solid #e0e0e0;">
                                                             {!! $design->svg_content !!}
                                                         </div>
                                                     @else
-                                                        <div
-                                                            style="width: 28px; height: 28px; background: #1565c0; border-radius: 4px; display: flex; align-items: center; justify-content: center; margin-right: 8px;">
-                                                            <i class="fas fa-vector-square"
-                                                                style="color: white; font-size: 12px;"></i>
+                                                        <div style="width: 24px; height: 24px; background: #1565c0; border-radius: 3px; display: flex; align-items: center; justify-content: center; margin-right: 6px;">
+                                                            <i class="fas fa-vector-square" style="color: white; font-size: 10px;"></i>
                                                         </div>
                                                     @endif
-                                                    <div>
-                                                        <span
-                                                            style="font-size: 14px; color: #212529; font-weight: 500;">
-                                                            {{ $design->application_label ?? ($design->export_name ?? 'Diseño #' . $design->id) }}
-                                                        </span>
-                                                        <br>
-                                                        <span style="font-size: 14px; color: #495057;">
-                                                            @if ($design->stitches_count)
-                                                                {{ number_format($design->stitches_count) }} pts
-                                                            @endif
-                                                            @if ($design->width_mm)
-                                                                • {{ $design->width_mm }}×{{ $design->height_mm }}mm
-                                                            @endif
-                                                        </span>
-                                                    </div>
+                                                    <span style="font-size: 14px; color: #212529; font-weight: 500;">
+                                                        {{ $design->application_label ?? ($design->export_name ?? 'Diseño') }}
+                                                        <span style="color: #1b5e20; font-weight: 600;">· {{ number_format($design->stitches_count ?? 0) }} pts</span>
+                                                        @if ($design->width_mm)
+                                                            <span style="color: #1565c0; font-weight: 600;">· {{ $design->width_mm }}×{{ $design->height_mm }}mm</span>
+                                                        @endif
+                                                    </span>
                                                 </div>
                                                 <div>
-                                                    <button type="button" class="btn btn-sm btn-link p-1"
-                                                        style="color: #1565c0; font-size: 14px;" title="Ver"
-                                                        onclick="showDesignPreview({{ $design->id }}, {{ $item->id }})">
-                                                        <i class="fas fa-eye"></i>
-                                                    </button>
-                                                    @if (in_array($order->status, [\App\Models\Order::STATUS_DRAFT, \App\Models\Order::STATUS_CONFIRMED]))
+                                                    @if (!$isStandardDesign && in_array($order->status, [\App\Models\Order::STATUS_DRAFT, \App\Models\Order::STATUS_CONFIRMED]))
                                                         <button type="button" class="btn btn-sm btn-link p-1"
                                                             style="color: #c62828; font-size: 14px;" title="Quitar"
                                                             onclick="unlinkDesignFromItem({{ $order->id }}, {{ $item->id }}, {{ $design->id }}, '{{ addslashes($design->application_label ?? $design->export_name) }}')">
@@ -300,19 +302,21 @@
                                             </div>
                                         @endforeach
 
-                                        {{-- Estimado técnico inline (solo en CONFIRMED) --}}
-                                        @if ($order->status === \App\Models\Order::STATUS_CONFIRMED && $itemEstimado > 0)
-                                            <div class="mt-2 pt-2" style="border-top: 1px dashed #bdbdbd;">
-                                                <div class="d-flex justify-content-between align-items-center"
-                                                    style="font-size: 14px;">
-                                                    <span style="color: #7b1fa2;">
-                                                        <i class="fas fa-calculator mr-1"></i>
-                                                        {{ number_format($itemPuntadas) }} pts × {{ $item->quantity }} pz
-                                                    </span>
-                                                    <strong style="color: #7b1fa2;">Costo bordado:
-                                                        ${{ number_format($itemEstimado, 2) }}</strong>
-                                                </div>
+                                        {{-- Estimado técnico inline (DRAFT, CONFIRMED, IN_PRODUCTION) --}}
+                                        @if (in_array($order->status, [\App\Models\Order::STATUS_DRAFT, \App\Models\Order::STATUS_CONFIRMED, \App\Models\Order::STATUS_IN_PRODUCTION]) && $itemPuntadas > 0)
+                                            @php
+                                                // Usar precio por millar guardado en el producto
+                                                $precioPorMillar = (float)($item->product?->embroidery_rate_per_thousand ?? 0);
+                                                $costoCalculado = ($itemPuntadas / 1000) * $precioPorMillar * $item->quantity;
+                                            @endphp
+                                            @if($precioPorMillar > 0)
+                                            <div class="mt-1 pt-1" style="border-top: 1px solid #e0e0e0;">
+                                                <span style="color: #7b1fa2; font-size: 14px; font-weight: 500;">
+                                                    <i class="fas fa-calculator mr-1"></i>
+                                                    {{ number_format($itemPuntadas) }} pts × ${{ number_format($precioPorMillar, 2) }}/mil = <strong>${{ number_format($costoCalculado, 2) }}</strong>
+                                                </span>
                                             </div>
+                                            @endif
                                         @endif
                                     </div>
                                 </div>
@@ -398,8 +402,8 @@
     </div>
 </div>
 
-{{-- RESUMEN TÉCNICO DEL PEDIDO (Solo si hay items personalizados con diseños y en estado CONFIRMED) --}}
-@if ($order->status === \App\Models\Order::STATUS_CONFIRMED && $totalDisenosGlobal > 0)
+{{-- RESUMEN TÉCNICO DEL PEDIDO (Visible en DRAFT, CONFIRMED e IN_PRODUCTION si hay diseños) --}}
+@if (in_array($order->status, [\App\Models\Order::STATUS_DRAFT, \App\Models\Order::STATUS_CONFIRMED, \App\Models\Order::STATUS_IN_PRODUCTION]) && $totalDisenosGlobal > 0)
     <div class="card mt-3" style="border: 1px solid #7b1fa2;">
         <div class="card-header py-2"
             style="background: linear-gradient(135deg, #7b1fa2 0%, #6a1b9a 100%); color: white;">

@@ -544,6 +544,68 @@ class OrderController extends Controller
     }
 
     // =========================================================================
+    // === MARCAR ITEM COMO PRODUCCIÓN COMPLETADA ===
+    // =========================================================================
+    // Permite marcar productos individuales como terminados antes de finalizar
+    // todo el pedido. Esto da control granular en pedidos con múltiples productos.
+    //
+    public function markItemCompleted(Request $request, Order $order)
+    {
+        // Validar que el pedido esté en producción
+        if ($order->status !== Order::STATUS_IN_PRODUCTION) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Solo se pueden marcar productos en pedidos que están en producción.'
+            ], 400);
+        }
+
+        $request->validate([
+            'item_id' => 'required|integer|exists:order_items,id',
+        ]);
+
+        $item = $order->items()->find($request->item_id);
+
+        if (!$item) {
+            return response()->json([
+                'success' => false,
+                'error' => 'El producto no pertenece a este pedido.'
+            ], 404);
+        }
+
+        if ($item->production_completed) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Este producto ya fue marcado como terminado.'
+            ], 400);
+        }
+
+        // Marcar como completado
+        $item->update([
+            'production_completed' => true,
+            'production_completed_at' => now(),
+        ]);
+
+        // Log del evento
+        Log::info('ORDER_ITEM_COMPLETED', [
+            'order_id' => $order->id,
+            'order_number' => $order->order_number,
+            'item_id' => $item->id,
+            'product_name' => $item->product->name ?? 'N/A',
+            'user_id' => Auth::id(),
+        ]);
+
+        // Verificar si todos los items están completados
+        $allCompleted = $order->items()->where('production_completed', false)->count() === 0;
+
+        return response()->json([
+            'success' => true,
+            'item_id' => $item->id,
+            'all_completed' => $allCompleted,
+            'message' => 'Producto marcado como terminado.'
+        ]);
+    }
+
+    // =========================================================================
     // === CIERRE CANÓNICO: CANCELAR PEDIDO ===
     // =========================================================================
     //

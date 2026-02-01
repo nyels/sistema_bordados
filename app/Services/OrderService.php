@@ -19,6 +19,7 @@ use App\Events\OrderStatusChanged;
 use App\Exceptions\InsufficientInventoryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class OrderService
 {
@@ -528,10 +529,13 @@ class OrderService
     // - Entregar = cierre logístico y contable DEFINITIVO
     // - Un Order DELIVERED es INMUTABLE (estado terminal)
     //
+    // BIFURCACIÓN POR TIPO DE PEDIDO v2.6:
+    // - SALE: Solo cierre logístico (entrega a cliente)
+    // - STOCK_PRODUCTION: Entrada a inventario PT + cierre
+    //
     // PROTECCIONES:
     // - Solo READY puede transicionar a DELIVERED
     // - Pedidos ya entregados NO pueden re-entregarse
-    // - El inventario NO se toca en esta transición
     // - El timestamp delivered_date es ÚNICO e inmutable
     //
     public function triggerDelivery(Order $order): void
@@ -556,6 +560,13 @@ class OrderService
         }
 
         DB::transaction(function () use ($order) {
+            // =================================================================
+            // STOCK_PRODUCTION: Entrada a inventario de producto terminado
+            // =================================================================
+            if ($order->isStockProduction()) {
+                $this->registerFinishedGoodsEntry($order);
+            }
+
             // === CIERRE DEFINITIVO ===
             $order->update([
                 'status' => Order::STATUS_DELIVERED,
@@ -582,6 +593,69 @@ class OrderService
                 Order::STATUS_DELIVERED
             ));
         });
+    }
+
+    // =========================================================================
+    // === STOCK_PRODUCTION: Entrada a inventario de producto terminado ===
+    // =========================================================================
+    //
+    // REGLA ERP: Cuando un pedido de producción para stock se completa,
+    // los productos fabricados INGRESAN al inventario de producto terminado.
+    //
+    // FUENTE DE VERDAD ÚNICA: finished_goods_movements (ledger)
+    // El stock se calcula: SUM(entradas) - SUM(salidas)
+    // NO se actualiza ProductVariant.current_stock directamente.
+    //
+    protected function registerFinishedGoodsEntry(Order $order): void
+    {
+        // Cargar items con sus variantes
+        $order->load(['items.variant']);
+
+        foreach ($order->items as $item) {
+            // Solo procesar items con variante definida
+            if (!$item->product_variant_id || !$item->variant) {
+                continue;
+            }
+
+            // === IDEMPOTENCIA: Verificar movimiento previo ===
+            $existingMovement = \App\Models\FinishedGoodsMovement::where('reference_type', Order::class)
+                ->where('reference_id', $order->id)
+                ->where('product_variant_id', $item->product_variant_id)
+                ->where('type', \App\Models\FinishedGoodsMovement::TYPE_PRODUCTION_ENTRY)
+                ->exists();
+
+            if ($existingMovement) {
+                Log::warning("STOCK_PRODUCTION: Movimiento ya existe para Order #{$order->id}, Variant #{$item->product_variant_id}");
+                continue;
+            }
+
+            // === CALCULAR STOCK DESDE LEDGER ===
+            $quantityToAdd = (float) $item->quantity;
+
+            // Stock antes = SUM(entradas) - SUM(salidas) del ledger
+            $stockBefore = (float) \App\Models\FinishedGoodsMovement::where('product_variant_id', $item->product_variant_id)
+                ->selectRaw("COALESCE(SUM(CASE WHEN type IN ('production_entry', 'return') THEN quantity ELSE 0 END), 0) -
+                             COALESCE(SUM(CASE WHEN type = 'sale_exit' THEN quantity ELSE 0 END), 0) as stock")
+                ->value('stock');
+
+            $stockAfter = $stockBefore + $quantityToAdd;
+
+            // === REGISTRAR MOVIMIENTO EN LEDGER (ÚNICA FUENTE DE VERDAD) ===
+            \App\Models\FinishedGoodsMovement::create([
+                'product_variant_id' => $item->product_variant_id,
+                'type' => \App\Models\FinishedGoodsMovement::TYPE_PRODUCTION_ENTRY,
+                'reference_type' => Order::class,
+                'reference_id' => $order->id,
+                'quantity' => $quantityToAdd,
+                'stock_before' => $stockBefore,
+                'stock_after' => $stockAfter,
+                'notes' => "Producción para stock - Pedido {$order->order_number}",
+                'created_by' => Auth::id(),
+            ]);
+
+            Log::info("STOCK_PRODUCTION: Entrada de {$quantityToAdd} unidades. " .
+                "Stock: {$stockBefore} → {$stockAfter}. ProductVariant #{$item->product_variant_id}. Pedido: {$order->order_number}");
+        }
     }
 
     // =========================================================================

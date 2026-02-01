@@ -302,10 +302,17 @@ class Order extends Model
 
     /**
      * Verifica si el pedido puede generar un pedido post-venta.
-     * Solo pedidos READY o DELIVERED pueden tener post-ventas.
+     * REGLAS:
+     * - Solo pedidos READY o DELIVERED
+     * - NO aplica para STOCK_PRODUCTION (no tienen cliente)
      */
     public function canHavePostSale(): bool
     {
+        // Stock production no tiene cliente, no puede tener post-venta
+        if ($this->isStockProduction()) {
+            return false;
+        }
+
         return in_array($this->status, [self::STATUS_READY, self::STATUS_DELIVERED]);
     }
 

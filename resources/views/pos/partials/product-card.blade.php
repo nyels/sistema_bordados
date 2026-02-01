@@ -1,23 +1,25 @@
 {{-- Product Card - Premium Apple/SaaS Style --}}
 @php
     $product = $variant->product ?? null;
-    $name = $product ? $product->name . ' - ' . $variant->name : $variant->name;
-    $sku = $variant->sku ?? '';
+    $productName = $product ? $product->name : 'Producto';
+    $variantName = $variant->attributes_display ?? $variant->name ?? '';
+    $fullName = $productName . ($variantName ? ' - ' . $variantName : '');
+    $sku = $variant->sku_variant ?? $variant->sku ?? '';
     $price = $variant->sale_price ?? $variant->price ?? 0;
     $stock = $variant->stock_finished ?? $variant->stock ?? 0;
     $hasStock = $stock > 0;
-    $imageUrl = $variant->image_url ?? $product?->image_url ?? null;
+    $imageUrl = $product?->primary_image_url ?? null;
 @endphp
 
 <div class="pos-product-card {{ $hasStock ? 'has-stock' : 'no-stock' }}"
      data-product-card
-     data-product-name="{{ $name }}"
+     data-product-name="{{ $fullName }}"
      data-product-sku="{{ $sku }}">
 
     {{-- Image --}}
     <div class="pos-product-image">
         @if($imageUrl)
-            <img src="{{ $imageUrl }}" alt="{{ $name }}">
+            <img src="{{ $imageUrl }}" alt="{{ $productName }}">
         @else
             <div class="pos-product-placeholder">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -36,7 +38,7 @@
         @if($hasStock)
         <button data-add-product
                 data-variant-id="{{ $variant->id }}"
-                data-name="{{ $name }}"
+                data-name="{{ $fullName }}"
                 data-price="{{ $price }}"
                 data-stock="{{ $stock }}"
                 class="pos-product-overlay">
@@ -50,11 +52,11 @@
         @endif
     </div>
 
-    {{-- Info --}}
+    {{-- Info (CENTRADO) --}}
     <div class="pos-product-info">
-        <h3 class="pos-product-name">{{ $name }}</h3>
-        @if($sku)
-            <p class="pos-product-sku">SKU: {{ $sku }}</p>
+        <h3 class="pos-product-name">{{ strtoupper($productName) }}</h3>
+        @if($variantName)
+            <p class="pos-product-variant">{{ $variantName }}</p>
         @endif
         <div class="pos-product-price">
             ${{ number_format($price, 2) }}
@@ -71,34 +73,36 @@
         border-radius: 16px;
         overflow: hidden;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.04);
-        border: 1px solid #f1f5f9;
+        border: 2px solid #3b82f6;
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .pos-product-card.has-stock:hover {
         transform: translateY(-4px);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.06);
-        border-color: #e2e8f0;
+        box-shadow: 0 8px 25px rgba(59, 130, 246, 0.25), 0 4px 12px rgba(0, 0, 0, 0.06);
+        border-color: #2563eb;
     }
 
     .pos-product-card.no-stock {
         opacity: 0.6;
+        border-color: #94a3b8;
     }
 
     .pos-product-image {
         position: relative;
-        height: 140px;
+        height: 180px;
         background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
         display: flex;
         align-items: center;
         justify-content: center;
         overflow: hidden;
+        padding: 8px;
     }
 
     .pos-product-image img {
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        object-fit: contain;
         transition: transform 0.3s ease;
     }
 
@@ -187,19 +191,31 @@
     }
 
     .pos-product-info {
-        padding: 14px 16px 16px;
+        padding: 16px 16px 20px;
+        text-align: center;
+        background: #fff;
     }
 
     .pos-product-name {
-        font-size: 14px;
-        font-weight: 600;
+        font-size: 15px;
+        font-weight: 700;
         color: #1e293b;
         line-height: 1.4;
-        margin: 0 0 4px 0;
+        margin: 0 0 6px 0;
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    .pos-product-variant {
+        font-size: 14px;
+        color: #475569;
+        margin: 0 0 10px 0;
+        font-weight: 500;
+        text-transform: uppercase;
     }
 
     .pos-product-sku {
@@ -209,7 +225,7 @@
     }
 
     .pos-product-price {
-        font-size: 20px;
+        font-size: 22px;
         font-weight: 700;
         color: #0f172a;
         letter-spacing: -0.5px;

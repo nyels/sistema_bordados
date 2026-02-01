@@ -227,6 +227,11 @@ Route::delete('admin/exports/{export}/ajax', [App\Http\Controllers\DesignExportC
     ->name('admin.exports.destroy-ajax')
     ->middleware('auth');
 
+// Descargar archivo de exportación
+Route::get('admin/exports/{export}/download', [App\Http\Controllers\DesignExportController::class, 'download'])
+    ->name('admin.design-exports.download')
+    ->middleware('auth');
+
 // Obtener tipos de aplicación
 Route::get('admin/exports/application-types', [App\Http\Controllers\DesignExportController::class, 'getApplicationTypes'])
     ->name('admin.exports.application-types')
@@ -1198,6 +1203,7 @@ Route::prefix('admin/orders')->name('admin.orders.')->middleware('auth')->group(
     Route::get('{order}/edit', [App\Http\Controllers\OrderController::class, 'edit'])->name('edit');
     Route::put('{order}', [App\Http\Controllers\OrderController::class, 'update'])->name('update');
     Route::patch('{order}/status', [App\Http\Controllers\OrderController::class, 'updateStatus'])->name('update-status');
+    Route::post('{order}/mark-item-completed', [App\Http\Controllers\OrderController::class, 'markItemCompleted'])->name('mark-item-completed');
     Route::patch('{order}/cancel', [App\Http\Controllers\OrderController::class, 'cancel'])->name('cancel');
     Route::post('{order}/payments', [App\Http\Controllers\OrderController::class, 'storePayment'])->name('payments.store');
     Route::put('payments/{payment}', [App\Http\Controllers\OrderController::class, 'updatePayment'])->name('payments.update');
@@ -1350,6 +1356,10 @@ Route::get('pos/stock/{productVariantId}', [App\Http\Controllers\PosController::
     ->name('pos.stock')
     ->middleware('auth')
     ->where('productVariantId', '[0-9]+');
+
+Route::get('pos/clientes/search', [App\Http\Controllers\PosController::class, 'searchClientes'])
+    ->name('pos.clientes.search')
+    ->middleware('auth');
 
 /*
 |--------------------------------------------------------------------------

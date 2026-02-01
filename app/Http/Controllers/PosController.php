@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Cliente;
 use App\Models\FinishedGoodsMovement;
 use App\Models\Order;
 use App\Models\ProductVariant;
@@ -638,6 +639,50 @@ class PosController extends Controller
                 'error' => $e->getMessage(),
             ], 400);
         }
+    }
+
+    /**
+     * GET /pos/clientes/search
+     *
+     * Búsqueda de clientes por nombre, apellidos o teléfono.
+     * Búsqueda robusta: desde 1 caracter, soporta singular/plural.
+     */
+    public function searchClientes(Request $request): JsonResponse
+    {
+        $query = trim($request->input('q', ''));
+
+        if (strlen($query) < 1) {
+            return response()->json([
+                'success' => true,
+                'data' => [],
+            ]);
+        }
+
+        // Normalizar búsqueda: remover 's' final para buscar singular/plural
+        $searchTerms = [$query];
+        if (strlen($query) > 1 && str_ends_with(strtolower($query), 's')) {
+            $searchTerms[] = substr($query, 0, -1); // Sin 's' final
+        } else {
+            $searchTerms[] = $query . 's'; // Con 's' final
+        }
+
+        $clientes = Cliente::where('activo', true)
+            ->where(function ($q) use ($searchTerms) {
+                foreach ($searchTerms as $term) {
+                    $q->orWhere('nombre', 'LIKE', "%{$term}%")
+                      ->orWhere('apellidos', 'LIKE', "%{$term}%")
+                      ->orWhere('telefono', 'LIKE', "%{$term}%");
+                }
+            })
+            ->select('id', 'nombre', 'apellidos', 'telefono', 'email')
+            ->orderBy('nombre')
+            ->limit(20)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $clientes,
+        ]);
     }
 
 }

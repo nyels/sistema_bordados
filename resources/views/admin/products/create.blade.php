@@ -6133,6 +6133,7 @@
             State.financials = {
                 material_cost: matCost,
                 embroidery_cost: embCost,
+                stitch_rate: parseFloat($('#finStitchRate').val()) || 0,
                 labor_cost: laborCost,
                 extras_cost: extrasCost,
                 total_cost: totalCost,

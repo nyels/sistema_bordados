@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\MaterialVariant;
 use App\Models\ProductVariant;
+use App\Models\FinishedGoodsMovement;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -90,12 +91,29 @@ class HomeController extends Controller
             ->count();
 
         // ========================================
-        // KPI: PRODUCTOS TERMINADOS BAJO STOCK
-        // Fuente: ProductVariant con current_stock <= stock_alert
-        // REGLA: Solo alerta operativa, NO bloquea ventas ni producción
+        // KPI: PRODUCTOS TERMINADOS BAJO STOCK (LEDGER-BASED)
+        // Fuente: finished_goods_movements (SUM) vs stock_alert
+        // REGLA ERP: Solo variantes CON movimientos reales cuentan
+        // Si no existe ledger → NO existe inventario → NO cuenta
         // ========================================
         $productosBajoStock = ProductVariant::where('activo', true)
-            ->whereColumn('current_stock', '<=', 'stock_alert')
+            ->whereHas('finishedGoodsMovements') // SOLO variantes con ledger real
+            ->get()
+            ->filter(function ($variant) {
+                // Calcular stock real desde el ledger (fórmula canónica)
+                $stockReal = FinishedGoodsMovement::where('product_variant_id', $variant->id)
+                    ->selectRaw("
+                        COALESCE(SUM(CASE WHEN type IN ('production_entry', 'return') THEN quantity ELSE 0 END), 0)
+                        - COALESCE(SUM(CASE WHEN type = 'sale_exit' THEN quantity ELSE 0 END), 0)
+                        + COALESCE(SUM(CASE WHEN type = 'adjustment' THEN quantity ELSE 0 END), 0)
+                        as stock_calculado
+                    ")
+                    ->value('stock_calculado') ?? 0;
+
+                // Comparar con el umbral de alerta
+                $stockAlert = $variant->stock_alert ?? 0;
+                return (float) $stockReal <= (float) $stockAlert;
+            })
             ->count();
 
         // ========================================

@@ -147,6 +147,7 @@ class StoreProductRequest extends FormRequest
             'production_cost' => ['nullable', 'numeric', 'min:0'],
             'materials_cost' => ['nullable', 'numeric', 'min:0'],
             'embroidery_cost' => ['nullable', 'numeric', 'min:0'],
+            'embroidery_rate_per_thousand' => ['nullable', 'numeric', 'min:0'],
             'labor_cost' => ['nullable', 'numeric', 'min:0'],
             'extra_services_cost' => ['nullable', 'numeric', 'min:0'],
             'suggested_price' => ['nullable', 'numeric', 'min:0'],
@@ -298,6 +299,9 @@ class StoreProductRequest extends FormRequest
                 }
                 if (isset($finData['embroidery_cost'])) {
                     $this->merge(['embroidery_cost' => $finData['embroidery_cost']]);
+                }
+                if (isset($finData['stitch_rate'])) {
+                    $this->merge(['embroidery_rate_per_thousand' => $finData['stitch_rate']]);
                 }
                 if (isset($finData['labor_cost'])) {
                     $this->merge(['labor_cost' => $finData['labor_cost']]);

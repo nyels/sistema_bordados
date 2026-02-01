@@ -219,7 +219,12 @@
                 return;
             }
 
-            currentConversions.forEach(conv => {
+            // Ordenar presentaciones alfabéticamente (ASC) por label
+            const sortedConversions = [...currentConversions].sort((a, b) =>
+                (a.label || '').localeCompare(b.label || '', 'es', { sensitivity: 'base' })
+            );
+
+            sortedConversions.forEach(conv => {
                 const opt = document.createElement('option');
                 opt.value = conv.id;
                 opt.textContent = conv.label + ' (' + conv.conversion_factor + ' ' + data.consumption_unit + ')';
@@ -251,8 +256,13 @@
         availableMaterials = materials;
         onConversionApplied = callback;
 
+        // Ordenar materiales alfabéticamente (ASC) antes de poblar el select
+        const sortedMaterials = [...materials].sort((a, b) =>
+            (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' })
+        );
+
         // Poblar select de materiales
-        materials.forEach(mat => {
+        sortedMaterials.forEach(mat => {
             const opt = document.createElement('option');
             opt.value = mat.id;
             opt.textContent = mat.name;

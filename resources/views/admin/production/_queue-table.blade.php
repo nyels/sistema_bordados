@@ -184,7 +184,7 @@
                                 @else
                                     <span class="text-success">
                                         <i class="fas fa-check-circle"></i>
-                                        {{ $sufficient->count() }} OK
+                                        {{ $sufficient->count() }}
                                     </span>
                                 @endif
                                 <button type="button" class="btn btn-xs btn-outline-info ml-1" data-toggle="modal"
@@ -208,7 +208,7 @@
                                 </span>
                             @elseif($order->status === \App\Models\Order::STATUS_CONFIRMED)
                                 <span class="text-success" title="Listo para iniciar produccion">
-                                    <i class="fas fa-check-circle"></i> OK
+                                    <i class="fas fa-check-circle"></i>
                                 </span>
                             @else
                                 <span style="color: #212529;">-</span>
@@ -231,18 +231,11 @@
                                     </button>
                                 </form>
                             @elseif($order->status === \App\Models\Order::STATUS_IN_PRODUCTION)
-                                <form action="{{ route('admin.orders.update-status', $order) }}" method="POST"
-                                    class="d-inline" data-confirm="listo"
-                                    data-confirm-title="¿Marcar {{ $order->order_number }} como listo?"
-                                    data-confirm-text="El pedido pasará a estado 'Listo para entregar'."
-                                    data-confirm-impact="El cliente podrá recoger su pedido.">
-                                    @csrf
-                                    @method('PATCH')
-                                    <input type="hidden" name="status" value="ready">
-                                    <button type="submit" class="btn btn-sm btn-primary">
-                                        <i class="fas fa-check"></i> Listo
-                                    </button>
-                                </form>
+                                <button type="button" class="btn btn-sm btn-primary" data-toggle="modal"
+                                    data-target="#modalProductosQueue{{ $order->id }}"
+                                    title="Marcar productos como terminados">
+                                    <i class="fas fa-check"></i> Listo
+                                </button>
                             @elseif($hasBlockers)
                                 <a href="{{ route('admin.orders.show', $order) }}?from=queue#blockers-section"
                                     class="btn btn-sm btn-warning"
@@ -451,4 +444,240 @@
             </div>
         </div>
     @endif
+
+    {{-- MODAL DE PRODUCTOS PARA MARCAR LISTO --}}
+    @if ($order->status === \App\Models\Order::STATUS_IN_PRODUCTION)
+        <div class="modal fade" id="modalProductosQueue{{ $order->id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">
+                            <i class="fas fa-tasks mr-2"></i>Productos: {{ $order->order_number }}
+                        </h5>
+                        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info py-2 mb-3" style="font-size: 14px;">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Marque cada producto como <strong>Terminado</strong> conforme se complete su producción.
+                        </div>
+
+                        {{-- Barra de progreso --}}
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span style="font-size: 14px; font-weight: 600;">Progreso de Producción</span>
+                                <span class="progress-label-{{ $order->id }}" style="font-size: 14px; font-weight: 600;">
+                                    {{ $order->items->where('production_completed', true)->count() }} / {{ $order->items->count() }}
+                                </span>
+                            </div>
+                            <div class="progress" style="height: 20px;">
+                                @php
+                                    $completedCount = $order->items->where('production_completed', true)->count();
+                                    $totalCount = $order->items->count();
+                                    $percentage = $totalCount > 0 ? round(($completedCount / $totalCount) * 100) : 0;
+                                @endphp
+                                <div class="progress-bar-{{ $order->id }} progress-bar bg-success" role="progressbar"
+                                    style="width: {{ $percentage }}%;" aria-valuenow="{{ $percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+
+                        {{-- Lista de productos --}}
+                        <div class="list-group lista-productos-{{ $order->id }}">
+                            @foreach($order->items as $item)
+                                @php
+                                    $isCompleted = $item->production_completed ?? false;
+                                @endphp
+                                <div class="list-group-item d-flex justify-content-between align-items-center producto-item-queue {{ $isCompleted ? 'bg-light' : '' }}"
+                                     data-item-id="{{ $item->id }}"
+                                     data-order-id="{{ $order->id }}"
+                                     data-completed="{{ $isCompleted ? '1' : '0' }}">
+                                    <div>
+                                        <strong style="font-size: 15px;">{{ $item->product->name ?? $item->product_name ?? 'Producto' }}</strong>
+                                        <br>
+                                        <span style="font-size: 13px; color: #6c757d;">
+                                            Cantidad: <strong>{{ $item->quantity }}</strong>
+                                            @if($item->product && $item->product->category)
+                                                &bull; {{ $item->product->category->name }}
+                                            @endif
+                                        </span>
+                                    </div>
+                                    <div>
+                                        @if($isCompleted)
+                                            <span class="badge badge-success px-3 py-2" style="font-size: 14px;">
+                                                <i class="fas fa-check mr-1"></i> Terminado
+                                            </span>
+                                        @else
+                                            <button type="button" class="btn btn-outline-success btn-sm btn-marcar-terminado-queue"
+                                                    data-item-id="{{ $item->id }}"
+                                                    data-order-id="{{ $order->id }}">
+                                                <i class="fas fa-check mr-1"></i> Terminado
+                                            </button>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                        <form action="{{ route('admin.orders.update-status', $order) }}" method="POST"
+                              class="d-inline form-finalizar-{{ $order->id }}">
+                            @csrf
+                            @method('PATCH')
+                            <input type="hidden" name="status" value="ready">
+                            <button type="submit" class="btn btn-success btn-finalizar-{{ $order->id }}"
+                                    {{ $completedCount < $totalCount ? 'disabled' : '' }}>
+                                <i class="fas fa-box-open mr-1"></i> Finalizar Pedido
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
 @endforeach
+
+{{-- JAVASCRIPT PARA MODALES DE PRODUCTOS --}}
+{{-- v2.2: reverseButtons + reinit forms --}}
+<script>
+(function() {
+    'use strict';
+    // Evitar múltiples inicializaciones de event listeners
+    if (window.queueProductosInitialized) return;
+    window.queueProductosInitialized = true;
+
+    // Manejar clicks en botones "Terminado" de la cola
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-marcar-terminado-queue');
+        if (!btn) return;
+
+        const itemId = btn.dataset.itemId;
+        const orderId = btn.dataset.orderId;
+        const itemEl = btn.closest('.producto-item-queue');
+
+        // Deshabilitar botón mientras procesa
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Procesando...';
+
+        // AJAX para marcar como terminado
+        fetch('/admin/orders/' + orderId + '/mark-item-completed', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ item_id: itemId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Actualizar UI del item
+                itemEl.dataset.completed = '1';
+                itemEl.classList.add('bg-light');
+                btn.outerHTML = '<span class="badge badge-success px-3 py-2" style="font-size: 14px;"><i class="fas fa-check mr-1"></i> Terminado</span>';
+
+                // Actualizar barra de progreso
+                updateQueueProgress(orderId);
+
+                // Toast de éxito
+                if (typeof Swal !== 'undefined') {
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
+                    Toast.fire({ icon: 'success', title: 'Producto marcado como terminado' });
+                }
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check mr-1"></i> Terminado';
+                alert(data.error || 'Error al marcar producto');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check mr-1"></i> Terminado';
+            alert('Error de conexión');
+        });
+    });
+
+    // Función para actualizar progreso
+    function updateQueueProgress(orderId) {
+        const lista = document.querySelector('.lista-productos-' + orderId);
+        if (!lista) return;
+
+        const items = lista.querySelectorAll('.producto-item-queue');
+        const completados = lista.querySelectorAll('.producto-item-queue[data-completed="1"]').length;
+        const total = items.length;
+        const porcentaje = total > 0 ? Math.round((completados / total) * 100) : 0;
+
+        // Actualizar barra
+        const progressBar = document.querySelector('.progress-bar-' + orderId);
+        if (progressBar) {
+            progressBar.style.width = porcentaje + '%';
+            progressBar.setAttribute('aria-valuenow', porcentaje);
+
+            if (completados === total) {
+                progressBar.classList.remove('bg-success');
+                progressBar.classList.add('bg-primary', 'progress-bar-striped', 'progress-bar-animated');
+            }
+        }
+
+        // Actualizar label
+        const progressLabel = document.querySelector('.progress-label-' + orderId);
+        if (progressLabel) {
+            progressLabel.textContent = completados + ' / ' + total;
+        }
+
+        // Habilitar/deshabilitar botón finalizar
+        const btnFinalizar = document.querySelector('.btn-finalizar-' + orderId);
+        if (btnFinalizar) {
+            btnFinalizar.disabled = (completados < total);
+        }
+    }
+
+    // Confirmación al finalizar pedido (Event Delegation para contenido AJAX)
+    document.addEventListener('submit', function(e) {
+        var form = e.target;
+        // Verificar si es un formulario de finalización
+        if (!form.className || !form.className.includes('form-finalizar-')) return;
+
+        e.preventDefault();
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: '¿Finalizar pedido?',
+                html: '<p>Esta acción:</p><ul style="text-align:left;"><li>Consume los materiales reservados del inventario</li><li>Marca el pedido como <strong>LISTO</strong></li></ul>',
+                icon: 'question',
+                showCancelButton: true,
+                reverseButtons: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="fas fa-check mr-1"></i> Sí, finalizar',
+                cancelButtonText: 'Cancelar'
+            }).then(function(result) {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            });
+        } else {
+            if (confirm('¿Finalizar el pedido? Esto consumirá los materiales del inventario.')) {
+                form.submit();
+            }
+        }
+    });
+
+    // Actualizar progreso al abrir modal
+    document.querySelectorAll('[id^="modalProductosQueue"]').forEach(function(modal) {
+        $(modal).on('shown.bs.modal', function() {
+            const orderId = this.id.replace('modalProductosQueue', '');
+            updateQueueProgress(orderId);
+        });
+    });
+})();
+</script>

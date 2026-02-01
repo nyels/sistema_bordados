@@ -204,8 +204,8 @@
                 @include('admin.orders._bom-adjustment')
             @endif
 
-            {{-- 3. DISEÑO: Solo en CONFIRMED (gestion activa) - COLAPSADO por defecto --}}
-            @if($status === Order::STATUS_CONFIRMED)
+            {{-- 3. DISEÑO: Visible en DRAFT, CONFIRMED e IN_PRODUCTION --}}
+            @if(in_array($status, [Order::STATUS_DRAFT, Order::STATUS_CONFIRMED, Order::STATUS_IN_PRODUCTION]))
                 @php
                     $designItems = $order->items->filter(fn($i) => $i->personalization_type === 'design');
                     $hasDesignItems = $designItems->count() > 0;
@@ -823,6 +823,134 @@
                     @endif
                 </div>
             </div>
+
+            {{-- DISEÑOS DEL PEDIDO: Visible en borrador, confirmado y producción --}}
+            @if(in_array($status, [Order::STATUS_DRAFT, Order::STATUS_CONFIRMED, Order::STATUS_IN_PRODUCTION]))
+                @php
+                    // Recolectar todos los DesignExports de los items del pedido
+                    $allDesigns = collect();
+                    foreach ($order->items as $item) {
+                        // Primero intentar diseños directos del item (pivot order_item_design_exports)
+                        $itemDesigns = $item->designExports ?? collect();
+
+                        // Si no hay diseños en el item y es producto estándar, obtener del producto
+                        if ($itemDesigns->isEmpty() && $item->product) {
+                            // Cargar diseños del producto con sus exports
+                            $product = $item->product->load('designs.exports');
+                            foreach ($product->designs as $design) {
+                                // Si el pivot tiene design_export_id específico, usar ese
+                                if ($design->pivot->design_export_id) {
+                                    $export = \App\Models\DesignExport::find($design->pivot->design_export_id);
+                                    if ($export && !$allDesigns->contains('id', $export->id)) {
+                                        $allDesigns->push($export);
+                                    }
+                                } else {
+                                    // Si no, usar todos los exports del diseño
+                                    foreach ($design->exports as $export) {
+                                        if (!$allDesigns->contains('id', $export->id)) {
+                                            $allDesigns->push($export);
+                                        }
+                                    }
+                                }
+                            }
+                            continue; // Ya procesamos este item
+                        }
+
+                        // Agregar diseños del item (evitando duplicados)
+                        foreach ($itemDesigns as $design) {
+                            if (!$allDesigns->contains('id', $design->id)) {
+                                $allDesigns->push($design);
+                            }
+                        }
+                    }
+                @endphp
+
+                @if($allDesigns->isNotEmpty())
+                    <div class="card card-section-disenos">
+                        <div class="card-header bg-purple" style="background: #6f42c1 !important; color: white;">
+                            <h5 class="mb-0"><i class="fas fa-palette mr-2"></i> Diseños del Pedido</h5>
+                        </div>
+                        <div class="card-body p-3">
+                            @foreach($allDesigns as $designExport)
+                                @php
+                                    // Cargar diseño y variante para obtener la ruta
+                                    $design = $designExport->design;
+                                    $variant = $designExport->variant;
+                                @endphp
+                                <div class="design-item border rounded p-3 mb-3 bg-light {{ !$loop->last ? '' : 'mb-0' }}">
+                                    {{-- Nombre del diseño --}}
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <strong class="text-dark" style="font-size: 16px;">
+                                            <i class="fas fa-tshirt mr-2" style="color: #6f42c1;"></i>
+                                            {{ $designExport->application_label ?? $design->name ?? 'Diseño' }}
+                                        </strong>
+                                        @if($designExport->file_path)
+                                            <a href="{{ route('admin.design-exports.download', $designExport) }}"
+                                               class="btn btn-sm btn-primary"
+                                               title="Descargar archivo">
+                                                <i class="fas fa-download mr-1"></i> Descargar
+                                            </a>
+                                        @endif
+                                    </div>
+                                    {{-- Ruta de origen: diseño → variante --}}
+                                    @if($design)
+                                        <div class="mb-2" style="font-size: 14px;">
+                                            <i class="fas fa-sitemap mr-1" style="color: #1976d2;"></i>
+                                            <span style="color: #1976d2; font-weight: 500;">{{ $design->name }}</span>
+                                            @if($variant)
+                                                <span style="color: #1976d2; margin: 0 6px;">→</span>
+                                                <span style="color: #1976d2; font-weight: 500;">{{ $variant->name }}</span>
+                                            @endif
+                                        </div>
+                                    @endif
+
+                                    {{-- Preview SVG si existe --}}
+                                    @if($designExport->svg_content)
+                                        <div class="text-center mb-3 p-3 bg-white border rounded"
+                                             style="display: flex; align-items: center; justify-content: center; min-height: 120px;">
+                                            <div style="max-width: 200px; max-height: 150px;">
+                                                {!! preg_replace('/(<svg[^>]*)(>)/', '$1 style="width:100%;height:auto;max-height:150px;"$2', $designExport->svg_content) !!}
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    {{-- Especificaciones técnicas --}}
+                                    <div class="row" style="font-size: 15px;">
+                                        @if($designExport->stitches_count)
+                                            <div class="col-6 mb-2">
+                                                <i class="fas fa-dot-circle mr-1" style="color: #e91e63;"></i>
+                                                <span class="text-muted">Puntadas:</span>
+                                                <strong class="text-dark">{{ number_format($designExport->stitches_count, 0, ',', '.') }}</strong>
+                                            </div>
+                                        @endif
+                                        @if($designExport->width_mm && $designExport->height_mm)
+                                            <div class="col-6 mb-2">
+                                                <i class="fas fa-ruler-combined mr-1" style="color: #2196f3;"></i>
+                                                <span class="text-muted">Tamaño:</span>
+                                                <strong class="text-dark">{{ $designExport->width_mm }}×{{ $designExport->height_mm }}mm</strong>
+                                            </div>
+                                        @endif
+                                        @if($designExport->colors_count)
+                                            <div class="col-6 mb-2">
+                                                <i class="fas fa-palette mr-1" style="color: #7b1fa2;"></i>
+                                                <span class="text-muted">Colores:</span>
+                                                <strong class="text-dark">{{ $designExport->colors_count }}</strong>
+                                            </div>
+                                        @endif
+                                        @if($designExport->file_format)
+                                            <div class="col-6 mb-2">
+                                                <i class="fas fa-file-archive mr-1" style="color: #4caf50;"></i>
+                                                <span class="text-muted">Formato:</span>
+                                                <span class="badge badge-dark" style="font-size: 13px;">{{ strtoupper($designExport->file_format) }}</span>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+            @endif
 
             @if ($order->notes)
                 <div class="card card-section-notas">

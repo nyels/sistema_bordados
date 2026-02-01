@@ -50,6 +50,8 @@ class OrderItem extends Model
         'time_multiplier_snapshot',
         'estimated_lead_time',
         'measurements_hash_at_approval',
+        'production_completed',
+        'production_completed_at',
     ];
 
     protected $casts = [
@@ -72,6 +74,8 @@ class OrderItem extends Model
         'design_approved_at' => 'datetime',
         'time_multiplier_snapshot' => 'decimal:2',
         'estimated_lead_time' => 'integer',
+        'production_completed' => 'boolean',
+        'production_completed_at' => 'datetime',
     ];
 
     // === CONSTANTES ===

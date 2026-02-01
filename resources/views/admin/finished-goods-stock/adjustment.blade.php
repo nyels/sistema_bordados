@@ -24,39 +24,8 @@
     @endif
 
     <div class="row">
+        {{-- COLUMNA IZQUIERDA: Formulario --}}
         <div class="col-lg-6">
-            {{-- CARD INFO ACTUAL --}}
-            <div class="card card-outline card-info mb-3">
-                <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-info-circle mr-1"></i> Informacion Actual</h3>
-                </div>
-                <div class="card-body">
-                    <table class="table table-sm table-borderless mb-0">
-                        <tr>
-                            <th style="width: 40%;">Producto:</th>
-                            <td>{{ $productVariant->product->name ?? 'N/A' }}</td>
-                        </tr>
-                        <tr>
-                            <th>SKU Variante:</th>
-                            <td><code>{{ $productVariant->sku_variant }}</code></td>
-                        </tr>
-                        <tr>
-                            <th>Categoria:</th>
-                            <td>{{ $productVariant->product->category->name ?? 'N/A' }}</td>
-                        </tr>
-                        <tr>
-                            <th>Stock Sistema (Ledger):</th>
-                            <td>
-                                <span class="badge badge-primary" style="font-size: 16px;">
-                                    {{ number_format($currentStock, 2) }}
-                                </span>
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-            </div>
-
-            {{-- CARD FORMULARIO --}}
             <div class="card card-outline card-warning">
                 <div class="card-header">
                     <h3 class="card-title"><i class="fas fa-edit mr-1"></i> Registrar Ajuste</h3>
@@ -129,7 +98,39 @@
             </div>
         </div>
 
+        {{-- COLUMNA DERECHA: Info Actual + Reglas --}}
         <div class="col-lg-6">
+            {{-- CARD INFO ACTUAL --}}
+            <div class="card card-outline card-info mb-3">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-info-circle mr-1"></i> Informacion Actual</h3>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless mb-0">
+                        <tr>
+                            <th style="width: 40%;">Producto:</th>
+                            <td>{{ $productVariant->product->name ?? 'N/A' }}</td>
+                        </tr>
+                        <tr>
+                            <th>SKU Variante:</th>
+                            <td><code>{{ $productVariant->sku_variant }}</code></td>
+                        </tr>
+                        <tr>
+                            <th>Categoria:</th>
+                            <td>{{ $productVariant->product->category->name ?? 'N/A' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Stock Sistema (Ledger):</th>
+                            <td>
+                                <span class="badge badge-primary" style="font-size: 16px;">
+                                    {{ number_format($currentStock, 2) }}
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
             {{-- CARD REGLAS --}}
             <div class="card card-outline card-secondary">
                 <div class="card-header">

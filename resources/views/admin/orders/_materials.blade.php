@@ -135,7 +135,7 @@
                         <th class="text-right" style="color: #212529;">Requerido</th>
                         <th class="text-right" style="color: #212529;">Reservado</th>
                         <th class="text-right" style="color: #212529;">Consumido</th>
-                        <th class="text-center" style="width: 90px; color: #212529;">Estado</th>
+                        <th class="text-center" style="width: 60px; color: #212529;"></th>
                     </tr>
                 </thead>
                 <tbody>

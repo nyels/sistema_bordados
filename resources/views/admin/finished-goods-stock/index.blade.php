@@ -49,46 +49,36 @@
         </div>
     </div>
 
-    {{-- FILTROS --}}
+    {{-- FILTROS (sin recarga de página) --}}
     <div class="card card-outline card-primary mb-3">
         <div class="card-body py-2">
-            <form method="GET" action="{{ route('admin.finished-goods-stock.index') }}" id="filter-form">
-                <div class="row align-items-center">
-                    <div class="col-md-3">
-                        <select name="category_id" id="filter-category" class="form-control form-control-sm">
-                            <option value="">-- Categoria --</option>
-                            @foreach ($categories as $cat)
-                                <option value="{{ $cat->id }}" {{ request('category_id') == $cat->id ? 'selected' : '' }}>
-                                    {{ $cat->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <select name="stock_status" id="filter-stock-status" class="form-control form-control-sm">
-                            <option value="">-- Estado Stock --</option>
-                            <option value="ok" {{ request('stock_status') == 'ok' ? 'selected' : '' }}>OK</option>
-                            <option value="bajo" {{ request('stock_status') == 'bajo' ? 'selected' : '' }}>Bajo</option>
-                            <option value="agotado" {{ request('stock_status') == 'agotado' ? 'selected' : '' }}>Agotado</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="input-group input-group-sm">
-                            <input type="text" name="search" id="filter-search" class="form-control"
-                                placeholder="Buscar producto / SKU..."
-                                value="{{ request('search') }}">
-                            <div class="input-group-append">
-                                <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <a href="{{ route('admin.finished-goods-stock.index') }}" class="btn btn-sm btn-outline-secondary">
-                            Limpiar
-                        </a>
-                    </div>
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <select id="filter-category" class="form-control form-control-sm">
+                        <option value="">-- Categoria --</option>
+                        @foreach ($categories as $cat)
+                            <option value="{{ $cat->name }}">{{ $cat->name }}</option>
+                        @endforeach
+                    </select>
                 </div>
-            </form>
+                <div class="col-md-2">
+                    <select id="filter-stock-status" class="form-control form-control-sm">
+                        <option value="">-- Estado Stock --</option>
+                        <option value="OK">OK</option>
+                        <option value="Bajo">Bajo</option>
+                        <option value="Agotado">Agotado</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <input type="text" id="filter-search" class="form-control form-control-sm"
+                        placeholder="Buscar producto / SKU...">
+                </div>
+                <div class="col-md-2">
+                    <button type="button" id="btn-clear-filters" class="btn btn-sm btn-outline-secondary">
+                        Limpiar
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -97,17 +87,17 @@
         <div class="card-header py-2">
             <span class="font-weight-bold">Listado de Stock - Productos Terminados</span>
         </div>
-        <div class="card-body p-0">
-            <table id="stockTable" class="table table-hover table-sm mb-0" style="font-size: 16px;">
-                <thead style="background-color: #000; color: #fff;">
+        <div class="card-body table-responsive p-0">
+            <table id="stockTable" class="table table-hover table-striped mb-0" style="font-size: 16px;">
+                <thead style="background: #343a40; color: white;">
                     <tr>
-                        <th>Producto</th>
-                        <th>SKU Variante</th>
-                        <th>Atributos</th>
-                        <th class="text-right">Stock Actual</th>
-                        <th class="text-right">Nivel Alerta</th>
-                        <th class="text-center">Estado</th>
-                        <th class="text-center" style="width: 130px;">Acciones</th>
+                        <th class="align-middle" style="color: white;">Producto</th>
+                        <th class="align-middle" style="color: white;">SKU Variante</th>
+                        <th class="align-middle" style="color: white;">Atributos</th>
+                        <th class="text-right align-middle" style="color: white;">Stock Actual</th>
+                        <th class="text-right align-middle" style="color: white;">Nivel Alerta</th>
+                        <th class="text-center align-middle" style="color: white;">Estado</th>
+                        <th class="text-center align-middle" style="color: white; width: 150px;">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -121,59 +111,57 @@
                         @endphp
                         <tr class="{{ $rowClass }}">
                             {{-- Columna 1: Producto --}}
-                            <td>
+                            <td class="align-middle" style="color: #212529;">
                                 <strong>{{ $variant->product?->name ?? 'N/A' }}</strong>
                                 <br>
-                                <small class="text-muted">{{ $variant->product?->category?->name ?? '' }}</small>
+                                <small style="color: #6c757d;">{{ $variant->product?->category?->name ?? '' }}</small>
                             </td>
 
                             {{-- Columna 2: SKU Variante --}}
-                            <td>
-                                <code>{{ $variant->sku_variant }}</code>
+                            <td class="align-middle" style="color: #212529;">
+                                <code style="font-size: 15px;">{{ $variant->sku_variant }}</code>
                             </td>
 
                             {{-- Columna 3: Atributos --}}
-                            <td>
-                                @if ($variant->attributeValues && $variant->attributeValues->count() > 0)
-                                    @foreach ($variant->attributeValues as $attrValue)
-                                        <span class="badge badge-light border">{{ $attrValue->value }}</span>
-                                    @endforeach
+                            <td class="align-middle">
+                                @if ($variant->attributes_display)
+                                    <span class="badge badge-light border" style="font-size: 14px; color: #212529;">{{ $variant->attributes_display }}</span>
                                 @else
-                                    <span class="text-muted">-</span>
+                                    <span style="color: #212529;">-</span>
                                 @endif
                             </td>
 
                             {{-- Columna 4: Stock Actual (calculado desde ledger - I1, I2, I5) --}}
-                            <td class="text-right">
-                                <strong class="{{ $variant->stock_status === 'agotado' ? 'text-danger' : ($variant->stock_status === 'bajo' ? 'text-warning' : 'text-dark') }}">
+                            <td class="text-right align-middle">
+                                <strong style="font-size: 17px; color: {{ $variant->stock_status === 'agotado' ? '#dc3545' : ($variant->stock_status === 'bajo' ? '#ffc107' : '#212529') }};">
                                     {{ number_format($variant->calculated_stock, 0) }}
                                 </strong>
                             </td>
 
                             {{-- Columna 5: Nivel de Alerta --}}
-                            <td class="text-right text-muted">
+                            <td class="text-right align-middle" style="color: #212529;">
                                 {{ $variant->stock_alert ?? 0 }}
                             </td>
 
                             {{-- Columna 6: Estado --}}
-                            <td class="text-center">
-                                <span class="badge badge-{{ $variant->stock_status_color }}">
+                            <td class="text-center align-middle">
+                                <span class="badge badge-{{ $variant->stock_status_color }}" style="font-size: 16px;">
                                     {{ $variant->stock_status_label }}
                                 </span>
                             </td>
 
                             {{-- Columna 7: Acciones --}}
-                            <td class="text-center">
+                            <td class="text-center align-middle text-nowrap">
                                 <a href="{{ route('admin.finished-goods-stock.kardex', $variant->id) }}"
-                                   class="btn btn-xs btn-outline-info" title="Kardex">
+                                   class="btn btn-sm btn-info" title="Kardex">
                                     <i class="fas fa-history"></i>
                                 </a>
                                 <a href="{{ route('admin.finished-goods-stock.adjustment', $variant->id) }}"
-                                   class="btn btn-xs btn-outline-warning" title="Ajuste">
+                                   class="btn btn-sm btn-warning" title="Ajuste">
                                     <i class="fas fa-balance-scale"></i>
                                 </a>
                                 <button type="button"
-                                        class="btn btn-xs btn-outline-danger btn-waste-pt"
+                                        class="btn btn-sm btn-danger btn-waste-pt"
                                         title="Registrar Merma"
                                         data-toggle="modal"
                                         data-target="#modalWasteFinishedProduct"
@@ -181,16 +169,15 @@
                                         data-name="{{ $variant->product?->name ?? 'N/A' }}"
                                         data-sku="{{ $variant->sku_variant }}"
                                         data-stock="{{ number_format($variant->calculated_stock, 0) }}"
-                                        data-price="${{ number_format($variant->product?->base_price ?? 0, 2) }}"
-                                        data-price-raw="{{ $variant->product?->base_price ?? 0 }}">
+                                        data-cost="${{ number_format($variant->product?->production_cost ?? 0, 2) }}"
+                                        data-cost-raw="{{ $variant->product?->production_cost ?? 0 }}">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center py-4 text-muted">
-                                <i class="fas fa-inbox fa-2x mb-2"></i><br>
+                            <td colspan="7" class="text-center py-4" style="color: #212529; font-size: 15px;">
                                 No hay variantes de producto terminado
                             </td>
                         </tr>
@@ -198,14 +185,6 @@
                 </tbody>
             </table>
         </div>
-    </div>
-
-    {{-- NOTA DE FUENTE DE DATOS --}}
-    <div class="mt-3">
-        <small class="text-muted">
-            <i class="fas fa-info-circle mr-1"></i>
-            Stock calculado desde movimientos de producto terminado (ledger). Fuente: <code>finished_goods_movements</code>
-        </small>
     </div>
 
     {{-- Modal de Merma de Producto Terminado --}}
@@ -253,8 +232,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 name: this.dataset.name,
                 sku: this.dataset.sku,
                 stock: this.dataset.stock,
-                price: this.dataset.price,
-                price_raw: this.dataset.priceRaw
+                cost: this.dataset.cost,
+                cost_raw: this.dataset.costRaw
             });
         });
     });
@@ -282,7 +261,7 @@ document.addEventListener('DOMContentLoaded', function() {
         "responsive": true,
         "lengthChange": true,
         "autoWidth": false,
-        "order": [[3, 'desc']], // Ordenar por stock descendente
+        "order": [[3, 'desc']],
         buttons: [
             {
                 text: '<i class="fas fa-copy"></i> COPIAR',
@@ -320,6 +299,35 @@ document.addEventListener('DOMContentLoaded', function() {
         ]
     });
     table.buttons().container().appendTo('#stockTable_wrapper .row:eq(0)');
+
+    // =====================================================
+    // FILTROS SIN RECARGA DE PÁGINA
+    // =====================================================
+
+    // Filtro por categoría (columna 0 - subcategoría en small)
+    $('#filter-category').on('change', function() {
+        var val = $(this).val();
+        table.column(0).search(val).draw();
+    });
+
+    // Filtro por estado de stock (columna 5 - badge de estado)
+    $('#filter-stock-status').on('change', function() {
+        var val = $(this).val();
+        table.column(5).search(val).draw();
+    });
+
+    // Filtro por búsqueda general (producto / SKU)
+    $('#filter-search').on('keyup', function() {
+        table.search(this.value).draw();
+    });
+
+    // Botón limpiar filtros
+    $('#btn-clear-filters').on('click', function() {
+        $('#filter-category').val('');
+        $('#filter-stock-status').val('');
+        $('#filter-search').val('');
+        table.search('').columns().search('').draw();
+    });
 });
 </script>
 @stop
