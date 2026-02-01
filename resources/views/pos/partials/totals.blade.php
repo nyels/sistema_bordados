@@ -1,9 +1,10 @@
-{{-- Totals - Premium Apple/SaaS Style --}}
+{{-- Totals - Enterprise SaaS Design 2025 --}}
 <div class="pos-totals-section">
-
     {{-- Precio Final Manual --}}
     <div class="pos-input-group">
-        <label for="unit-price-final" class="pos-input-label">Precio Final $:</label>
+        <label for="unit-price-final" class="pos-input-label">
+            <i class="fas fa-tag"></i> Precio Final
+        </label>
         <div class="pos-input-wrapper">
             <span class="pos-input-prefix">$</span>
             <input type="number"
@@ -19,9 +20,7 @@
     {{-- ADVERTENCIA DE PRECIO DE RIESGO --}}
     <div id="price-warning" class="pos-price-warning hidden">
         <div class="pos-warning-icon">
-            <svg fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-            </svg>
+            <i class="fas fa-exclamation-triangle"></i>
         </div>
         <div class="pos-warning-content">
             <p id="price-warning-title" class="pos-warning-title"></p>
@@ -31,17 +30,21 @@
 
     {{-- Discount Reason --}}
     <div class="pos-input-group">
-        <label for="discount-reason" class="pos-input-label">Motivo Desc.:</label>
+        <label for="discount-reason" class="pos-input-label">
+            <i class="fas fa-percent"></i> Motivo Descuento
+        </label>
         <input type="text"
                id="discount-reason"
-               placeholder="Razón del descuento (opcional)..."
+               placeholder="Razon del descuento (opcional)..."
                maxlength="255"
                class="pos-input-text">
     </div>
 
     {{-- IVA Toggle --}}
     <div class="pos-toggle-group">
-        <span class="pos-toggle-label">Aplicar IVA:</span>
+        <span class="pos-toggle-label">
+            <i class="fas fa-receipt"></i> Aplicar IVA
+        </span>
         <label class="pos-toggle">
             <input type="checkbox" id="apply-iva" class="pos-toggle-input">
             <span class="pos-toggle-slider"></span>
@@ -50,22 +53,20 @@
 
     {{-- Info Card --}}
     <div class="pos-info-card">
-        <svg class="pos-info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
-        <p>El total será calculado por el servidor al confirmar.</p>
+        <i class="fas fa-info-circle"></i>
+        <p>El total sera calculado por el servidor al confirmar.</p>
     </div>
 </div>
 
 @push('styles')
 <style>
     .pos-totals-section {
-        padding: 20px;
-        border-bottom: 1px solid #e2e8f0;
+        padding: var(--pos-space-md);
+        border-bottom: 1px solid var(--pos-slate-200);
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: var(--pos-space-md);
+        background: var(--pos-white);
     }
 
     .pos-input-group {
@@ -75,92 +76,100 @@
     }
 
     .pos-input-label {
-        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
         font-weight: 600;
-        color: #64748b;
+        color: var(--pos-slate-500);
+    }
+
+    .pos-input-label i {
+        font-size: 12px;
+        color: var(--pos-slate-400);
     }
 
     .pos-input-wrapper {
         display: flex;
         align-items: center;
-        background: #fff;
-        border: 2px solid #e2e8f0;
-        border-radius: 12px;
+        background: var(--pos-white);
+        border: 2px solid var(--pos-slate-200);
+        border-radius: var(--pos-radius-md);
         overflow: hidden;
-        transition: all 0.2s ease;
+        transition: var(--pos-transition);
     }
 
     .pos-input-wrapper:focus-within {
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+        border-color: var(--pos-primary);
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
     }
 
     .pos-input-prefix,
     .pos-input-suffix {
         padding: 0 12px;
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 600;
-        color: #64748b;
-        background: #f8fafc;
+        color: var(--pos-slate-500);
+        background: var(--pos-slate-50);
     }
 
     .pos-input-prefix {
-        border-right: 1px solid #e2e8f0;
+        border-right: 1px solid var(--pos-slate-200);
     }
 
     .pos-input-suffix {
-        border-left: 1px solid #e2e8f0;
+        border-left: 1px solid var(--pos-slate-200);
         font-size: 12px;
     }
 
     .pos-input-number {
         flex: 1;
-        height: 48px;
+        height: 44px;
         padding: 0 12px;
         border: none;
-        font-size: 18px;
+        font-size: 16px;
         font-weight: 600;
-        color: #1e293b;
+        color: var(--pos-slate-800);
         background: transparent;
         outline: none;
     }
 
     .pos-input-number::placeholder {
-        color: #cbd5e1;
+        color: var(--pos-slate-400);
         font-weight: 400;
     }
 
     .pos-input-text {
         width: 100%;
-        height: 48px;
-        padding: 0 16px;
-        background: #fff;
-        border: 2px solid #e2e8f0;
-        border-radius: 12px;
+        height: 44px;
+        padding: 0 14px;
+        background: var(--pos-white);
+        border: 2px solid var(--pos-slate-200);
+        border-radius: var(--pos-radius-md);
         font-size: 14px;
-        color: #1e293b;
-        transition: all 0.2s ease;
+        color: var(--pos-slate-800);
+        transition: var(--pos-transition);
     }
 
     .pos-input-text:focus {
         outline: none;
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+        border-color: var(--pos-primary);
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
     }
 
     .pos-input-text::placeholder {
-        color: #94a3b8;
+        color: var(--pos-slate-400);
     }
 
     /* Price Warning */
     .pos-price-warning {
         display: flex;
         align-items: flex-start;
-        gap: 12px;
-        padding: 14px;
-        border-radius: 12px;
-        background: #fef3c7;
-        border: 1px solid #f59e0b;
+        gap: var(--pos-space-sm);
+        padding: var(--pos-space-md);
+        border-radius: var(--pos-radius-md);
+        background: rgba(245, 158, 11, 0.1);
+        border: 1px solid var(--pos-warning);
     }
 
     .pos-price-warning.hidden {
@@ -168,15 +177,9 @@
     }
 
     .pos-warning-icon {
-        width: 22px;
-        height: 22px;
-        color: #d97706;
+        font-size: 18px;
+        color: var(--pos-warning);
         flex-shrink: 0;
-    }
-
-    .pos-warning-icon svg {
-        width: 100%;
-        height: 100%;
     }
 
     .pos-warning-content {
@@ -184,14 +187,14 @@
     }
 
     .pos-warning-title {
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 700;
         color: #92400e;
         margin: 0 0 2px 0;
     }
 
     .pos-warning-text {
-        font-size: 13px;
+        font-size: 12px;
         color: #a16207;
         margin: 0;
         line-height: 1.4;
@@ -202,22 +205,29 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 12px 16px;
-        background: #f8fafc;
-        border-radius: 12px;
+        padding: var(--pos-space-md);
+        background: var(--pos-slate-50);
+        border-radius: var(--pos-radius-md);
     }
 
     .pos-toggle-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
         font-size: 14px;
         font-weight: 600;
-        color: #475569;
+        color: var(--pos-slate-600);
+    }
+
+    .pos-toggle-label i {
+        color: var(--pos-slate-400);
     }
 
     .pos-toggle {
         position: relative;
         display: inline-block;
-        width: 52px;
-        height: 28px;
+        width: 48px;
+        height: 26px;
         cursor: pointer;
     }
 
@@ -230,9 +240,9 @@
     .pos-toggle-slider {
         position: absolute;
         inset: 0;
-        background: #e2e8f0;
-        border-radius: 28px;
-        transition: all 0.3s ease;
+        background: var(--pos-slate-300);
+        border-radius: var(--pos-radius-full);
+        transition: var(--pos-transition);
     }
 
     .pos-toggle-slider::before {
@@ -240,49 +250,44 @@
         position: absolute;
         top: 2px;
         left: 2px;
-        width: 24px;
-        height: 24px;
-        background: #fff;
-        border-radius: 50%;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        transition: all 0.3s ease;
+        width: 22px;
+        height: 22px;
+        background: var(--pos-white);
+        border-radius: var(--pos-radius-full);
+        box-shadow: var(--pos-shadow-sm);
+        transition: var(--pos-transition);
     }
 
     .pos-toggle-input:checked + .pos-toggle-slider {
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        background: var(--pos-primary);
     }
 
     .pos-toggle-input:checked + .pos-toggle-slider::before {
-        transform: translateX(24px);
-    }
-
-    .pos-toggle-input:focus + .pos-toggle-slider {
-        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+        transform: translateX(22px);
     }
 
     /* Info Card */
     .pos-info-card {
         display: flex;
         align-items: center;
-        gap: 10px;
-        padding: 14px 16px;
-        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-        border: 1px solid #93c5fd;
-        border-radius: 12px;
+        gap: var(--pos-space-sm);
+        padding: var(--pos-space-md);
+        background: rgba(79, 70, 229, 0.08);
+        border: 1px solid rgba(79, 70, 229, 0.2);
+        border-radius: var(--pos-radius-md);
     }
 
-    .pos-info-icon {
-        width: 20px;
-        height: 20px;
-        color: #3b82f6;
+    .pos-info-card i {
+        font-size: 16px;
+        color: var(--pos-primary);
         flex-shrink: 0;
     }
 
     .pos-info-card p {
         margin: 0;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 500;
-        color: #1e40af;
+        color: var(--pos-primary-dark);
     }
 </style>
 @endpush

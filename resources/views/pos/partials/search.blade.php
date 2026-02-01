@@ -1,80 +1,67 @@
-{{-- Product Search - Premium Apple/SaaS Style --}}
-<div class="pos-search-container">
+{{-- Product Search - Enterprise SaaS Design 2025 --}}
+<div class="pos-search-section">
     <div class="pos-search-wrapper">
-        <div class="pos-search-icon">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-            </svg>
-        </div>
+        <i class="fas fa-search pos-search-icon"></i>
         <input type="text"
                id="pos-search"
                placeholder="Buscar producto por nombre o SKU..."
                class="pos-search-input"
                autocomplete="off">
         <div class="pos-search-shortcut">
-            <kbd>Ctrl</kbd> + <kbd>K</kbd>
+            <kbd>Ctrl</kbd><span>+</span><kbd>K</kbd>
         </div>
     </div>
 </div>
 
 @push('styles')
 <style>
-    .pos-search-container {
-        padding: 20px 24px;
-        background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-        border-bottom: 1px solid #e2e8f0;
+    .pos-search-section {
+        padding: var(--pos-space-md) var(--pos-space-lg);
+        background: var(--pos-slate-800);
+        border-bottom: 1px solid var(--pos-slate-700);
     }
 
     .pos-search-wrapper {
         position: relative;
         display: flex;
         align-items: center;
-        max-width: 100%;
     }
 
     .pos-search-icon {
         position: absolute;
-        left: 16px;
-        width: 22px;
-        height: 22px;
-        color: #94a3b8;
+        left: 18px;
+        font-size: 16px;
+        color: var(--pos-slate-400);
         pointer-events: none;
         z-index: 1;
-    }
-
-    .pos-search-icon svg {
-        width: 100%;
-        height: 100%;
     }
 
     .pos-search-input {
         width: 100%;
         height: 52px;
-        padding: 0 120px 0 52px;
-        background: #fff;
-        border: 2px solid #e2e8f0;
-        border-radius: 14px;
-        font-size: 16px;
+        padding: 0 140px 0 52px;
+        background: var(--pos-slate-900);
+        border: 2px solid var(--pos-slate-700);
+        border-radius: var(--pos-radius-md);
+        font-size: 15px;
         font-weight: 500;
-        color: #1e293b;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(0, 0, 0, 0.03);
-        transition: all 0.2s ease;
+        color: var(--pos-white);
+        transition: var(--pos-transition);
     }
 
     .pos-search-input::placeholder {
-        color: #94a3b8;
+        color: var(--pos-slate-500);
         font-weight: 400;
     }
 
     .pos-search-input:hover {
-        border-color: #cbd5e1;
+        border-color: var(--pos-slate-600);
     }
 
     .pos-search-input:focus {
         outline: none;
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15), 0 4px 12px rgba(0, 0, 0, 0.05);
+        border-color: var(--pos-primary);
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
     }
 
     .pos-search-shortcut {
@@ -83,7 +70,7 @@
         display: flex;
         align-items: center;
         gap: 4px;
-        color: #94a3b8;
+        color: var(--pos-slate-500);
         font-size: 12px;
         pointer-events: none;
     }
@@ -95,25 +82,30 @@
         min-width: 24px;
         height: 22px;
         padding: 0 6px;
-        background: linear-gradient(180deg, #fff 0%, #f1f5f9 100%);
-        border: 1px solid #e2e8f0;
-        border-radius: 5px;
+        background: var(--pos-slate-700);
+        border: 1px solid var(--pos-slate-600);
+        border-radius: 4px;
         font-family: inherit;
         font-size: 11px;
         font-weight: 600;
-        color: #64748b;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        color: var(--pos-slate-300);
     }
 
-    @media (max-width: 640px) {
-        .pos-search-container {
-            padding: 16px;
+    .pos-search-shortcut span {
+        color: var(--pos-slate-600);
+    }
+
+    @media (max-width: 768px) {
+        .pos-search-section {
+            padding: var(--pos-space-sm) var(--pos-space-md);
         }
+
         .pos-search-input {
             height: 48px;
             padding-right: 16px;
-            font-size: 15px;
+            font-size: 14px;
         }
+
         .pos-search-shortcut {
             display: none;
         }
@@ -123,11 +115,11 @@
 
 @push('scripts')
 <script>
-    // Keyboard shortcut Ctrl+K for search
     document.addEventListener('keydown', function(e) {
         if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
             e.preventDefault();
-            document.getElementById('pos-search').focus();
+            var searchInput = document.getElementById('pos-search');
+            if (searchInput) searchInput.focus();
         }
     });
 </script>

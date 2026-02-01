@@ -41,6 +41,10 @@
 
 @push('styles')
 <style>
+    /* =====================================================================
+       POS INDEX - Enterprise SaaS Layout 2025
+       ===================================================================== */
+
     /* Main Layout */
     .pos-main-layout {
         display: flex;
@@ -52,125 +56,32 @@
         flex: 1;
         display: flex;
         flex-direction: column;
-        background: #f1f5f9;
+        background: var(--pos-slate-100);
         overflow: hidden;
         min-width: 0;
     }
 
     .pos-cart-panel {
-        width: 380px;
-        min-width: 380px;
-        max-width: 380px;
+        width: 400px;
+        min-width: 400px;
+        max-width: 400px;
         display: flex;
         flex-direction: column;
-        background: #fff;
-        border-left: 1px solid #e2e8f0;
-        box-shadow: -4px 0 20px rgba(0, 0, 0, 0.05);
+        background: var(--pos-white);
+        border-left: 1px solid var(--pos-slate-200);
+        box-shadow: var(--pos-shadow-xl);
         overflow-y: auto;
     }
 
-    /* Cart Item Styles */
-    .pos-cart-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 16px;
-        background: #f8fafc;
-        border-radius: 12px;
-        margin: 0 16px;
-    }
-
-    .pos-cart-item-info {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .pos-cart-item-name {
-        font-size: 15px;
-        font-weight: 600;
-        color: #1e293b;
-        margin: 0 0 4px 0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .pos-cart-item-price {
-        font-size: 13px;
-        color: #64748b;
-        margin: 0;
-    }
-
-    .pos-cart-item-quantity {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .pos-qty-btn {
-        width: 36px;
-        height: 36px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #1e293b;
-        border: none;
-        border-radius: 10px;
-        color: #fff;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-    .pos-qty-btn:hover {
-        background: #334155;
-    }
-
-    .pos-qty-btn svg {
-        width: 18px;
-        height: 18px;
-    }
-
-    .pos-qty-input {
-        width: 56px;
-        height: 36px;
-        text-align: center;
-        font-size: 16px;
-        font-weight: 600;
-        color: #1e293b;
-        background: #fff;
-        border: 2px solid #e2e8f0;
-        border-radius: 10px;
-    }
-
-    .pos-qty-input:focus {
-        outline: none;
-        border-color: #3b82f6;
-    }
-
-    .pos-remove-btn {
-        width: 36px;
-        height: 36px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #ef4444;
-        border: none;
-        border-radius: 10px;
-        color: #fff;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-    .pos-remove-btn:hover {
-        background: #dc2626;
-    }
-
-    .pos-remove-btn svg {
-        width: 18px;
-        height: 18px;
-    }
-
     /* Responsive */
+    @media (max-width: 1280px) {
+        .pos-cart-panel {
+            width: 360px;
+            min-width: 360px;
+            max-width: 360px;
+        }
+    }
+
     @media (max-width: 1024px) {
         .pos-cart-panel {
             width: 340px;
@@ -195,8 +106,83 @@
             max-width: 100%;
             flex: 1;
             border-left: none;
-            border-top: 1px solid #e2e8f0;
+            border-top: 1px solid var(--pos-slate-200);
         }
+    }
+
+    /* =====================================================================
+       Confirm Modal Content Styles
+       ===================================================================== */
+    .pos-confirm-details {
+        display: flex;
+        flex-direction: column;
+        gap: var(--pos-space-sm);
+        background: var(--pos-slate-50);
+        padding: var(--pos-space-md);
+        border-radius: var(--pos-radius-md);
+        border: 1px solid var(--pos-slate-200);
+    }
+
+    .pos-confirm-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--pos-space-sm) 0;
+        border-bottom: 1px solid var(--pos-slate-100);
+    }
+
+    .pos-confirm-row:last-child {
+        border-bottom: none;
+    }
+
+    .pos-confirm-row-highlight {
+        background: rgba(79, 70, 229, 0.05);
+        margin: 0 calc(-1 * var(--pos-space-md));
+        padding: var(--pos-space-sm) var(--pos-space-md);
+        border-bottom: none;
+    }
+
+    .pos-confirm-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--pos-slate-500);
+    }
+
+    .pos-confirm-label i {
+        font-size: 12px;
+        color: var(--pos-slate-400);
+    }
+
+    .pos-confirm-value {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--pos-slate-800);
+    }
+
+    .pos-confirm-value-primary {
+        color: var(--pos-primary);
+        font-size: 16px;
+    }
+
+    .pos-confirm-notice {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-top: var(--pos-space-md);
+        padding: var(--pos-space-sm) var(--pos-space-md);
+        background: rgba(79, 70, 229, 0.08);
+        border-radius: var(--pos-radius-md);
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--pos-primary-dark);
+    }
+
+    .pos-confirm-notice i {
+        color: var(--pos-primary);
     }
 </style>
 @endpush
@@ -355,34 +341,30 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const item = cart.item;
 
-            // Renderiza valores como texto opaco
+            // Renderiza valores como texto opaco - Enterprise Design 2025
             cartItemEl.innerHTML = `
-                <div class="flex items-center justify-between p-4 border-b-2 border-black">
-                    <div class="flex-1">
-                        <p class="text-lg font-semibold text-black">${item.name}</p>
-                        <p class="text-base text-black">Precio lista: $${item.price_original}</p>
+                <div class="pos-cart-item">
+                    <div class="pos-cart-item-info">
+                        <p class="pos-cart-item-name">${item.name}</p>
+                        <p class="pos-cart-item-price">
+                            <i class="fas fa-tag"></i> Precio lista: $${item.price_original}
+                        </p>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <button data-action="decrease"
-                                class="w-10 h-10 bg-black text-white text-xl font-bold rounded border-2 border-black
-                                       hover:bg-gray-800 transition-colors">
-                            -
+                    <div class="pos-cart-item-quantity">
+                        <button data-action="decrease" class="pos-qty-btn">
+                            <i class="fas fa-minus"></i>
                         </button>
                         <input type="number"
                                id="quantity-input"
                                min="1"
                                value="${cart.quantity}"
-                               class="w-16 h-10 text-center text-lg font-bold text-black bg-white border-2 border-black rounded">
-                        <button data-action="increase"
-                                class="w-10 h-10 bg-black text-white text-xl font-bold rounded border-2 border-black
-                                       hover:bg-gray-800 transition-colors">
-                            +
+                               class="pos-qty-input">
+                        <button data-action="increase" class="pos-qty-btn">
+                            <i class="fas fa-plus"></i>
                         </button>
                     </div>
-                    <button data-action="remove"
-                            class="ml-4 w-10 h-10 bg-red-600 text-white text-xl font-bold rounded border-2 border-red-800
-                                   hover:bg-red-700 transition-colors">
-                        ×
+                    <button data-action="remove" class="pos-remove-btn">
+                        <i class="fas fa-trash"></i>
                     </button>
                 </div>
             `;
@@ -548,44 +530,49 @@ document.addEventListener('DOMContentLoaded', function() {
             const unitPriceFinal = unitPriceFinalInput.value || item.price_original;
             const discountReason = discountReasonInput.value || '';
 
-            // Mostrar SOLO datos capturados como TEXTO OPACO
+            // Mostrar SOLO datos capturados como TEXTO OPACO - Enterprise Design 2025
             let html = `
-                <div class="space-y-3">
-                    <div class="text-lg">
-                        <strong>Producto:</strong> ${item.name}
+                <div class="pos-confirm-details">
+                    <div class="pos-confirm-row">
+                        <span class="pos-confirm-label"><i class="fas fa-box"></i> Producto</span>
+                        <span class="pos-confirm-value">${item.name}</span>
                     </div>
-                    <div class="text-lg">
-                        <strong>Cantidad:</strong> ${cart.quantity}
+                    <div class="pos-confirm-row">
+                        <span class="pos-confirm-label"><i class="fas fa-cubes"></i> Cantidad</span>
+                        <span class="pos-confirm-value">${cart.quantity}</span>
                     </div>
-                    <div class="text-lg">
-                        <strong>Precio original:</strong> $${item.price_original} c/u
+                    <div class="pos-confirm-row">
+                        <span class="pos-confirm-label"><i class="fas fa-tag"></i> Precio lista</span>
+                        <span class="pos-confirm-value">$${item.price_original} c/u</span>
                     </div>
-                    <div class="text-lg">
-                        <strong>Precio final:</strong> $${unitPriceFinal} c/u
+                    <div class="pos-confirm-row pos-confirm-row-highlight">
+                        <span class="pos-confirm-label"><i class="fas fa-dollar-sign"></i> Precio final</span>
+                        <span class="pos-confirm-value pos-confirm-value-primary">$${unitPriceFinal} c/u</span>
                     </div>
             `;
 
             if (discountReason) {
                 html += `
-                    <div class="text-lg">
-                        <strong>Motivo descuento:</strong> ${discountReason}
+                    <div class="pos-confirm-row">
+                        <span class="pos-confirm-label"><i class="fas fa-percent"></i> Motivo descuento</span>
+                        <span class="pos-confirm-value">${discountReason}</span>
                     </div>
                 `;
             }
 
             html += `
-                    <div class="text-lg">
-                        <strong>Método de pago:</strong> ${cart.payment_method.toUpperCase()}
+                    <div class="pos-confirm-row">
+                        <span class="pos-confirm-label"><i class="fas fa-credit-card"></i> Método pago</span>
+                        <span class="pos-confirm-value">${cart.payment_method.toUpperCase()}</span>
                     </div>
-                    <div class="text-lg">
-                        <strong>Aplicar IVA:</strong> ${cart.apply_iva ? 'SÍ' : 'NO'}
+                    <div class="pos-confirm-row">
+                        <span class="pos-confirm-label"><i class="fas fa-receipt"></i> Aplicar IVA</span>
+                        <span class="pos-confirm-value">${cart.apply_iva ? 'SÍ' : 'NO'}</span>
                     </div>
-
-                    <div class="border-t-2 border-black pt-4 mt-4 bg-gray-100 p-3 rounded">
-                        <p class="text-center text-gray-700 font-medium">
-                            El total será calculado por el servidor.
-                        </p>
-                    </div>
+                </div>
+                <div class="pos-confirm-notice">
+                    <i class="fas fa-info-circle"></i>
+                    <span>El total será calculado por el servidor.</span>
                 </div>
             `;
 
@@ -702,30 +689,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
             let resultHtml = `
                 <div class="pos-result-icon pos-result-icon-success">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
+                    <i class="fas fa-check-circle"></i>
                 </div>
                 <p class="pos-result-title pos-result-title-success">VENTA REGISTRADA</p>
                 <div class="pos-result-details">
-                    <p><strong>Pedido:</strong> ${data.data.order_number}</p>
-                    <p><strong>Cantidad:</strong> ${data.data.quantity}</p>
-                    <p><strong>Subtotal:</strong> $${data.data.subtotal}</p>
+                    <p><i class="fas fa-receipt"></i> <strong>Pedido:</strong> ${data.data.order_number}</p>
+                    <p><i class="fas fa-cubes"></i> <strong>Cantidad:</strong> ${data.data.quantity}</p>
+                    <p><i class="fas fa-coins"></i> <strong>Subtotal:</strong> $${data.data.subtotal}</p>
             `;
 
             if (data.data.discount_display) {
-                resultHtml += `<p><strong>Descuento:</strong> $${data.data.discount}</p>`;
+                resultHtml += `<p><i class="fas fa-percent"></i> <strong>Descuento:</strong> $${data.data.discount}</p>`;
             }
 
             if (data.data.iva_display) {
-                resultHtml += `<p><strong>IVA (${data.data.iva_rate}%):</strong> $${data.data.iva_amount}</p>`;
+                resultHtml += `<p><i class="fas fa-file-invoice"></i> <strong>IVA (${data.data.iva_rate}%):</strong> $${data.data.iva_amount}</p>`;
             }
 
             resultHtml += `
-                    <p class="pos-result-total"><strong>TOTAL:</strong> $${data.data.total}</p>
-                    <p><strong>Stock restante:</strong> ${data.data.stock_after}</p>
-                    <p><strong>Vendedor:</strong> ${data.data.seller_name}</p>
+                    <p class="pos-result-total"><i class="fas fa-dollar-sign"></i> <strong>TOTAL:</strong> $${data.data.total}</p>
+                    <p><i class="fas fa-box"></i> <strong>Stock restante:</strong> ${data.data.stock_after}</p>
+                    <p><i class="fas fa-user"></i> <strong>Vendedor:</strong> ${data.data.seller_name}</p>
                 </div>
             `;
 
@@ -733,7 +717,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             footer.innerHTML = `
                 <button id="btn-result-close" class="pos-modal-btn pos-modal-btn-primary pos-modal-btn-full">
-                    CERRAR
+                    <i class="fas fa-check"></i> CERRAR
                 </button>
             `;
 
@@ -746,10 +730,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             content.innerHTML = `
                 <div class="pos-result-icon pos-result-icon-error">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
+                    <i class="fas fa-times-circle"></i>
                 </div>
                 <p class="pos-result-title pos-result-title-error">NO SE PUDO REGISTRAR</p>
                 <p class="pos-modal-text-secondary">${data.error || 'Error desconocido'}</p>
@@ -757,7 +738,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             footer.innerHTML = `
                 <button id="btn-result-close" class="pos-modal-btn pos-modal-btn-primary pos-modal-btn-full">
-                    CERRAR
+                    <i class="fas fa-times"></i> CERRAR
                 </button>
             `;
 

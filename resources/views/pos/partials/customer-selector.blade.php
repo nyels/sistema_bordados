@@ -1,10 +1,7 @@
-{{-- Customer Selector - Enterprise SaaS Style --}}
+{{-- Customer Selector - Enterprise SaaS Design 2025 --}}
 <div class="pos-customer-section">
     <div class="pos-section-header">
-        <svg class="pos-section-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-        </svg>
+        <i class="fas fa-user"></i>
         <span>CLIENTE</span>
     </div>
 
@@ -16,7 +13,7 @@
             </div>
             <div class="pos-option-text">
                 <strong>Venta Libre</strong>
-                <span>Público general</span>
+                <span>Publico general</span>
             </div>
             <div class="pos-option-check">
                 <i class="fas fa-check-circle"></i>
@@ -41,12 +38,11 @@
     <div id="cliente-selected-card" class="pos-cliente-card" style="display: none;">
         <div class="pos-cliente-card-avatar" id="cliente-avatar">J</div>
         <div class="pos-cliente-card-info">
-            <strong id="cliente-nombre">Juan Pérez</strong>
+            <strong id="cliente-nombre">Juan Perez</strong>
             <span id="cliente-telefono"><i class="fas fa-phone"></i> 555-1234</span>
         </div>
         <button type="button" id="btn-quitar-cliente" class="pos-cliente-card-remove">
             <i class="fas fa-times"></i>
-            <span>Quitar</span>
         </button>
     </div>
 
@@ -76,10 +72,10 @@
                     <input type="text"
                            id="input-buscar-cliente"
                            class="pos-search-input"
-                           placeholder="Buscar por nombre, apellidos o teléfono..."
+                           placeholder="Buscar por nombre, apellidos o telefono..."
                            autocomplete="off">
                     <div class="pos-search-input-hint">
-                        <kbd>ESC</kbd> para cerrar
+                        <kbd>ESC</kbd> cerrar
                     </div>
                 </div>
             </div>
@@ -92,7 +88,7 @@
                     </div>
                     <div class="pos-search-placeholder-text">
                         <strong>Buscar clientes</strong>
-                        <span>Escribe un nombre, apellido o teléfono para comenzar</span>
+                        <span>Escribe un nombre, apellido o telefono para comenzar</span>
                     </div>
                 </div>
             </div>
@@ -106,25 +102,25 @@
        CUSTOMER SECTION
        ============================================ */
     .pos-customer-section {
-        padding: 20px;
-        border-bottom: 1px solid #e5e7eb;
-        background: #fff;
+        padding: var(--pos-space-md);
+        border-bottom: 1px solid var(--pos-slate-200);
+        background: var(--pos-white);
     }
 
     .pos-section-header {
         display: flex;
         align-items: center;
-        gap: 8px;
-        margin-bottom: 16px;
+        gap: var(--pos-space-sm);
+        margin-bottom: var(--pos-space-md);
         font-size: 12px;
         font-weight: 700;
-        color: #6b7280;
+        color: var(--pos-slate-500);
         letter-spacing: 0.05em;
     }
 
-    .pos-section-icon {
-        width: 16px;
-        height: 16px;
+    .pos-section-header i {
+        font-size: 14px;
+        color: var(--pos-slate-400);
     }
 
     /* ============================================
@@ -133,31 +129,31 @@
     .pos-customer-options {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: var(--pos-space-sm);
     }
 
     .pos-option-btn {
         display: flex;
         align-items: center;
-        gap: 14px;
+        gap: var(--pos-space-md);
         width: 100%;
-        padding: 14px 16px;
-        background: #f9fafb;
-        border: 2px solid #e5e7eb;
-        border-radius: 12px;
+        padding: var(--pos-space-md);
+        background: var(--pos-slate-50);
+        border: 2px solid var(--pos-slate-200);
+        border-radius: var(--pos-radius-md);
         cursor: pointer;
-        transition: all 0.15s ease;
+        transition: var(--pos-transition);
         text-align: left;
     }
 
     .pos-option-btn:hover {
-        background: #f3f4f6;
-        border-color: #d1d5db;
+        background: var(--pos-slate-100);
+        border-color: var(--pos-slate-300);
     }
 
     .pos-option-btn.pos-option-active {
-        background: #eff6ff;
-        border-color: #3b82f6;
+        background: rgba(79, 70, 229, 0.08);
+        border-color: var(--pos-primary);
     }
 
     .pos-option-icon {
@@ -166,15 +162,15 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #3b82f6;
-        border-radius: 10px;
-        color: #fff;
+        background: var(--pos-primary);
+        border-radius: var(--pos-radius-sm);
+        color: var(--pos-white);
         font-size: 16px;
         flex-shrink: 0;
     }
 
     .pos-option-icon-search {
-        background: #6366f1;
+        background: var(--pos-success);
     }
 
     .pos-option-text {
@@ -185,18 +181,18 @@
         display: block;
         font-size: 14px;
         font-weight: 600;
-        color: #111827;
+        color: var(--pos-slate-800);
         margin-bottom: 2px;
     }
 
     .pos-option-text span {
         font-size: 12px;
-        color: #6b7280;
+        color: var(--pos-slate-500);
     }
 
     .pos-option-check {
-        color: #3b82f6;
-        font-size: 20px;
+        color: var(--pos-primary);
+        font-size: 18px;
         opacity: 0;
         transition: opacity 0.15s;
     }
@@ -206,14 +202,14 @@
     }
 
     .pos-option-arrow {
-        color: #9ca3af;
+        color: var(--pos-slate-400);
         font-size: 14px;
         transition: transform 0.15s;
     }
 
     .pos-option-btn:hover .pos-option-arrow {
         transform: translateX(4px);
-        color: #6366f1;
+        color: var(--pos-success);
     }
 
     /* ============================================
@@ -222,23 +218,23 @@
     .pos-cliente-card {
         display: flex;
         align-items: center;
-        gap: 14px;
-        padding: 14px 16px;
-        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-        border: 2px solid #3b82f6;
-        border-radius: 12px;
+        gap: var(--pos-space-md);
+        padding: var(--pos-space-md);
+        background: rgba(79, 70, 229, 0.08);
+        border: 2px solid var(--pos-primary);
+        border-radius: var(--pos-radius-md);
     }
 
     .pos-cliente-card-avatar {
-        width: 48px;
-        height: 48px;
+        width: 44px;
+        height: 44px;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-        border-radius: 12px;
-        color: #fff;
-        font-size: 20px;
+        background: linear-gradient(135deg, var(--pos-primary) 0%, var(--pos-primary-dark) 100%);
+        border-radius: var(--pos-radius-sm);
+        color: var(--pos-white);
+        font-size: 18px;
         font-weight: 700;
         flex-shrink: 0;
     }
@@ -250,44 +246,42 @@
 
     .pos-cliente-card-info strong {
         display: block;
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 600;
-        color: #1e40af;
-        margin-bottom: 4px;
+        color: var(--pos-primary-dark);
+        margin-bottom: 2px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
     .pos-cliente-card-info span {
-        font-size: 13px;
-        color: #3b82f6;
+        font-size: 12px;
+        color: var(--pos-primary);
     }
 
     .pos-cliente-card-info span i {
-        margin-right: 6px;
+        margin-right: 4px;
     }
 
     .pos-cliente-card-remove {
         display: flex;
         align-items: center;
-        gap: 6px;
-        padding: 8px 14px;
-        background: #fee2e2;
-        border: 1px solid #fecaca;
-        border-radius: 8px;
-        color: #dc2626;
-        font-size: 13px;
-        font-weight: 600;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        background: var(--pos-danger);
+        border: none;
+        border-radius: var(--pos-radius-sm);
+        color: var(--pos-white);
+        font-size: 14px;
         cursor: pointer;
-        transition: all 0.15s;
+        transition: var(--pos-transition);
         flex-shrink: 0;
     }
 
     .pos-cliente-card-remove:hover {
-        background: #dc2626;
-        border-color: #dc2626;
-        color: #fff;
+        background: var(--pos-danger-dark);
     }
 
     /* ============================================
@@ -307,14 +301,9 @@
     .pos-search-modal-backdrop {
         position: absolute;
         inset: 0;
-        background: rgba(17, 24, 39, 0.75);
+        background: rgba(15, 23, 42, 0.8);
         backdrop-filter: blur(4px);
         animation: fadeIn 0.2s ease;
-    }
-
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
     }
 
     .pos-search-modal-container {
@@ -323,30 +312,18 @@
         display: flex;
         align-items: flex-start;
         justify-content: center;
-        padding: 60px 20px 20px;
+        padding: 80px 20px 20px;
         overflow-y: auto;
     }
 
     .pos-search-modal-content {
         width: 100%;
-        max-width: 560px;
-        background: #fff;
-        border-radius: 16px;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25),
-                    0 0 0 1px rgba(0, 0, 0, 0.05);
+        max-width: 520px;
+        background: var(--pos-white);
+        border-radius: var(--pos-radius-lg);
+        box-shadow: var(--pos-shadow-xl);
         animation: slideDown 0.25s ease;
         overflow: hidden;
-    }
-
-    @keyframes slideDown {
-        from {
-            opacity: 0;
-            transform: translateY(-20px) scale(0.98);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-        }
     }
 
     /* Modal Header */
@@ -354,131 +331,114 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 20px 24px;
-        background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
-        border-bottom: 1px solid #374151;
+        padding: var(--pos-space-md) var(--pos-space-lg);
+        background: var(--pos-slate-900);
+        border-bottom: 1px solid var(--pos-slate-700);
     }
 
     .pos-search-modal-title {
         display: flex;
         align-items: center;
-        gap: 12px;
-        color: #fff;
-        font-size: 18px;
+        gap: var(--pos-space-sm);
+        color: var(--pos-white);
+        font-size: 16px;
         font-weight: 600;
     }
 
     .pos-search-modal-title i {
-        font-size: 20px;
-        opacity: 0.9;
+        font-size: 18px;
+        color: var(--pos-primary-light);
     }
 
     .pos-search-modal-close {
-        width: 40px;
-        height: 40px;
+        width: 36px;
+        height: 36px;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
-        color: #fff;
-        font-size: 16px;
+        background: var(--pos-slate-800);
+        border: 1px solid var(--pos-slate-700);
+        border-radius: var(--pos-radius-sm);
+        color: var(--pos-slate-300);
+        font-size: 14px;
         cursor: pointer;
-        transition: all 0.15s;
+        transition: var(--pos-transition);
     }
 
     .pos-search-modal-close:hover {
-        background: rgba(255, 255, 255, 0.2);
-        border-color: rgba(255, 255, 255, 0.2);
+        background: var(--pos-slate-700);
+        color: var(--pos-white);
     }
 
     /* Modal Search */
     .pos-search-modal-search {
-        padding: 20px 24px;
-        background: #f9fafb;
-        border-bottom: 1px solid #e5e7eb;
+        padding: var(--pos-space-md) var(--pos-space-lg);
+        background: var(--pos-slate-50);
+        border-bottom: 1px solid var(--pos-slate-200);
     }
 
-    .pos-search-input-wrapper {
+    .pos-search-modal-search .pos-search-input-wrapper {
         position: relative;
         display: flex;
         align-items: center;
     }
 
-    .pos-search-input-icon {
+    .pos-search-modal-search .pos-search-input-icon {
         position: absolute;
         left: 16px;
-        color: #9ca3af;
-        font-size: 16px;
+        color: var(--pos-slate-400);
+        font-size: 14px;
         pointer-events: none;
     }
 
-    .pos-search-input {
+    .pos-search-modal-search .pos-search-input {
         width: 100%;
-        height: 52px;
-        padding: 0 140px 0 48px;
-        background: #fff;
-        border: 2px solid #e5e7eb;
-        border-radius: 12px;
-        font-size: 15px;
-        color: #111827;
-        transition: all 0.15s;
+        height: 48px;
+        padding: 0 120px 0 44px;
+        background: var(--pos-white);
+        border: 2px solid var(--pos-slate-200);
+        border-radius: var(--pos-radius-md);
+        font-size: 14px;
+        color: var(--pos-slate-800);
+        transition: var(--pos-transition);
     }
 
-    .pos-search-input:focus {
+    .pos-search-modal-search .pos-search-input:focus {
         outline: none;
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        border-color: var(--pos-primary);
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
     }
 
-    .pos-search-input::placeholder {
-        color: #9ca3af;
+    .pos-search-modal-search .pos-search-input::placeholder {
+        color: var(--pos-slate-400);
     }
 
     .pos-search-input-hint {
         position: absolute;
-        right: 16px;
+        right: 12px;
         display: flex;
         align-items: center;
-        gap: 6px;
-        font-size: 12px;
-        color: #9ca3af;
+        gap: 4px;
+        font-size: 11px;
+        color: var(--pos-slate-400);
     }
 
     .pos-search-input-hint kbd {
-        padding: 4px 8px;
-        background: #f3f4f6;
-        border: 1px solid #e5e7eb;
-        border-radius: 6px;
+        padding: 3px 6px;
+        background: var(--pos-slate-100);
+        border: 1px solid var(--pos-slate-200);
+        border-radius: 4px;
         font-family: inherit;
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 600;
-        color: #6b7280;
+        color: var(--pos-slate-500);
     }
 
     /* Modal Results */
     .pos-search-modal-results {
-        max-height: 400px;
+        max-height: 350px;
         overflow-y: auto;
-        padding: 16px 24px 24px;
-    }
-
-    .pos-search-modal-results::-webkit-scrollbar {
-        width: 8px;
-    }
-
-    .pos-search-modal-results::-webkit-scrollbar-track {
-        background: #f3f4f6;
-    }
-
-    .pos-search-modal-results::-webkit-scrollbar-thumb {
-        background: #d1d5db;
-        border-radius: 4px;
-    }
-
-    .pos-search-modal-results::-webkit-scrollbar-thumb:hover {
-        background: #9ca3af;
+        padding: var(--pos-space-md) var(--pos-space-lg);
     }
 
     /* Placeholder State */
@@ -487,37 +447,37 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 48px 24px;
+        padding: var(--pos-space-2xl) var(--pos-space-lg);
         text-align: center;
     }
 
     .pos-search-placeholder-icon {
-        width: 72px;
-        height: 72px;
+        width: 64px;
+        height: 64px;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #f3f4f6;
-        border-radius: 16px;
-        margin-bottom: 20px;
+        background: var(--pos-slate-100);
+        border-radius: var(--pos-radius-md);
+        margin-bottom: var(--pos-space-md);
     }
 
     .pos-search-placeholder-icon i {
-        font-size: 32px;
-        color: #9ca3af;
+        font-size: 28px;
+        color: var(--pos-slate-400);
     }
 
     .pos-search-placeholder-text strong {
         display: block;
-        font-size: 16px;
+        font-size: 15px;
         font-weight: 600;
-        color: #374151;
-        margin-bottom: 6px;
+        color: var(--pos-slate-700);
+        margin-bottom: 4px;
     }
 
     .pos-search-placeholder-text span {
-        font-size: 14px;
-        color: #6b7280;
+        font-size: 13px;
+        color: var(--pos-slate-500);
     }
 
     /* Loading State */
@@ -526,50 +486,46 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 48px 24px;
+        padding: var(--pos-space-2xl);
     }
 
     .pos-search-loading-spinner {
-        width: 48px;
-        height: 48px;
-        border: 4px solid #e5e7eb;
-        border-top-color: #3b82f6;
+        width: 40px;
+        height: 40px;
+        border: 3px solid var(--pos-slate-200);
+        border-top-color: var(--pos-primary);
         border-radius: 50%;
         animation: spin 0.8s linear infinite;
-        margin-bottom: 16px;
-    }
-
-    @keyframes spin {
-        to { transform: rotate(360deg); }
+        margin-bottom: var(--pos-space-md);
     }
 
     .pos-search-loading span {
-        font-size: 14px;
-        color: #6b7280;
+        font-size: 13px;
+        color: var(--pos-slate-500);
     }
 
     /* Result Items */
     .pos-result-list {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: var(--pos-space-sm);
     }
 
     .pos-result-item {
         display: flex;
         align-items: center;
-        gap: 16px;
-        padding: 16px;
-        background: #fff;
-        border: 2px solid #e5e7eb;
-        border-radius: 12px;
+        gap: var(--pos-space-md);
+        padding: var(--pos-space-md);
+        background: var(--pos-white);
+        border: 2px solid var(--pos-slate-200);
+        border-radius: var(--pos-radius-md);
         cursor: pointer;
-        transition: all 0.15s;
+        transition: var(--pos-transition);
     }
 
     .pos-result-item:hover {
-        background: #f9fafb;
-        border-color: #3b82f6;
+        background: var(--pos-slate-50);
+        border-color: var(--pos-primary);
         transform: translateX(4px);
     }
 
@@ -579,15 +535,15 @@
     }
 
     .pos-result-item-avatar {
-        width: 52px;
-        height: 52px;
+        width: 44px;
+        height: 44px;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-        border-radius: 12px;
-        color: #fff;
-        font-size: 20px;
+        background: linear-gradient(135deg, var(--pos-primary) 0%, var(--pos-primary-dark) 100%);
+        border-radius: var(--pos-radius-sm);
+        color: var(--pos-white);
+        font-size: 16px;
         font-weight: 700;
         flex-shrink: 0;
     }
@@ -599,29 +555,29 @@
 
     .pos-result-item-info strong {
         display: block;
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 600;
-        color: #111827;
-        margin-bottom: 4px;
+        color: var(--pos-slate-800);
+        margin-bottom: 2px;
     }
 
     .pos-result-item-info span {
         display: flex;
         align-items: center;
         gap: 6px;
-        font-size: 13px;
-        color: #6b7280;
+        font-size: 12px;
+        color: var(--pos-slate-500);
     }
 
     .pos-result-item-info span i {
-        color: #9ca3af;
+        color: var(--pos-slate-400);
     }
 
     .pos-result-item-arrow {
-        color: #3b82f6;
-        font-size: 16px;
+        color: var(--pos-primary);
+        font-size: 14px;
         opacity: 0;
-        transition: all 0.15s;
+        transition: var(--pos-transition);
     }
 
     /* No Results */
@@ -630,37 +586,37 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 48px 24px;
+        padding: var(--pos-space-2xl);
         text-align: center;
     }
 
     .pos-search-no-results-icon {
-        width: 72px;
-        height: 72px;
+        width: 64px;
+        height: 64px;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #fef2f2;
-        border-radius: 16px;
-        margin-bottom: 20px;
+        background: rgba(239, 68, 68, 0.1);
+        border-radius: var(--pos-radius-md);
+        margin-bottom: var(--pos-space-md);
     }
 
     .pos-search-no-results-icon i {
-        font-size: 32px;
-        color: #ef4444;
+        font-size: 28px;
+        color: var(--pos-danger);
     }
 
     .pos-search-no-results strong {
         display: block;
-        font-size: 16px;
+        font-size: 15px;
         font-weight: 600;
-        color: #374151;
-        margin-bottom: 6px;
+        color: var(--pos-slate-700);
+        margin-bottom: 4px;
     }
 
     .pos-search-no-results span {
-        font-size: 14px;
-        color: #6b7280;
+        font-size: 13px;
+        color: var(--pos-slate-500);
     }
 </style>
 @endpush
@@ -685,12 +641,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     var debounceTimer = null;
 
-    // Venta Libre
     if (btnVentaLibre) {
         btnVentaLibre.addEventListener('click', setVentaLibre);
     }
 
-    // Abrir modal
     if (btnBuscarCliente && modal) {
         btnBuscarCliente.addEventListener('click', function() {
             modal.classList.add('active');
@@ -702,7 +656,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Cerrar modal
     function closeModal() {
         if (modal) {
             modal.classList.remove('active');
@@ -724,7 +677,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Reset search
     function resetSearch() {
         if (inputBuscar) inputBuscar.value = '';
         if (resultadosDiv) {
@@ -734,13 +686,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 '</div>' +
                 '<div class="pos-search-placeholder-text">' +
                 '<strong>Buscar clientes</strong>' +
-                '<span>Escribe un nombre, apellido o teléfono para comenzar</span>' +
+                '<span>Escribe un nombre, apellido o telefono para comenzar</span>' +
                 '</div>' +
                 '</div>';
         }
     }
 
-    // Búsqueda con debounce
     if (inputBuscar) {
         inputBuscar.addEventListener('input', function() {
             var query = this.value.trim();
@@ -790,8 +741,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     '<div class="pos-search-no-results-icon">' +
                     '<i class="fas fa-exclamation-triangle"></i>' +
                     '</div>' +
-                    '<strong>Error de conexión</strong>' +
-                    '<span>No se pudo realizar la búsqueda</span>' +
+                    '<strong>Error de conexion</strong>' +
+                    '<span>No se pudo realizar la busqueda</span>' +
                     '</div>';
             }
         });
@@ -803,7 +754,7 @@ document.addEventListener('DOMContentLoaded', function() {
             var c = clientes[i];
             var inicial = (c.nombre || 'C').charAt(0).toUpperCase();
             var nombre = ((c.nombre || '') + ' ' + (c.apellidos || '')).trim();
-            var tel = c.telefono || 'Sin teléfono';
+            var tel = c.telefono || 'Sin telefono';
 
             html += '<div class="pos-result-item" data-id="' + c.id + '" data-nombre="' + nombre + '" data-telefono="' + tel + '">' +
                 '<div class="pos-result-item-avatar">' + inicial + '</div>' +
