@@ -95,12 +95,14 @@
                                     <label class="field-label">IVA</label>
                                     <div class="iva-control-wrapper">
                                         <label class="iva-toggle">
-                                            <input type="checkbox" id="iva_enabled" {{ old('tax_rate', 16) > 0 ? 'checked' : '' }}>
+                                            <input type="checkbox" id="iva_enabled"
+                                                {{ old('tax_rate', 16) > 0 ? 'checked' : '' }}>
                                             <span class="iva-toggle-slider"></span>
                                         </label>
                                         <div class="field-with-suffix" id="iva_input_wrapper">
                                             <input type="number" name="tax_rate" id="tax_rate" class="field-control"
-                                                value="{{ old('tax_rate', 16) }}" min="0" max="100" step="0.01">
+                                                value="{{ old('tax_rate', 16) }}" min="0" max="100"
+                                                step="0.01">
                                             <span class="field-suffix">%</span>
                                         </div>
                                     </div>
@@ -198,6 +200,7 @@
                                 </div>
                             </div>
                         </div>
+
                     </div>
                 </div>
             </div>
@@ -346,8 +349,8 @@
 @section('css')
     <style>
         /* ============================================
-                                                   SISTEMA DE DISEÑO PROFESIONAL - SaaS Style
-                                                   ============================================ */
+                                                       SISTEMA DE DISEÑO PROFESIONAL - SaaS Style
+                                                       ============================================ */
 
         /* Variables CSS */
         :root {
@@ -383,8 +386,8 @@
         }
 
         /* ============================================
-                                                   HEADER
-                                                   ============================================ */
+                                                       HEADER
+                                                       ============================================ */
         .purchase-header {
             background: #fff;
             border-bottom: 1px solid var(--gray-200);
@@ -457,8 +460,8 @@
         }
 
         /* ============================================
-                                                   CONTENIDO PRINCIPAL
-                                                   ============================================ */
+                                                       CONTENIDO PRINCIPAL
+                                                       ============================================ */
         .purchase-content {
             padding: 24px 32px 32px;
         }
@@ -519,8 +522,8 @@
         }
 
         /* ============================================
-                                                   CAMPOS DE FORMULARIO
-                                                   ============================================ */
+                                                       CAMPOS DE FORMULARIO
+                                                       ============================================ */
         .field-group {
             margin-bottom: 16px;
         }
@@ -691,11 +694,11 @@
             border-radius: 50%;
         }
 
-        .iva-toggle input:checked + .iva-toggle-slider {
+        .iva-toggle input:checked+.iva-toggle-slider {
             background-color: var(--primary);
         }
 
-        .iva-toggle input:checked + .iva-toggle-slider:before {
+        .iva-toggle input:checked+.iva-toggle-slider:before {
             transform: translateX(20px);
         }
 
@@ -709,8 +712,8 @@
         }
 
         /* ============================================
-                                                   SECCIÓN AGREGAR MATERIAL
-                                                   ============================================ */
+                                                       SECCIÓN AGREGAR MATERIAL
+                                                       ============================================ */
         .add-material-section {
             border-bottom: 1px solid var(--gray-100);
         }
@@ -802,8 +805,8 @@
         }
 
         /* ============================================
-                                                   TABLA DE ITEMS
-                                                   ============================================ */
+                                                       TABLA DE ITEMS
+                                                       ============================================ */
         .items-section {
             display: flex;
             flex-direction: column;
@@ -1033,8 +1036,8 @@
         }
 
         /* ============================================
-                                                   TOTALES
-                                                   ============================================ */
+                                                       TOTALES
+                                                       ============================================ */
         .totals-section {
             background: var(--gray-50);
             border-top: 1px solid var(--gray-200);
@@ -1080,8 +1083,8 @@
         }
 
         /* ============================================
-                                                   SCROLLBAR PERSONALIZADA
-                                                   ============================================ */
+                                                       SCROLLBAR PERSONALIZADA
+                                                       ============================================ */
         .items-table-wrapper::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -1101,8 +1104,8 @@
         }
 
         /* ============================================
-                                                   RESPONSIVE
-                                                   ============================================ */
+                                                       RESPONSIVE
+                                                       ============================================ */
         @media (max-width: 768px) {
             .purchase-header {
                 padding: 16px 20px;
@@ -1138,8 +1141,8 @@
         }
 
         /* ============================================
-                                       BOTÓN BUSCAR MATERIAL
-                                       ============================================ */
+                                           BOTÓN BUSCAR MATERIAL
+                                           ============================================ */
         .btn-search-material {
             display: inline-flex;
             align-items: center;
@@ -1168,8 +1171,8 @@
         }
 
         /* ============================================
-                                       MODAL BUSCAR MATERIAL
-                                       ============================================ */
+                                           MODAL BUSCAR MATERIAL
+                                           ============================================ */
         #modalSearchMaterial .modal-content {
             border: none;
             border-radius: 12px;
@@ -1705,8 +1708,8 @@
         }
 
         /* ============================================
-                                       RESPONSIVE - TABLET Y MÓVIL
-                                       ============================================ */
+                                           RESPONSIVE - TABLET Y MÓVIL
+                                           ============================================ */
         @media (max-width: 991.98px) {
             #modalSearchMaterial .modal-dialog {
                 max-width: 95%;

@@ -17,6 +17,27 @@ use Illuminate\Http\Request;
  * PRINCIPIO: Solo métricas matemáticamente correctas y auditables.
  * REGLA: Solo pedidos con status = 'delivered' se consideran ventas.
  *
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * REGLAS CONTABLES ERP (INVARIANTES)
+ * ═══════════════════════════════════════════════════════════════════════════════
+ *
+ * FÓRMULA CANÓNICA:
+ *   VENTA NETA = subtotal - discount
+ *   total = subtotal - discount + iva_amount (SOLO informativo, NO usar en KPIs)
+ *
+ * REGLA 1: TODAS las métricas de "ventas" usan: (subtotal - discount)
+ * REGLA 2: IVA es impuesto TRASLADADO, NO es ingreso
+ * REGLA 3: El campo "total" incluye IVA, por lo tanto NO se usa en KPIs de ventas
+ *
+ * MÉTRICAS CORREGIDAS:
+ *   - ventasPosDelMes: SUM(subtotal - discount)
+ *   - ventasPedidosDelMes: SUM(subtotal - discount)
+ *   - getVentasPorMesFijo(): SUM(subtotal - discount)
+ *   - getVentasPorSemana(): SUM(subtotal - discount)
+ *   - getTopProductos(): Distribución proporcional de (subtotal - discount)
+ *
+ * ═══════════════════════════════════════════════════════════════════════════════
+ *
  * ARQUITECTURA DE DATASETS:
  * - FIJO (solo index): ventasPorMes (4 meses históricos, no cambia con selector)
  * - DINÁMICO (AJAX): ventasPorSemana, topProductos (cambian con selector)
@@ -71,17 +92,43 @@ class HomeController extends Controller
         ];
 
         // ========================================
-        // KPI: VENTAS CONFIRMADAS DEL MES
+        // KPI: VENTAS DEL MES - SEGMENTADAS POR CANAL
         // ========================================
         $mesActual = Carbon::now();
         $inicioMes = $mesActual->copy()->startOfMonth();
         $finMes = $mesActual->copy()->endOfMonth();
 
-        // PASO 6: Solo ventas CON cliente (excluye producción para stock)
-        $ventasDelMes = Order::where('status', Order::STATUS_DELIVERED)
-            ->whereNotNull('cliente_id')
+        // Ventas POS (con o sin cliente) - identificadas por marca en notas
+        // ERP: VENTA NETA = subtotal - discount (NO incluye IVA)
+        $ventasPosDelMes = Order::where('status', Order::STATUS_DELIVERED)
+            ->whereNull('cancelled_at')
+            ->where('notes', 'like', '%[VENTA POS MOSTRADOR%')
             ->whereBetween('created_at', [$inicioMes, $finMes])
-            ->sum('total');
+            ->selectRaw('COALESCE(SUM(subtotal - discount), 0) as venta_neta')
+            ->value('venta_neta') ?? 0;
+
+        // Pedidos normales (con cliente, NO son POS)
+        // ERP: VENTA NETA = subtotal - discount (NO incluye IVA)
+        $ventasPedidosDelMes = Order::where('status', Order::STATUS_DELIVERED)
+            ->whereNull('cancelled_at')
+            ->whereNotNull('cliente_id')
+            ->where(function ($q) {
+                $q->whereNull('notes')
+                  ->orWhere('notes', 'not like', '%[VENTA POS MOSTRADOR%');
+            })
+            ->whereBetween('created_at', [$inicioMes, $finMes])
+            ->selectRaw('COALESCE(SUM(subtotal - discount), 0) as venta_neta')
+            ->value('venta_neta') ?? 0;
+
+        // Total combinado
+        $ventasDelMes = $ventasPosDelMes + $ventasPedidosDelMes;
+
+        // Array segmentado para la vista
+        $ventasSegmentadas = [
+            'total' => $ventasDelMes,
+            'pedidos' => $ventasPedidosDelMes,
+            'pos' => $ventasPosDelMes,
+        ];
 
         // ========================================
         // KPI: INSUMOS EN RIESGO (Materiales bajo mínimo)
@@ -149,6 +196,7 @@ class HomeController extends Controller
         return view('home', compact(
             'kpis',
             'ventasDelMes',
+            'ventasSegmentadas',
             'insumosEnRiesgo',
             'productosBajoStock',
             'nombreMes',
@@ -173,9 +221,13 @@ class HomeController extends Controller
         $year = (int) $request->year;
         $month = (int) $request->month;
 
-        // Verificar que el mes tiene ventas reales (excluye producción para stock)
+        // Verificar que el mes tiene ventas reales (excluye producción para stock y canceladas)
         $tieneVentas = Order::where('status', Order::STATUS_DELIVERED)
-            ->whereNotNull('cliente_id')
+            ->whereNull('cancelled_at')
+            ->where(function ($q) {
+                $q->whereNotNull('cliente_id')
+                  ->orWhere('notes', 'like', '%[VENTA POS MOSTRADOR%');
+            })
             ->whereYear('created_at', $year)
             ->whereMonth('created_at', $month)
             ->exists();
@@ -205,9 +257,13 @@ class HomeController extends Controller
      */
     private function getMesesConVentas(): \Illuminate\Support\Collection
     {
-        // PASO 6: Solo meses con ventas reales (excluye producción para stock)
+        // Meses con ventas reales (con cliente O ventas POS), excluye canceladas
         return Order::where('status', Order::STATUS_DELIVERED)
-            ->whereNotNull('cliente_id')
+            ->whereNull('cancelled_at')
+            ->where(function ($q) {
+                $q->whereNotNull('cliente_id')
+                  ->orWhere('notes', 'like', '%[VENTA POS MOSTRADOR%');
+            })
             ->selectRaw('YEAR(created_at) as year, MONTH(created_at) as month')
             ->groupBy('year', 'month')
             ->orderByDesc('year')
@@ -250,15 +306,21 @@ class HomeController extends Controller
             $inicioMes = Carbon::createFromDate($mes['year'], $mes['month'], 1)->startOfMonth();
             $finMes = Carbon::createFromDate($mes['year'], $mes['month'], 1)->endOfMonth();
 
-            // PASO 6: Solo ventas CON cliente (excluye producción para stock)
-            $total = Order::where('status', Order::STATUS_DELIVERED)
-                ->whereNotNull('cliente_id')
+            // Ventas con cliente O ventas POS (con o sin cliente), excluye canceladas
+            // ERP: VENTA NETA = subtotal - discount (NO incluye IVA)
+            $ventaNeta = Order::where('status', Order::STATUS_DELIVERED)
+                ->whereNull('cancelled_at')
+                ->where(function ($q) {
+                    $q->whereNotNull('cliente_id')
+                      ->orWhere('notes', 'like', '%[VENTA POS MOSTRADOR%');
+                })
                 ->whereBetween('created_at', [$inicioMes, $finMes])
-                ->sum('total');
+                ->selectRaw('COALESCE(SUM(subtotal - discount), 0) as venta_neta')
+                ->value('venta_neta') ?? 0;
 
             return [
                 'label' => Carbon::createFromDate($mes['year'], $mes['month'], 1)->translatedFormat('M Y'),
-                'total' => (float) $total,
+                'total' => (float) $ventaNeta,
             ];
         })->toArray();
     }
@@ -294,24 +356,47 @@ class HomeController extends Controller
 
     /**
      * GRÁFICA CONTEXTUAL: Ventas por Semana (mes específico)
+     * Muestra el rango de días de cada semana: "Sem 1 (1-7)"
      */
     private function getVentasPorSemana(int $year, int $month): array
     {
         $inicioMes = Carbon::createFromDate($year, $month, 1)->startOfMonth();
         $finMes = Carbon::createFromDate($year, $month, 1)->endOfMonth();
 
-        // PASO 6: Solo ventas CON cliente (excluye producción para stock)
+        // Ventas con cliente O ventas POS (con o sin cliente), excluye canceladas
+        // ERP: VENTA NETA = subtotal - discount (NO incluye IVA)
         return Order::where('status', Order::STATUS_DELIVERED)
-            ->whereNotNull('cliente_id')
+            ->whereNull('cancelled_at')
+            ->where(function ($q) {
+                $q->whereNotNull('cliente_id')
+                  ->orWhere('notes', 'like', '%[VENTA POS MOSTRADOR%');
+            })
             ->whereBetween('created_at', [$inicioMes, $finMes])
-            ->selectRaw('WEEK(created_at, 1) as week_num, MIN(created_at) as first_day, SUM(total) as total')
+            ->selectRaw('WEEK(created_at, 1) as week_num, MIN(created_at) as first_day, MAX(created_at) as last_day, SUM(subtotal - discount) as venta_neta')
             ->groupBy('week_num')
             ->orderBy('week_num')
             ->get()
-            ->map(function ($item, $index) {
+            ->map(function ($item, $index) use ($inicioMes, $finMes) {
+                // Calcular inicio de semana (lunes) y fin de semana (domingo)
+                $firstDay = Carbon::parse($item->first_day);
+                $weekStart = $firstDay->copy()->startOfWeek(Carbon::MONDAY);
+                $weekEnd = $firstDay->copy()->endOfWeek(Carbon::SUNDAY);
+
+                // Limitar al mes actual (no mostrar días de otros meses)
+                $dayStart = max($weekStart->day, $inicioMes->day);
+                $dayEnd = min($weekEnd->day, $finMes->day);
+
+                // Si la semana cruza meses, ajustar
+                if ($weekStart->month != $inicioMes->month) {
+                    $dayStart = 1;
+                }
+                if ($weekEnd->month != $finMes->month) {
+                    $dayEnd = $finMes->day;
+                }
+
                 return [
-                    'label' => 'Sem ' . ($index + 1),
-                    'total' => (float) $item->total,
+                    'label' => 'Sem ' . ($index + 1) . ' (' . $dayStart . '-' . $dayEnd . ')',
+                    'total' => (float) $item->venta_neta,
                 ];
             })
             ->toArray();
@@ -319,29 +404,133 @@ class HomeController extends Controller
 
     /**
      * GRÁFICA CONTEXTUAL: Top 5 Productos Vendidos (mes específico)
+     *
+     * COMBINA DOS FUENTES:
+     * 1. OrderItems: Pedidos normales (con cliente, flujo completo)
+     * 2. FinishedGoodsMovement: Ventas POS (sale_exit directo desde stock)
+     *
+     * IMPORTANTE: Para ventas POS, el valor se calcula proporcionalmente
+     * desde Order.subtotal (valor real cobrado), NO desde precios de catálogo.
      */
     private function getTopProductos(int $year, int $month): array
     {
         $inicioMes = Carbon::createFromDate($year, $month, 1)->startOfMonth();
         $finMes = Carbon::createFromDate($year, $month, 1)->endOfMonth();
 
-        // PASO 6: Solo ventas CON cliente (excluye producción para stock)
-        return OrderItem::join('orders', 'order_items.order_id', '=', 'orders.id')
+        // ========================================
+        // FUENTE 1: OrderItems (Pedidos normales - NO POS)
+        // Usa order_items.total que ya tiene el valor real vendido
+        // ========================================
+        $fromOrderItems = OrderItem::join('orders', 'order_items.order_id', '=', 'orders.id')
             ->where('orders.status', Order::STATUS_DELIVERED)
+            ->whereNull('orders.cancelled_at')
             ->whereNotNull('orders.cliente_id')
+            ->where(function ($q) {
+                $q->whereNull('orders.notes')
+                  ->orWhere('orders.notes', 'not like', '%[VENTA POS MOSTRADOR%');
+            })
             ->whereBetween('orders.created_at', [$inicioMes, $finMes])
-            ->selectRaw('order_items.product_name, SUM(order_items.quantity) as cantidad, SUM(order_items.total) as valor')
+            ->selectRaw('order_items.product_name as producto, SUM(order_items.quantity) as cantidad, SUM(order_items.total) as valor')
             ->groupBy('order_items.product_name')
-            ->orderByDesc('cantidad')
-            ->limit(5)
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'producto' => $item->product_name,
+            ->get();
+
+        // ========================================
+        // FUENTE 2: Ventas POS - Valor REAL NETO (subtotal - discount)
+        // ERP: NO incluir IVA en métricas de ventas
+        // ========================================
+        $posOrders = Order::where('status', Order::STATUS_DELIVERED)
+            ->whereNull('cancelled_at')
+            ->where('notes', 'like', '%[VENTA POS MOSTRADOR%')
+            ->whereBetween('created_at', [$inicioMes, $finMes])
+            ->get(['id', 'subtotal', 'discount']);
+
+        $fromPosData = collect();
+
+        foreach ($posOrders as $order) {
+            // Obtener movimientos de este pedido POS
+            $movements = FinishedGoodsMovement::where('reference_type', Order::class)
+                ->where('reference_id', $order->id)
+                ->where('type', FinishedGoodsMovement::TYPE_SALE_EXIT)
+                ->with('productVariant.product')
+                ->get();
+
+            if ($movements->isEmpty()) {
+                continue;
+            }
+
+            // Calcular cantidad total del pedido para distribución proporcional
+            $totalQty = $movements->sum(fn($m) => abs((float) $m->quantity));
+            // ERP: VENTA NETA = subtotal - discount (NO incluye IVA)
+            $orderVentaNeta = (float) $order->subtotal - (float) $order->discount;
+
+            foreach ($movements as $movement) {
+                $product = $movement->productVariant?->product;
+                if (!$product) {
+                    continue;
+                }
+
+                $qty = abs((float) $movement->quantity);
+                // Valor proporcional = (cantidad / total_cantidad) * venta_neta_order
+                $valorProporcional = $totalQty > 0 ? ($qty / $totalQty) * $orderVentaNeta : 0;
+
+                $key = $product->name;
+                if ($fromPosData->has($key)) {
+                    $existing = $fromPosData->get($key);
+                    $fromPosData->put($key, [
+                        'producto' => $key,
+                        'cantidad' => $existing['cantidad'] + (int) $qty,
+                        'valor' => $existing['valor'] + $valorProporcional,
+                    ]);
+                } else {
+                    $fromPosData->put($key, [
+                        'producto' => $key,
+                        'cantidad' => (int) $qty,
+                        'valor' => $valorProporcional,
+                    ]);
+                }
+            }
+        }
+
+        // ========================================
+        // COMBINAR AMBAS FUENTES
+        // ========================================
+        $combined = collect();
+
+        foreach ($fromOrderItems as $item) {
+            $key = $item->producto;
+            if ($combined->has($key)) {
+                $existing = $combined->get($key);
+                $combined->put($key, [
+                    'producto' => $key,
+                    'cantidad' => $existing['cantidad'] + (int) $item->cantidad,
+                    'valor' => $existing['valor'] + (float) $item->valor,
+                ]);
+            } else {
+                $combined->put($key, [
+                    'producto' => $key,
                     'cantidad' => (int) $item->cantidad,
                     'valor' => (float) $item->valor,
-                ];
-            })
+                ]);
+            }
+        }
+
+        foreach ($fromPosData as $key => $item) {
+            if ($combined->has($key)) {
+                $existing = $combined->get($key);
+                $combined->put($key, [
+                    'producto' => $key,
+                    'cantidad' => $existing['cantidad'] + $item['cantidad'],
+                    'valor' => $existing['valor'] + $item['valor'],
+                ]);
+            } else {
+                $combined->put($key, $item);
+            }
+        }
+
+        // Ordenar por cantidad y tomar top 5
+        return $combined->sortByDesc('cantidad')
+            ->take(5)
+            ->values()
             ->toArray();
     }
 }

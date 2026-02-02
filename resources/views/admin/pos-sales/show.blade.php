@@ -331,10 +331,18 @@
                             $('#modalCancelSale').modal('hide');
 
                             if (data.success) {
+                                // Calcular total de unidades devueltas
+                                var totalUnidades = 0;
+                                if (data.data.returned_items && data.data.returned_items.length > 0) {
+                                    data.data.returned_items.forEach(function(item) {
+                                        totalUnidades += parseFloat(item.quantity) || 0;
+                                    });
+                                }
+
                                 Swal.fire({
                                     icon: 'success',
                                     title: 'Venta cancelada',
-                                    text: 'Stock revertido: ' + data.data.quantity_returned + ' unidades',
+                                    text: 'Stock revertido: ' + totalUnidades + ' unidades (' + data.data.items_returned + ' productos)',
                                     confirmButtonColor: '#3085d6'
                                 }).then(() => {
                                     window.location.reload();

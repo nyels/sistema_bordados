@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Cliente;
 use App\Models\FinishedGoodsMovement;
+use App\Models\MotivoDescuento;
 use App\Models\Order;
 use App\Models\ProductVariant;
 use App\Models\User;
@@ -12,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 /**
@@ -66,45 +68,93 @@ class PosController extends Controller
             })
             ->values();
 
-        return view('pos.index', compact('variants'));
+        // Obtener motivos de descuento activos ordenados alfabéticamente
+        $motivosDescuento = MotivoDescuento::where('activo', true)
+            ->orderBy('nombre', 'asc')
+            ->get();
+
+        return view('pos.index', compact('variants', 'motivosDescuento'));
     }
 
     /**
      * POST /pos/sale
      *
      * Registra salida de stock + Order terminal con trazabilidad de vendedor y fecha.
+     * Soporta MÚLTIPLES ÍTEMS en una sola transacción (carrito POS profesional).
+     *
+     * Formato request:
+     * - items[]: Array de productos con { product_variant_id, quantity, unit_price_original, unit_price_final }
+     * - discount_reason: Motivo del descuento (opcional)
+     * - payment_method_note: Método de pago (opcional)
+     * - apply_iva: Aplicar IVA (opcional)
      */
     public function sale(Request $request): JsonResponse
     {
         // =====================================================================
-        // VALIDACIÓN DEL REQUEST (CONTRATO DURO - EXACTO)
+        // NORMALIZAR: Detectar formato antiguo (1 item) vs nuevo (múltiples)
         // =====================================================================
-        $validator = Validator::make($request->all(), [
-            'product_variant_id' => 'required|integer|exists:product_variants,id',
-            'quantity' => 'required|integer|min:1',
-            'unit_price_original' => 'required|numeric|min:0',
-            'unit_price_final' => 'required|numeric|min:0',
-            'discount_reason' => 'nullable|string|max:255',
-            'payment_method_note' => 'nullable|string|max:100',
-            'apply_iva' => 'nullable|boolean',
-        ], [
-            'product_variant_id.required' => 'Se requiere el ID de la variante.',
-            'product_variant_id.exists' => 'La variante no existe.',
-            'quantity.required' => 'Se requiere la cantidad.',
-            'quantity.min' => 'La cantidad debe ser al menos 1.',
-            'unit_price_original.required' => 'Se requiere el precio original.',
-            'unit_price_original.min' => 'El precio original no puede ser negativo.',
-            'unit_price_final.required' => 'Se requiere el precio final.',
-            'unit_price_final.min' => 'El precio final no puede ser negativo.',
-        ]);
+        $items = $request->input('items');
 
-        if ($validator->fails()) {
+        // Si no hay 'items', convertir formato antiguo a array
+        if (!$items && $request->has('product_variant_id')) {
+            $items = [[
+                'product_variant_id' => $request->input('product_variant_id'),
+                'quantity' => $request->input('quantity'),
+                'unit_price_original' => $request->input('unit_price_original'),
+                'unit_price_final' => $request->input('unit_price_final'),
+            ]];
+        }
+
+        if (!$items || !is_array($items) || count($items) === 0) {
             return response()->json([
                 'success' => false,
-                'error' => 'Validación fallida',
-                'details' => $validator->errors()->toArray(),
+                'error' => 'Se requiere al menos un producto en el carrito.',
             ], 422);
         }
+
+        // =====================================================================
+        // VALIDACIÓN DE CADA ÍTEM
+        // =====================================================================
+        $validatedItems = [];
+        foreach ($items as $index => $item) {
+            $itemValidator = Validator::make($item, [
+                'product_variant_id' => 'required|integer|exists:product_variants,id',
+                'quantity' => 'required|integer|min:1',
+                'unit_price_original' => 'required|numeric|min:0',
+                'unit_price_final' => 'required|numeric|min:0',
+            ], [
+                'product_variant_id.required' => "Ítem #{$index}: Se requiere el ID de la variante.",
+                'product_variant_id.exists' => "Ítem #{$index}: La variante no existe.",
+                'quantity.required' => "Ítem #{$index}: Se requiere la cantidad.",
+                'quantity.min' => "Ítem #{$index}: La cantidad debe ser al menos 1.",
+                'unit_price_original.required' => "Ítem #{$index}: Se requiere el precio original.",
+                'unit_price_final.required' => "Ítem #{$index}: Se requiere el precio final.",
+            ]);
+
+            if ($itemValidator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Validación fallida',
+                    'details' => $itemValidator->errors()->toArray(),
+                ], 422);
+            }
+
+            $validatedItems[] = [
+                'product_variant_id' => (int) $item['product_variant_id'],
+                'quantity' => (int) $item['quantity'],
+                'unit_price_original' => (float) $item['unit_price_original'],
+                'unit_price_final' => (float) $item['unit_price_final'],
+            ];
+        }
+
+        // Parámetros globales de la venta
+        $discountReason = $request->input('discount_reason') ?: null; // null si vacío
+        $discountType = $request->input('discount_type') ?: null; // 'fixed' o 'percent'
+        $discountValue = $request->input('discount_value'); // Valor ingresado
+        $discountValue = ($discountValue !== null && $discountValue !== '') ? (float) $discountValue : null;
+        $paymentMethod = $request->input('payment_method') ?: null; // efectivo, tarjeta, transferencia
+        $applyIva = (bool) $request->input('apply_iva', false);
+        $clienteId = $request->input('cliente_id') ?: null;
 
         // =====================================================================
         // INVARIANTE I14: VENDEDOR = usuario autenticado
@@ -119,153 +169,197 @@ class PosController extends Controller
         // =====================================================================
         $saleTimestamp = now();
 
-        $productVariantId = (int) $request->input('product_variant_id');
-        $quantity = (int) $request->input('quantity');
-        $unitPriceOriginal = (float) $request->input('unit_price_original');
-        $unitPriceFinal = (float) $request->input('unit_price_final');
-        $discountReason = $request->input('discount_reason');
-        $paymentMethodNote = $request->input('payment_method_note');
-        $applyIva = (bool) $request->input('apply_iva', false);
-
         // =====================================================================
-        // TRANSACCIÓN ATÓMICA
+        // TRANSACCIÓN ATÓMICA - MÚLTIPLES ÍTEMS
         // =====================================================================
         try {
             $result = DB::transaction(function () use (
-                $productVariantId,
-                $quantity,
-                $unitPriceOriginal,
-                $unitPriceFinal,
+                $validatedItems,
                 $discountReason,
-                $paymentMethodNote,
+                $discountType,
+                $discountValue,
+                $paymentMethod,
+                $clienteId,
                 $sellerId,
                 $sellerName,
                 $saleTimestamp,
                 $applyIva
             ) {
-
                 // -----------------------------------------------------------------
-                // PASO 1: Calcular stock real EXCLUSIVAMENTE desde ledger
-                // INVARIANTE I1: Solo production_entry - sale_exit
+                // PASO 1: Validar stock de TODOS los ítems antes de procesar
                 // -----------------------------------------------------------------
-                $stockReal = $this->calculateRealStock($productVariantId);
-
-                // -----------------------------------------------------------------
-                // PASO 2: Validar stock suficiente
-                // INVARIANTE I2: Si stock < quantity → ABORTAR
-                // -----------------------------------------------------------------
-                if ($stockReal < $quantity) {
-                    throw new \Exception(
-                        "Stock insuficiente. Disponible: {$stockReal}, Requerido: {$quantity}"
-                    );
+                $stockChecks = [];
+                foreach ($validatedItems as $item) {
+                    $stockReal = $this->calculateRealStock($item['product_variant_id']);
+                    if ($stockReal < $item['quantity']) {
+                        $variant = ProductVariant::with('product')->find($item['product_variant_id']);
+                        $productName = $variant ? ($variant->product->name ?? 'Producto') . ' - ' . $variant->name : 'Variante #' . $item['product_variant_id'];
+                        throw new \Exception(
+                            "Stock insuficiente para '{$productName}'. Disponible: {$stockReal}, Requerido: {$item['quantity']}"
+                        );
+                    }
+                    $stockChecks[$item['product_variant_id']] = $stockReal;
                 }
 
                 // -----------------------------------------------------------------
-                // PASO 3: Calcular descuento SOLO aritmético
-                // discount = (unit_price_original - unit_price_final) * quantity
+                // PASO 2: Calcular totales consolidados
                 // -----------------------------------------------------------------
-                $discountPerUnit = $unitPriceOriginal - $unitPriceFinal;
-                $totalDiscount = $discountPerUnit * $quantity;
+                $subtotalGeneral = 0;
+                $itemsDetails = [];
+
+                foreach ($validatedItems as $item) {
+                    $itemSubtotal = $item['unit_price_final'] * $item['quantity'];
+
+                    $subtotalGeneral += $itemSubtotal;
+
+                    $variant = ProductVariant::with('product')->find($item['product_variant_id']);
+                    $itemsDetails[] = [
+                        'variant_id' => $item['product_variant_id'],
+                        'name' => $variant ? ($variant->product->name ?? '') . ' - ' . $variant->name : 'Variante',
+                        'quantity' => $item['quantity'],
+                        'price_original' => $item['unit_price_original'],
+                        'price_final' => $item['unit_price_final'],
+                        'subtotal' => $itemSubtotal,
+                        'stock_before' => $stockChecks[$item['product_variant_id']],
+                    ];
+                }
 
                 // -----------------------------------------------------------------
-                // PASO 4: Crear Order terminal (snapshot mínimo)
-                // INVARIANTE I8: Order se crea DIRECTO en DELIVERED
-                // INVARIANTE I14: created_by = vendedor autenticado
-                // INVARIANTE I15: delivered_date = timestamp servidor
+                // PASO 2.5: Calcular descuento global ($ fijo o % porcentaje)
                 // -----------------------------------------------------------------
-                $subtotal = $unitPriceFinal * $quantity;
+                $discountGeneral = 0;
+                if ($discountValue !== null && $discountValue > 0) {
+                    if ($discountType === 'percent') {
+                        // Porcentaje: limitar a 100%
+                        $discountGeneral = round($subtotalGeneral * (min($discountValue, 100) / 100), 2);
+                    } else {
+                        // Fijo ($): limitar al subtotal
+                        $discountGeneral = round(min($discountValue, $subtotalGeneral), 2);
+                    }
+                }
 
-                // CIERRE POS: Cálculo de IVA como snapshot
+                $subtotalAfterDiscount = $subtotalGeneral - $discountGeneral;
+
+                // CIERRE POS: Cálculo de IVA como snapshot (sobre subtotal - descuento)
                 $ivaRate = $applyIva ? 16.00 : 0.00;
-                $ivaAmount = $applyIva ? round($subtotal * 0.16, 2) : 0.00;
-                $totalWithTax = $subtotal + $ivaAmount;
+                $ivaAmount = $applyIva ? round($subtotalAfterDiscount * 0.16, 2) : 0.00;
+                $totalWithTax = $subtotalAfterDiscount + $ivaAmount;
 
-                // Construir notas con trazabilidad humana COMPLETA
-                $notesLines = ['[VENTA POS MOSTRADOR]'];
+                // -----------------------------------------------------------------
+                // PASO 3: Construir notas con trazabilidad humana COMPLETA
+                // -----------------------------------------------------------------
+                $notesLines = ['[VENTA POS MOSTRADOR - MULTI-ITEM]'];
                 $notesLines[] = "Fecha/Hora: " . $saleTimestamp->format('Y-m-d H:i:s');
                 $notesLines[] = "Vendedor: {$sellerName} (ID: {$sellerId})";
+                $notesLines[] = "Productos: " . count($validatedItems);
                 $notesLines[] = "---";
-                $notesLines[] = "Precio original: $" . number_format($unitPriceOriginal, 2);
-                $notesLines[] = "Precio final: $" . number_format($unitPriceFinal, 2);
 
-                if ($totalDiscount > 0) {
-                    $notesLines[] = "Descuento aplicado: $" . number_format($totalDiscount, 2);
+                foreach ($itemsDetails as $idx => $detail) {
+                    $notesLines[] = ($idx + 1) . ". {$detail['name']} x{$detail['quantity']} @ \${$detail['price_final']} = \$" . number_format($detail['subtotal'], 2);
+                }
+
+                $notesLines[] = "---";
+                $notesLines[] = "Subtotal: \$" . number_format($subtotalGeneral, 2);
+
+                if ($discountGeneral > 0 || $discountReason) {
+                    $discountTypeLabel = $discountType === 'percent' ? '%' : '$';
+                    $notesLines[] = "Descuento: {$discountTypeLabel}" . ($discountValue ?? 0) . " = \$" . number_format($discountGeneral, 2);
                     if ($discountReason) {
-                        $notesLines[] = "Razón descuento: {$discountReason}";
+                        $notesLines[] = "Motivo: {$discountReason}";
                     }
                 }
 
                 if ($applyIva) {
-                    $notesLines[] = "IVA ({$ivaRate}%): $" . number_format($ivaAmount, 2);
-                    $notesLines[] = "Total con IVA: $" . number_format($totalWithTax, 2);
+                    $notesLines[] = "IVA ({$ivaRate}%): \$" . number_format($ivaAmount, 2);
                 }
 
-                if ($paymentMethodNote) {
-                    $notesLines[] = "Método de pago: {$paymentMethodNote}";
+                $notesLines[] = "TOTAL: \$" . number_format($totalWithTax, 2);
+
+                if ($paymentMethod) {
+                    $notesLines[] = "Método de pago: {$paymentMethod}";
                 }
 
                 $notes = implode("\n", $notesLines);
 
+                // -----------------------------------------------------------------
+                // PASO 4: Crear Order terminal (snapshot consolidado)
+                // NOTA: Generamos uuid y order_number manualmente porque
+                // saveQuietly() salta los eventos del modelo (creating)
+                // -----------------------------------------------------------------
                 $order = new Order();
-                $order->cliente_id = null;
+                $order->uuid = (string) Str::uuid();
+                $order->order_number = Order::generateOrderNumber();
+                $order->cliente_id = $clienteId;
                 $order->status = Order::STATUS_DELIVERED;
                 $order->payment_status = Order::PAYMENT_PAID;
                 $order->urgency_level = Order::URGENCY_NORMAL;
                 $order->priority = Order::PRIORITY_NORMAL;
-                $order->subtotal = $subtotal;
-                $order->discount = $totalDiscount;
+                $order->subtotal = $subtotalGeneral;
+                $order->discount = $discountGeneral;
+                // Nuevos campos POS para descuento detallado
+                $order->discount_reason = $discountReason;
+                $order->discount_type = $discountType;
+                $order->discount_value = $discountValue;
+                $order->payment_method = $paymentMethod;
                 $order->requires_invoice = $applyIva;
                 $order->iva_rate = $ivaRate;
                 $order->iva_amount = $ivaAmount;
                 $order->total_with_tax = $totalWithTax;
-                $order->total = $totalWithTax; // Total siempre incluye IVA si aplica
+                $order->total = $totalWithTax;
                 $order->amount_paid = $totalWithTax;
                 $order->balance = 0;
                 $order->delivered_date = $saleTimestamp;
+                $order->sold_at = $saleTimestamp; // Fecha y hora exacta
                 $order->created_by = $sellerId;
+                $order->seller_name = $sellerName; // Snapshot del vendedor
                 $order->notes = $notes;
                 $order->saveQuietly();
 
                 // -----------------------------------------------------------------
-                // PASO 5: Crear FinishedGoodsMovement TYPE_SALE_EXIT
-                // INVARIANTE I9: Un sale_exit = un movimiento
-                // Nota: created_by se asigna automáticamente en boot del modelo
+                // PASO 5: Crear FinishedGoodsMovement por cada ítem
                 // -----------------------------------------------------------------
-                $stockAfter = $stockReal - $quantity;
+                $movements = [];
+                foreach ($itemsDetails as $detail) {
+                    $stockAfter = $detail['stock_before'] - $detail['quantity'];
 
-                $movement = new FinishedGoodsMovement();
-                $movement->product_variant_id = $productVariantId;
-                $movement->type = FinishedGoodsMovement::TYPE_SALE_EXIT;
-                $movement->reference_type = Order::class;
-                $movement->reference_id = $order->id;
-                $movement->quantity = $quantity;
-                $movement->stock_before = $stockReal;
-                $movement->stock_after = $stockAfter;
-                $movement->notes = "Venta POS #{$order->order_number} | Vendedor: {$sellerName}";
-                $movement->save();
+                    $movement = new FinishedGoodsMovement();
+                    $movement->product_variant_id = $detail['variant_id'];
+                    $movement->type = FinishedGoodsMovement::TYPE_SALE_EXIT;
+                    $movement->reference_type = Order::class;
+                    $movement->reference_id = $order->id;
+                    $movement->quantity = $detail['quantity'];
+                    $movement->stock_before = $detail['stock_before'];
+                    $movement->stock_after = $stockAfter;
+                    $movement->notes = "Venta POS #{$order->order_number} | {$detail['name']} | Vendedor: {$sellerName}";
+                    $movement->save();
+
+                    $movements[] = [
+                        'movement_id' => $movement->id,
+                        'variant_id' => $detail['variant_id'],
+                        'name' => $detail['name'],
+                        'quantity' => $detail['quantity'],
+                        'stock_before' => $detail['stock_before'],
+                        'stock_after' => $stockAfter,
+                    ];
+                }
 
                 // -----------------------------------------------------------------
-                // PASO 6: Commit (implícito al retornar)
+                // PASO 6: Retornar resultado consolidado
                 // -----------------------------------------------------------------
                 return [
                     'order_id' => $order->id,
                     'order_number' => $order->order_number,
                     'order_uuid' => $order->uuid,
-                    'product_variant_id' => $productVariantId,
-                    'quantity' => $quantity,
-                    'unit_price_original' => number_format($unitPriceOriginal, 2, '.', ''),
-                    'unit_price_final' => number_format($unitPriceFinal, 2, '.', ''),
-                    'discount' => number_format($totalDiscount, 2, '.', ''),
-                    'discount_display' => $totalDiscount > 0,
-                    'subtotal' => number_format($subtotal, 2, '.', ''),
+                    'items_count' => count($validatedItems),
+                    'items' => $movements,
+                    'subtotal' => number_format($subtotalGeneral, 2, '.', ''),
+                    'discount' => number_format($discountGeneral, 2, '.', ''),
+                    'discount_display' => $discountGeneral > 0,
                     'iva_rate' => $ivaRate,
                     'iva_amount' => number_format($ivaAmount, 2, '.', ''),
                     'iva_display' => $applyIva,
                     'total' => number_format($totalWithTax, 2, '.', ''),
-                    'stock_before' => $stockReal,
-                    'stock_after' => $stockAfter,
-                    'movement_id' => $movement->id,
-                    'payment_method_note' => $paymentMethodNote,
+                    'payment_method' => $paymentMethod,
                     'discount_reason' => $discountReason,
                     'seller_id' => $sellerId,
                     'seller_name' => $sellerName,
@@ -280,9 +374,27 @@ class PosController extends Controller
             ], 201);
 
         } catch (\Exception $e) {
+            // Trazabilidad completa del error para debugging
+            $errorTrace = [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace_summary' => collect(array_slice($e->getTrace(), 0, 5))->map(function ($t) {
+                    return ($t['file'] ?? 'unknown') . ':' . ($t['line'] ?? '?') . ' → ' . ($t['function'] ?? '?');
+                })->toArray(),
+            ];
+
+            // Log para el servidor (completo)
+            \Log::error('POS SALE ERROR', $errorTrace);
+
+            // Respuesta al cliente (con info útil para debugging)
             return response()->json([
                 'success' => false,
                 'error' => $e->getMessage(),
+                'debug' => [
+                    'location' => basename($e->getFile()) . ':' . $e->getLine(),
+                    'trace' => $errorTrace['trace_summary'],
+                ],
             ], 400);
         }
     }
@@ -392,40 +504,50 @@ class PosController extends Controller
                 }
 
                 // -----------------------------------------------------------------
-                // PASO 2: Buscar el movimiento de salida original
+                // PASO 2: Buscar TODOS los movimientos de salida originales
+                // (ventas multi-item tienen varios movimientos)
                 // -----------------------------------------------------------------
-                $originalMovement = FinishedGoodsMovement::where('reference_type', Order::class)
+                $originalMovements = FinishedGoodsMovement::where('reference_type', Order::class)
                     ->where('reference_id', $order->id)
                     ->where('type', FinishedGoodsMovement::TYPE_SALE_EXIT)
-                    ->first();
+                    ->get();
 
-                if (!$originalMovement) {
+                if ($originalMovements->isEmpty()) {
                     throw new \Exception(
-                        "No se encontró el movimiento de stock original para el pedido {$order->order_number}."
+                        "No se encontraron movimientos de stock para el pedido {$order->order_number}."
                     );
                 }
 
                 // -----------------------------------------------------------------
-                // PASO 3: Calcular stock actual y crear movimiento de devolución
+                // PASO 3: Crear movimiento de devolución por cada ítem
                 // -----------------------------------------------------------------
-                $productVariantId = $originalMovement->product_variant_id;
-                $quantityToReturn = (float) $originalMovement->quantity;
-                $currentStock = $this->calculateRealStock($productVariantId);
-                $stockAfterReturn = $currentStock + $quantityToReturn;
+                $returnedItems = [];
+                foreach ($originalMovements as $originalMovement) {
+                    $productVariantId = $originalMovement->product_variant_id;
+                    $quantityToReturn = (float) $originalMovement->quantity;
+                    $currentStock = $this->calculateRealStock($productVariantId);
+                    $stockAfterReturn = $currentStock + $quantityToReturn;
 
-                $returnMovement = new FinishedGoodsMovement();
-                $returnMovement->product_variant_id = $productVariantId;
-                $returnMovement->type = FinishedGoodsMovement::TYPE_RETURN;
-                $returnMovement->reference_type = Order::class;
-                $returnMovement->reference_id = $order->id;
-                $returnMovement->quantity = $quantityToReturn;
-                $returnMovement->stock_before = $currentStock;
-                $returnMovement->stock_after = $stockAfterReturn;
-                $returnMovement->notes = "CANCELACIÓN Venta POS #{$order->order_number} | " .
-                    "Motivo: {$cancelReason} | " .
-                    "Cancelado por: {$canceller->name}";
-                $returnMovement->created_by = $canceller->id;
-                $returnMovement->save();
+                    $returnMovement = new FinishedGoodsMovement();
+                    $returnMovement->product_variant_id = $productVariantId;
+                    $returnMovement->type = FinishedGoodsMovement::TYPE_RETURN;
+                    $returnMovement->reference_type = Order::class;
+                    $returnMovement->reference_id = $order->id;
+                    $returnMovement->quantity = $quantityToReturn;
+                    $returnMovement->stock_before = $currentStock;
+                    $returnMovement->stock_after = $stockAfterReturn;
+                    $returnMovement->notes = "CANCELACIÓN Venta POS #{$order->order_number} | " .
+                        "Motivo: {$cancelReason} | " .
+                        "Cancelado por: {$canceller->name}";
+                    $returnMovement->created_by = $canceller->id;
+                    $returnMovement->save();
+
+                    $returnedItems[] = [
+                        'variant_id' => $productVariantId,
+                        'quantity' => $quantityToReturn,
+                        'stock_after' => $stockAfterReturn,
+                    ];
+                }
 
                 // -----------------------------------------------------------------
                 // PASO 4: Actualizar el pedido (sin usar saveQuietly para registrar)
@@ -450,11 +572,8 @@ class PosController extends Controller
                     'cancelled_by_id' => $canceller->id,
                     'cancelled_by_name' => $canceller->name,
                     'cancel_reason' => $cancelReason,
-                    'product_variant_id' => $productVariantId,
-                    'quantity_returned' => $quantityToReturn,
-                    'stock_before' => $currentStock,
-                    'stock_after' => $stockAfterReturn,
-                    'return_movement_id' => $returnMovement->id,
+                    'items_returned' => count($returnedItems),
+                    'returned_items' => $returnedItems,
                 ];
             });
 
@@ -465,9 +584,25 @@ class PosController extends Controller
             ], 200);
 
         } catch (\Exception $e) {
+            // Trazabilidad completa del error
+            $errorTrace = [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace_summary' => collect(array_slice($e->getTrace(), 0, 5))->map(function ($t) {
+                    return ($t['file'] ?? 'unknown') . ':' . ($t['line'] ?? '?') . ' → ' . ($t['function'] ?? '?');
+                })->toArray(),
+            ];
+
+            \Log::error('POS CANCEL ERROR', $errorTrace);
+
             return response()->json([
                 'success' => false,
                 'error' => $e->getMessage(),
+                'debug' => [
+                    'location' => basename($e->getFile()) . ':' . $e->getLine(),
+                    'trace' => $errorTrace['trace_summary'],
+                ],
             ], 400);
         }
     }
@@ -608,9 +743,25 @@ class PosController extends Controller
             ], $result['adjustment_needed'] ? 201 : 200);
 
         } catch (\Exception $e) {
+            // Trazabilidad completa del error
+            $errorTrace = [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace_summary' => collect(array_slice($e->getTrace(), 0, 5))->map(function ($t) {
+                    return ($t['file'] ?? 'unknown') . ':' . ($t['line'] ?? '?') . ' → ' . ($t['function'] ?? '?');
+                })->toArray(),
+            ];
+
+            \Log::error('POS ADJUSTMENT ERROR', $errorTrace);
+
             return response()->json([
                 'success' => false,
                 'error' => $e->getMessage(),
+                'debug' => [
+                    'location' => basename($e->getFile()) . ':' . $e->getLine(),
+                    'trace' => $errorTrace['trace_summary'],
+                ],
             ], 400);
         }
     }

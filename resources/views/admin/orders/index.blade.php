@@ -96,15 +96,58 @@
     </div>
 
     {{-- ========================================
-         FILTROS
+         CARD CON FILTROS + TABLA
     ======================================== --}}
-    @include('admin.orders._filters')
+    <div class="card card-outline card-primary mb-0">
+        {{-- FILTROS (fijos, no se recargan con AJAX) --}}
+        <div class="card-header py-2" style="background: #fff;">
+            <div class="row align-items-center">
+                {{-- Prioridad --}}
+                <div class="col-md-2 col-sm-6 mb-2 mb-md-0">
+                    <select id="filter-urgency" class="form-control form-control-sm" style="font-size: 14px;">
+                        <option value="">-- Prioridad --</option>
+                        <option value="normal" {{ request('urgency') == 'normal' ? 'selected' : '' }}>Normal</option>
+                        <option value="urgente" {{ request('urgency') == 'urgente' ? 'selected' : '' }}>Urgente</option>
+                        <option value="express" {{ request('urgency') == 'express' ? 'selected' : '' }}>Express</option>
+                    </select>
+                </div>
 
-    {{-- ========================================
-         TABLA DE PEDIDOS (Contenedor AJAX)
-    ======================================== --}}
-    <div id="orders-table-container">
-        @include('admin.orders._table')
+                {{-- Estado --}}
+                <div class="col-md-2 col-sm-6 mb-2 mb-md-0">
+                    <select id="filter-status" class="form-control form-control-sm" style="font-size: 14px;">
+                        <option value="">-- Estado --</option>
+                        <option value="draft" {{ request('status') == 'draft' ? 'selected' : '' }}>Borrador</option>
+                        <option value="confirmed" {{ request('status') == 'confirmed' ? 'selected' : '' }}>Confirmado</option>
+                        <option value="in_production" {{ request('status') == 'in_production' ? 'selected' : '' }}>En Producción</option>
+                        <option value="ready" {{ request('status') == 'ready' ? 'selected' : '' }}>Listo</option>
+                        <option value="delivered" {{ request('status') == 'delivered' ? 'selected' : '' }}>Entregado</option>
+                        <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Cancelado</option>
+                    </select>
+                </div>
+
+                {{-- Pago --}}
+                <div class="col-md-2 col-sm-6 mb-2 mb-md-0">
+                    <select id="filter-payment" class="form-control form-control-sm" style="font-size: 14px;">
+                        <option value="">-- Pago --</option>
+                        <option value="pending" {{ request('payment_status') == 'pending' ? 'selected' : '' }}>Pendiente</option>
+                        <option value="partial" {{ request('payment_status') == 'partial' ? 'selected' : '' }}>Parcial</option>
+                        <option value="paid" {{ request('payment_status') == 'paid' ? 'selected' : '' }}>Pagado</option>
+                    </select>
+                </div>
+
+                {{-- Limpiar --}}
+                <div class="col-md-auto col-sm-6 mb-2 mb-md-0">
+                    <button type="button" id="filter-clear" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-times"></i> Limpiar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {{-- TABLA (se recarga via AJAX) --}}
+        <div id="orders-table-container">
+            @include('admin.orders._table')
+        </div>
     </div>
 
     {{-- Modal de Pago (Reutilizado del show) --}}

@@ -37,6 +37,23 @@ class OrderController extends Controller
         $query = Order::with(['cliente', 'items'])
             ->orderBy('created_at', 'desc');
 
+        // ========================================
+        // FILTRO BASE: Excluir Ventas POS
+        // Las ventas POS tienen su propia vista en /admin/pos-sales
+        // ========================================
+        $query->where(function ($q) {
+            $q->whereNull('notes')
+              ->orWhere('notes', 'not like', '%[VENTA POS MOSTRADOR%');
+        });
+
+        // ========================================
+        // FILTRO BASE: Excluir Canceladas por defecto
+        // Solo mostrar canceladas si se filtra explícitamente
+        // ========================================
+        if (!$request->filled('status') || $request->status !== Order::STATUS_CANCELLED) {
+            $query->where('status', '!=', Order::STATUS_CANCELLED);
+        }
+
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }

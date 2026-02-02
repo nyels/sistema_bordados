@@ -1,47 +1,26 @@
-{{-- Customer Selector - Enterprise SaaS Design 2025 --}}
+{{-- Customer Selector - Enterprise SaaS Design 2025 - Compact --}}
 <div class="pos-customer-section">
-    <div class="pos-section-header">
-        <i class="fas fa-user"></i>
-        <span>CLIENTE</span>
-    </div>
-
     {{-- Estado: Botones --}}
     <div class="pos-customer-options" id="customer-options">
-        <button type="button" id="btn-venta-libre" class="pos-option-btn pos-option-active">
-            <div class="pos-option-icon">
-                <i class="fas fa-store"></i>
-            </div>
-            <div class="pos-option-text">
-                <strong>Venta Libre</strong>
-                <span>Publico general</span>
-            </div>
-            <div class="pos-option-check">
-                <i class="fas fa-check-circle"></i>
-            </div>
+        <button type="button" id="btn-venta-libre" class="pos-option-chip pos-option-active">
+            <i class="fas fa-store"></i>
+            <span>Venta Libre</span>
         </button>
-
-        <button type="button" id="btn-buscar-cliente" class="pos-option-btn">
-            <div class="pos-option-icon pos-option-icon-search">
-                <i class="fas fa-user-plus"></i>
-            </div>
-            <div class="pos-option-text">
-                <strong>Buscar Cliente</strong>
-                <span>Cliente registrado</span>
-            </div>
-            <div class="pos-option-arrow">
-                <i class="fas fa-chevron-right"></i>
-            </div>
+        <button type="button" id="btn-buscar-cliente" class="pos-option-chip pos-option-search">
+            <i class="fas fa-user-plus"></i>
+            <span>Cliente</span>
+            <i class="fas fa-chevron-right pos-chip-arrow"></i>
         </button>
     </div>
 
     {{-- Estado: Cliente Seleccionado --}}
-    <div id="cliente-selected-card" class="pos-cliente-card" style="display: none;">
-        <div class="pos-cliente-card-avatar" id="cliente-avatar">J</div>
-        <div class="pos-cliente-card-info">
+    <div id="cliente-selected-card" class="pos-cliente-chip" style="display: none;">
+        <div class="pos-cliente-chip-avatar" id="cliente-avatar">J</div>
+        <div class="pos-cliente-chip-info">
             <strong id="cliente-nombre">Juan Perez</strong>
-            <span id="cliente-telefono"><i class="fas fa-phone"></i> 555-1234</span>
+            <span id="cliente-telefono">555-1234</span>
         </div>
-        <button type="button" id="btn-quitar-cliente" class="pos-cliente-card-remove">
+        <button type="button" id="btn-quitar-cliente" class="pos-cliente-chip-remove">
             <i class="fas fa-times"></i>
         </button>
     </div>
@@ -99,188 +78,142 @@
 @push('styles')
 <style>
     /* ============================================
-       CUSTOMER SECTION
+       CUSTOMER SECTION - COMPACT
        ============================================ */
     .pos-customer-section {
-        padding: var(--pos-space-md);
-        border-bottom: 1px solid var(--pos-slate-200);
+        padding: var(--pos-space-sm) var(--pos-space-md);
+        border-bottom: 1px solid var(--pos-slate-100);
         background: var(--pos-white);
     }
 
-    .pos-section-header {
-        display: flex;
-        align-items: center;
-        gap: var(--pos-space-sm);
-        margin-bottom: var(--pos-space-md);
-        font-size: 12px;
-        font-weight: 700;
-        color: var(--pos-slate-500);
-        letter-spacing: 0.05em;
-    }
-
-    .pos-section-header i {
-        font-size: 14px;
-        color: var(--pos-slate-400);
-    }
-
     /* ============================================
-       OPTION BUTTONS
+       OPTION CHIPS - INLINE
        ============================================ */
     .pos-customer-options {
         display: flex;
-        flex-direction: column;
-        gap: var(--pos-space-sm);
+        gap: 8px;
     }
 
-    .pos-option-btn {
+    .pos-option-chip {
         display: flex;
         align-items: center;
-        gap: var(--pos-space-md);
-        width: 100%;
-        padding: var(--pos-space-md);
+        gap: 6px;
+        padding: 8px 14px;
         background: var(--pos-slate-50);
-        border: 2px solid var(--pos-slate-200);
-        border-radius: var(--pos-radius-md);
+        border: 1.5px solid var(--pos-slate-200);
+        border-radius: var(--pos-radius-full);
         cursor: pointer;
         transition: var(--pos-transition);
-        text-align: left;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--pos-slate-600);
     }
 
-    .pos-option-btn:hover {
+    .pos-option-chip:hover {
         background: var(--pos-slate-100);
         border-color: var(--pos-slate-300);
     }
 
-    .pos-option-btn.pos-option-active {
-        background: rgba(79, 70, 229, 0.08);
+    .pos-option-chip.pos-option-active {
+        background: var(--pos-primary);
         border-color: var(--pos-primary);
+        color: var(--pos-white);
     }
 
-    .pos-option-icon {
-        width: 40px;
-        height: 40px;
+    .pos-option-chip i {
+        font-size: 11px;
+    }
+
+    .pos-option-chip.pos-option-active i {
+        color: var(--pos-white);
+    }
+
+    .pos-option-chip.pos-option-search {
+        background: var(--pos-white);
+        border-color: var(--pos-success);
+        color: var(--pos-success);
+    }
+
+    .pos-option-chip.pos-option-search:hover {
+        background: rgba(16, 185, 129, 0.08);
+    }
+
+    .pos-chip-arrow {
+        font-size: 10px !important;
+        margin-left: 2px;
+        transition: transform 0.15s;
+    }
+
+    .pos-option-chip:hover .pos-chip-arrow {
+        transform: translateX(2px);
+    }
+
+    /* ============================================
+       CLIENTE CHIP (SELECTED)
+       ============================================ */
+    .pos-cliente-chip {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 10px;
+        background: rgba(79, 70, 229, 0.08);
+        border: 1.5px solid var(--pos-primary);
+        border-radius: var(--pos-radius-full);
+    }
+
+    .pos-cliente-chip-avatar {
+        width: 28px;
+        height: 28px;
         display: flex;
         align-items: center;
         justify-content: center;
         background: var(--pos-primary);
-        border-radius: var(--pos-radius-sm);
+        border-radius: 50%;
         color: var(--pos-white);
-        font-size: 16px;
-        flex-shrink: 0;
-    }
-
-    .pos-option-icon-search {
-        background: var(--pos-success);
-    }
-
-    .pos-option-text {
-        flex: 1;
-    }
-
-    .pos-option-text strong {
-        display: block;
-        font-size: 14px;
-        font-weight: 600;
-        color: var(--pos-slate-800);
-        margin-bottom: 2px;
-    }
-
-    .pos-option-text span {
         font-size: 12px;
-        color: var(--pos-slate-500);
-    }
-
-    .pos-option-check {
-        color: var(--pos-primary);
-        font-size: 18px;
-        opacity: 0;
-        transition: opacity 0.15s;
-    }
-
-    .pos-option-active .pos-option-check {
-        opacity: 1;
-    }
-
-    .pos-option-arrow {
-        color: var(--pos-slate-400);
-        font-size: 14px;
-        transition: transform 0.15s;
-    }
-
-    .pos-option-btn:hover .pos-option-arrow {
-        transform: translateX(4px);
-        color: var(--pos-success);
-    }
-
-    /* ============================================
-       CLIENTE CARD (SELECTED)
-       ============================================ */
-    .pos-cliente-card {
-        display: flex;
-        align-items: center;
-        gap: var(--pos-space-md);
-        padding: var(--pos-space-md);
-        background: rgba(79, 70, 229, 0.08);
-        border: 2px solid var(--pos-primary);
-        border-radius: var(--pos-radius-md);
-    }
-
-    .pos-cliente-card-avatar {
-        width: 44px;
-        height: 44px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: linear-gradient(135deg, var(--pos-primary) 0%, var(--pos-primary-dark) 100%);
-        border-radius: var(--pos-radius-sm);
-        color: var(--pos-white);
-        font-size: 18px;
         font-weight: 700;
         flex-shrink: 0;
     }
 
-    .pos-cliente-card-info {
+    .pos-cliente-chip-info {
         flex: 1;
         min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
 
-    .pos-cliente-card-info strong {
-        display: block;
-        font-size: 14px;
+    .pos-cliente-chip-info strong {
+        font-size: 12px;
         font-weight: 600;
         color: var(--pos-primary-dark);
-        margin-bottom: 2px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
-    .pos-cliente-card-info span {
-        font-size: 12px;
-        color: var(--pos-primary);
+    .pos-cliente-chip-info span {
+        font-size: 11px;
+        color: var(--pos-slate-500);
     }
 
-    .pos-cliente-card-info span i {
-        margin-right: 4px;
-    }
-
-    .pos-cliente-card-remove {
+    .pos-cliente-chip-remove {
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 36px;
-        height: 36px;
+        width: 24px;
+        height: 24px;
         background: var(--pos-danger);
         border: none;
-        border-radius: var(--pos-radius-sm);
+        border-radius: 50%;
         color: var(--pos-white);
-        font-size: 14px;
+        font-size: 10px;
         cursor: pointer;
         transition: var(--pos-transition);
         flex-shrink: 0;
     }
 
-    .pos-cliente-card-remove:hover {
+    .pos-cliente-chip-remove:hover {
         background: var(--pos-danger-dark);
     }
 

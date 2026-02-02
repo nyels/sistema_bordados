@@ -433,6 +433,29 @@ Route::delete('/recomendaciones/delete/{id}', [App\Http\Controllers\Recomendacio
     ->name('admin.recomendaciones.destroy')
     ->middleware('auth');
 
+// Motivos de Descuento
+Route::get('/motivos-descuento', [App\Http\Controllers\MotivoDescuentoController::class, 'index'])
+    ->name('admin.motivos-descuento.index')
+    ->middleware('auth');
+Route::get('/motivos-descuento/nuevo', [App\Http\Controllers\MotivoDescuentoController::class, 'create'])
+    ->name('admin.motivos-descuento.create')
+    ->middleware('auth');
+Route::post('/motivos-descuento/create', [App\Http\Controllers\MotivoDescuentoController::class, 'store'])
+    ->name('admin.motivos-descuento.store')
+    ->middleware('auth');
+Route::get('/motivos-descuento/edit/{id}', [App\Http\Controllers\MotivoDescuentoController::class, 'edit'])
+    ->name('admin.motivos-descuento.edit')
+    ->middleware('auth');
+Route::put('/motivos-descuento/edit/{id}', [App\Http\Controllers\MotivoDescuentoController::class, 'update'])
+    ->name('admin.motivos-descuento.update')
+    ->middleware('auth');
+Route::get('/motivos-descuento/confirm_delete/{id}', [App\Http\Controllers\MotivoDescuentoController::class, 'confirm_delete'])
+    ->name('admin.motivos-descuento.confirm_delete')
+    ->middleware('auth');
+Route::delete('/motivos-descuento/delete/{id}', [App\Http\Controllers\MotivoDescuentoController::class, 'destroy'])
+    ->name('admin.motivos-descuento.destroy')
+    ->middleware('auth');
+
 // Clientes
 Route::get('/clientes', [App\Http\Controllers\ClienteController::class, 'index'])
     ->name('admin.clientes.index')
@@ -1384,6 +1407,16 @@ Route::patch('admin/pos-sales/{order}/cancel', [App\Http\Controllers\PosSalesCon
     ->name('admin.pos-sales.cancel')
     ->middleware('auth')
     ->where('order', '[0-9]+');
+
+Route::get('admin/pos-sales/{order}/items', [App\Http\Controllers\PosSalesController::class, 'items'])
+    ->name('admin.pos-sales.items')
+    ->middleware('auth')
+    ->where('order', '[0-9]+');
+
+Route::get('admin/pos-sales/cliente/{cliente}', [App\Http\Controllers\PosSalesController::class, 'getCliente'])
+    ->name('admin.pos-sales.cliente')
+    ->middleware('auth')
+    ->where('cliente', '[0-9]+');
 
 /*
 |--------------------------------------------------------------------------

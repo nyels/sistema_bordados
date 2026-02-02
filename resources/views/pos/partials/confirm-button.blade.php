@@ -1,4 +1,4 @@
-{{-- Action Buttons - Enterprise SaaS Design 2025 --}}
+{{-- Action Buttons - Enterprise SaaS Design 2025 - Compact --}}
 <div class="pos-actions-section">
     {{-- ACCION PRINCIPAL: CONFIRMAR --}}
     <button onclick="openModal('modal-confirm')" class="pos-btn-confirm">
@@ -9,79 +9,86 @@
     {{-- ACCION SECUNDARIA: LIMPIAR --}}
     <button onclick="openModal('modal-cancel')" class="pos-btn-clear">
         <i class="fas fa-trash-alt"></i>
-        <span>Limpiar carrito</span>
+        <span>Limpiar</span>
     </button>
 </div>
 
 @push('styles')
 <style>
     .pos-actions-section {
-        padding: var(--pos-space-md);
+        padding: var(--pos-space-sm) var(--pos-space-md) var(--pos-space-md);
         display: flex;
-        flex-direction: column;
-        gap: var(--pos-space-sm);
-        background: var(--pos-slate-50);
+        gap: 10px;
+        background: var(--pos-white);
+        border-top: 1px solid var(--pos-slate-100);
+        margin-top: auto;
     }
 
     .pos-btn-confirm {
+        flex: 1;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: var(--pos-space-sm);
-        width: 100%;
-        height: 56px;
+        gap: 8px;
+        height: 44px;
         background: linear-gradient(135deg, var(--pos-success) 0%, var(--pos-success-dark) 100%);
         border: none;
         border-radius: var(--pos-radius-md);
         color: var(--pos-white);
-        font-size: 16px;
+        font-size: 13px;
         font-weight: 700;
         letter-spacing: 0.3px;
         cursor: pointer;
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
         transition: var(--pos-transition);
     }
 
     .pos-btn-confirm i {
-        font-size: 18px;
+        font-size: 14px;
     }
 
     .pos-btn-confirm:hover {
         background: linear-gradient(135deg, var(--pos-success-dark) 0%, #047857 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
     }
 
     .pos-btn-confirm:active {
         transform: translateY(0);
-        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+        box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2);
     }
 
     .pos-btn-clear {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: var(--pos-space-sm);
-        width: 100%;
+        gap: 6px;
+        padding: 0 18px;
         height: 44px;
-        background: var(--pos-white);
-        border: 2px solid var(--pos-slate-200);
+        background: var(--pos-slate-100);
+        border: 2px solid var(--pos-slate-300);
         border-radius: var(--pos-radius-md);
-        color: var(--pos-slate-500);
-        font-size: 14px;
-        font-weight: 600;
+        color: var(--pos-slate-600);
+        font-size: 13px;
+        font-weight: 700;
         cursor: pointer;
         transition: var(--pos-transition);
+        white-space: nowrap;
     }
 
     .pos-btn-clear i {
-        font-size: 14px;
+        font-size: 13px;
+        color: var(--pos-danger);
     }
 
     .pos-btn-clear:hover {
         border-color: var(--pos-danger);
         color: var(--pos-danger);
-        background: rgba(239, 68, 68, 0.05);
+        background: rgba(239, 68, 68, 0.1);
+    }
+
+    .pos-btn-clear:active {
+        transform: scale(0.98);
     }
 </style>
 @endpush

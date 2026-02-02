@@ -1,293 +1,355 @@
 {{-- Totals - Enterprise SaaS Design 2025 --}}
 <div class="pos-totals-section">
-    {{-- Precio Final Manual --}}
-    <div class="pos-input-group">
-        <label for="unit-price-final" class="pos-input-label">
-            <i class="fas fa-tag"></i> Precio Final
-        </label>
-        <div class="pos-input-wrapper">
-            <span class="pos-input-prefix">$</span>
-            <input type="number"
-                   id="unit-price-final"
-                   min="0"
-                   step="0.01"
-                   placeholder="0.00"
-                   class="pos-input-number">
-            <span class="pos-input-suffix">c/u</span>
+    {{-- Descuento --}}
+    <div class="pos-discount-section">
+        <div class="pos-discount-header">
+            <label class="pos-discount-label">Motivo descuento</label>
+            <select id="discount-reason" class="pos-discount-reason">
+                <option value="">Selecciona el motivo</option>
+                @if(isset($motivosDescuento))
+                    @foreach($motivosDescuento as $motivo)
+                        <option value="{{ $motivo->nombre }}">{{ $motivo->nombre }}</option>
+                    @endforeach
+                @endif
+            </select>
+        </div>
+        <div class="pos-discount-controls">
+            <div class="pos-discount-type">
+                <button type="button" id="btn-discount-money" class="pos-discount-btn active" data-type="money">
+                    <i class="fas fa-dollar-sign"></i>
+                </button>
+                <button type="button" id="btn-discount-percent" class="pos-discount-btn" data-type="percent">
+                    <i class="fas fa-percent"></i>
+                </button>
+            </div>
+            <div class="pos-discount-value">
+                <span class="pos-discount-prefix" id="discount-prefix">$</span>
+                <input type="number"
+                       id="discount-value"
+                       min="0"
+                       step="0.01"
+                       placeholder="0.00"
+                       value="">
+            </div>
         </div>
     </div>
 
-    {{-- ADVERTENCIA DE PRECIO DE RIESGO --}}
-    <div id="price-warning" class="pos-price-warning hidden">
-        <div class="pos-warning-icon">
-            <i class="fas fa-exclamation-triangle"></i>
-        </div>
-        <div class="pos-warning-content">
-            <p id="price-warning-title" class="pos-warning-title"></p>
-            <p id="price-warning-text" class="pos-warning-text"></p>
-        </div>
-    </div>
-
-    {{-- Discount Reason --}}
-    <div class="pos-input-group">
-        <label for="discount-reason" class="pos-input-label">
-            <i class="fas fa-percent"></i> Motivo Descuento
-        </label>
-        <input type="text"
-               id="discount-reason"
-               placeholder="Razon del descuento (opcional)..."
-               maxlength="255"
-               class="pos-input-text">
-    </div>
-
-    {{-- IVA Toggle --}}
-    <div class="pos-toggle-group">
-        <span class="pos-toggle-label">
-            <i class="fas fa-receipt"></i> Aplicar IVA
-        </span>
-        <label class="pos-toggle">
-            <input type="checkbox" id="apply-iva" class="pos-toggle-input">
-            <span class="pos-toggle-slider"></span>
-        </label>
-    </div>
-
-    {{-- Info Card --}}
-    <div class="pos-info-card">
-        <i class="fas fa-info-circle"></i>
-        <p>El total sera calculado por el servidor al confirmar.</p>
+    {{-- Total Display --}}
+    <div class="pos-total-display" id="pos-total-display">
+        <span class="pos-total-empty">Agrega productos al carrito</span>
     </div>
 </div>
 
 @push('styles')
 <style>
     .pos-totals-section {
-        padding: var(--pos-space-md);
-        border-bottom: 1px solid var(--pos-slate-200);
+        padding: var(--pos-space-sm) var(--pos-space-md);
         display: flex;
         flex-direction: column;
-        gap: var(--pos-space-md);
+        gap: 10px;
         background: var(--pos-white);
+        border-top: 1px solid var(--pos-slate-100);
     }
 
-    .pos-input-group {
+    /* Discount Section */
+    .pos-discount-section {
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        gap: 8px;
     }
 
-    .pos-input-label {
+    .pos-discount-header {
         display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 12px;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .pos-discount-label {
+        font-size: 11px;
         font-weight: 600;
         color: var(--pos-slate-500);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
     }
 
-    .pos-input-label i {
-        font-size: 12px;
+    .pos-discount-reason {
+        width: 100%;
+        height: 34px;
+        padding: 0 12px;
+        background: var(--pos-slate-50);
+        border: 1.5px solid var(--pos-slate-200);
+        border-radius: var(--pos-radius-sm);
+        font-size: 13px;
+        color: var(--pos-slate-700);
+        transition: var(--pos-transition);
+        cursor: pointer;
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        padding-right: 32px;
+    }
+
+    .pos-discount-reason:focus {
+        outline: none;
+        border-color: var(--pos-primary);
+        background-color: var(--pos-white);
+    }
+
+    .pos-discount-reason option {
+        color: var(--pos-slate-700);
+        background: var(--pos-white);
+        padding: 8px;
+    }
+
+    .pos-discount-reason option:first-child {
         color: var(--pos-slate-400);
     }
 
-    .pos-input-wrapper {
+    .pos-discount-controls {
         display: flex;
         align-items: center;
-        background: var(--pos-white);
-        border: 2px solid var(--pos-slate-200);
+        gap: 8px;
+    }
+
+    .pos-discount-type {
+        display: flex;
+        background: var(--pos-slate-200);
         border-radius: var(--pos-radius-md);
+        padding: 3px;
+        gap: 2px;
+    }
+
+    .pos-discount-btn {
+        width: 38px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        border: 2px solid transparent;
+        border-radius: var(--pos-radius-sm);
+        color: var(--pos-slate-500);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .pos-discount-btn:hover {
+        color: var(--pos-slate-700);
+        background: rgba(255, 255, 255, 0.5);
+    }
+
+    .pos-discount-btn.active {
+        background: var(--pos-primary);
+        color: var(--pos-white);
+        border-color: var(--pos-primary);
+        box-shadow: 0 2px 8px rgba(79, 70, 229, 0.35);
+    }
+
+    .pos-discount-btn.active:hover {
+        background: var(--pos-primary-dark);
+        border-color: var(--pos-primary-dark);
+    }
+
+    .pos-discount-value {
+        display: flex;
+        align-items: center;
+        flex: 1;
+        min-width: 120px;
+        height: 36px;
+        background: var(--pos-slate-50);
+        border: 1.5px solid var(--pos-slate-200);
+        border-radius: var(--pos-radius-sm);
         overflow: hidden;
         transition: var(--pos-transition);
     }
 
-    .pos-input-wrapper:focus-within {
+    .pos-discount-value:focus-within {
         border-color: var(--pos-primary);
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        background: var(--pos-white);
     }
 
-    .pos-input-prefix,
-    .pos-input-suffix {
-        padding: 0 12px;
+    .pos-discount-prefix {
+        padding: 0 8px 0 12px;
         font-size: 14px;
-        font-weight: 600;
-        color: var(--pos-slate-500);
-        background: var(--pos-slate-50);
+        font-weight: 700;
+        color: var(--pos-slate-600);
     }
 
-    .pos-input-prefix {
-        border-right: 1px solid var(--pos-slate-200);
-    }
-
-    .pos-input-suffix {
-        border-left: 1px solid var(--pos-slate-200);
-        font-size: 12px;
-    }
-
-    .pos-input-number {
+    .pos-discount-value input {
         flex: 1;
-        height: 44px;
-        padding: 0 12px;
+        width: 100%;
+        height: 100%;
         border: none;
-        font-size: 16px;
+        background: transparent;
+        font-size: 15px;
         font-weight: 600;
         color: var(--pos-slate-800);
-        background: transparent;
         outline: none;
+        padding-right: 12px;
     }
 
-    .pos-input-number::placeholder {
+    .pos-discount-value input::placeholder {
         color: var(--pos-slate-400);
         font-weight: 400;
     }
 
-    .pos-input-text {
-        width: 100%;
-        height: 44px;
-        padding: 0 14px;
-        background: var(--pos-white);
-        border: 2px solid var(--pos-slate-200);
+    /* Total Display */
+    .pos-total-display {
+        background: linear-gradient(135deg, var(--pos-primary) 0%, var(--pos-primary-dark) 100%);
         border-radius: var(--pos-radius-md);
-        font-size: 14px;
-        color: var(--pos-slate-800);
-        transition: var(--pos-transition);
+        padding: 8px 10px;
+        color: var(--pos-white);
     }
 
-    .pos-input-text:focus {
-        outline: none;
-        border-color: var(--pos-primary);
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-    }
-
-    .pos-input-text::placeholder {
-        color: var(--pos-slate-400);
-    }
-
-    /* Price Warning */
-    .pos-price-warning {
-        display: flex;
-        align-items: flex-start;
-        gap: var(--pos-space-sm);
-        padding: var(--pos-space-md);
-        border-radius: var(--pos-radius-md);
-        background: rgba(245, 158, 11, 0.1);
-        border: 1px solid var(--pos-warning);
-    }
-
-    .pos-price-warning.hidden {
-        display: none;
-    }
-
-    .pos-warning-icon {
-        font-size: 18px;
-        color: var(--pos-warning);
-        flex-shrink: 0;
-    }
-
-    .pos-warning-content {
-        flex: 1;
-    }
-
-    .pos-warning-title {
-        font-size: 13px;
-        font-weight: 700;
-        color: #92400e;
-        margin: 0 0 2px 0;
-    }
-
-    .pos-warning-text {
+    .pos-total-empty {
+        display: block;
+        text-align: center;
         font-size: 12px;
-        color: #a16207;
-        margin: 0;
-        line-height: 1.4;
+        color: rgba(255, 255, 255, 0.7);
+        padding: 4px 0;
     }
 
-    /* Toggle */
-    .pos-toggle-group {
+    .pos-total-row {
         display: flex;
-        align-items: center;
         justify-content: space-between;
-        padding: var(--pos-space-md);
-        background: var(--pos-slate-50);
-        border-radius: var(--pos-radius-md);
+        align-items: center;
+        font-size: 12px;
+        font-weight: 500;
+        padding: 2px 0;
+        color: rgba(255, 255, 255, 0.95);
     }
 
-    .pos-toggle-label {
+    .pos-total-row span:last-child {
+        font-weight: 600;
+    }
+
+    .pos-total-row-subtotal {
+        padding-bottom: 4px;
+        margin-bottom: 4px;
+        border-bottom: 1px dashed rgba(255, 255, 255, 0.3);
+    }
+
+    .pos-total-row-discount {
+        color: var(--pos-success-light, #6ee7b7);
+        padding-bottom: 4px;
+        margin-bottom: 4px;
+        border-bottom: 1px dashed rgba(255, 255, 255, 0.3);
+    }
+
+    .pos-total-row-iva .pos-iva-label {
         display: flex;
         align-items: center;
-        gap: 8px;
-        font-size: 14px;
-        font-weight: 600;
-        color: var(--pos-slate-600);
+        gap: 6px;
     }
 
-    .pos-toggle-label i {
-        color: var(--pos-slate-400);
-    }
-
-    .pos-toggle {
+    /* Mini Toggle for IVA */
+    .pos-toggle-mini {
         position: relative;
-        display: inline-block;
-        width: 48px;
-        height: 26px;
+        width: 28px;
+        height: 16px;
         cursor: pointer;
     }
 
-    .pos-toggle-input {
+    .pos-toggle-mini input {
         opacity: 0;
         width: 0;
         height: 0;
     }
 
-    .pos-toggle-slider {
+    .pos-toggle-mini-slider {
         position: absolute;
         inset: 0;
-        background: var(--pos-slate-300);
-        border-radius: var(--pos-radius-full);
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
         transition: var(--pos-transition);
     }
 
-    .pos-toggle-slider::before {
+    .pos-toggle-mini-slider::before {
         content: '';
         position: absolute;
         top: 2px;
         left: 2px;
-        width: 22px;
-        height: 22px;
+        width: 12px;
+        height: 12px;
         background: var(--pos-white);
-        border-radius: var(--pos-radius-full);
-        box-shadow: var(--pos-shadow-sm);
+        border-radius: 50%;
         transition: var(--pos-transition);
     }
 
-    .pos-toggle-input:checked + .pos-toggle-slider {
-        background: var(--pos-primary);
+    .pos-toggle-mini input:checked + .pos-toggle-mini-slider {
+        background: var(--pos-success);
     }
 
-    .pos-toggle-input:checked + .pos-toggle-slider::before {
-        transform: translateX(22px);
+    .pos-toggle-mini input:checked + .pos-toggle-mini-slider::before {
+        transform: translateX(12px);
     }
 
-    /* Info Card */
-    .pos-info-card {
-        display: flex;
-        align-items: center;
-        gap: var(--pos-space-sm);
-        padding: var(--pos-space-md);
-        background: rgba(79, 70, 229, 0.08);
-        border: 1px solid rgba(79, 70, 229, 0.2);
-        border-radius: var(--pos-radius-md);
+    .pos-total-row-final {
+        margin-top: 4px;
+        padding-top: 6px;
+        border-top: 2px solid rgba(255, 255, 255, 0.3);
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--pos-white);
     }
 
-    .pos-info-card i {
-        font-size: 16px;
-        color: var(--pos-primary);
-        flex-shrink: 0;
-    }
-
-    .pos-info-card p {
-        margin: 0;
-        font-size: 12px;
-        font-weight: 500;
-        color: var(--pos-primary-dark);
+    .pos-total-row-final span:last-child {
+        font-size: 14px;
+        font-weight: 700;
     }
 </style>
+@endpush
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var btnMoney = document.getElementById('btn-discount-money');
+    var btnPercent = document.getElementById('btn-discount-percent');
+    var discountPrefix = document.getElementById('discount-prefix');
+    var discountValue = document.getElementById('discount-value');
+
+    // Función para disparar actualización de totales
+    function triggerUpdateTotals() {
+        if (typeof window.updateTotals === 'function') {
+            window.updateTotals();
+        }
+    }
+
+    if (btnMoney && btnPercent) {
+        btnMoney.addEventListener('click', function() {
+            btnMoney.classList.add('active');
+            btnPercent.classList.remove('active');
+            discountPrefix.textContent = '$';
+            discountValue.placeholder = '0.00';
+            discountValue.step = '0.01';
+            discountValue.removeAttribute('max');
+            triggerUpdateTotals();
+        });
+
+        btnPercent.addEventListener('click', function() {
+            btnPercent.classList.add('active');
+            btnMoney.classList.remove('active');
+            discountPrefix.textContent = '%';
+            discountValue.placeholder = '0';
+            discountValue.step = '1';
+            discountValue.max = '100';
+            triggerUpdateTotals();
+        });
+    }
+
+    if (discountValue) {
+        // Eventos múltiples para capturar cualquier cambio
+        ['input', 'change', 'keyup'].forEach(function(eventType) {
+            discountValue.addEventListener(eventType, function() {
+                triggerUpdateTotals();
+            });
+        });
+    }
+});
+</script>
 @endpush

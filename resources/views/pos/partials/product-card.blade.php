@@ -14,7 +14,15 @@
 <div class="pos-product-card {{ $hasStock ? 'has-stock' : 'no-stock' }}"
      data-product-card
      data-product-name="{{ $fullName }}"
-     data-product-sku="{{ $sku }}">
+     data-product-sku="{{ $sku }}"
+     @if($hasStock)
+     onclick="addProduct('{{ $variant->id }}', '{{ str_replace(["'", '"'], ["\\'", '&quot;'], $fullName) }}', '{{ $price }}', '{{ $imageUrl }}', '{{ $stock }}')"
+     data-add-product
+     data-variant-id="{{ $variant->id }}"
+     data-name="{{ $fullName }}"
+     data-price="{{ $price }}"
+     data-stock="{{ $stock }}"
+     @endif>
 
     {{-- Image --}}
     <div class="pos-product-image">
@@ -32,19 +40,14 @@
             {{ $hasStock ? $stock . ' disp.' : 'Agotado' }}
         </div>
 
-        {{-- Hover Overlay --}}
+        {{-- Hover Overlay (visual only) --}}
         @if($hasStock)
-        <button data-add-product
-                data-variant-id="{{ $variant->id }}"
-                data-name="{{ $fullName }}"
-                data-price="{{ $price }}"
-                data-stock="{{ $stock }}"
-                class="pos-product-overlay">
+        <div class="pos-product-overlay">
             <div class="pos-product-add-icon">
                 <i class="fas fa-plus"></i>
             </div>
             <span>Agregar al carrito</span>
-        </button>
+        </div>
         @endif
     </div>
 
@@ -73,10 +76,18 @@
         transition: var(--pos-transition);
     }
 
+    .pos-product-card.has-stock {
+        cursor: pointer;
+    }
+
     .pos-product-card.has-stock:hover {
         transform: translateY(-4px);
         box-shadow: var(--pos-shadow-xl);
         border-color: var(--pos-primary);
+    }
+
+    .pos-product-card.has-stock:active {
+        transform: translateY(-2px);
     }
 
     .pos-product-card.no-stock {

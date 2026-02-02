@@ -257,7 +257,7 @@ return [
     */
 
     'use_route_url' => false,
-    'dashboard_url' => 'home',
+    'dashboard_url' => false,
     'logout_url' => 'logout',
     'login_url' => 'login',
     'register_url' => 'register',
@@ -299,6 +299,13 @@ return [
     */
 
     'menu' => [
+        [
+            'text' => 'Dashboard',
+            'url' => 'home',
+            'icon' => 'fas fa-fw fa-tachometer-alt',
+            'active' => ['home'],
+        ],
+
         /*
         |--------------------------------------------------------------------------
         | VENTAS POS (Mostrador)
@@ -571,6 +578,12 @@ return [
                     'url' => 'tipos_aplicacion',
                     'icon' => 'fas fa-fw fa-palette',
                     'active' => ['tipos_aplicacion*'],
+                ],
+                [
+                    'text' => 'Motivos de Descuento',
+                    'url' => 'motivos-descuento',
+                    'icon' => 'fas fa-fw fa-percent',
+                    'active' => ['motivos-descuento*'],
                 ],
             ],
         ],

@@ -49,6 +49,13 @@ class Order extends Model
         'notes',
         'created_by',
         'updated_by',
+        // Campos POS
+        'discount_reason',
+        'discount_type',
+        'discount_value',
+        'payment_method',
+        'sold_at',
+        'seller_name',
     ];
 
     // === CONSTANTES DE PRIORIDAD ===
@@ -75,6 +82,9 @@ class Order extends Model
         'minimum_date' => 'date',
         'delivered_date' => 'date',
         'cancelled_at' => 'datetime',
+        // Campos POS
+        'discount_value' => 'decimal:2',
+        'sold_at' => 'datetime',
     ];
 
     // === CONSTANTES DE ESTADO ===
@@ -1742,18 +1752,17 @@ class Order extends Model
      * Verifica si el pedido es una VENTA POS (mostrador).
      *
      * CRITERIOS:
-     * - cliente_id = NULL (venta sin cliente registrado)
      * - status = DELIVERED (creado directo como entregado)
-     * - Tiene movimiento TYPE_SALE_EXIT asociado
+     * - notes CONTIENE '[VENTA POS MOSTRADOR' (marca distintiva)
+     * - cliente_id puede ser NULL o tener cliente asignado
      *
      * @return bool TRUE si es venta POS
      */
     public function isPosOrder(): bool
     {
-        // Venta POS: sin cliente, entregado, tiene notas de POS
-        return $this->cliente_id === null
-            && $this->status === self::STATUS_DELIVERED
-            && str_contains($this->notes ?? '', '[VENTA POS MOSTRADOR]');
+        // Venta POS: entregado + tiene notas de POS (cliente es opcional)
+        return $this->status === self::STATUS_DELIVERED
+            && str_contains($this->notes ?? '', '[VENTA POS MOSTRADOR');
     }
 
     /**
