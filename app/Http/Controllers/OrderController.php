@@ -10,11 +10,13 @@ use App\Models\Cliente;
 use App\Models\Product;
 use App\Models\ClientMeasurement;
 use App\Models\DesignExport;
+use App\Models\UrgencyLevel;
 use App\Events\OrderStatusChanged;
 use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\StoreOrderPaymentRequest;
 use App\Http\Requests\CancelOrderRequest;
 use App\Services\OrderService;
+use App\Services\ProductionCapacityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -156,7 +158,36 @@ class OrderController extends Controller
             }
         }
 
-        return view('admin.orders.create', compact('products', 'relatedOrder'));
+        // ================================================================
+        // MOTOR DE CAPACIDAD: Obtener información para feedback visual
+        // PASO 3: Solo visualización, sin control para el usuario
+        // ================================================================
+        $capacityService = app(ProductionCapacityService::class);
+
+        // Sugerir fecha inicial (lead time = 0, se recalculará al agregar productos)
+        $capacitySuggestion = $capacityService->suggestPromisedDate(0);
+        $capacityInfo = null;
+
+        if ($capacitySuggestion['week_snapshot']) {
+            $snapshot = $capacitySuggestion['week_snapshot'];
+            $capacityInfo = [
+                'suggested_date' => $capacitySuggestion['suggested_date'],
+                'week_label' => $capacityService->formatWeekLabel($snapshot['year'], $snapshot['week'], true),
+                'week_start' => $snapshot['week_start'],
+                'week_end' => $snapshot['week_end'],
+                'used' => $snapshot['used'],
+                'max' => $snapshot['max'],
+                'available' => $snapshot['available'],
+                'utilization_percent' => $snapshot['utilization_percent'],
+                'is_full' => $snapshot['is_full'],
+                'is_high_load' => $snapshot['utilization_percent'] >= 80,
+            ];
+        }
+
+        // Niveles de urgencia desde la base de datos
+        $urgencyLevels = UrgencyLevel::activo()->ordered()->get();
+
+        return view('admin.orders.create', compact('products', 'relatedOrder', 'capacityInfo', 'urgencyLevels'));
     }
 
     // === GUARDAR NUEVO PEDIDO ===
@@ -226,11 +257,15 @@ class OrderController extends Controller
             ];
         });
 
+        // Niveles de urgencia desde la base de datos
+        $urgencyLevels = UrgencyLevel::activo()->ordered()->get();
+
         return view('admin.orders.create', [
             'products' => $products,
             'order' => $order,
             'orderItems' => $orderItems,
             'isEdit' => true,
+            'urgencyLevels' => $urgencyLevels,
         ]);
     }
 
@@ -669,7 +704,8 @@ class OrderController extends Controller
         return response()->json([
             'results' => $clientes->map(fn($c) => [
                 'id' => $c->id,
-                'text' => "{$c->nombre} {$c->apellidos} - {$c->telefono}",
+                'text' => trim("{$c->nombre} {$c->apellidos}"),
+                'telefono' => $c->telefono,
             ]),
             'pagination' => [
                 'more' => ($page * $perPage) < $total,
@@ -689,7 +725,8 @@ class OrderController extends Controller
                 $q->where('name', 'like', "%{$term}%")
                     ->orWhere('sku', 'like', "%{$term}%");
             })
-            ->with(['variants.attributeValues', 'primaryImage', 'productType', 'extras', 'category']);
+            ->with(['variants.attributeValues', 'primaryImage', 'productType', 'extras', 'category'])
+            ->orderBy('name', 'asc');
 
         $total = $query->count();
         $products = $query->skip(($page - 1) * $perPage)
@@ -830,32 +867,120 @@ class OrderController extends Controller
     // === AJAX: MEDIDAS DEL CLIENTE ===
     public function getClientMeasurements(Cliente $cliente)
     {
-        // Buscar en tabla client_measurements (nuevo sistema)
-        $measurements = ClientMeasurement::where('cliente_id', $cliente->id)
-            ->orderBy('is_primary', 'desc')
-            ->orderBy('created_at', 'desc')
+        $result = [];
+
+        // 1. Buscar en historial de medidas (ClientMeasurementHistory) - más recientes primero
+        $history = \App\Models\ClientMeasurementHistory::where('cliente_id', $cliente->id)
+            ->with(['order:id,order_number', 'product:id,name'])
+            ->orderBy('captured_at', 'desc')
+            ->limit(20)
             ->get();
 
-        // Si no hay registros, usar medidas legacy de tabla clientes
-        if ($measurements->isEmpty() && $this->clientHasLegacyMeasures($cliente)) {
-            return response()->json([
-                [
-                    'id' => 0,
-                    'cliente_id' => $cliente->id,
-                    'busto' => $cliente->busto,
-                    'cintura' => $cliente->cintura,
-                    'cadera' => $cliente->cadera,
-                    'alto_cintura' => $cliente->alto_cintura,
-                    'largo' => $cliente->largo,
-                    'largo_vestido' => $cliente->largo_vestido,
-                    'is_primary' => true,
-                    'label' => 'Medidas registradas',
-                    'notes' => null,
-                ]
-            ]);
+        foreach ($history as $h) {
+            $measurements = $h->measurements ?? [];
+            $result[] = [
+                'id' => $h->id,
+                'type' => 'history',
+                'cliente_id' => $cliente->id,
+                'busto' => $measurements['busto'] ?? null,
+                'cintura' => $measurements['cintura'] ?? null,
+                'cadera' => $measurements['cadera'] ?? null,
+                'alto_cintura' => $measurements['alto_cintura'] ?? null,
+                'largo' => $measurements['largo'] ?? null,
+                'largo_vestido' => $measurements['largo_vestido'] ?? null,
+                'is_primary' => false,
+                'label' => $this->buildHistoryLabel($h),
+                'source' => $h->source,
+                'source_label' => $h->source_label,
+                'order_number' => $h->order?->order_number,
+                'product_name' => $h->product?->name,
+                'captured_at' => $h->captured_at?->format('d/m/Y H:i'),
+                'captured_at_relative' => $h->captured_at?->diffForHumans(),
+                'notes' => $h->notes,
+            ];
         }
 
-        return response()->json($measurements);
+        // 2. Si no hay historial, buscar en client_measurements (sistema anterior)
+        if (empty($result)) {
+            $measurements = ClientMeasurement::where('cliente_id', $cliente->id)
+                ->orderBy('is_primary', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            foreach ($measurements as $m) {
+                $result[] = [
+                    'id' => $m->id,
+                    'type' => 'profile',
+                    'cliente_id' => $cliente->id,
+                    'busto' => $m->busto,
+                    'cintura' => $m->cintura,
+                    'cadera' => $m->cadera,
+                    'alto_cintura' => $m->alto_cintura,
+                    'largo' => $m->largo,
+                    'largo_vestido' => $m->largo_vestido,
+                    'is_primary' => $m->is_primary,
+                    'label' => $m->label ?? 'Medidas del perfil',
+                    'source' => 'profile',
+                    'source_label' => 'Perfil',
+                    'order_number' => null,
+                    'product_name' => null,
+                    'captured_at' => $m->created_at?->format('d/m/Y H:i'),
+                    'captured_at_relative' => $m->created_at?->diffForHumans(),
+                    'notes' => $m->notes,
+                ];
+            }
+        }
+
+        // 3. Si aún no hay nada, usar medidas legacy de tabla clientes
+        if (empty($result) && $this->clientHasLegacyMeasures($cliente)) {
+            $result[] = [
+                'id' => 0,
+                'type' => 'legacy',
+                'cliente_id' => $cliente->id,
+                'busto' => $cliente->busto,
+                'cintura' => $cliente->cintura,
+                'cadera' => $cliente->cadera,
+                'alto_cintura' => $cliente->alto_cintura,
+                'largo' => $cliente->largo,
+                'largo_vestido' => $cliente->largo_vestido,
+                'is_primary' => true,
+                'label' => 'Medidas registradas',
+                'source' => 'legacy',
+                'source_label' => 'Perfil',
+                'order_number' => null,
+                'product_name' => null,
+                'captured_at' => null,
+                'captured_at_relative' => null,
+                'notes' => null,
+            ];
+        }
+
+        return response()->json($result);
+    }
+
+    // Helper: construir etiqueta descriptiva para historial
+    private function buildHistoryLabel(\App\Models\ClientMeasurementHistory $h): string
+    {
+        $parts = [];
+
+        if ($h->order?->order_number) {
+            $parts[] = "Pedido #{$h->order->order_number}";
+        }
+
+        if ($h->product?->name) {
+            $parts[] = $h->product->name;
+        }
+
+        if (empty($parts)) {
+            return match($h->source) {
+                'order' => 'Captura en pedido',
+                'manual' => 'Captura manual',
+                'import' => 'Importado',
+                default => 'Medidas registradas',
+            };
+        }
+
+        return implode(' - ', $parts);
     }
 
     // Helper: verificar si cliente tiene medidas legacy

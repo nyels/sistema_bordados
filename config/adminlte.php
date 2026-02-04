@@ -327,6 +327,14 @@ return [
             'active' => ['admin/pos-sales*'],
         ],
 
+        [
+            'text' => 'Ventas Consolidadas',
+            'url' => 'admin/sales',
+            'icon' => 'fas fa-fw fa-chart-line',
+            'icon_color' => 'primary',
+            'active' => ['admin/sales*'],
+        ],
+
         /*
         |--------------------------------------------------------------------------
         | PEDIDOS CLIENTE
@@ -598,13 +606,19 @@ return [
         [
             'text' => 'Sistema',
             'icon' => 'fas fa-fw fa-cogs',
-            'active' => ['admin/settings*', 'admin/units*'],
+            'active' => ['admin/settings*', 'admin/units*', 'admin/niveles-urgencia*'],
             'submenu' => [
                 [
                     'text' => 'Configuración General',
                     'url' => 'admin/settings',
                     'icon' => 'fas fa-fw fa-wrench',
                     'active' => ['admin/settings*'],
+                ],
+                [
+                    'text' => 'Niveles de Urgencia',
+                    'url' => 'admin/niveles-urgencia',
+                    'icon' => 'fas fa-fw fa-clock',
+                    'active' => ['admin/niveles-urgencia*'],
                 ],
                 [
                     'text' => 'Unidades de Medida',

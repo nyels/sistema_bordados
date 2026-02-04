@@ -205,7 +205,8 @@
         /* === 5. PRODUCTOS: SCROLL FIJO ==================== */
         /* ================================================== */
         .products-scroll-container {
-            max-height: 300px;
+            min-height: 280px;
+            max-height: 400px;
             overflow-y: auto;
             overflow-x: hidden;
         }
@@ -267,38 +268,38 @@
         }
 
         /* ================================================== */
-        /* === 6. RESUMEN CON IVA INTEGRADO ================= */
+        /* === RESUMEN INTEGRADO EN FOOTER DE PRODUCTOS ===== */
         /* ================================================== */
-        .resumen-card {
-            position: relative;
+        .resumen-footer {
+            padding: 0.75rem 1rem;
         }
 
-        .resumen-totals {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 1rem;
+        .resumen-footer .resumen-totals {
+            background: transparent;
+            padding: 0;
         }
 
         .resumen-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.25rem 0;
+            padding: 0.2rem 0;
+            font-size: 1rem;
         }
 
         .resumen-row.total-final {
             border-top: 2px solid #212529;
-            margin-top: 0.5rem;
-            padding-top: 0.75rem;
-            font-size: 1.25rem;
+            margin-top: 0.4rem;
+            padding-top: 0.5rem;
+            font-size: 1.1rem;
         }
 
         /* IVA row en resumen */
         .iva-row-resumen {
-            padding: 0.5rem 0;
+            padding: 0.3rem 0;
             border-top: 1px dashed #dee2e6;
             border-bottom: 1px dashed #dee2e6;
-            margin: 0.25rem 0;
+            margin: 0.2rem 0;
         }
 
         .iva-row-resumen .custom-control-label {
@@ -318,14 +319,75 @@
         /* === LAYOUT RESPONSIVO ============================ */
         /* ================================================== */
 
-        /* Móvil/Tablet: usar flexbox con order para secuencia correcta */
+        /* ================================================== */
+        /* === PWA / WEB APP OPTIMIZATIONS ================== */
+        /* ================================================== */
+
+        /* Touch-friendly interactions */
+        .btn,
+        .form-control,
+        .custom-control-label,
+        .cliente-selector-btn,
+        .nav-link {
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        /* Prevent text selection on interactive elements */
+        .btn,
+        .badge,
+        .card-header {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* Smooth scrolling for iOS */
+        .products-scroll-container,
+        .modal-body {
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Safe area insets for notched devices */
+        @supports (padding: max(0px)) {
+            .content-header {
+                padding-left: max(1rem, env(safe-area-inset-left));
+                padding-right: max(1rem, env(safe-area-inset-right));
+            }
+
+            .card-erp {
+                margin-left: max(0px, env(safe-area-inset-left));
+                margin-right: max(0px, env(safe-area-inset-right));
+            }
+        }
+
+        /* ================================================== */
+        /* === DESKTOP (992px+) ============================= */
+        /* ================================================== */
+        @media (min-width: 992px) {
+            .main-column {
+                padding-right: 0.5rem;
+            }
+
+            .sidebar-column {
+                padding-left: 0.5rem;
+            }
+
+            /* Altura fija para alinear visualmente ambas columnas */
+            .products-scroll-container {
+                min-height: 320px;
+            }
+        }
+
+        /* ================================================== */
+        /* === TABLET (768px - 991px) ======================= */
+        /* ================================================== */
         @media (max-width: 991px) {
             .erp-row {
                 display: flex;
                 flex-direction: column;
             }
 
-            /* Orden: 1.Cliente → 2.Productos → 3.Pago → 4.Entrega → 5.Resumen → 6.Notas → 7.Botón */
+            /* Orden móvil: 1.Cliente → 2.Productos → 3.Pago/Prioridad → 4.Notas */
             .order-mobile-1 {
                 order: 1;
             }
@@ -361,29 +423,60 @@
             }
 
             .products-scroll-container {
-                max-height: 250px;
+                min-height: 200px;
+                max-height: 300px;
+            }
+
+            /* Cards de Pago y Prioridad en columna */
+            .row>.col-md-6 {
+                flex: 0 0 100%;
+                max-width: 100%;
+                margin-bottom: 0.5rem;
+            }
+
+            /* Ajustar resumen footer */
+            .resumen-footer {
+                padding: 0.5rem 0.75rem;
+            }
+
+            .resumen-row {
+                font-size: 0.95rem;
             }
         }
 
-        @media (min-width: 992px) {
-            .main-column {
-                padding-right: 0.5rem;
-            }
-
-            .sidebar-column {
-                padding-left: 0.5rem;
-            }
-        }
-
+        /* ================================================== */
+        /* === MOBILE (< 768px) ============================= */
+        /* ================================================== */
         @media (max-width: 767px) {
+
+            /* Header compacto */
             .content-header h1 {
-                font-size: 1.25rem;
+                font-size: 1.1rem;
+            }
+
+            .content-header .btn {
+                padding: 0.375rem 0.75rem;
+                font-size: 0.875rem;
+            }
+
+            /* Cards más compactas */
+            .card-erp {
+                margin-bottom: 0.75rem;
+            }
+
+            .card-erp .card-header {
+                padding: 0.5rem 0.75rem;
+            }
+
+            .card-erp .card-header h5 {
+                font-size: 0.95rem;
             }
 
             .card-body {
                 padding: 0.75rem;
             }
 
+            /* Tabla de productos responsive */
             .product-table thead {
                 display: none;
             }
@@ -402,12 +495,12 @@
             }
 
             .product-table tbody tr td:nth-child(1) {
-                width: 60px;
+                width: 50px;
                 order: 1;
             }
 
             .product-table tbody tr td:nth-child(2) {
-                width: calc(100% - 100px);
+                width: calc(100% - 90px);
                 order: 2;
                 padding-left: 0.5rem !important;
             }
@@ -426,6 +519,8 @@
                 width: 33%;
                 order: 4;
                 margin-top: 0.5rem;
+                text-align: center;
+                font-size: 0.85rem;
             }
 
             #noItemsRow td {
@@ -433,28 +528,235 @@
                 display: block !important;
             }
 
+            /* Header de productos responsive */
             .productos-header {
                 flex-direction: column;
                 align-items: stretch !important;
+                gap: 0.5rem;
             }
 
             .productos-header h5 {
                 text-align: center;
-                margin-bottom: 0.5rem;
+                margin-bottom: 0;
             }
 
             .productos-header .btn {
                 width: 100%;
             }
+
+            /* Resumen compacto */
+            .resumen-footer {
+                padding: 0.5rem;
+            }
+
+            .resumen-row {
+                font-size: 0.9rem;
+                padding: 0.15rem 0;
+            }
+
+            .resumen-row.total-final {
+                font-size: 1rem;
+                margin-top: 0.3rem;
+                padding-top: 0.4rem;
+            }
+
+            /* Inputs más grandes para touch */
+            .form-control,
+            .form-control-sm {
+                min-height: 44px;
+                font-size: 16px !important;
+                /* Previene zoom en iOS */
+            }
+
+            select.form-control {
+                min-height: 44px;
+            }
+
+            /* Botones touch-friendly */
+            .btn {
+                min-height: 44px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .btn-sm {
+                min-height: 38px;
+            }
+
+            /* Cliente selector más grande */
+            .cliente-selector-btn {
+                min-height: 60px;
+                padding: 0.5rem 0.75rem;
+            }
+
+            /* Checkboxes más grandes */
+            .custom-control {
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+            }
+
+            .custom-control-label::before,
+            .custom-control-label::after {
+                width: 1.25rem;
+                height: 1.25rem;
+                top: 50%;
+                transform: translateY(-50%);
+            }
+
+            /* Products scroll menor en móvil */
+            .products-scroll-container {
+                min-height: 150px;
+                max-height: 250px;
+            }
         }
 
         /* ================================================== */
-        /* === CSS MODAL MEDIDAS EXTERNO — ELIMINADO (FASE 1)
-                                                                                                                                                                     El modal #measurementsModal ya no existe.
-                                                                                                                                                                     Clases eliminadas: .medida-card, .medida-img,
-                                                                                                                                                                     .medida-input, .medida-label, .medida-hint, .medidas-grid,
-                                                                                                                                                                     .measurement-history-item
-                                                                                                                                                                     ================================================== */
+        /* === EXTRA SMALL MOBILE (< 480px) ================= */
+        /* ================================================== */
+        @media (max-width: 480px) {
+            .content-header h1 {
+                font-size: 1rem;
+            }
+
+            .content-header .d-flex {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .content-header .btn {
+                flex: 1;
+                min-width: 120px;
+            }
+
+            /* Ocultar texto en botones, solo iconos */
+            .productos-header .btn span {
+                display: none;
+            }
+
+            /* Resumen ultra compacto */
+            .resumen-row {
+                font-size: 0.85rem;
+            }
+
+            .resumen-row .input-group {
+                width: 80px !important;
+            }
+
+            /* Card headers más compactos */
+            .card-erp .card-header h5 {
+                font-size: 0.9rem;
+            }
+
+            .card-erp .card-header h5 i {
+                margin-right: 0.25rem !important;
+            }
+        }
+
+        /* ================================================== */
+        /* === LANDSCAPE MOBILE ============================= */
+        /* ================================================== */
+        @media (max-height: 500px) and (orientation: landscape) {
+            .products-scroll-container {
+                min-height: 120px;
+                max-height: 180px;
+            }
+
+            .card-erp .card-body {
+                min-height: 60px;
+            }
+
+            .modal-body {
+                max-height: 60vh;
+                overflow-y: auto;
+            }
+        }
+
+        /* ================================================== */
+        /* === HIGH DPI / RETINA DISPLAYS =================== */
+        /* ================================================== */
+        @media (-webkit-min-device-pixel-ratio: 2),
+        (min-resolution: 192dpi) {
+            .card-erp {
+                border-width: 0.5px;
+            }
+
+            .table td,
+            .table th {
+                border-width: 0.5px;
+            }
+        }
+
+        /* ================================================== */
+        /* === MODALS RESPONSIVE ============================ */
+        /* ================================================== */
+        @media (max-width: 767px) {
+            .modal-dialog {
+                margin: 0.5rem;
+                max-width: calc(100% - 1rem);
+            }
+
+            .modal-dialog-centered {
+                min-height: calc(100% - 1rem);
+            }
+
+            .modal-xl,
+            .modal-lg {
+                max-width: calc(100% - 1rem);
+            }
+
+            .modal-content {
+                border-radius: 12px;
+            }
+
+            .modal-header {
+                padding: 0.75rem 1rem;
+            }
+
+            .modal-body {
+                padding: 0.75rem;
+                max-height: 70vh;
+                overflow-y: auto;
+                overscroll-behavior: contain;
+            }
+
+            .modal-footer {
+                padding: 0.75rem;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .modal-footer .btn {
+                flex: 1;
+                min-width: 100px;
+            }
+
+            /* Client search modal */
+            .client-results-container {
+                max-height: 50vh;
+            }
+
+            .client-result-item {
+                padding: 1rem;
+            }
+
+            /* Product modal */
+            #productModal .modal-body {
+                padding: 0.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .modal-header h5 {
+                font-size: 1rem;
+            }
+
+            .modal-footer .btn {
+                width: 100%;
+                margin: 0;
+            }
+        }
 
         /* Badge requiere medidas (se mantiene para tabla de items) */
         .badge-requires-measurements {
@@ -486,11 +788,15 @@
 
         /* D6: SCROLL SEGURO - Modal nunca depende del body */
         #addProductModal .modal-body,
-        #quickClientModal .modal-body {
+        #quickClientModal .modal-body,
+        #measurementsModal .modal-body,
+        #clientSearchModal .modal-body {
             max-height: calc(100vh - 200px);
             overflow-y: auto;
             overflow-x: hidden;
             -webkit-overflow-scrolling: touch;
+            /* Prevenir scroll chaining al body cuando el modal llega al final */
+            overscroll-behavior: contain;
         }
 
         #addProductModal .modal-footer,
@@ -735,41 +1041,43 @@
                             </small>
                         @else
                             {{-- ================================================ --}}
-                            {{-- SWITCH: PRODUCCIÓN PARA STOCK (sin cliente)      --}}
+                            {{-- SWITCH: PRODUCCIÓN PARA STOCK + BOTÓN CLIENTE    --}}
                             {{-- ================================================ --}}
-                            <div class="custom-control custom-switch mb-3" id="stockSwitchContainer">
-                                <input type="checkbox" class="custom-control-input" id="forStockSwitch" name="for_stock"
-                                    value="1" {{ old('for_stock') ? 'checked' : '' }}>
-                                <label class="custom-control-label font-weight-bold" for="forStockSwitch">
-                                    <i class="fas fa-boxes mr-1 text-info"></i> Producción para stock
-                                    <small class="text-muted d-block" style="font-weight: normal; font-size: 11px;">
-                                        Sin cliente — para inventario de productos terminados
-                                    </small>
-                                </label>
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div class="custom-control custom-switch" id="stockSwitchContainer">
+                                    <input type="checkbox" class="custom-control-input" id="forStockSwitch" name="for_stock"
+                                        value="1" {{ old('for_stock') ? 'checked' : '' }}>
+                                    <label class="custom-control-label font-weight-bold" for="forStockSwitch">
+                                        <i class="fas fa-boxes mr-1 text-info"></i> Producción para stock
+                                        <small class="text-muted d-block" style="font-weight: normal; font-size: 11px;">
+                                            Sin cliente — para inventario de productos terminados
+                                        </small>
+                                    </label>
+                                </div>
+                                <div id="quickClientBtnContainer">
+                                    <button type="button" class="btn btn-sm btn-outline-success" data-toggle="modal"
+                                        data-target="#quickClientModal" id="btnQuickClient">
+                                        <i class="fas fa-user-plus mr-1"></i> Cliente Rápido
+                                    </button>
+                                </div>
                             </div>
 
                             {{-- Modo normal: selector de cliente --}}
                             <div id="clienteSelectorSection">
-                                <input type="hidden" name="cliente_id" id="cliente_id" value="{{ old('cliente_id') }}">
+                                <input type="hidden" name="cliente_id" id="cliente_id"
+                                    value="{{ old('cliente_id') }}">
                                 @error('cliente_id')
                                     <div class="alert alert-danger py-1 mb-2">{{ $message }}</div>
                                 @enderror
 
-                                <button type="button" class="cliente-selector-btn" id="btnSelectClient" data-toggle="modal"
-                                    data-target="#clientSearchModal">
+                                <button type="button" class="cliente-selector-btn" id="btnSelectClient"
+                                    data-toggle="modal" data-target="#clientSearchModal">
                                     <div class="cliente-info" id="clienteDisplay">
                                         <span class="placeholder-text"><i class="fas fa-search mr-1"></i> Buscar
                                             cliente...</span>
                                     </div>
                                     <i class="fas fa-chevron-right text-muted"></i>
                                 </button>
-
-                                <div class="mt-2 text-right" id="quickClientBtnContainer">
-                                    <button type="button" class="btn btn-sm btn-outline-success" data-toggle="modal"
-                                        data-target="#quickClientModal" id="btnQuickClient">
-                                        <i class="fas fa-user-plus mr-1"></i> Cliente Rápido
-                                    </button>
-                                </div>
                             </div>
 
                             {{-- Display cuando está en modo STOCK --}}
@@ -786,108 +1094,147 @@
                     </div>
                 </div>
 
-                {{-- ======================================================
-                     CARD MEDIDAS GLOBAL — ELIMINADO (FASE 1)
-                     Las medidas ahora se capturan INLINE en el modal de producto.
-                     ====================================================== --}}
-
-                {{-- 3. PAGO --}}
-                <div class="card card-erp order-mobile-3">
-                    <div class="card-header py-2" style="background: #343a40; color: white;">
-                        <h5 class="mb-0"><i class="fas fa-dollar-sign mr-2"></i> 3. Pago</h5>
-                    </div>
-                    <div class="card-body payment-section">
-                        {{-- POST-VENTA: Microcopy indicando que es editable --}}
-                        @if (isset($relatedOrder))
-                            <div class="mb-2 py-1 px-2 rounded"
-                                style="background: #e8f5e9; font-size: 12px; color: #2e7d32;">
-                                <i class="fas fa-edit mr-1"></i>
-                                Configura el pago para este nuevo pedido
+                {{-- 3. PAGO Y 4. FECHA DE ENTREGA - EN LA MISMA LÍNEA --}}
+                <div class="row">
+                    {{-- 3. PAGO --}}
+                    <div class="col-md-6">
+                        <div class="card card-erp order-mobile-3">
+                            <div class="card-header py-2" style="background: #343a40; color: white;">
+                                <h5 class="mb-0"><i class="fas fa-dollar-sign mr-2"></i> 3. Pago</h5>
                             </div>
-                        @endif
-                        <div class="form-group mb-2">
-                            <label class="font-weight-bold mb-1">Método de Pago</label>
-                            <select name="payment_method" id="paymentMethod" class="form-control form-control-sm">
-                                <option value="">-- Seleccionar Método de Pago --</option>
-                                <option value="cash" {{ old('payment_method') == 'cash' ? 'selected' : '' }}>Efectivo
-                                </option>
-                                <option value="transfer" {{ old('payment_method') == 'transfer' ? 'selected' : '' }}>
-                                    Transferencia</option>
-                                <option value="card" {{ old('payment_method') == 'card' ? 'selected' : '' }}>Tarjeta
-                                </option>
-                                <option value="other" {{ old('payment_method') == 'other' ? 'selected' : '' }}>Otro
-                                </option>
-                            </select>
-                        </div>
+                            <div class="card-body payment-section">
+                                {{-- POST-VENTA: Microcopy indicando que es editable --}}
+                                @if (isset($relatedOrder))
+                                    <div class="mb-2 py-1 px-2 rounded"
+                                        style="background: #e8f5e9; font-size: 12px; color: #2e7d32;">
+                                        <i class="fas fa-edit mr-1"></i>
+                                        Configura el pago para este nuevo pedido
+                                    </div>
+                                @endif
+                                <div class="form-group mb-2">
+                                    <label class="font-weight-bold mb-1">Método de Pago <span
+                                            class="text-danger">*</span></label>
+                                    <select name="payment_method" id="paymentMethod" class="form-control form-control-sm"
+                                        required>
+                                        <option value="">-- Seleccionar --</option>
+                                        <option value="cash" {{ old('payment_method') == 'cash' ? 'selected' : '' }}>
+                                            Efectivo
+                                        </option>
+                                        <option value="transfer"
+                                            {{ old('payment_method') == 'transfer' ? 'selected' : '' }}>
+                                            Transferencia</option>
+                                        <option value="card" {{ old('payment_method') == 'card' ? 'selected' : '' }}>
+                                            Tarjeta
+                                        </option>
+                                        <option value="other" {{ old('payment_method') == 'other' ? 'selected' : '' }}>
+                                            Otro
+                                        </option>
+                                    </select>
+                                </div>
 
-                        <div class="form-group mb-2" id="payFullGroup" style="display: none;">
-                            <div class="custom-control custom-checkbox">
-                                <input type="checkbox" class="custom-control-input" id="payFull" name="pay_full"
-                                    value="1" {{ old('pay_full') ? 'checked' : '' }}>
-                                <label class="custom-control-label font-weight-bold text-success" for="payFull">
-                                    <i class="fas fa-check-circle mr-1"></i> Pagar Total
-                                </label>
-                            </div>
-                        </div>
+                                <div class="form-group mb-2" id="payFullGroup" style="display: none;">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input" id="payFull"
+                                            name="pay_full" value="1" {{ old('pay_full') ? 'checked' : '' }}>
+                                        <label class="custom-control-label font-weight-bold text-success" for="payFull">
+                                            <i class="fas fa-check-circle mr-1"></i> Pagar Total
+                                        </label>
+                                    </div>
+                                </div>
 
-                        <div class="form-group mb-0" id="anticipoGroup" style="display: none;">
-                            <label class="mb-1">Anticipo</label>
-                            <div class="input-group input-group-sm">
-                                <div class="input-group-prepend"><span class="input-group-text">$</span></div>
-                                <input type="number" name="initial_payment" id="initialPayment" class="form-control"
-                                    value="{{ old('initial_payment') }}" min="0" step="0.01">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- 4. ENTREGA --}}
-                <div class="card card-erp order-mobile-4">
-                    <div class="card-header py-2" style="background: #343a40; color: white;">
-                        <h5 class="mb-0"><i class="fas fa-truck mr-2"></i> 4. Entrega</h5>
-                    </div>
-                    <div class="card-body">
-                        {{-- POST-VENTA: Microcopy indicando que es editable --}}
-                        @if (isset($relatedOrder))
-                            <div class="mb-2 py-1 px-2 rounded"
-                                style="background: #e8f5e9; font-size: 12px; color: #2e7d32;">
-                                <i class="fas fa-edit mr-1"></i>
-                                Define la urgencia y fecha para este pedido
-                            </div>
-                        @endif
-                        <div class="form-group mb-2">
-                            <label class="font-weight-bold mb-1">Nivel de Urgencia</label>
-                            <select name="urgency_level" id="urgencyLevel" class="form-control form-control-sm">
-                                <option value="normal" {{ old('urgency_level', 'normal') == 'normal' ? 'selected' : '' }}>
-                                    Normal (100% tiempo)</option>
-                                <option value="urgente" {{ old('urgency_level') == 'urgente' ? 'selected' : '' }}>Urgente
-                                    (70% tiempo)</option>
-                                <option value="express" {{ old('urgency_level') == 'express' ? 'selected' : '' }}>Express
-                                    (50% tiempo)</option>
-                            </select>
-                        </div>
-
-                        <div class="alert alert-info py-1 mb-2" id="minimumDateAlert" style="display: none;">
-                            <small>
-                                <i class="fas fa-info-circle mr-1"></i>
-                                <strong>Fecha mínima:</strong> <span id="minimumDateDisplay">-</span>
-                            </small>
-                        </div>
-
-                        <div class="form-group mb-0">
-                            <label class="font-weight-bold mb-1">Fecha Prometida</label>
-                            <input type="date" name="promised_date" id="promisedDate"
-                                class="form-control form-control-sm @error('promised_date') is-invalid @enderror"
-                                value="{{ old('promised_date') }}" min="{{ date('Y-m-d') }}" required>
-                            @error('promised_date')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <div class="invalid-feedback" id="dateWarning" style="display: none;">
-                                Fecha anterior a la mínima de producción
+                                <div class="form-group mb-0" id="anticipoGroup" style="display: none;">
+                                    <label class="mb-1">Anticipo</label>
+                                    <div class="input-group input-group-sm">
+                                        <div class="input-group-prepend"><span class="input-group-text">$</span></div>
+                                        <input type="number" name="initial_payment" id="initialPayment"
+                                            class="form-control" value="{{ old('initial_payment') }}" min="0"
+                                            step="0.01">
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+
+                    {{-- 4. PRIORIDAD DEL PEDIDO --}}
+                    <div class="col-md-6">
+                        <div class="card card-erp order-mobile-4">
+                            <div class="card-header py-2" style="background: #343a40; color: white;">
+                                <h5 class="mb-0"><i class="fas fa-clock mr-2"></i> 4. Prioridad del Pedido</h5>
+                            </div>
+                            <div class="card-body">
+                                {{-- POST-VENTA: Microcopy indicando que es editable --}}
+                                @if (isset($relatedOrder))
+                                    <div class="mb-2 py-1 px-2 rounded"
+                                        style="background: #e8f5e9; font-size: 12px; color: #2e7d32;">
+                                        <i class="fas fa-edit mr-1"></i>
+                                        Define la urgencia y fecha para este pedido
+                                    </div>
+                                @endif
+                                <div class="form-group mb-2">
+                                    <label class="font-weight-bold mb-1">Nivel de Urgencia</label>
+                                    <select name="urgency_level" id="urgencyLevel" class="form-control form-control-sm">
+                                        @foreach ($urgencyLevels as $level)
+                                            <option value="{{ $level->slug }}"
+                                                data-time="{{ $level->time_percentage }}"
+                                                data-multiplier="{{ $level->price_multiplier }}"
+                                                data-color="{{ $level->color }}"
+                                                {{ old('urgency_level', $order->urgency_level ?? 'normal') == $level->slug ? 'selected' : '' }}>
+                                                {{ $level->name }} ({{ $level->time_percentage }}% tiempo)
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="alert alert-info py-1 mb-2" id="minimumDateAlert" style="display: none;">
+                                    <small>
+                                        <i class="fas fa-info-circle mr-1"></i>
+                                        <strong>Fecha mínima:</strong> <span id="minimumDateDisplay">-</span>
+                                    </small>
+                                </div>
+
+                                <div class="form-group mb-0">
+                                    <label class="font-weight-bold mb-1">Fecha Prometida</label>
+                                    <input type="date" name="promised_date" id="promisedDate"
+                                        class="form-control form-control-sm @error('promised_date') is-invalid @enderror"
+                                        value="{{ old('promised_date') }}" min="{{ date('Y-m-d') }}" required>
+                                    @error('promised_date')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    <div class="invalid-feedback" id="dateWarning" style="display: none;">
+                                        Fecha anterior a la mínima de producción
+                                    </div>
+                                </div>
+
+                                {{-- FEEDBACK VISUAL DE CAPACIDAD SEMANAL --}}
+                                @if (isset($capacityInfo) && $capacityInfo)
+                                    <div id="capacityFeedback" class="mt-2">
+                                        @if ($capacityInfo['is_full'])
+                                            <div class="text-danger" style="font-size: 14px;">
+                                                <i class="fas fa-exclamation-circle mr-1"></i>
+                                                <strong>{{ $capacityInfo['week_label'] }}</strong> a capacidad máxima.
+                                                El sistema asignará la siguiente semana disponible.
+                                            </div>
+                                        @elseif($capacityInfo['is_high_load'])
+                                            <div class="text-warning" style="font-size: 14px;">
+                                                <i class="fas fa-exclamation-triangle mr-1"></i>
+                                                <strong>{{ $capacityInfo['week_label'] }}</strong>
+                                                &middot; {{ $capacityInfo['used'] }}/{{ $capacityInfo['max'] }} pedidos
+                                                <span class="text-muted">(alta carga)</span>
+                                            </div>
+                                        @else
+                                            <div class="text-dark" style="font-size: 14px;">
+                                                <i class="fas fa-calendar-check mr-1 text-info"></i>
+                                                <strong>{{ $capacityInfo['week_label'] }}</strong>
+                                                &middot; {{ $capacityInfo['used'] }}/{{ $capacityInfo['max'] }} pedidos
+                                                asignados
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>{{-- Cierre de row de Pago y Fecha de Entrega --}}
 
             </div>
 
@@ -919,20 +1266,21 @@
                     @endif
                     <div class="card-body p-0">
                         <div class="table-responsive products-scroll-container">
-                            <table class="table table-hover product-table mb-0" id="itemsTable">
+                            <table class="table table-hover product-table mb-0" id="itemsTable"
+                                style="table-layout: fixed;">
                                 <thead class="thead-light" style="position: sticky; top: 0; z-index: 1;">
                                     <tr>
-                                        <th style="width: 60px;">Img</th>
-                                        <th>Producto</th>
-                                        <th style="width: 80px;">Cant.</th>
-                                        <th style="width: 90px;">Días Prod.</th>
-                                        <th style="width: 120px;">Subtotal</th>
-                                        <th style="width: 50px;"></th>
+                                        <th style="width: 70px; text-align: center;">Foto</th>
+                                        <th style="width: auto;">Producto</th>
+                                        <th style="width: 75px; text-align: center;">Cant.</th>
+                                        <th style="width: 85px; text-align: center;">Días Prod.</th>
+                                        <th style="width: 110px; text-align: right;">Subtotal</th>
+                                        <th style="width: 85px; text-align: center;"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="itemsTableBody">
                                     <tr id="noItemsRow">
-                                        <td colspan="6" class="text-center text-muted py-4">
+                                        <td colspan="6" class="text-center text-muted" style="height: 280px; vertical-align: middle;">
                                             <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
                                             Click en "Agregar" para añadir productos
                                         </td>
@@ -941,70 +1289,58 @@
                             </table>
                         </div>
                     </div>
-                </div>
-
-                {{-- 5. RESUMEN (con IVA integrado) --}}
-                <div class="card card-erp resumen-card order-mobile-5">
-                    <div class="card-header py-2" style="background: #343a40; color: white;">
-                        <h5 class="mb-0"><i class="fas fa-calculator mr-2"></i> 5. Resumen</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="resumen-totals">
-                            <div class="resumen-row">
-                                <span>Subtotal:</span>
-                                <strong id="subtotalDisplay">$0.00</strong>
+                    {{-- FOOTER: Notas (izq) + Resumen (der) --}}
+                    <div class="card-footer resumen-footer" style="background: #f8f9fa; border-top: 2px solid #dee2e6;">
+                        <div class="row">
+                            {{-- COLUMNA IZQUIERDA: NOTAS --}}
+                            <div class="col-md-6 pr-md-3">
+                                <label class="font-weight-bold mb-1" style="font-size: 0.9rem;">
+                                    <i class="fas fa-sticky-note mr-1"></i> Notas
+                                </label>
+                                <textarea name="notes" class="form-control form-control-sm" rows="4" maxlength="2000"
+                                    placeholder="Observaciones generales del pedido...">{{ old('notes') }}</textarea>
                             </div>
-                            <div class="resumen-row">
-                                <span>Descuento:</span>
-                                <div class="input-group input-group-sm" style="width: 120px;">
-                                    <div class="input-group-prepend"><span class="input-group-text">$</span></div>
-                                    <input type="number" name="discount" id="discount" class="form-control"
-                                        value="{{ old('discount', 0) }}" min="0" step="0.01">
+                            {{-- COLUMNA DERECHA: RESUMEN --}}
+                            <div class="col-md-6 pl-md-3">
+                                <div class="resumen-totals">
+                                    <div class="resumen-row">
+                                        <span>Subtotal:</span>
+                                        <strong id="subtotalDisplay">$0.00</strong>
+                                    </div>
+                                    <div class="resumen-row">
+                                        <span>Descuento:</span>
+                                        <div class="input-group input-group-sm" style="width: 100px;">
+                                            <div class="input-group-prepend"><span class="input-group-text py-0 px-2">$</span></div>
+                                            <input type="number" name="discount" id="discount" class="form-control py-0"
+                                                value="{{ old('discount', 0) }}" min="0" step="0.01">
+                                        </div>
+                                    </div>
+                                    <div class="resumen-row iva-row-resumen">
+                                        <div class="custom-control custom-checkbox">
+                                            <input type="checkbox" class="custom-control-input" id="requiresInvoice"
+                                                name="requires_invoice" value="1"
+                                                {{ old('requires_invoice') ? 'checked' : '' }}>
+                                            <label class="custom-control-label" for="requiresInvoice">
+                                                IVA 16% <small class="text-muted">(Factura)</small>
+                                            </label>
+                                        </div>
+                                        <strong id="ivaDisplay" class="iva-amount-disabled">$0.00</strong>
+                                    </div>
+                                    <div class="resumen-row total-final">
+                                        <span>TOTAL:</span>
+                                        <strong class="text-success" id="totalDisplay">$0.00</strong>
+                                    </div>
                                 </div>
-                            </div>
-
-                            {{-- IVA con checkbox integrado --}}
-                            <div class="resumen-row iva-row-resumen">
-                                <div class="custom-control custom-checkbox">
-                                    <input type="checkbox" class="custom-control-input" id="requiresInvoice"
-                                        name="requires_invoice" value="1"
-                                        {{ old('requires_invoice') ? 'checked' : '' }}>
-                                    <label class="custom-control-label" for="requiresInvoice">
-                                        IVA 16% <small class="text-muted">(Requiere Factura)</small>
-                                    </label>
-                                </div>
-                                <strong id="ivaDisplay" class="iva-amount-disabled">$0.00</strong>
-                            </div>
-
-                            <div class="resumen-row total-final">
-                                <span>TOTAL:</span>
-                                <strong class="text-success" id="totalDisplay">$0.00</strong>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {{-- ============================================== --}}
-                {{-- INDICADOR DE ESTADO OPERATIVO (READY/PENDING) --}}
-                {{-- Feedback en tiempo real sobre completitud     --}}
-                {{-- ============================================== --}}
-                @include('admin.orders._order-readiness')
-
-                {{-- 6. NOTAS --}}
-                <div class="card card-erp order-mobile-6">
-                    <div class="card-header bg-light py-2">
-                        <h5 class="mb-0"><i class="fas fa-sticky-note mr-2"></i> Notas</h5>
-                    </div>
-                    <div class="card-body py-2">
-                        <textarea name="notes" class="form-control form-control-sm" rows="2" maxlength="2000"
-                            placeholder="Observaciones generales del pedido...">{{ old('notes') }}</textarea>
-                    </div>
-                </div>
-
-
-
             </div>
         </div>
+
+        {{-- INDICADOR DE ESTADO OPERATIVO (READY/PENDING) --}}
+        @include('admin.orders._order-readiness')
 
         {{-- Hidden inputs para items --}}
         <div id="hiddenItemsContainer"></div>
@@ -1225,6 +1561,15 @@
                                                     <input type="number" id="modalPrice" class="form-control"
                                                         step="0.01" min="0">
                                                 </div>
+                                                {{-- Indicadores debajo del precio --}}
+                                                <div id="priceIndicators" class="mt-1" style="font-size: 13px;">
+                                                    <span id="extrasIndicator" class="text-success font-weight-bold"
+                                                        style="display: none;"></span>
+                                                    <span id="estimatedPriceIndicator"
+                                                        style="display: none; color: #fd7e14; font-weight: 500;">
+                                                        <i class="fas fa-info-circle"></i> Precio estimado
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -1357,13 +1702,6 @@
                                         </div>
                                     </div>
 
-                                    {{-- Elementos ocultos para compatibilidad --}}
-                                    <div id="customizationCard" style="display: none;"></div>
-                                    <div id="customizationToggle" style="display: none;"></div>
-                                    <div id="customizationBody" style="display: none;"></div>
-                                    <div id="customizationChevron" style="display: none;"></div>
-                                    <input type="checkbox" id="isCustomized" style="display: none;" checked>
-
                                 </div>
                             </div>
                         </div>
@@ -1485,9 +1823,16 @@
                     <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
                 </div>
                 <div class="modal-body">
+                    {{-- Info del cliente --}}
+                    <div class="alert py-2 mb-2" style="background: #17a2b8; border: none;">
+                        <i class="fas fa-user mr-1 text-white"></i>
+                        <strong class="text-white">Capturar medidas de:</strong>
+                        <span id="measurementsClientName" class="text-white font-weight-bold">-</span>
+                    </div>
+
                     {{-- Info del producto actual --}}
-                    <div class="alert alert-info py-2 mb-3" id="measurementsProductInfo">
-                        <i class="fas fa-box mr-1"></i>
+                    <div class="alert alert-light py-2 mb-3 border" id="measurementsProductInfo">
+                        <i class="fas fa-box mr-1 text-info"></i>
                         <strong>Producto:</strong> <span id="measurementsProductName">-</span>
                     </div>
 
@@ -1586,16 +1931,16 @@
                         <div class="tab-pane fade" id="panel-existing-measures" role="tabpanel">
                             <div class="text-center py-3" id="existingMeasuresLoading">
                                 <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
-                                <p class="mt-2 mb-0" style="color: #495057;">Cargando medidas del cliente...</p>
+                                <p class="mt-2 mb-0" style="color: #495057;">Cargando historial de medidas...</p>
                             </div>
-                            <div id="existingMeasuresList">
-                                {{-- Se llena dinámicamente con fecha y medidas --}}
+                            <div id="existingMeasuresList" style="max-height: 350px; overflow-y: auto;">
+                                {{-- Se llena dinámicamente con historial enriquecido --}}
                             </div>
                             <div class="alert alert-secondary py-3 mt-2 text-center" id="noExistingMeasuresAlert"
                                 style="display: none;">
                                 <i class="fas fa-inbox fa-2x mb-2 d-block" style="color: #6c757d;"></i>
                                 <span style="color: #495057; font-size: 14px;">Este cliente no tiene medidas
-                                    registradas.</span>
+                                    registradas en el historial.</span>
                             </div>
                         </div>
                     </div>{{-- fin tab-content --}}
@@ -1626,7 +1971,7 @@
     {{-- MODAL: SELECCIÓN DE EXTRAS --}}
     {{-- ============================================== --}}
     <div class="modal fade" id="extrasSelectionModal" tabindex="-1" aria-hidden="true" data-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 550px;">
             <div class="modal-content">
                 <div class="modal-header py-2" style="background: #343a40; color: white;">
                     <h5 class="modal-title"><i class="fas fa-plus-circle mr-2"></i> Seleccionar Extras</h5>
@@ -1638,27 +1983,15 @@
                         <input type="text" id="extrasSearchInput" class="form-control"
                             placeholder="Buscar extras...">
                     </div>
-                    {{-- Tabla de extras disponibles --}}
-                    <div style="max-height: 350px; overflow-y: auto;">
-                        <table class="table table-hover table-sm mb-0" id="extrasTable">
-                            <thead class="thead-light" style="position: sticky; top: 0;">
-                                <tr>
-                                    <th style="width: 50px;" class="text-center">
-                                        <input type="checkbox" id="selectAllExtras" title="Seleccionar todos">
-                                    </th>
-                                    <th>Extra</th>
-                                    <th style="width: 120px;" class="text-right">Precio</th>
-                                </tr>
-                            </thead>
-                            <tbody id="extrasTableBody">
-                                {{-- Se llena dinámicamente --}}
-                            </tbody>
-                        </table>
+                    {{-- Lista de extras disponibles (cards en lugar de tabla) --}}
+                    <div style="max-height: 350px; overflow-y: auto; padding: 10px;" id="extrasListContainer">
+                        {{-- Se llena dinámicamente --}}
                     </div>
                     {{-- Resumen de selección --}}
                     <div class="p-3 border-top bg-light d-flex justify-content-between align-items-center">
-                        <span><strong id="extrasSelectedCount">0</strong> extras seleccionados</span>
-                        <span class="text-success font-weight-bold" style="font-size: 1.1rem;">
+                        <span style="font-size: 15px;"><strong id="extrasSelectedCount">0</strong> extras
+                            seleccionados</span>
+                        <span class="text-success font-weight-bold" style="font-size: 1.2rem;">
                             Total: <span id="extrasSelectionTotal">$0.00</span>
                         </span>
                     </div>
@@ -1981,94 +2314,91 @@
             });
 
             // ==========================================
-            // GESTIÓN DE MEDIDAS — ELIMINADO (FASE 1)
-            // Las medidas ahora se capturan INLINE en el modal de producto.
-            // ==========================================
-
-            // ==========================================
             // SWITCH: PRODUCCIÓN PARA STOCK (sin cliente)
             // REGLA: DESHABILITAR campos, NO ocultarlos
             // ==========================================
             @if (!isset($relatedOrder) && !isset($isEdit))
-            const $forStockSwitch = $('#forStockSwitch');
-            const $clienteSelectorSection = $('#clienteSelectorSection');
-            const $stockModeDisplay = $('#stockModeDisplay');
+                const $forStockSwitch = $('#forStockSwitch');
+                const $clienteSelectorSection = $('#clienteSelectorSection');
+                const $stockModeDisplay = $('#stockModeDisplay');
 
-            // Referencias a secciones de Pago y Entrega
-            const $pagoCard = $('.order-mobile-3');
-            const $entregaCard = $('.order-mobile-4');
+                // Referencias a secciones de Pago y Entrega
+                const $pagoCard = $('.order-mobile-3');
+                const $entregaCard = $('.order-mobile-4');
 
-            // Función para actualizar UI según modo stock
-            function updateStockModeUI() {
-                const isStockMode = $forStockSwitch.is(':checked');
+                // Función para actualizar UI según modo stock
+                function updateStockModeUI() {
+                    const isStockMode = $forStockSwitch.is(':checked');
 
-                if (isStockMode) {
-                    // ══════════════════════════════════════════
-                    // MODO STOCK: DESHABILITAR (no ocultar)
-                    // ══════════════════════════════════════════
+                    if (isStockMode) {
+                        // ══════════════════════════════════════════
+                        // MODO STOCK: DESHABILITAR (no ocultar)
+                        // ══════════════════════════════════════════
 
-                    // CLIENTE: Deshabilitar visualmente (mostrar indicador)
-                    $clienteSelectorSection.addClass('section-disabled');
-                    $stockModeDisplay.show();
+                        // CLIENTE: Deshabilitar visualmente (mostrar indicador)
+                        $clienteSelectorSection.addClass('section-disabled');
+                        $stockModeDisplay.show();
 
-                    // Limpiar cliente seleccionado
-                    $('#cliente_id').val('');
-                    selectedClientData = null;
-                    clientMeasurementsCache = null;
-                    $('#clienteDisplay').html('<span class="placeholder-text"><i class="fas fa-search mr-1"></i> Buscar cliente...</span>');
-                    $('#btnSelectClient').removeClass('has-client');
+                        // Limpiar cliente seleccionado
+                        $('#cliente_id').val('');
+                        selectedClientData = null;
+                        clientMeasurementsCache = null;
+                        $('#clienteDisplay').html(
+                            '<span class="placeholder-text"><i class="fas fa-search mr-1"></i> Buscar cliente...</span>'
+                            );
+                        $('#btnSelectClient').removeClass('has-client');
 
-                    // PAGO: Deshabilitar sección completa
-                    $pagoCard.find('.card-body').addClass('section-disabled');
-                    $pagoCard.find('select, input').prop('disabled', true);
-                    $('#paymentMethod').val('');
-                    $('#payFull').prop('checked', false);
-                    $('#initialPayment').val('');
-                    $('#payFullGroup, #anticipoGroup').hide();
+                        // PAGO: Deshabilitar sección completa
+                        $pagoCard.find('.card-body').addClass('section-disabled');
+                        $pagoCard.find('select, input').prop('disabled', true);
+                        $('#paymentMethod').val('');
+                        $('#payFull').prop('checked', false);
+                        $('#initialPayment').val('');
+                        $('#payFullGroup, #anticipoGroup').hide();
 
-                    // ENTREGA: Deshabilitar sección completa
-                    $entregaCard.find('.card-body').addClass('section-disabled');
-                    $entregaCard.find('select, input').prop('disabled', true);
+                        // ENTREGA: Deshabilitar sección completa
+                        $entregaCard.find('.card-body').addClass('section-disabled');
+                        $entregaCard.find('select, input').prop('disabled', true);
 
-                } else {
-                    // ══════════════════════════════════════════
-                    // MODO NORMAL: RE-HABILITAR TODO
-                    // ══════════════════════════════════════════
+                    } else {
+                        // ══════════════════════════════════════════
+                        // MODO NORMAL: RE-HABILITAR TODO
+                        // ══════════════════════════════════════════
 
-                    // CLIENTE: Habilitar
-                    $clienteSelectorSection.removeClass('section-disabled');
-                    $stockModeDisplay.hide();
+                        // CLIENTE: Habilitar
+                        $clienteSelectorSection.removeClass('section-disabled');
+                        $stockModeDisplay.hide();
 
-                    // PAGO: Habilitar
-                    $pagoCard.find('.card-body').removeClass('section-disabled');
-                    $pagoCard.find('select, input').prop('disabled', false);
+                        // PAGO: Habilitar
+                        $pagoCard.find('.card-body').removeClass('section-disabled');
+                        $pagoCard.find('select, input').prop('disabled', false);
 
-                    // ENTREGA: Habilitar
-                    $entregaCard.find('.card-body').removeClass('section-disabled');
-                    $entregaCard.find('select, input').prop('disabled', false);
+                        // ENTREGA: Habilitar
+                        $entregaCard.find('.card-body').removeClass('section-disabled');
+                        $entregaCard.find('select, input').prop('disabled', false);
+                    }
                 }
-            }
 
-            // Inicializar estado
-            updateStockModeUI();
-
-            // Handler del switch
-            $forStockSwitch.on('change', function() {
+                // Inicializar estado
                 updateStockModeUI();
 
-                // Feedback visual
-                if ($(this).is(':checked')) {
-                    Swal.fire({
-                        icon: 'info',
-                        title: 'Producción para Stock',
-                        text: 'Pedido sin cliente, pago ni entrega. Se producirá para inventario.',
-                        toast: true,
-                        position: 'top-end',
-                        showConfirmButton: false,
-                        timer: 3000
-                    });
-                }
-            });
+                // Handler del switch
+                $forStockSwitch.on('change', function() {
+                    updateStockModeUI();
+
+                    // Feedback visual
+                    if ($(this).is(':checked')) {
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Producción para Stock',
+                            text: 'Pedido sin cliente, pago ni entrega. Se producirá para inventario.',
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 3000
+                        });
+                    }
+                });
             @endif
 
             // ==========================================
@@ -2094,7 +2424,7 @@
                         return {
                             results: items.map(p => ({
                                 id: p.id,
-                                text: `${p.name} - $${parseFloat(p.base_price).toFixed(2)}`,
+                                text: p.name.toUpperCase(),
                                 product: p
                             })),
                             pagination: data.pagination || {
@@ -2136,17 +2466,16 @@
                 $('#productPreviewCategory').text(selectedProduct.category_name || '-');
                 // SKU como badge
                 $('#productPreviewSku').html(
-                    selectedProduct.sku
-                        ? `<span class="badge badge-secondary" style="font-size: 0.75rem;">${selectedProduct.sku}</span>`
-                        : '-'
+                    selectedProduct.sku ?
+                    `<span class="badge badge-secondary" style="font-size: 0.75rem;">${selectedProduct.sku}</span>` :
+                    '-'
                 );
                 // Imagen
                 $('#productPreviewImage').attr('src', selectedProduct.image_url ||
                     '{{ asset('img/no-image.png') }}');
 
-                // Guardar precio base y establecer precio
+                // Guardar precio base pero NO establecer precio aún (se llena al seleccionar variante)
                 modalBasePrice = parseFloat(selectedProduct.base_price) || 0;
-                $('#modalPrice').val(modalBasePrice);
 
                 // === MOSTRAR/OCULTAR SECCIÓN DE MEDIDAS ===
                 updateMeasurementsSectionVisibility();
@@ -2154,22 +2483,24 @@
                 // === CARGAR EXTRAS DEL PRODUCTO ===
                 loadProductExtras();
 
-                // === MOSTRAR COMPARACIÓN DE PRECIOS ===
-                updatePriceComparison();
-
                 const $variantSelect = $('#modalVariantSelect');
-                $variantSelect.empty().append('<option value="">-- Seleccionar el producto --</option>');
+                $variantSelect.empty().append('<option value="">-- Seleccione variante --</option>');
 
                 if (selectedProduct.variants && selectedProduct.variants.length > 0) {
+                    // Producto CON variantes: precio vacío hasta seleccionar variante
+                    $('#modalPrice').val('');
                     selectedProduct.variants.forEach(v => {
                         $variantSelect.append(
                             `<option value="${v.id}" data-price="${v.price}" data-sku="${v.sku}">${v.display} ($${parseFloat(v.price).toFixed(2)})</option>`
                         );
                     });
-
                 } else {
-
+                    // Producto SIN variantes: usar precio base directamente
+                    $('#modalPrice').val(modalBasePrice.toFixed(2));
                 }
+
+                // === MOSTRAR COMPARACIÓN DE PRECIOS ===
+                updatePriceComparison();
 
                 // Mostrar subtotal del ítem
                 $('#itemSubtotalContainer').show();
@@ -2215,11 +2546,17 @@
                     $list.show();
 
                     selectedExtras.forEach(extra => {
+                        const qty = extra.quantity || 1;
+                        const unitPrice = extra.unit_price || extra.price;
+                        const totalPrice = extra.price || (unitPrice * qty);
+                        const qtyLabel = qty > 1 ?
+                            `<span class="badge badge-secondary mr-1">${qty}x</span>` : '';
+
                         const itemHtml = `
-                            <div class="d-flex justify-content-between align-items-center px-2 py-1 border-bottom" data-extra-id="${extra.id}">
-                                <span class="small">${extra.name}</span>
-                                <div>
-                                    <span class="text-info small mr-2">+$${extra.price.toFixed(2)}</span>
+                            <div class="d-flex justify-content-between align-items-center px-2 py-2 border-bottom" data-extra-id="${extra.id}">
+                                <span style="font-size: 14px; font-weight: 500;">${qtyLabel}${extra.name.toUpperCase()}</span>
+                                <div class="d-flex align-items-center">
+                                    <span class="text-success font-weight-bold mr-2" style="font-size: 14px;">+$${totalPrice.toFixed(2)}</span>
                                     <button type="button" class="btn btn-xs btn-outline-danger remove-extra-btn" data-id="${extra.id}" title="Quitar">
                                         <i class="fas fa-times"></i>
                                     </button>
@@ -2268,14 +2605,12 @@
                     return;
                 }
 
-                // Mostrar loading en la tabla
-                $('#extrasTableBody').html(`
-                    <tr>
-                        <td colspan="3" class="text-center py-4">
-                            <i class="fas fa-spinner fa-spin fa-2x text-success"></i>
-                            <p class="mt-2 mb-0 text-muted">Cargando extras...</p>
-                        </td>
-                    </tr>
+                // Mostrar loading
+                $('#extrasListContainer').html(`
+                    <div class="text-center py-4">
+                        <i class="fas fa-spinner fa-spin fa-2x text-success"></i>
+                        <p class="mt-2 mb-0 text-muted">Cargando extras...</p>
+                    </div>
                 `);
 
                 // Abrir modal inmediatamente
@@ -2291,57 +2626,77 @@
                         selectedProduct.extras = response.extras || [];
 
                         if (selectedProduct.extras.length === 0) {
-                            $('#extrasTableBody').html(`
-                                <tr>
-                                    <td colspan="3" class="text-center py-4 text-muted">
-                                        <i class="fas fa-box-open fa-2x mb-2 d-block"></i>
-                                        No hay extras disponibles en el catálogo
-                                    </td>
-                                </tr>
+                            $('#extrasListContainer').html(`
+                                <div class="text-center py-4 text-muted">
+                                    <i class="fas fa-box-open fa-2x mb-2 d-block"></i>
+                                    No hay extras disponibles en el catálogo
+                                </div>
                             `);
                             return;
                         }
 
-                        // Copiar selección actual a temporal
+                        // Copiar selección actual a temporal (con cantidad)
                         tempSelectedExtras = selectedExtras.map(e => ({
-                            ...e
+                            ...e,
+                            quantity: e.quantity || 1
                         }));
 
-                        // Llenar tabla de extras
-                        populateExtrasTable();
+                        // Llenar lista de extras
+                        populateExtrasList();
                     },
                     error: function() {
-                        $('#extrasTableBody').html(`
-                            <tr>
-                                <td colspan="3" class="text-center py-4 text-danger">
-                                    <i class="fas fa-exclamation-triangle fa-2x mb-2 d-block"></i>
-                                    Error al cargar extras
-                                </td>
-                            </tr>
+                        $('#extrasListContainer').html(`
+                            <div class="text-center py-4 text-danger">
+                                <i class="fas fa-exclamation-triangle fa-2x mb-2 d-block"></i>
+                                Error al cargar extras
+                            </div>
                         `);
                     }
                 });
             });
 
-            // Llenar tabla con extras del producto
-            function populateExtrasTable() {
-                const $tbody = $('#extrasTableBody');
-                $tbody.empty();
+            // Llenar lista con extras del producto (con cantidad)
+            function populateExtrasList() {
+                const $container = $('#extrasListContainer');
+                $container.empty();
 
                 if (!selectedProduct || !selectedProduct.extras) return;
 
                 selectedProduct.extras.forEach(extra => {
-                    const isSelected = tempSelectedExtras.some(e => e.id === extra.id);
-                    const rowHtml = `
-                        <tr data-extra-id="${extra.id}" data-name="${extra.name}" data-price="${extra.price_addition}">
-                            <td class="text-center">
-                                <input type="checkbox" class="extra-table-checkbox" ${isSelected ? 'checked' : ''}>
-                            </td>
-                            <td>${extra.name}</td>
-                            <td class="text-right text-success font-weight-bold">+$${parseFloat(extra.price_addition).toFixed(2)}</td>
-                        </tr>
+                    const selected = tempSelectedExtras.find(e => e.id === extra.id);
+                    const isSelected = !!selected;
+                    const qty = selected ? selected.quantity : 1;
+                    const unitPrice = parseFloat(extra.price_addition) || 0;
+
+                    const cardHtml = `
+                        <div class="extra-card d-flex align-items-center p-2 mb-2 border rounded ${isSelected ? 'border-success bg-light' : ''}"
+                             data-extra-id="${extra.id}" data-name="${extra.name}" data-price="${unitPrice}"
+                             style="cursor: pointer;">
+                            <div class="mr-3">
+                                <input type="checkbox" class="extra-checkbox" style="width: 20px; height: 20px;" ${isSelected ? 'checked' : ''}>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="font-weight-bold" style="font-size: 15px;">${extra.name.toUpperCase()}</div>
+                                <div class="text-success" style="font-size: 14px;">+$${unitPrice.toFixed(2)} c/u</div>
+                            </div>
+                            <div class="d-flex align-items-center extra-qty-controls" style="display: ${isSelected ? 'flex' : 'none'} !important;">
+                                <button type="button" class="btn btn-sm btn-outline-secondary extra-qty-minus" style="width: 32px; height: 32px;">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                                <input type="number" class="form-control form-control-sm text-center extra-qty-input mx-1"
+                                       value="${qty}" min="1" max="99" style="width: 50px; font-size: 15px; font-weight: bold;">
+                                <button type="button" class="btn btn-sm btn-outline-secondary extra-qty-plus" style="width: 32px; height: 32px;">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            <div class="ml-3 text-right" style="min-width: 80px;">
+                                <span class="extra-subtotal font-weight-bold text-success" style="font-size: 16px;">
+                                    ${isSelected ? '+$' + (unitPrice * qty).toFixed(2) : ''}
+                                </span>
+                            </div>
+                        </div>
                     `;
-                    $tbody.append(rowHtml);
+                    $container.append(cardHtml);
                 });
 
                 updateExtrasModalSummary();
@@ -2350,43 +2705,92 @@
             // Buscador de extras
             $('#extrasSearchInput').on('input', function() {
                 const term = $(this).val().toLowerCase().trim();
-                $('#extrasTableBody tr').each(function() {
+                $('.extra-card').each(function() {
                     const name = $(this).data('name').toLowerCase();
                     $(this).toggle(name.includes(term));
                 });
             });
 
-            // Checkbox en tabla de extras
-            $(document).on('change', '.extra-table-checkbox', function() {
-                const $row = $(this).closest('tr');
-                const extraId = $row.data('extra-id');
-                const extraName = $row.data('name');
-                const extraPrice = parseFloat($row.data('price')) || 0;
+            // Click en card de extra (toggle selección)
+            $(document).on('click', '.extra-card', function(e) {
+                // Evitar toggle si se hace click en controles de cantidad o checkbox directamente
+                if ($(e.target).closest('.extra-qty-controls').length || $(e.target).is(
+                    '.extra-checkbox')) {
+                    return;
+                }
+                $(this).find('.extra-checkbox').prop('checked', !$(this).find('.extra-checkbox').prop(
+                    'checked')).trigger('change');
+            });
+
+            // Checkbox de extra
+            $(document).on('change', '.extra-checkbox', function() {
+                const $card = $(this).closest('.extra-card');
+                const extraId = $card.data('extra-id');
+                const extraName = $card.data('name');
+                const extraPrice = parseFloat($card.data('price')) || 0;
+                const qty = parseInt($card.find('.extra-qty-input').val()) || 1;
 
                 if ($(this).is(':checked')) {
+                    $card.addClass('border-success bg-light');
+                    $card.find('.extra-qty-controls').css('display', 'flex');
+                    $card.find('.extra-subtotal').text('+$' + (extraPrice * qty).toFixed(2));
+
                     if (!tempSelectedExtras.some(e => e.id === extraId)) {
                         tempSelectedExtras.push({
                             id: extraId,
                             name: extraName,
-                            price: extraPrice
+                            price: extraPrice * qty,
+                            unit_price: extraPrice,
+                            quantity: qty
                         });
                     }
                 } else {
+                    $card.removeClass('border-success bg-light');
+                    $card.find('.extra-qty-controls').css('display', 'none');
+                    $card.find('.extra-subtotal').text('');
                     tempSelectedExtras = tempSelectedExtras.filter(e => e.id !== extraId);
                 }
 
                 updateExtrasModalSummary();
             });
 
-            // Seleccionar/deseleccionar todos
-            $('#selectAllExtras').on('change', function() {
-                const isChecked = $(this).is(':checked');
-                $('#extrasTableBody tr:visible').each(function() {
-                    const $checkbox = $(this).find('.extra-table-checkbox');
-                    if ($checkbox.prop('checked') !== isChecked) {
-                        $checkbox.prop('checked', isChecked).trigger('change');
-                    }
-                });
+            // Botones de cantidad +/-
+            $(document).on('click', '.extra-qty-minus', function(e) {
+                e.stopPropagation();
+                const $input = $(this).siblings('.extra-qty-input');
+                let val = parseInt($input.val()) || 1;
+                if (val > 1) $input.val(val - 1).trigger('input');
+            });
+
+            $(document).on('click', '.extra-qty-plus', function(e) {
+                e.stopPropagation();
+                const $input = $(this).siblings('.extra-qty-input');
+                let val = parseInt($input.val()) || 1;
+                if (val < 99) $input.val(val + 1).trigger('input');
+            });
+
+            // Cambio en input de cantidad
+            $(document).on('input', '.extra-qty-input', function(e) {
+                e.stopPropagation();
+                const $card = $(this).closest('.extra-card');
+                const extraId = $card.data('extra-id');
+                const extraPrice = parseFloat($card.data('price')) || 0;
+                let qty = parseInt($(this).val()) || 1;
+                if (qty < 1) qty = 1;
+                if (qty > 99) qty = 99;
+                $(this).val(qty);
+
+                // Actualizar subtotal visual
+                $card.find('.extra-subtotal').text('+$' + (extraPrice * qty).toFixed(2));
+
+                // Actualizar en tempSelectedExtras
+                const idx = tempSelectedExtras.findIndex(e => e.id === extraId);
+                if (idx !== -1) {
+                    tempSelectedExtras[idx].quantity = qty;
+                    tempSelectedExtras[idx].price = extraPrice * qty;
+                }
+
+                updateExtrasModalSummary();
             });
 
             // Actualizar resumen en modal de extras
@@ -2421,12 +2825,33 @@
                 tempSelectedExtras = [];
             });
 
-            // Recalcular precio final (base + extras + ajuste manual)
+            // Actualizar indicadores de precio (extras y estimado)
+            // REGLA: El precio del campo es SOLO el del producto/variante
+            // Los extras se muestran como información adicional, NO se suman al campo
             function recalculateFinalPrice() {
                 const extrasTotal = selectedExtras.reduce((sum, e) => sum + e.price, 0);
                 const manualAdjust = parseFloat($('#modalExtrasCost').val()) || 0;
-                const finalPrice = modalBasePrice + extrasTotal + manualAdjust;
-                $('#modalPrice').val(finalPrice.toFixed(2));
+                const requiresDesign = $('#chkRequiresDesign').is(':checked');
+
+                // NO modificar el precio del campo - queda el precio base del producto/variante
+                // Solo actualizar indicadores visuales
+
+                // Indicador de extras
+                if (extrasTotal > 0) {
+                    $('#extrasIndicator').text('+ Extras $' + extrasTotal.toFixed(2)).show();
+                } else {
+                    $('#extrasIndicator').hide();
+                }
+
+                // Indicador de precio estimado (cuando requiere personalización)
+                if (requiresDesign) {
+                    $('#estimatedPriceIndicator').show();
+                } else {
+                    $('#estimatedPriceIndicator').hide();
+                }
+
+                // Actualizar subtotal visual
+                updateItemSubtotal();
             }
 
             // Actualizar comparación de precios
@@ -2462,13 +2887,27 @@
             }
 
             // Actualizar subtotal del ítem
+            // El subtotal incluye precio base + extras para mostrar el total real
             function updateItemSubtotal() {
                 const qty = parseInt($('#modalQuantity').val()) || 1;
                 const price = parseFloat($('#modalPrice').val()) || 0;
-                const subtotal = qty * price;
+                const extrasTotal = selectedExtras.reduce((sum, e) => sum + e.price, 0);
+                const manualAdjust = parseFloat($('#modalExtrasCost').val()) || 0;
+
+                // Precio total por unidad = precio producto + extras + ajuste manual
+                const pricePerUnit = price + extrasTotal + manualAdjust;
+                const subtotal = qty * pricePerUnit;
 
                 $('#itemSubtotalDisplay').text('$' + subtotal.toFixed(2));
-                $('#itemSubtotalDetail').text(qty + ' × $' + price.toFixed(2));
+
+                // Mostrar detalle con desglose si hay extras
+                if (extrasTotal > 0 || manualAdjust > 0) {
+                    const extrasInfo = extrasTotal > 0 ? ` + $${extrasTotal.toFixed(2)} extras` : '';
+                    const adjustInfo = manualAdjust > 0 ? ` + $${manualAdjust.toFixed(2)} ajuste` : '';
+                    $('#itemSubtotalDetail').text(`${qty} × ($${price.toFixed(2)}${extrasInfo}${adjustInfo})`);
+                } else {
+                    $('#itemSubtotalDetail').text(qty + ' × $' + price.toFixed(2));
+                }
             }
 
             // ==========================================
@@ -2541,7 +2980,7 @@
                 }
                 // Cargar desde servidor
                 $.ajax({
-                    url: `/admin/orders/ajax/clientes/${selectedClientData.id}/measurements`,
+                    url: `/admin/orders/ajax/cliente/${selectedClientData.id}/measurements`,
                     method: 'GET',
                     dataType: 'json',
                     success: function(measurements) {
@@ -2576,7 +3015,8 @@
             $('#btnOpenMeasurementsModal').on('click', function() {
                 if (!selectedProduct) return;
 
-                // Mostrar nombre del producto en el modal de medidas
+                // Mostrar nombre del cliente y producto en el modal de medidas
+                $('#measurementsClientName').text(selectedClientData ? selectedClientData.text : '-');
                 $('#measurementsProductName').text(selectedProduct.name);
 
                 // Si hay medidas capturadas previamente, llenar los campos
@@ -2628,7 +3068,7 @@
 
                 // Cargar desde servidor
                 $.ajax({
-                    url: `/admin/orders/ajax/clientes/${selectedClientData.id}/measurements`,
+                    url: `/admin/orders/ajax/cliente/${selectedClientData.id}/measurements`,
                     method: 'GET',
                     dataType: 'json',
                     success: function(measurements) {
@@ -2642,7 +3082,7 @@
                 });
             }
 
-            // Renderizar lista de medidas existentes
+            // Renderizar lista de medidas existentes (con historial enriquecido)
             function renderExistingMeasurements(measurements) {
                 $('#existingMeasuresLoading').hide();
 
@@ -2656,19 +3096,61 @@
 
                 measurements.forEach(m => {
                     const summary = buildMeasurementSummaryText(m);
+
+                    // Badge de fuente con colores según tipo
+                    let sourceBadge = '';
+                    if (m.source === 'order') {
+                        sourceBadge =
+                            '<span class="badge" style="background: #e3f2fd; color: #1565c0; font-size: 11px;">Pedido</span>';
+                    } else if (m.source === 'manual') {
+                        sourceBadge =
+                            '<span class="badge" style="background: #e8f5e9; color: #2e7d32; font-size: 11px;">Manual</span>';
+                    } else if (m.source === 'profile' || m.source === 'legacy') {
+                        sourceBadge =
+                            '<span class="badge" style="background: #f3e5f5; color: #7b1fa2; font-size: 11px;">Perfil</span>';
+                    }
+
+                    // Badge principal
                     const isPrimary = m.is_primary ?
-                        '<span class="badge badge-info ml-1">Principal</span>' : '';
-                    const label = m.label || 'Medidas registradas';
+                        '<span class="badge badge-info ml-1" style="font-size: 11px;">Principal</span>' :
+                        '';
+
+                    // Info del pedido/producto si existe
+                    let contextInfo = '';
+                    if (m.order_number) {
+                        contextInfo +=
+                            `<span class="text-primary" style="font-size: 12px;"><i class="fas fa-file-alt mr-1"></i>#${m.order_number}</span>`;
+                    }
+                    if (m.product_name) {
+                        contextInfo +=
+                            `<span class="text-secondary ml-2" style="font-size: 12px;"><i class="fas fa-box mr-1"></i>${m.product_name}</span>`;
+                    }
+
+                    // Fecha relativa
+                    const dateInfo = m.captured_at_relative ?
+                        `<span class="text-muted" style="font-size: 11px;"><i class="fas fa-clock mr-1"></i>${m.captured_at_relative}</span>` :
+                        '';
 
                     const itemHtml = `
-                        <div class="card mb-2 measurement-option" data-measurement='${JSON.stringify(m)}' style="cursor: pointer;">
+                        <div class="card mb-2 measurement-option" data-measurement='${JSON.stringify(m)}' style="cursor: pointer; border-left: 3px solid ${m.source === 'order' ? '#1565c0' : (m.source === 'manual' ? '#2e7d32' : '#7b1fa2')};">
                             <div class="card-body py-2 px-3">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <strong>${label}</strong> ${isPrimary}
-                                        <div class="small text-muted">${summary}</div>
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div style="flex: 1;">
+                                        <div class="d-flex align-items-center flex-wrap mb-1">
+                                            ${sourceBadge} ${isPrimary}
+                                            <span class="ml-2 font-weight-bold" style="font-size: 13px;">${m.label || 'Medidas registradas'}</span>
+                                        </div>
+                                        ${contextInfo ? `<div class="mb-1">${contextInfo}</div>` : ''}
+                                        <div class="text-dark" style="font-size: 13px;">
+                                            <i class="fas fa-ruler-combined mr-1 text-info"></i>${summary}
+                                        </div>
                                     </div>
-                                    <i class="fas fa-chevron-right text-muted"></i>
+                                    <div class="text-right ml-2">
+                                        ${dateInfo}
+                                        <div class="mt-1">
+                                            <i class="fas fa-chevron-right text-muted"></i>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2833,66 +3315,6 @@
                 $('#measurementsSummaryContent').html(summaryHtml);
             }
 
-            // ══════════════════════════════════════════════════════════════
-            // FUTURA ACTIVACIÓN — MODELO DE CLIENTE NO CERRADO
-            // La persistencia real en cliente está DESACTIVADA hasta que:
-            // - Se defina modelo de versionado de medidas
-            // - Se implemente historial/rollback
-            // - Se cierre arquitectura de medidas en módulo clientes
-            // ══════════════════════════════════════════════════════════════
-            function saveMeasurementsToClient(measurements) {
-                if (!selectedClientData) return;
-
-                // NEUTRALIZADO: No se persiste en BD del cliente
-                // Las medidas SOLO quedan en el contexto del ítem (JS)
-
-                /* CÓDIGO ORIGINAL — REACTIVAR CUANDO MODELO ESTÉ CERRADO:
-                $.ajax({
-                    url: `/admin/orders/ajax/cliente/${selectedClientData.id}/measurements`,
-                    method: 'POST',
-                    data: {
-                        ...measurements,
-                        _token: '{{ csrf_token() }}'
-                    },
-                    success: function(response) {
-                        clientMeasurementsCache = null;
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Medidas guardadas',
-                            text: 'Las medidas se guardaron en el perfil del cliente',
-                            toast: true,
-                            position: 'top-end',
-                            showConfirmButton: false,
-                            timer: 3000
-                        });
-                    },
-                    error: function(xhr) {
-                        console.error('Error al guardar medidas en cliente:', xhr);
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: 'No se pudieron guardar las medidas en el cliente',
-                            toast: true,
-                            position: 'top-end',
-                            showConfirmButton: false,
-                            timer: 3000
-                        });
-                    }
-                });
-                FIN CÓDIGO ORIGINAL */
-
-                // COMPORTAMIENTO TEMPORAL: Feedback informativo sin persistencia
-                Swal.fire({
-                    icon: 'info',
-                    title: 'Medidas registradas',
-                    html: '<small>Las medidas se usarán para este pedido.<br>El guardado en cliente se habilitará próximamente.</small>',
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 4000
-                });
-            }
-
             // Limpiar cache de medidas cuando cambia el cliente
             function clearMeasurementsCache() {
                 clientMeasurementsCache = null;
@@ -2938,8 +3360,17 @@
                 }
 
                 const price = parseFloat($('#modalPrice').val()) || 0;
+                const hasVariants = selectedProduct.variants && selectedProduct.variants.length > 0;
+                const variantSelected = $('#modalVariantSelect').val();
 
-                // Bloquear SOLO si precio es 0
+                // Bloquear si el producto tiene variantes y no se ha seleccionado una
+                if (hasVariants && !variantSelected) {
+                    $btn.prop('disabled', true).attr('title', 'Seleccione una variante').tooltip('dispose')
+                        .tooltip();
+                    return;
+                }
+
+                // Bloquear si precio es 0 o vacío
                 if (price <= 0) {
                     $btn.prop('disabled', true).attr('title', 'Ingrese un precio válido').tooltip('dispose')
                         .tooltip();
@@ -3015,15 +3446,14 @@
                 $('#priceComparisonContainer').hide();
                 // $('#priceModifiedAlert').hide();
                 $('#itemSubtotalContainer').hide();
-                // Reset personalización (nuevo flujo)
+                // Reset indicadores de precio
+                $('#extrasIndicator').hide().text('');
+                $('#estimatedPriceIndicator').hide();
+                // Reset personalización
                 $('#chkRequiresDesign').prop('checked', false);
                 $('#modalEmbroideryText').prop('disabled', true).val('').attr('placeholder',
                     'Marque el checkbox para habilitar');
                 $('#embroideryTextHint').hide();
-                // Reset personalización (LEGACY)
-                $('#isCustomized').prop('checked', false);
-                $('#customizationBody').hide();
-                $('#customizationChevron').removeClass('fa-chevron-up').addClass('fa-chevron-down');
                 $('#modalExtrasCost').val('0');
                 $('#modalCustomizationNotes').val('');
                 // Reset extras del producto
@@ -3072,9 +3502,12 @@
                 if (variantPrice) {
                     // Actualizar precio base con precio de variante
                     modalBasePrice = parseFloat(variantPrice);
+                    // Poner el precio en el campo
+                    $('#modalPrice').val(modalBasePrice.toFixed(2));
                 } else if (selectedProduct) {
-                    // Sin variante: usar precio base del producto
+                    // Sin variante seleccionada: limpiar precio
                     modalBasePrice = parseFloat(selectedProduct.base_price) || 0;
+                    $('#modalPrice').val('');
                 }
                 // Recalcular precio final (base + extras + ajuste)
                 recalculateFinalPrice();
@@ -3104,28 +3537,8 @@
                         'Marque el checkbox para habilitar');
                     $('#embroideryTextHint').hide();
                 }
-            });
-
-            // Handler LEGACY para checkbox de personalización (mantener compatibilidad)
-            $('#isCustomized').on('change', function() {
-                const isChecked = $(this).is(':checked');
-                if (isChecked) {
-                    $('#customizationBody').slideDown(200);
-                    $('#customizationChevron').removeClass('fa-chevron-down').addClass('fa-chevron-up');
-                } else {
-                    $('#customizationBody').slideUp(200);
-                    $('#customizationChevron').removeClass('fa-chevron-up').addClass('fa-chevron-down');
-                }
-            });
-
-            // Toggle por click en header de personalización (LEGACY)
-            $('#customizationToggle').on('click', function(e) {
-                // Evitar toggle cuando se hace click directamente en el checkbox
-                if ($(e.target).is('#isCustomized') || $(e.target).closest('label').is(
-                        '[for="isCustomized"]')) {
-                    return;
-                }
-                $('#isCustomized').prop('checked', !$('#isCustomized').is(':checked')).trigger('change');
+                // Actualizar indicador de precio estimado
+                recalculateFinalPrice();
             });
 
             // Handler para ajuste de precio manual
@@ -3176,11 +3589,6 @@
                     return;
                 }
 
-                // === VALIDACIÓN MEDIDAS LEGACY ELIMINADA (FASE 1) ===
-                // El flujo de medidas que cerraba el modal y abría otro fue eliminado.
-                // Las medidas se capturarán inline en FASE 2.
-
-                // Agregar producto directamente
                 addProductToOrder();
             });
 
@@ -3240,21 +3648,27 @@
                 const variantId = $('#modalVariantSelect').val() || null;
                 const variantOption = $('#modalVariantSelect option:selected');
                 const newQuantity = parseInt($('#modalQuantity').val()) || 1;
-                const newPrice = parseFloat($('#modalPrice').val()) || 0;
+                const basePrice = parseFloat($('#modalPrice').val()) || 0;
 
                 // Capturar flag de personalización (requiere diseño)
                 const requiresDesign = $('#chkRequiresDesign').is(':checked');
                 const embroideryText = $('#modalEmbroideryText').val().trim();
                 const extrasCost = parseFloat($('#modalExtrasCost').val()) || 0;
                 const customizationNotes = $('#modalCustomizationNotes').val().trim();
-                // LEGACY: mantener is_customized basado en requiresDesign
                 const isCustomized = requiresDesign || embroideryText.length > 0;
 
-                // Clonar extras seleccionados para este ítem
+                // Calcular total de extras seleccionados
+                const extrasTotal = selectedExtras.reduce((sum, e) => sum + e.price, 0);
+
+                // Precio unitario FINAL = precio base + extras + ajuste manual
+                const newPrice = basePrice + extrasTotal + extrasCost;
+
+                // Clonar extras seleccionados para este ítem (con cantidad)
                 const itemExtras = selectedExtras.map(e => ({
                     id: e.id,
                     name: e.name,
-                    price: e.price
+                    price: e.price,
+                    quantity: e.quantity || 1
                 }));
 
                 // === MODO EDIT: Actualizar item existente ===
@@ -3299,28 +3713,43 @@
                     editingItemIndex = null;
                 } else {
                     // === MODO CREATE ===
-                    // Buscar si ya existe el mismo producto/variante en la lista
-                    const existingItem = orderItems.find(item =>
-                        item.product_id === selectedProduct.id &&
-                        item.product_variant_id === variantId
-                    );
+                    // Buscar si ya existe un item IDÉNTICO en la lista
+                    // Solo se agrupa si TODO es exactamente igual (mismo trabajo de producción)
+                    const existingItem = orderItems.find(item => {
+                        // 1. Mismo producto y variante
+                        if (item.product_id !== selectedProduct.id) return false;
+                        if (item.product_variant_id !== variantId) return false;
+
+                        // 2. Mismo estado de personalización
+                        if (item.is_customized !== isCustomized) return false;
+
+                        // 3. Mismo texto de bordado (case-sensitive)
+                        const itemText = (item.embroidery_text || '').trim();
+                        const newText = (embroideryText || '').trim();
+                        if (itemText !== newText) return false;
+
+                        // 4. Mismas notas de personalización
+                        const itemNotes = (item.customization_notes || '').trim();
+                        const newNotes = (customizationNotes || '').trim();
+                        if (itemNotes !== newNotes) return false;
+
+                        // 5. Mismos extras (comparar IDs ordenados)
+                        const itemExtrasIds = (item.selected_extras || []).map(e => e.id).sort().join(',');
+                        const newExtrasIds = (itemExtras || []).map(e => e.id).sort().join(',');
+                        if (itemExtrasIds !== newExtrasIds) return false;
+
+                        // 6. Mismas medidas (si aplica)
+                        const itemMeasures = JSON.stringify(item.measurements || {});
+                        const newMeasures = JSON.stringify(currentItemMeasurements || {});
+                        if (itemMeasures !== newMeasures) return false;
+
+                        // Todo coincide: es el mismo item
+                        return true;
+                    });
 
                     if (existingItem) {
-                        // Ya existe: actualizar cantidad sumando la nueva
+                        // Item idéntico existe: solo incrementar cantidad
                         existingItem.quantity += newQuantity;
-                        if (newPrice > 0) existingItem.unit_price = newPrice;
-                        if (isCustomized) {
-                            existingItem.is_customized = true;
-                            if (embroideryText) existingItem.embroidery_text = embroideryText;
-                            if (extrasCost > 0) existingItem.extras_cost = extrasCost;
-                            if (customizationNotes) existingItem.customization_notes = customizationNotes;
-                            if (itemExtras.length > 0) existingItem.selected_extras = itemExtras;
-                        }
-                        if (currentItemMeasurements) {
-                            existingItem.measurements = {
-                                ...currentItemMeasurements
-                            };
-                        }
 
                         Swal.fire({
                             icon: 'info',
@@ -3424,12 +3853,12 @@
 
                         $tbody.append(`
                             <tr data-index="${item.index}" style="background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);">
-                                <td class="text-center">
+                                <td class="text-center align-middle">
                                     <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto" style="width: 50px; height: 50px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
                                         <i class="fas fa-plus-circle fa-lg text-white"></i>
                                     </div>
                                 </td>
-                                <td>
+                                <td class="align-middle">
                                     <strong style="font-size: 1.05rem; color: #2e7d32;">
                                         <i class="fas fa-plus-circle mr-1"></i> Extras Adicionales
                                     </strong>
@@ -3437,12 +3866,12 @@
                                     ${extrasListHtml}
                                     ${notesRow}
                                 </td>
-                                <td class="text-center text-muted">-</td>
-                                <td class="text-center text-muted">-</td>
-                                <td class="font-weight-bold text-success" style="font-size: 1.05rem;">
+                                <td class="text-center align-middle text-muted">-</td>
+                                <td class="text-center align-middle text-muted">-</td>
+                                <td class="text-right align-middle font-weight-bold text-success" style="font-size: 1.05rem;">
                                     $${subtotal.toFixed(2)}
                                 </td>
-                                <td class="text-nowrap">
+                                <td class="text-center align-middle text-nowrap">
                                     <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn" data-index="${item.index}" title="Eliminar"><i class="fas fa-trash"></i></button>
                                 </td>
                             </tr>
@@ -3505,21 +3934,21 @@
 
                     $tbody.append(`
                         <tr data-index="${item.index}">
-                            <td><img src="${item.image_url || '{{ asset('img/no-image.png') }}'}" class="product-image-thumb" onerror="this.src='{{ asset('img/no-image.png') }}'"></td>
-                            <td>
+                            <td class="text-center align-middle"><img src="${item.image_url || '{{ asset('img/no-image.png') }}'}" class="product-image-thumb" onerror="this.src='{{ asset('img/no-image.png') }}'"></td>
+                            <td class="align-middle">
                                 <strong style="font-size: 1.05rem;">${item.product_name}</strong>
                                 ${variantText}
                                 ${badgesHtml}
                             </td>
-                            <td><input type="number" class="form-control form-control-sm item-qty" value="${item.quantity}" min="1" max="999" data-index="${item.index}"></td>
-                            <td class="text-center">
-                                <span class="badge badge-secondary" style="font-size: 1rem;">${leadTimeDays} días</span>
+                            <td class="text-center align-middle"><input type="number" class="form-control form-control-sm item-qty text-center" value="${item.quantity}" min="1" max="999" data-index="${item.index}"></td>
+                            <td class="text-center align-middle">
+                                <span class="badge badge-secondary" style="font-size: 0.9rem;">${leadTimeDays} días</span>
                             </td>
-                            <td class="font-weight-bold text-success" style="font-size: 1.05rem;">
+                            <td class="text-right align-middle font-weight-bold text-success" style="font-size: 1.05rem;">
                                 <div>$${subtotal.toFixed(2)}</div>
                                 <small class="text-muted">($${item.unit_price.toFixed(2)} c/u)</small>
                             </td>
-                            <td class="text-nowrap">
+                            <td class="text-center align-middle text-nowrap">
                                 <button type="button" class="btn btn-sm btn-outline-primary edit-item-btn mr-1" data-index="${item.index}" title="Editar"><i class="fas fa-pencil-alt"></i></button>
                                 <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn" data-index="${item.index}" title="Eliminar"><i class="fas fa-trash"></i></button>
                             </td>
@@ -3554,7 +3983,6 @@
             $(document).on('click', '.remove-item-btn', function() {
                 orderItems = orderItems.filter(i => i.index !== $(this).data('index'));
                 renderItemsTable();
-                // updateMeasurementsSectionVisibility(); // ELIMINADO (FASE 1)
                 updateHiddenInputs();
                 calculateTotals();
                 calculateMinimumDate();
@@ -3741,16 +4169,10 @@
                         }
 
                         // Precargar personalización
-                        if (item.is_customized) {
-                            $('#isCustomized').prop('checked', true);
-                            $('#customizationBody').show();
-                            $('#customizationChevron').removeClass('fa-chevron-down').addClass(
-                                'fa-chevron-up');
-                        } else {
-                            $('#isCustomized').prop('checked', false);
-                            $('#customizationBody').hide();
-                            $('#customizationChevron').removeClass('fa-chevron-up').addClass(
-                                'fa-chevron-down');
+                        if (item.is_customized || item.embroidery_text) {
+                            $('#chkRequiresDesign').prop('checked', true);
+                            $('#modalEmbroideryText').prop('disabled', false);
+                            $('#embroideryTextHint').show();
                         }
                         $('#modalEmbroideryText').val(item.embroidery_text || '');
                         $('#modalExtrasCost').val(item.extras_cost || 0);
@@ -3817,6 +4239,7 @@
                                 <input type="hidden" name="items[${idx}][extras][${extIdx}][id]" value="${extra.id}">
                                 <input type="hidden" name="items[${idx}][extras][${extIdx}][name]" value="${extra.name}">
                                 <input type="hidden" name="items[${idx}][extras][${extIdx}][price]" value="${extra.price}">
+                                <input type="hidden" name="items[${idx}][extras][${extIdx}][quantity]" value="${extra.quantity || 1}">
                             `);
                         });
                     }
@@ -4009,9 +4432,9 @@
 
                 const minDateStr = minDate.toISOString().split('T')[0];
                 const displayDate = minDate.toLocaleDateString('es-MX', {
-                    weekday: 'short',
+                    weekday: 'long',
                     day: 'numeric',
-                    month: 'short'
+                    month: 'long'
                 });
 
                 $('#minimumDateDisplay').text(displayDate + ' (' + adjustedDays + ' días)');
@@ -4252,17 +4675,6 @@
                 }, 150);
             });
 
-            // HANDLER #measurementsModal ELIMINADO (FASE 1) - Modal externo ya no existe
-            // HANDLER #btnGoToMeasures ELIMINADO (FASE 1) - Era el que cerraba el modal de producto
-
-            // ==========================================
-            // VISIBILIDAD SECCIÓN MEDIDAS — ELIMINADO (FASE 1)
-            // Funciones eliminadas:
-            // - hasProductsRequiringMeasurements()
-            // - updateMeasurementsSectionVisibility()
-            // El card global de medidas ya no existe.
-            // ==========================================
-
             // ==========================================
             // VALIDACIÓN AL ENVIAR
             // ==========================================
@@ -4283,11 +4695,7 @@
                         '<li><i class="fas fa-box mr-1"></i> Debe agregar al menos un producto</li>');
                 }
 
-                // 3. VALIDACIÓN MEDIDAS LEGACY ELIMINADA (FASE 1)
-                // Las medidas se capturarán inline por ítem en FASE 2.
-                // Por ahora, no se bloquea el submit por medidas.
-
-                // 4. Validar método de pago (SOLO si NO es modo stock Y hay anticipo)
+                // 3. Validar método de pago (SOLO si NO es modo stock Y hay anticipo)
                 if (!isStockMode) {
                     const initialPaymentVal = parseFloat($('#initialPayment').val()) || 0;
                     const payFullChecked = $('#payFull').is(':checked');
@@ -4298,19 +4706,20 @@
                     }
                 }
 
-                // 5. Validar fecha prometida (SOLO si NO es modo stock)
+                // 4. Validar fecha prometida (SOLO si NO es modo stock)
                 if (!isStockMode && !$('#promisedDate').val()) {
                     errors.push(
                         '<li><i class="fas fa-calendar mr-1"></i> Debe indicar la fecha de entrega prometida</li>'
                     );
                 }
 
-                // 6. Validar que fecha prometida sea mayor o igual a la fecha mínima (SOLO si NO es modo stock)
+                // 5. Validar que fecha prometida sea mayor o igual a la fecha mínima (SOLO si NO es modo stock)
                 if (!isStockMode) {
                     const promisedDate = $('#promisedDate').val();
                     const minDate = $('#promisedDate').attr('min');
                     if (promisedDate && minDate && promisedDate < minDate) {
-                        const minDateFormatted = new Date(minDate + 'T00:00:00').toLocaleDateString('es-MX', {
+                        const minDateFormatted = new Date(minDate + 'T00:00:00').toLocaleDateString(
+                        'es-MX', {
                             day: 'numeric',
                             month: 'short',
                             year: 'numeric'
@@ -4336,7 +4745,8 @@
 
                 // === BLOQUEAR BOTÓN PARA EVITAR DOBLE SUBMIT ===
                 const $submitBtn = $('button[type="submit"][form="orderForm"]');
-                $submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i> Procesando...');
+                $submitBtn.prop('disabled', true).html(
+                    '<i class="fas fa-spinner fa-spin mr-2"></i> Procesando...');
             });
 
             // ==========================================
@@ -4437,7 +4847,7 @@
                         // Fetch async de productos para obtener nombres e imágenes
                         if (productIds.length > 0) {
                             $.ajax({
-                                url: '{{ route("admin.orders.ajax.get-products-info") }}',
+                                url: '{{ route('admin.orders.ajax.get-products-info') }}',
                                 method: 'POST',
                                 data: {
                                     _token: '{{ csrf_token() }}',
@@ -4445,24 +4855,36 @@
                                 },
                                 success: function(productsInfo) {
                                     oldItems.forEach(function(item) {
-                                        const productInfo = productsInfo[item.product_id] || {};
+                                        const productInfo = productsInfo[item.product_id] ||
+                                        {};
 
                                         const restoredItem = {
                                             index: itemIndex,
-                                            product_id: parseInt(item.product_id) || null,
-                                            product_variant_id: item.product_variant_id ? parseInt(item.product_variant_id) : null,
-                                            product_name: productInfo.name || 'Producto #' + item.product_id,
+                                            product_id: parseInt(item.product_id) ||
+                                                null,
+                                            product_variant_id: item
+                                                .product_variant_id ? parseInt(item
+                                                    .product_variant_id) : null,
+                                            product_name: productInfo.name ||
+                                                'Producto #' + item.product_id,
                                             variant_sku: productInfo.variant_sku || '',
-                                            variant_display: productInfo.variant_display || '',
-                                            unit_price: parseFloat(item.unit_price) || 0,
+                                            variant_display: productInfo
+                                                .variant_display || '',
+                                            unit_price: parseFloat(item.unit_price) ||
+                                                0,
                                             quantity: parseInt(item.quantity) || 1,
                                             lead_time: productInfo.lead_time || 0,
-                                            requires_measurements: productInfo.requires_measurements || false,
-                                            product_type_name: productInfo.product_type_name || null,
-                                            is_customized: item.is_customized == '1' || item.is_customized === true,
+                                            requires_measurements: productInfo
+                                                .requires_measurements || false,
+                                            product_type_name: productInfo
+                                                .product_type_name || null,
+                                            is_customized: item.is_customized == '1' ||
+                                                item.is_customized === true,
                                             embroidery_text: item.embroidery_text || '',
-                                            customization_notes: item.customization_notes || '',
-                                            extras_cost: parseFloat(item.extras_cost) || 0,
+                                            customization_notes: item
+                                                .customization_notes || '',
+                                            extras_cost: parseFloat(item.extras_cost) ||
+                                                0,
                                             selected_extras: item.extras || [],
                                             measurements: item.measurements || null,
                                             image_url: productInfo.image_url || null,
@@ -4470,7 +4892,8 @@
                                         };
 
                                         if (item.product_id) {
-                                            productLeadTimes[item.product_id] = productInfo.lead_time || 0;
+                                            productLeadTimes[item.product_id] = productInfo
+                                                .lead_time || 0;
                                         }
 
                                         orderItems.push(restoredItem);
@@ -4488,24 +4911,33 @@
                                 },
                                 error: function() {
                                     // Fallback: restaurar sin info adicional del producto
-                                    console.warn('[Restore] No se pudo obtener info de productos, restaurando básico');
+                                    console.warn(
+                                        '[Restore] No se pudo obtener info de productos, restaurando básico'
+                                        );
                                     oldItems.forEach(function(item) {
                                         const restoredItem = {
                                             index: itemIndex,
-                                            product_id: parseInt(item.product_id) || null,
-                                            product_variant_id: item.product_variant_id ? parseInt(item.product_variant_id) : null,
-                                            product_name: 'Producto #' + item.product_id,
+                                            product_id: parseInt(item.product_id) ||
+                                                null,
+                                            product_variant_id: item
+                                                .product_variant_id ? parseInt(item
+                                                    .product_variant_id) : null,
+                                            product_name: 'Producto #' + item
+                                                .product_id,
                                             variant_sku: '',
                                             variant_display: '',
-                                            unit_price: parseFloat(item.unit_price) || 0,
+                                            unit_price: parseFloat(item.unit_price) ||
+                                                0,
                                             quantity: parseInt(item.quantity) || 1,
                                             lead_time: 0,
                                             requires_measurements: false,
                                             product_type_name: null,
                                             is_customized: item.is_customized == '1',
                                             embroidery_text: item.embroidery_text || '',
-                                            customization_notes: item.customization_notes || '',
-                                            extras_cost: parseFloat(item.extras_cost) || 0,
+                                            customization_notes: item
+                                                .customization_notes || '',
+                                            extras_cost: parseFloat(item.extras_cost) ||
+                                                0,
                                             selected_extras: item.extras || [],
                                             measurements: item.measurements || null,
                                             image_url: null,
@@ -4525,7 +4957,7 @@
                     }
 
                     // Restaurar estado del switch de stock si estaba activado
-                    @if(old('for_stock'))
+                    @if (old('for_stock'))
                         $('#forStockSwitch').prop('checked', true);
                         if (typeof updateStockModeUI === 'function') {
                             updateStockModeUI();

@@ -410,6 +410,29 @@ Route::delete('/proveedores/delete/{id}', [App\Http\Controllers\ProveedorControl
     ->name('admin.proveedores.destroy')
     ->middleware('auth');
 
+// Niveles de Urgencia
+Route::get('/niveles-urgencia', [App\Http\Controllers\UrgencyLevelController::class, 'index'])
+    ->name('admin.urgency-levels.index')
+    ->middleware('auth');
+Route::get('/niveles-urgencia/nuevo', [App\Http\Controllers\UrgencyLevelController::class, 'create'])
+    ->name('admin.urgency-levels.create')
+    ->middleware('auth');
+Route::post('/niveles-urgencia/create', [App\Http\Controllers\UrgencyLevelController::class, 'store'])
+    ->name('admin.urgency-levels.store')
+    ->middleware('auth');
+Route::get('/niveles-urgencia/edit/{id}', [App\Http\Controllers\UrgencyLevelController::class, 'edit'])
+    ->name('admin.urgency-levels.edit')
+    ->middleware('auth');
+Route::put('/niveles-urgencia/edit/{id}', [App\Http\Controllers\UrgencyLevelController::class, 'update'])
+    ->name('admin.urgency-levels.update')
+    ->middleware('auth');
+Route::get('/niveles-urgencia/confirm_delete/{id}', [App\Http\Controllers\UrgencyLevelController::class, 'confirmDelete'])
+    ->name('admin.urgency-levels.confirm_delete')
+    ->middleware('auth');
+Route::delete('/niveles-urgencia/delete/{id}', [App\Http\Controllers\UrgencyLevelController::class, 'destroy'])
+    ->name('admin.urgency-levels.destroy')
+    ->middleware('auth');
+
 // Recomendaciones
 Route::get('/recomendaciones', [App\Http\Controllers\RecomendacionController::class, 'index'])
     ->name('admin.recomendaciones.index')
@@ -1384,6 +1407,10 @@ Route::get('pos/clientes/search', [App\Http\Controllers\PosController::class, 's
     ->name('pos.clientes.search')
     ->middleware('auth');
 
+Route::post('pos/clientes', [App\Http\Controllers\PosController::class, 'storeCliente'])
+    ->name('pos.clientes.store')
+    ->middleware('auth');
+
 /*
 |--------------------------------------------------------------------------
 | RUTAS DE HISTORIAL VENTAS POS (BACKOFFICE)
@@ -1478,4 +1505,23 @@ Route::post('admin/waste/wip/{order}', [App\Http\Controllers\WasteController::cl
 Route::post('admin/waste/finished-product', [App\Http\Controllers\WasteController::class, 'storeFinishedProduct'])
     ->name('admin.waste.store-finished-product')
     ->middleware('auth');
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS DE VENTAS CONSOLIDADAS (ERP CANÓNICO)
+|--------------------------------------------------------------------------
+| Módulo de consolidación de TODAS las ventas (POS + PEDIDOS).
+| Fuente única de verdad: orders WHERE status = 'delivered'
+| NO modifica POS, Pedidos, Dashboard ni inventarios.
+|--------------------------------------------------------------------------
+*/
+
+Route::get('admin/sales', [App\Http\Controllers\SalesController::class, 'index'])
+    ->name('admin.sales.index')
+    ->middleware('auth');
+
+Route::get('admin/sales/{order}', [App\Http\Controllers\SalesController::class, 'show'])
+    ->name('admin.sales.show')
+    ->middleware('auth')
+    ->where('order', '[0-9]+');
 
