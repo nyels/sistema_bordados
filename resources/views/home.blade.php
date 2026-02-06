@@ -166,14 +166,29 @@
             </div>
         </div>
 
+        {{-- KPI: Bajo Stock (stock > 0 pero <= alerta) --}}
         <div class="col-xl-4 col-lg-4 col-md-6 col-sm-6 col-12">
-            <div class="small-box {{ $productosBajoStock > 0 ? 'bg-warning' : 'bg-teal' }} h-100">
+            <div class="small-box bg-warning h-100">
                 <div class="inner">
-                    <h3>{{ $productosBajoStock }}</h3>
-                    <p>Productos Bajo Stock</p>
+                    <h3 class="text-white">{{ $productosBajoStock }}</h3>
+                    <p class="text-white">PT Bajo Stock</p>
                 </div>
-                <div class="icon"><i class="fas fa-boxes"></i></div>
-                <a href="{{ route('admin.finished-goods-stock.index', ['stock_status' => 'bajo']) }}" class="small-box-footer">
+                <div class="icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <a href="{{ route('admin.finished-goods-stock.index') }}" class="small-box-footer">
+                    Ver stock PT <i class="fas fa-arrow-circle-right"></i>
+                </a>
+            </div>
+        </div>
+
+        {{-- KPI: Agotados (stock = 0) --}}
+        <div class="col-xl-4 col-lg-4 col-md-6 col-sm-6 col-12">
+            <div class="small-box {{ $productosAgotados > 0 ? 'bg-danger' : 'bg-teal' }} h-100">
+                <div class="inner">
+                    <h3 class="text-white">{{ $productosAgotados }}</h3>
+                    <p class="text-white">PT Agotados</p>
+                </div>
+                <div class="icon"><i class="fas fa-times-circle"></i></div>
+                <a href="{{ route('admin.finished-goods-stock.index') }}" class="small-box-footer">
                     Ver stock PT <i class="fas fa-arrow-circle-right"></i>
                 </a>
             </div>

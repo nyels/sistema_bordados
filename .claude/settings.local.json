@@ -46,7 +46,23 @@
       "Bash(dir:*)",
       "Bash(timeout:*)",
       "Bash(xargs -I {} sh -c 'grep -n \"\"@stop\"\" \"\"{}\"\" | head -1 && grep -n \"\"modal\"\" \"\"{}\"\" | head -1')",
-      "Bash(if not exist \"c:\\\\xampp\\\\htdocs\\\\laravel\\\\sistema_bordados\\\\public\\\\images\" mkdir \"c:\\\\xampp\\\\htdocs\\\\laravel\\\\sistema_bordados\\\\public\\\\images\")"
+      "Bash(if not exist \"c:\\\\xampp\\\\htdocs\\\\laravel\\\\sistema_bordados\\\\public\\\\images\" mkdir \"c:\\\\xampp\\\\htdocs\\\\laravel\\\\sistema_bordados\\\\public\\\\images\")",
+      "Bash(php test_unit.php:*)",
+      "Bash(del \"c:\\\\xampp\\\\htdocs\\\\laravel\\\\sistema_bordados\\\\test_unit.php\")",
+      "Bash(xargs ls:*)",
+      "Bash(ping:*)",
+      "Bash(del \"c:\\\\xampp\\\\htdocs\\\\laravel\\\\sistema_bordados\\\\public\\\\js\\\\echo-notifications.js\")",
+      "Bash(Select-String \"download\")",
+      "Bash(php check_designs.php:*)",
+      "Bash(del check_designs.php)",
+      "WebFetch(domain:dribbble.com)",
+      "Bash(php:*)",
+      "Bash(del \"c:\\\\xampp\\\\htdocs\\\\laravel\\\\sistema_bordados\\\\resources\\\\views\\\\admin\\\\pos-sales\\\\_table.blade.php\")",
+      "Bash(del:*)",
+      "Bash(Get-Content storagelogslaravel.log -Tail 100)",
+      "Bash(Select-String \"ITEM_DESIGN|design_export\")",
+      "WebFetch(domain:animefenix2.tv)",
+      "Bash(git reset:*)"
     ]
   }
 }

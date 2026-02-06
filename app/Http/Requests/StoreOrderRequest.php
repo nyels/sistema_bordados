@@ -10,6 +10,8 @@ use App\Models\ProductVariant;
 use App\Models\ProductCategory;
 use App\Models\Cliente;
 use App\Models\ClientMeasurement;
+use App\Models\UrgencyLevel;
+use App\Services\ProductionCapacityService;
 use Illuminate\Support\Carbon;
 
 class StoreOrderRequest extends FormRequest
@@ -167,6 +169,12 @@ class StoreOrderRequest extends FormRequest
                 'numeric',
                 'min:0',
             ],
+            'items.*.extras.*.quantity' => [
+                'nullable',
+                'integer',
+                'min:1',
+                'max:99',
+            ],
 
             // Medidas inline capturadas en el pedido (JSON)
             'items.*.measurements' => [
@@ -211,9 +219,10 @@ class StoreOrderRequest extends FormRequest
             ],
 
             // ================================================
-            // === C) PAGO (OPCIONAL) ===
+            // === C) PAGO ===
             // ================================================
             'payment_method' => [
+                'required_if:for_stock,false,0,null', // Requerido si NO es para stock
                 'nullable',
                 'string',
                 'in:cash,transfer,card,other',
@@ -257,6 +266,7 @@ class StoreOrderRequest extends FormRequest
             $this->validateMeasurementsPerProductType($validator);
             $this->validateMeasurementsCategorySupportAuthoritative($validator);
             $this->validatePromisedDateVsLeadTime($validator);
+            $this->validatePromisedDateCapacity($validator);
             $this->validatePaymentAmount($validator);
             $this->validateRelatedOrderStatus($validator);
             $this->validatePostSaleRules($validator);
@@ -524,41 +534,57 @@ class StoreOrderRequest extends FormRequest
         }
     }
 
-    // === 5. VALIDAR FECHA PROMETIDA VS LEAD TIME (CRÍTICO) ===
-    // NO aplica para producción para stock (for_stock = true)
+    // === 5. FECHA PROMETIDA VS LEAD TIME ===
+    // NOTA: Esta validación ahora es INFORMATIVA, no bloqueante.
+    // El cliente puede necesitar fechas urgentes (viajes, eventos, etc.)
+    // El sistema muestra advertencia en frontend pero permite crear el pedido.
+    // La producción se marca como URGENTE automáticamente si la fecha es anterior.
     protected function validatePromisedDateVsLeadTime(Validator $validator): void
     {
-        // PRODUCCIÓN PARA STOCK: No requiere fecha prometida
+        // NO BLOQUEAR - Solo informativo
+        // El frontend muestra advertencia y el pedido se crea como URGENTE
+        return;
+    }
+
+    // ================================================================
+    // === 5b. VALIDAR CAPACIDAD DE PRODUCCIÓN SEMANAL (CRÍTICO) ===
+    // REGLA ERP: La semana de la fecha prometida debe tener capacidad disponible
+    // NO aplica para producción para stock (for_stock = true)
+    // ================================================================
+    protected function validatePromisedDateCapacity(Validator $validator): void
+    {
+        // PRODUCCIÓN PARA STOCK: No requiere validación de capacidad
         if ($this->boolean('for_stock')) {
             return;
         }
 
-        $items = $this->input('items', []);
         $promisedDate = $this->input('promised_date');
+        if (empty($promisedDate)) {
+            return;
+        }
 
-        if (empty($items) || empty($promisedDate)) return;
+        // Si ya hay errores en promised_date, no validar capacidad
+        if ($validator->errors()->has('promised_date')) {
+            return;
+        }
 
-        // Obtener máximo lead time de los productos
-        $productIds = array_filter(array_column($items, 'product_id'));
-        if (empty($productIds)) return;
+        // Usar el servicio de capacidad para validar
+        $capacityService = app(ProductionCapacityService::class);
+        $validation = $capacityService->validatePromisedDate($promisedDate);
 
-        $maxLeadTime = Product::whereIn('id', $productIds)
-            ->where('status', 'active')
-            ->max('production_lead_time') ?? 0;
+        if (!$validation['valid']) {
+            // Buscar la próxima semana disponible para sugerirla
+            $suggestion = $capacityService->suggestPromisedDate(0);
+            $suggestionText = '';
 
-        // Calcular fecha mínima según urgencia
-        $urgency = $this->input('urgency_level', 'normal');
-        $multiplier = Order::URGENCY_MULTIPLIERS[$urgency] ?? 1.0;
-        $adjustedDays = (int) ceil($maxLeadTime * $multiplier);
-        $minimumDate = now()->addDays($adjustedDays)->startOfDay();
+            if ($suggestion['suggested_date']) {
+                $suggestedFormatted = Carbon::parse($suggestion['suggested_date'])->format('d/m/Y');
+                $suggestionText = " Próxima fecha disponible: {$suggestedFormatted}.";
+            }
 
-        // Validar que la fecha prometida sea >= fecha mínima
-        $promised = Carbon::parse($promisedDate)->startOfDay();
-
-        if ($promised->lt($minimumDate)) {
             $validator->errors()->add(
                 'promised_date',
-                "La fecha de entrega debe ser a partir del {$minimumDate->format('d/m/Y')} según el tiempo de producción."
+                $validation['error'] . $suggestionText
             );
         }
     }
@@ -609,9 +635,10 @@ class StoreOrderRequest extends FormRequest
             $validator->errors()->add('initial_payment', 'Al pagar el total, el anticipo debe quedar vacío o coincidir con el total.');
         }
 
-        // Si hay anticipo o pago completo, debe especificar método de pago
-        if (($initialPayment > 0 || $payFull) && empty($paymentMethod)) {
-            $validator->errors()->add('payment_method', 'Debe seleccionar un método de pago para registrar el pago.');
+        // Método de pago es SIEMPRE requerido (excepto para stock)
+        $forStock = (bool) $this->input('for_stock', false);
+        if (!$forStock && empty($paymentMethod)) {
+            $validator->errors()->add('payment_method', 'Debe seleccionar un método de pago.');
         }
     }
 
@@ -667,6 +694,7 @@ class StoreOrderRequest extends FormRequest
             'items.*.extras.*.id.exists' => 'Uno de los extras seleccionados no existe.',
 
             // Pago
+            'payment_method.required_if' => 'Debe seleccionar un método de pago.',
             'payment_method.in' => 'El método de pago no es válido.',
             'initial_payment.numeric' => 'El anticipo debe ser un número.',
             'initial_payment.min' => 'El anticipo no puede ser negativo.',
@@ -679,6 +707,14 @@ class StoreOrderRequest extends FormRequest
     // ================================================
     protected function prepareForValidation(): void
     {
+        // DEBUG: Log de datos RAW antes de sanitizar
+        \Log::info('[StoreOrderRequest@prepareForValidation] Datos RAW:', [
+            'has_items' => $this->has('items'),
+            'items_type' => gettype($this->input('items')),
+            'items_count' => is_array($this->input('items')) ? count($this->input('items')) : 'N/A',
+            'items_raw' => $this->input('items'),
+        ]);
+
         // Sanitizar notas generales
         if ($this->has('notes')) {
             $this->merge(['notes' => $this->sanitizeText($this->input('notes'))]);
@@ -717,6 +753,7 @@ class StoreOrderRequest extends FormRequest
                                 'id' => (int) $extra['id'],
                                 'name' => isset($extra['name']) ? $this->sanitizeText($extra['name']) : '',
                                 'price' => isset($extra['price']) ? (float) $extra['price'] : 0,
+                                'quantity' => isset($extra['quantity']) ? max(1, (int) $extra['quantity']) : 1,
                             ];
                         }
                     }
@@ -746,8 +783,18 @@ class StoreOrderRequest extends FormRequest
                 // Solo agregar items válidos (con product_id)
                 if ($sanitizedItem['product_id']) {
                     $sanitizedItems[] = $sanitizedItem;
+                } else {
+                    \Log::warning('[StoreOrderRequest] Item descartado por falta de product_id:', [
+                        'original_item' => $item,
+                        'sanitized_product_id' => $sanitizedItem['product_id'],
+                    ]);
                 }
             }
+
+            \Log::info('[StoreOrderRequest@prepareForValidation] Items después de sanitizar:', [
+                'items_count' => count($sanitizedItems),
+                'items' => $sanitizedItems,
+            ]);
 
             $this->merge(['items' => $sanitizedItems]);
         }

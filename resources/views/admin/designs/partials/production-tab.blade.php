@@ -82,8 +82,8 @@
                 <select id="filterVariant" class="filter-select-inline">
                     <option value="">Todas las variantes</option>
                 </select>
-                <button type="button" id="btnClearFilters" class="btn-clear-inline" title="Limpiar filtro">
-                    <i class="fas fa-times"></i>
+                <button type="button" id="btnClearFilters" class="btn btn-secondary btn-sm" title="Limpiar filtro">
+                    <i class="fas fa-eraser"></i>
                 </button>
             </div>
         </div>

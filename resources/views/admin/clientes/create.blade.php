@@ -168,7 +168,7 @@
                             {{-- ciudad --}}
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="ciudad">Ciudad <span style="color: red;">*</span></label>
+                                    <label for="ciudad">Ciudad</label>
                                     <input type="text" name="ciudad" id="ciudad"
                                         class="form-control form-control-sm @error('ciudad') is-invalid @enderror"
                                         value="{{ old('ciudad') }}" placeholder="Ej: Mérida">

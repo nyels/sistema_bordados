@@ -32,7 +32,9 @@
             </div>
             <div class="col-md-2">
                 <button type="submit" class="btn btn-sm btn-primary">Filtrar</button>
-                <a href="{{ route('admin.inventory.reservations.history') }}" class="btn btn-sm btn-outline-secondary">Limpiar</a>
+                <a href="{{ route('admin.inventory.reservations.history') }}" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-eraser mr-1"></i> Limpiar
+                </a>
             </div>
         </form>
     </div>

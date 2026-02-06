@@ -18,20 +18,26 @@ class SystemSettingController extends Controller
     public function index(Request $request)
     {
         try {
-            $request->validate([
-                'group' => ['sometimes', 'string', 'max:50', 'regex:/^[a-z]+$/'],
-            ]);
+            // Obtener todos los grupos disponibles (solo los permitidos)
+            $groups = SystemSetting::whereIn('group', self::ALLOWED_GROUPS)
+                ->distinct()
+                ->pluck('group')
+                ->sort(function ($a, $b) {
+                    // Ordenar según el orden definido en ALLOWED_GROUPS
+                    $order = array_flip(self::ALLOWED_GROUPS);
+                    return ($order[$a] ?? 999) <=> ($order[$b] ?? 999);
+                })
+                ->values()
+                ->toArray();
 
-            $groups = SystemSetting::getGroups();
-            $activeGroup = $request->get('group', 'general');
+            // Cargar TODAS las configuraciones de todos los grupos permitidos
+            // La vista las filtrará por grupo usando ->where('group', $group)
+            $allSettings = SystemSetting::whereIn('group', self::ALLOWED_GROUPS)
+                ->orderBy('group')
+                ->orderBy('label')
+                ->get();
 
-            if (!in_array($activeGroup, self::ALLOWED_GROUPS, true)) {
-                $activeGroup = 'general';
-            }
-
-            $settings = SystemSetting::getByGroup($activeGroup);
-
-            return view('admin.settings.index', compact('groups', 'activeGroup', 'settings'));
+            return view('admin.settings.index', compact('groups', 'allSettings'));
         } catch (\Exception $e) {
             Log::error('Error al cargar configuraciones: ' . $e->getMessage(), [
                 'user_id' => Auth::id(),
@@ -39,8 +45,7 @@ class SystemSettingController extends Controller
             ]);
             return view('admin.settings.index', [
                 'groups' => [],
-                'activeGroup' => 'general',
-                'settings' => collect()
+                'allSettings' => collect()
             ])->with('error', 'Error al cargar las configuraciones');
         }
     }

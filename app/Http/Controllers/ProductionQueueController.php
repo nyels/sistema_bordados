@@ -32,6 +32,8 @@ class ProductionQueueController extends Controller
             'cliente',
             'items.product.materials.material.consumptionUnit',
             'items.product.materials.material.baseUnit',
+            'items.bomAdjustments', // Cargar ajustes de BOM guardados
+            'items.extras.productExtra', // Cargar extras del item con su nombre
         ])
             ->whereIn('status', [Order::STATUS_CONFIRMED, Order::STATUS_IN_PRODUCTION])
             ->orderByRaw("CASE
@@ -209,11 +211,25 @@ class ProductionQueueController extends Controller
                 $product?->load('materials.material.consumptionUnit', 'materials.material.baseUnit');
             }
 
+            // Cargar ajustes de BOM si no están cargados
+            if (!$item->relationLoaded('bomAdjustments')) {
+                $item->load('bomAdjustments');
+            }
+
+            // Indexar ajustes por material_variant_id para búsqueda rápida
+            $bomAdjustments = $item->bomAdjustments->keyBy('material_variant_id');
+
             if (!$product) continue;
 
             foreach ($product->materials as $materialVariant) {
-                $requiredQty = $materialVariant->pivot->quantity * $item->quantity;
                 $variantId = $materialVariant->id;
+
+                // Usar cantidad ajustada si existe, sino usar BOM base
+                $baseQty = (float) $materialVariant->pivot->quantity;
+                $adjustment = $bomAdjustments->get($variantId);
+                $adjustedQty = $adjustment ? (float) $adjustment->adjusted_quantity : $baseQty;
+
+                $requiredQty = $adjustedQty * $item->quantity;
 
                 if (!isset($requirements[$variantId])) {
                     // Obtener stock actual y reservas
@@ -251,10 +267,16 @@ class ProductionQueueController extends Controller
                         'reserved_for_this' => $reservedForThis,
                         'available' => $available,
                         'sufficient' => true,
+                        'has_bom_adjustment' => false, // Se marca si algún item tiene ajuste
                     ];
                 }
 
                 $requirements[$variantId]['required'] += $requiredQty;
+
+                // Marcar si este material tiene ajuste de BOM
+                if ($adjustment && $adjustment->hasChange()) {
+                    $requirements[$variantId]['has_bom_adjustment'] = true;
+                }
             }
         }
 

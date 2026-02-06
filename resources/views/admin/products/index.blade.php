@@ -58,7 +58,7 @@
             <div class="col-12">
                 <div class="table-responsive">
                     <table id="products-table" class="table table-bordered table-hover ">
-                        <thead class="thead-dark">
+                        <thead class="thead-dark text-center">
                             <tr>
                                 <th>#</th>
                                 <th>Imagen</th>
@@ -69,7 +69,7 @@
                                 <th>Costo Prod.</th>
                                 <th>Precio Base</th>
                                 <th>Creado</th>
-                                <th style="text-align: center;">Acciones</th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>

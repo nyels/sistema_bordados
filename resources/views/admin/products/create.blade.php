@@ -2686,7 +2686,15 @@
                 $desData = json_encode(
                     $cloneProduct->designs
                         ->map(function ($d) {
-                            $exp = $d->generalExports()->where('status', 'aprobado')->first() ?? $d->exports()->where('status', 'aprobado')->first();
+                            // PRIORIDAD: Usar design_export_id del pivot si existe
+                            $exp = null;
+                            if ($d->pivot->design_export_id) {
+                                $exp = \App\Models\DesignExport::find($d->pivot->design_export_id);
+                            }
+                            // Fallback: primer export aprobado del diseño
+                            if (!$exp) {
+                                $exp = $d->generalExports()->where('status', 'aprobado')->first() ?? $d->exports()->where('status', 'aprobado')->first();
+                            }
                             $appT = \App\Models\Application_types::find($d->pivot->application_type_id ?? 1);
                             return [
                                 'export_id' => $exp?->id,
@@ -2805,7 +2813,15 @@
                 $desData = json_encode(
                     $product->designs
                         ->map(function ($d) {
-                            $exp = $d->generalExports()->where('status', 'aprobado')->first() ?? $d->exports()->where('status', 'aprobado')->first();
+                            // PRIORIDAD: Usar design_export_id del pivot si existe
+                            $exp = null;
+                            if ($d->pivot->design_export_id) {
+                                $exp = \App\Models\DesignExport::find($d->pivot->design_export_id);
+                            }
+                            // Fallback: primer export aprobado del diseño
+                            if (!$exp) {
+                                $exp = $d->generalExports()->where('status', 'aprobado')->first() ?? $d->exports()->where('status', 'aprobado')->first();
+                            }
                             $appT = \App\Models\Application_types::find($d->pivot->application_type_id ?? 1);
                             return [
                                 'export_id' => $exp?->id,
@@ -2911,6 +2927,7 @@
                         $finData = json_encode([
                             'material_cost' => (float) ($product->materials_cost ?? 0),
                             'embroidery_cost' => (float) ($product->embroidery_cost ?? 0),
+                            'stitch_rate' => (float) ($product->embroidery_rate_per_thousand ?? 1),
                             'extras_cost' => (float) ($product->extra_services_cost ?? 0),
                             'labor_cost' => (float) ($product->labor_cost ?? 0),
                             'total_cost' => (float) ($product->production_cost ?? 0),
@@ -4038,8 +4055,8 @@
                                         </select>
                                     </div>
                                     <div class="col-md-1">
-                                        <button type="button" class="btn btn-outline-secondary btn-block" onclick="clearDesignFilters()" title="Limpiar">
-                                            <i class="fas fa-times"></i>
+                                        <button type="button" class="btn btn-secondary btn-block" onclick="clearDesignFilters()" title="Limpiar">
+                                            <i class="fas fa-eraser"></i>
                                         </button>
                                     </div>
                                 </div>
@@ -4583,6 +4600,10 @@
                 const fin = State.financials;
                 if (fin.labor_cost && fin.labor_cost > 0) {
                     $('#finLaborInput').val(parseFloat(fin.labor_cost).toFixed(2));
+                }
+                // Precargar tarifa por millar (stitch_rate) - CRÍTICO para modo EDIT
+                if (fin.stitch_rate && fin.stitch_rate > 0) {
+                    $('#finStitchRate').val(parseFloat(fin.stitch_rate).toFixed(2));
                 }
                 // FORCE DEFAULT MARGIN 30 if not set
                 if (!fin.margin) fin.margin = 30;

@@ -188,7 +188,7 @@
                                     <span class="totals-value" id="total_subtotal">$0.00</span>
                                 </div>
                                 <div class="totals-row">
-                                    <span class="totals-label">IVA (<span id="tax_rate_display">16</span>%)</span>
+                                    <span class="totals-label">IVA (<span id="tax_rate_display">{{ $purchase->tax_rate ?? $defaultTaxRate }}</span>%)</span>
                                     <span class="totals-value" id="total_tax">$0.00</span>
                                 </div>
                                 <div class="totals-row totals-discount" id="discount_row" style="display: none;">

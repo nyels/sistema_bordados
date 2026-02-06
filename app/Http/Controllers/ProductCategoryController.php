@@ -97,8 +97,11 @@ class ProductCategoryController extends Controller
                 'category_name' => $category->name
             ]);
 
-            return redirect()->route('admin.product_categories.index')
-                ->with('success', 'Categoría "' . $category->name . '" creada exitosamente.');
+            $msg = 'Categoría "' . $category->name . '" creada exitosamente.';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => true, 'message' => $msg, 'data' => $category]);
+            }
+            return redirect()->route('admin.product_categories.index')->with('success', $msg);
         } catch (\Exception $e) {
             Log::error('[ProductCategory@store] Error al crear categoría: ' . $e->getMessage(), [
                 'user_id' => Auth::id(),
@@ -107,9 +110,11 @@ class ProductCategoryController extends Controller
                 'file' => $e->getFile(),
                 'trace' => $e->getTraceAsString()
             ]);
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Error al crear la categoría. Por favor, intente nuevamente.');
+            $msg = 'Error al crear la categoría. Por favor, intente nuevamente.';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 500);
+            }
+            return redirect()->back()->withInput()->with('error', $msg);
         }
     }
 
@@ -195,6 +200,9 @@ class ProductCategoryController extends Controller
             $category->supports_measurements = $request->boolean('supports_measurements');
 
             if (!$category->isDirty()) {
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json(['success' => true, 'message' => 'No se realizaron cambios en la categoría.', 'type' => 'info']);
+                }
                 return redirect()->route('admin.product_categories.index')
                     ->with('info', 'No se realizaron cambios en la categoría.');
             }
@@ -207,6 +215,14 @@ class ProductCategoryController extends Controller
                 'category_name' => $category->name
             ]);
 
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Categoría "' . $category->name . '" actualizada exitosamente.',
+                    'type' => 'success',
+                    'data' => $category
+                ]);
+            }
             return redirect()->route('admin.product_categories.index')
                 ->with('success', 'Categoría "' . $category->name . '" actualizada exitosamente.');
         } catch (\Exception $e) {
@@ -218,6 +234,9 @@ class ProductCategoryController extends Controller
                 'file' => $e->getFile(),
                 'trace' => $e->getTraceAsString()
             ]);
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Error al actualizar la categoría.'], 500);
+            }
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Error al actualizar la categoría. Por favor, intente nuevamente.');
@@ -247,13 +266,19 @@ class ProductCategoryController extends Controller
     /**
      * Remove the specified resource from storage (soft delete).
      */
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         try {
             $category = ProductCategory::findOrFail($id);
 
             // Verificar si tiene productos asociados
             if ($category->products()->count() > 0) {
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No se puede eliminar la categoría porque tiene productos asociados.'
+                    ], 422);
+                }
                 return redirect()->route('admin.product_categories.index')
                     ->with('error', 'No se puede eliminar la categoría porque tiene productos asociados.');
             }
@@ -267,6 +292,9 @@ class ProductCategoryController extends Controller
                 'category_name' => $categoryName
             ]);
 
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => true, 'message' => 'Categoría "' . $categoryName . '" eliminada exitosamente.', 'type' => 'success']);
+            }
             return redirect()->route('admin.product_categories.index')
                 ->with('success', 'Categoría "' . $categoryName . '" eliminada exitosamente.');
         } catch (\Exception $e) {
@@ -277,6 +305,9 @@ class ProductCategoryController extends Controller
                 'file' => $e->getFile(),
                 'trace' => $e->getTraceAsString()
             ]);
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Error al eliminar la categoría.'], 500);
+            }
             return redirect()->route('admin.product_categories.index')
                 ->with('error', 'Error al eliminar la categoría. Por favor, intente nuevamente.');
         }

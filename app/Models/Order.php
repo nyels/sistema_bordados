@@ -153,12 +153,18 @@ class Order extends Model
             }
 
             // ================================================================
-            // v2.5: INMUTABILIDAD FINANCIERA
-            // Si hay pagos registrados, los campos financieros NO pueden cambiar
+            // v2.5: INMUTABILIDAD FINANCIERA (CON EXCEPCIÓN DRAFT)
+            // REGLA ERP: En DRAFT se permite cambiar IVA aunque haya anticipo.
+            // El bloqueo SOLO aplica a estados post-confirmación.
             // ================================================================
             $originalAmountPaid = (float) $model->getOriginal('amount_paid');
+            $currentStatus = $model->status;
 
-            if ($originalAmountPaid > 0) {
+            // EXCEPCIÓN DRAFT: En borrador, los campos financieros SON editables
+            // aunque haya anticipo. El sistema recalcula saldo automáticamente.
+            $isDraft = $currentStatus === self::STATUS_DRAFT;
+
+            if ($originalAmountPaid > 0 && !$isDraft) {
                 // Verificar si se está intentando modificar campos financieros protegidos
                 $protectedChanges = [];
 
@@ -178,9 +184,10 @@ class Order extends Model
                     $fieldList = implode(', ', $protectedChanges);
                     throw new \Exception(
                         "VIOLACIÓN CONTABLE: No se pueden modificar campos financieros " .
-                        "cuando hay pagos registrados (\${$originalAmountPaid}). " .
+                        "en pedidos confirmados cuando hay pagos registrados (\${$originalAmountPaid}). " .
                         "Campos bloqueados: {$fieldList}. " .
-                        "Para modificar el total, primero debe revertir todos los pagos."
+                        "Estado actual: {$currentStatus}. " .
+                        "Para modificar el total, primero debe revertir todos los pagos o usar nota de crédito."
                     );
                 }
             }
@@ -394,8 +401,17 @@ class Order extends Model
 
     // === MÉTODOS DE NEGOCIO ===
 
-    // Tasa de IVA (16%)
-    public const IVA_RATE = 0.16;
+    // Tasa de IVA por defecto (fallback si no hay en settings)
+    public const IVA_RATE_DEFAULT = 16;
+
+    /**
+     * Obtiene la tasa de IVA vigente desde configuración del sistema.
+     * @return float Tasa como porcentaje (ej: 16)
+     */
+    public static function getDefaultTaxRate(): float
+    {
+        return (float) SystemSetting::getValue('default_tax_rate', self::IVA_RATE_DEFAULT);
+    }
 
     public function recalculateTotals(): void
     {
@@ -406,11 +422,20 @@ class Order extends Model
         $approvedExtras = $this->calculateApprovedExtras();
 
         // Calcular IVA si requiere factura (sobre subtotal + extras - descuento)
+        // SNAPSHOT: iva_rate se guarda SOLO cuando requires_invoice = true
         $baseForIva = $this->subtotal + $approvedExtras - $this->discount;
         if ($this->requires_invoice) {
-            $this->iva_amount = $baseForIva * self::IVA_RATE;
+            // Usar iva_rate snapshot si ya existe, si no obtener de settings y guardar
+            if ($this->iva_rate === null || $this->iva_rate == 0) {
+                $this->iva_rate = self::getDefaultTaxRate(); // Snapshot desde settings
+            }
+            // Calcular usando el snapshot (iva_rate=16 → 0.16)
+            $this->iva_amount = $baseForIva * ($this->iva_rate / 100);
+            $this->total_with_tax = $this->subtotal + $approvedExtras - $this->discount + $this->iva_amount;
         } else {
+            // Sin factura = sin IVA, no guardar snapshot
             $this->iva_amount = 0;
+            $this->total_with_tax = $this->subtotal + $approvedExtras - $this->discount;
         }
 
         // Total = subtotal + extras aprobados - descuento + IVA
@@ -972,9 +997,15 @@ class Order extends Model
     }
 
     /**
-     * FASE 3.5: Calcula el costo de bordado sumando el embroidery_cost de cada producto.
+     * FASE 3.5: Calcula el costo de bordado basado en diseños y precios ajustados.
      *
-     * FUENTE: Product.embroidery_cost (definido al dar de alta el producto)
+     * PRIORIDAD DE CÁLCULO:
+     * 1. Si el item tiene diseños vinculados: suma (millar × rate_ajustado × qty) por diseño
+     * 2. Si no hay diseños: usa Product.embroidery_cost × qty
+     *
+     * FUENTE DEL RATE:
+     * - pivot.rate_per_thousand_adjusted si existe (ajustado en pre-producción)
+     * - Product.embroidery_rate_per_thousand como fallback
      *
      * @return float Costo de bordado en MXN
      */
@@ -983,12 +1014,52 @@ class Order extends Model
         $totalCost = 0.0;
 
         foreach ($this->items as $item) {
-            if ($item->product && $item->product->embroidery_cost > 0) {
-                $totalCost += (float) $item->product->embroidery_cost * $item->quantity;
-            }
+            $itemCost = $this->calculateItemEmbroideryCost($item);
+            $totalCost += $itemCost;
         }
 
         return round($totalCost, 4);
+    }
+
+    /**
+     * Calcula el costo de bordado para un item específico.
+     *
+     * @param OrderItem $item
+     * @return float Costo de bordado del item
+     */
+    protected function calculateItemEmbroideryCost(OrderItem $item): float
+    {
+        // Cargar diseños si no están cargados
+        $designExports = $item->relationLoaded('designExports')
+            ? $item->designExports
+            : $item->designExports()->get();
+
+        // Si tiene diseños vinculados, calcular por diseño
+        if ($designExports->isNotEmpty()) {
+            $itemCost = 0.0;
+            $baseRate = (float) ($item->product->embroidery_rate_per_thousand ?? 0);
+
+            foreach ($designExports as $design) {
+                $stitches = (int) ($design->stitches_count ?? 0);
+                $millar = $stitches / 1000;
+
+                // Usar rate ajustado si existe, si no usar el del producto
+                $rate = $design->pivot->rate_per_thousand_adjusted !== null
+                    ? (float) $design->pivot->rate_per_thousand_adjusted
+                    : $baseRate;
+
+                $itemCost += $millar * $rate * $item->quantity;
+            }
+
+            return $itemCost;
+        }
+
+        // Fallback: usar embroidery_cost del producto
+        if ($item->product && $item->product->embroidery_cost > 0) {
+            return (float) $item->product->embroidery_cost * $item->quantity;
+        }
+
+        return 0.0;
     }
 
     /**
@@ -1234,18 +1305,26 @@ class Order extends Model
     /**
      * GATE v2.5: Verifica si los campos financieros pueden editarse.
      *
-     * REGLA CONTABLE SELLADA:
-     * - Si amount_paid > 0 → total NO puede cambiar
+     * REGLA ERP CORREGIDA:
+     * - En DRAFT: SIEMPRE se puede editar (IVA, descuento, etc.)
+     *   El saldo se recalcula automáticamente: total - amount_paid
+     * - En estados != DRAFT con amount_paid > 0: BLOQUEADO
      * - Si isFinanciallyClosed() → NADA financiero puede cambiar
      *
-     * Campos protegidos cuando amount_paid > 0:
+     * Campos protegidos (post-confirmación con pagos):
      * - subtotal, discount, requires_invoice, iva_amount, total
      *
      * @return bool TRUE si se pueden editar campos financieros
      */
     public function canEditFinancials(): bool
     {
-        // R1: Si hay pagos registrados, el total está sellado
+        // EXCEPCIÓN DRAFT: En borrador SIEMPRE se puede editar
+        // aunque haya anticipo. El saldo se recalcula.
+        if ($this->status === self::STATUS_DRAFT) {
+            return true;
+        }
+
+        // R1: Post-confirmación con pagos → bloqueado
         if ($this->amount_paid > 0) {
             return false;
         }
@@ -1287,6 +1366,11 @@ class Order extends Model
      */
     public function getFinancialEditBlockReason(): ?string
     {
+        // EXCEPCIÓN DRAFT: En borrador siempre se puede editar
+        if ($this->status === self::STATUS_DRAFT) {
+            return null;
+        }
+
         if ($this->isFinanciallyClosed()) {
             return 'El pedido está cerrado contablemente (ENTREGADO + PAGADO). ' .
                    'Los datos financieros son inmutables.';
@@ -1294,8 +1378,9 @@ class Order extends Model
 
         if ($this->amount_paid > 0) {
             return 'El pedido tiene pagos registrados ($' .
-                   number_format($this->amount_paid, 2) . '). ' .
-                   'El total no puede modificarse para evitar descuadres contables.';
+                   number_format($this->amount_paid, 2) . ') y ya fue confirmado. ' .
+                   'El total no puede modificarse para evitar descuadres contables. ' .
+                   'Use nota de crédito para ajustes.';
         }
 
         return null;

@@ -96,12 +96,12 @@
                                     <div class="iva-control-wrapper">
                                         <label class="iva-toggle">
                                             <input type="checkbox" id="iva_enabled"
-                                                {{ old('tax_rate', 16) > 0 ? 'checked' : '' }}>
+                                                {{ old('tax_rate', $defaultTaxRate) > 0 ? 'checked' : '' }}>
                                             <span class="iva-toggle-slider"></span>
                                         </label>
                                         <div class="field-with-suffix" id="iva_input_wrapper">
                                             <input type="number" name="tax_rate" id="tax_rate" class="field-control"
-                                                value="{{ old('tax_rate', 16) }}" min="0" max="100"
+                                                value="{{ old('tax_rate', $defaultTaxRate) }}" min="0" max="100"
                                                 step="0.01">
                                             <span class="field-suffix">%</span>
                                         </div>
@@ -187,7 +187,7 @@
                                     <span class="totals-value" id="total_subtotal">$0.00</span>
                                 </div>
                                 <div class="totals-row">
-                                    <span class="totals-label">IVA (<span id="tax_rate_display">16</span>%)</span>
+                                    <span class="totals-label">IVA (<span id="tax_rate_display">{{ $defaultTaxRate }}</span>%)</span>
                                     <span class="totals-value" id="total_tax">$0.00</span>
                                 </div>
                                 <div class="totals-row totals-discount" id="discount_row" style="display: none;">

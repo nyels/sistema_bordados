@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Str;
 
 class OrderItem extends Model
@@ -213,13 +214,47 @@ class OrderItem extends Model
      * Diseños técnicos (DesignExport) vinculados a este item.
      * Solo se permite vincular diseños con status = 'aprobado'.
      * Un item personalizado puede tener múltiples diseños (logo + nombre, etc.)
+     *
+     * Campos pivot:
+     * - application_type: Tipo de aplicación (logo, nombre, etc.)
+     * - position: Ubicación en la prenda (pecho, espalda, manga)
+     * - notes: Notas específicas para este diseño
+     * - sort_order: Orden de aplicación
+     * - rate_per_thousand_adjusted: Precio por millar ajustado (NULL = usar valor del producto)
+     * - created_by: Usuario que vinculó el diseño
      */
     public function designExports(): BelongsToMany
     {
         return $this->belongsToMany(DesignExport::class, 'order_item_design_exports')
-            ->withPivot(['application_type', 'position', 'notes', 'sort_order', 'created_by'])
+            ->withPivot(['application_type', 'position', 'notes', 'sort_order', 'rate_per_thousand_adjusted', 'created_by'])
             ->withTimestamps()
             ->orderBy('order_item_design_exports.sort_order');
+    }
+
+    /**
+     * Extras asociados a este item (tabla pivot order_item_extras).
+     * Contiene snapshot del precio y cantidad al momento del pedido.
+     */
+    public function extras(): HasMany
+    {
+        return $this->hasMany(OrderItemExtra::class, 'order_item_id');
+    }
+
+    /**
+     * Ajustes de BOM (Bill of Materials) para este item.
+     * Permite modificar cantidades de materiales según medidas del cliente.
+     */
+    public function bomAdjustments(): HasMany
+    {
+        return $this->hasMany(OrderItemBomAdjustment::class, 'order_item_id');
+    }
+
+    /**
+     * Total de extras para este item.
+     */
+    public function getExtrasTotalAttribute(): float
+    {
+        return (float) $this->extras()->sum('total_price');
     }
 
     // === MÉTODOS ===

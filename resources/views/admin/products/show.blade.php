@@ -360,10 +360,10 @@
                 @endphp
 
                 <div class="card shadow-sm mb-4">
-                    <div class="card-header border-0 bg-white">
+                    <div class="card-header border-0" style="background: #212529;">
                         <div class="d-flex justify-content-between align-items-center">
-                            <h3 class="card-title font-weight-bold text-dark">
-                                <i class="fas fa-scroll mr-2 text-primary"></i>Receta de Materiales (BOM)
+                            <h3 class="card-title font-weight-bold text-white mb-0">
+                                <i class="fas fa-scroll mr-2"></i>Receta de Materiales (BOM)
                             </h3>
                             <span class="badge badge-light border">{{ $product->materials->count() }} Insumos</span>
                         </div>
@@ -474,7 +474,7 @@
 
                         {{-- RESUMEN TOTAL BOM --}}
                         @if($product->materials->count() > 0)
-                            <div class="bg-dark text-white px-4 py-3 d-flex justify-content-between align-items-center">
+                            <div class="text-white px-4 py-3 d-flex justify-content-between align-items-center" style="background: #1565c0;">
                                 <span class="font-weight-bold text-uppercase">
                                     <i class="fas fa-calculator mr-2"></i>Total Receta de Materiales
                                 </span>
@@ -486,13 +486,135 @@
                     </div>
                 </div>
 
+                {{-- COSTO DE BORDADO (CARD SEPARADO) --}}
+                @if($product->total_stitches > 0 || $product->embroidery_cost > 0)
+                    @php
+                        // Obtener los design exports asignados al producto
+                        $designExportsData = [];
+                        foreach($product->designs as $design) {
+                            if($design->pivot->design_export_id) {
+                                $export = \App\Models\DesignExport::find($design->pivot->design_export_id);
+                                if($export) {
+                                    $designExportsData[] = [
+                                        'name' => $export->application_label ?? $export->file_name,
+                                        'file_name' => $export->file_name,
+                                        'stitches' => $export->stitches_count ?? 0,
+                                    ];
+                                }
+                            }
+                        }
+                    @endphp
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header border-0" style="background: #212529;">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h3 class="card-title font-weight-bold text-white mb-0">
+                                    <i class="fas fa-pencil-ruler mr-2"></i>Costo de Bordado
+                                    <span style="margin-left: 8px; font-weight: bold; font-size: 14px;">(Puntadas × Tarifa por millar)</span>
+                                </h3>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0">
+                                    <thead class="bg-light text-uppercase small" style="color: #212529;">
+                                        <tr>
+                                            <th class="pl-4">Diseño</th>
+                                            <th class="text-center">Puntadas</th>
+                                            <th class="text-center">Millar</th>
+                                            <th class="text-right">$/Millar</th>
+                                            <th class="text-right pr-4">Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody style="color: #212529;">
+                                        @forelse($designExportsData as $exportData)
+                                            @php
+                                                $exportMillar = $exportData['stitches'] / 1000;
+                                                $exportCost = $exportMillar * $product->embroidery_rate_per_thousand;
+                                            @endphp
+                                            <tr style="background: #f3e5f5;">
+                                                <td class="pl-4">
+                                                    <span class="font-weight-bold" style="color: #212529; font-size: 14px;">{{ $exportData['name'] }}</span>
+                                                    <div>
+                                                        <span style="color: #212529; font-size: 14px; font-weight: 600;">
+                                                            <i class="fas fa-file mr-1"></i>{{ $exportData['file_name'] }}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="font-weight-bold" style="color: #6a1b9a;">
+                                                        {{ number_format($exportData['stitches']) }} pts
+                                                    </span>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span style="color: #8e24aa; font-weight: 600;">
+                                                        {{ number_format($exportMillar, 3) }}
+                                                    </span>
+                                                </td>
+                                                <td class="text-right">
+                                                    <span style="color: #6a1b9a; font-weight: 600;">
+                                                        ${{ number_format($product->embroidery_rate_per_thousand, 4) }}
+                                                    </span>
+                                                </td>
+                                                <td class="text-right pr-4">
+                                                    <span class="font-weight-bold" style="color: #6a1b9a; font-size: 15px;">
+                                                        ${{ number_format($exportCost, 2) }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        @empty
+                                            <tr style="background: #f3e5f5;">
+                                                <td class="pl-4">
+                                                    <span class="font-weight-bold" style="color: #6a1b9a;">Bordado del producto</span>
+                                                    <div>
+                                                        <small style="color: #8e24aa;">
+                                                            <i class="fas fa-info-circle mr-1"></i>Sin diseño específico asignado
+                                                        </small>
+                                                    </div>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="font-weight-bold" style="color: #6a1b9a;">
+                                                        {{ number_format($product->total_stitches) }} pts
+                                                    </span>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span style="color: #8e24aa; font-weight: 600;">
+                                                        {{ number_format($product->total_stitches / 1000, 3) }}
+                                                    </span>
+                                                </td>
+                                                <td class="text-right">
+                                                    <span style="color: #6a1b9a; font-weight: 600;">
+                                                        ${{ number_format($product->embroidery_rate_per_thousand, 4) }}
+                                                    </span>
+                                                </td>
+                                                <td class="text-right pr-4">
+                                                    <span class="font-weight-bold" style="color: #6a1b9a; font-size: 15px;">
+                                                        ${{ number_format($product->embroidery_cost, 2) }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="px-4 py-3 d-flex justify-content-between align-items-center" style="background: #1565c0; color: white;">
+                                <span class="font-weight-bold text-uppercase">
+                                    <i class="fas fa-calculator mr-2"></i>Total Costo de Bordado
+                                </span>
+                                <span class="h5 mb-0 font-weight-bold">
+                                    ${{ number_format($product->embroidery_cost, 2) }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
                 {{-- SERVICES EXTRAS TABLE (MIRROR BOM FORMAT) --}}
                 @if ($product->extras->count() > 0)
                     <div class="card shadow-sm mb-4">
-                        <div class="card-header border-0 bg-white">
+                        <div class="card-header border-0" style="background: #212529;">
                             <div class="d-flex justify-content-between align-items-center">
-                                <h3 class="card-title font-weight-bold text-dark">
-                                    <i class="fas fa-concierge-bell mr-2 text-warning"></i>Servicios Extras
+                                <h3 class="card-title font-weight-bold text-white mb-0">
+                                    <i class="fas fa-concierge-bell mr-2"></i>Servicios Extras
                                 </h3>
                                 <span class="badge badge-light border text-dark">{{ $product->extras->count() }}
                                     Servicios</span>
@@ -545,35 +667,36 @@
                                             </td>
                                         </tr>
                                     @endforeach
-                                    <tr class="bg-light border-top">
-                                        <td colspan="5" class="pl-4 font-weight-bold text-dark text-right">TOTAL EXTRAS
+                                </tbody>
+                                @php
+                                    // Calculate total cost using snapshot logic
+                                    $totalExtrasCost = $product->extras->sum(function ($extra) {
+                                        return $extra->pivot->snapshot_cost > 0
+                                            ? $extra->pivot->snapshot_cost
+                                            : $extra->cost_addition;
+                                    });
+                                    // Calculate total price using snapshot logic
+                                    $totalExtrasPrice = $product->extras->sum(function ($extra) {
+                                        return $extra->pivot->snapshot_price > 0
+                                            ? $extra->pivot->snapshot_price
+                                            : $extra->price_addition;
+                                    });
+                                @endphp
+                                <tfoot>
+                                    <tr style="background: #1565c0;">
+                                        <td class="pl-4 border-0" colspan="5" style="background: #1565c0; color: white;">
+                                            <span class="font-weight-bold text-uppercase">
+                                                <i class="fas fa-calculator mr-2"></i>Total Extras
+                                            </span>
                                         </td>
-                                        <td class="text-right font-weight-bold text-dark">
-                                            @php
-                                                // Calculate total cost using snapshot logic
-                                                $totalExtrasCost = $product->extras->sum(function ($extra) {
-                                                    return $extra->pivot->snapshot_cost > 0
-                                                        ? $extra->pivot->snapshot_cost
-                                                        : $extra->cost_addition;
-                                                });
-                                            @endphp
-                                            ${{ number_format($totalExtrasCost, 2) }}
+                                        <td class="text-right border-0" style="background: #1565c0; color: white;">
+                                            <span class="h5 mb-0 font-weight-bold">${{ number_format($totalExtrasCost, 2) }}</span>
                                         </td>
-                                        <td>
-                                            @php
-                                                // Calculate total price using snapshot logic
-                                                $totalExtrasPrice = $product->extras->sum(function ($extra) {
-                                                    return $extra->pivot->snapshot_price > 0
-                                                        ? $extra->pivot->snapshot_price
-                                                        : $extra->price_addition;
-                                                });
-                                            @endphp
-                                            <div class="text-right font-weight-bold text-success">
-                                                ${{ number_format($totalExtrasPrice, 2) }}
-                                            </div>
+                                        <td class="text-right pr-4 border-0" style="background: #1565c0; color: white;">
+                                            <span class="h5 mb-0 font-weight-bold">${{ number_format($totalExtrasPrice, 2) }}</span>
                                         </td>
                                     </tr>
-                                </tbody>
+                                </tfoot>
                             </table>
                         </div>
                     </div>
@@ -784,7 +907,7 @@
         <div class="row">
             <div class="col-lg-8">
                 <div class="card shadow-sm border-0 mb-4" id="variants-section">
-                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-2">
+                    <div class="card-header text-white d-flex justify-content-between align-items-center py-2" style="background: #212529;">
                         <h3 class="card-title font-weight-bold mb-0">
                             <i class="fas fa-th mr-2"></i>Variantes del Producto ({{ $product->activeVariants->count() }})
                         </h3>

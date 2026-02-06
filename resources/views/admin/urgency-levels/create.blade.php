@@ -1,38 +1,38 @@
 @extends('adminlte::page')
 
-@section('title', 'Nuevo Nivel de Urgencia')
+@section('title', 'NIVEL DE URGENCIA')
 
 @section('content_header')
-    <h1><i class="fas fa-clock mr-2"></i> Nuevo Nivel de Urgencia</h1>
 @stop
 
 @section('content')
-    {{-- Mensajes Flash --}}
-    @if (session('error'))
-        <div class="alert alert-danger alert-dismissible fade show">
-            {{ session('error') }}
-            <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
-        </div>
-    @endif
+    <br>
+    <div class="col-12 col-md-8 col-lg-6">
+        <div class="card card-primary">
 
-    <form action="{{ route('admin.urgency-levels.store') }}" method="POST">
-        @csrf
+            <div class="card-header">
+                <h3 class="card-title" style="font-weight: bold;font-size: 20px;"> NUEVO NIVEL DE URGENCIA</h3>
+            </div>
 
-        <div class="row">
-            <div class="col-md-8">
-                <div class="card card-primary">
-                    <div class="card-header">
-                        <h3 class="card-title">Datos del Nivel</h3>
-                    </div>
-                    <div class="card-body">
+            <div class="card-body">
+                <form method="post" action="{{ route('admin.urgency-levels.store') }}" id="formCreate">
+                    @csrf
+                    @method('POST')
+                    <div class="col-md-12">
+                        <div style="border-bottom: 3px solid #007bff; padding-bottom: 8px; margin-bottom: 20px;">
+                            <h5 style="color: #007bff; font-weight: 600; margin: 0; display: flex; align-items: center;">
+                                <i class="fas fa-clock" style="margin-right: 10px;"></i>
+                                Datos del Nivel
+                            </h5>
+                        </div>
+
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="name">Nombre <span class="text-danger">*</span></label>
-                                    <input type="text" name="name" id="name"
-                                           class="form-control @error('name') is-invalid @enderror"
-                                           value="{{ old('name') }}" maxlength="100" required
-                                           placeholder="Ej: Urgente, Express, Normal">
+                                    <label for="name">Nombre <span style="color: red;">*</span></label>
+                                    <input type="text" class="form-control form-control-sm @error('name') is-invalid @enderror"
+                                        id="name" name="name" value="{{ old('name') }}"
+                                        placeholder="Ej: URGENTE, EXPRESS, NORMAL" required maxlength="100">
                                     @error('name')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -41,9 +41,8 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="sort_order">Orden de Aparición</label>
-                                    <input type="number" name="sort_order" id="sort_order"
-                                           class="form-control @error('sort_order') is-invalid @enderror"
-                                           value="{{ old('sort_order', 0) }}" min="0">
+                                    <input type="number" class="form-control form-control-sm @error('sort_order') is-invalid @enderror"
+                                        id="sort_order" name="sort_order" value="{{ old('sort_order', 0) }}" min="0">
                                     @error('sort_order')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -55,11 +54,11 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="time_percentage">Porcentaje de Tiempo <span class="text-danger">*</span></label>
-                                    <div class="input-group">
-                                        <input type="number" name="time_percentage" id="time_percentage"
-                                               class="form-control @error('time_percentage') is-invalid @enderror"
-                                               value="{{ old('time_percentage', 100) }}" min="1" max="200" required>
+                                    <label for="time_percentage">Porcentaje de Tiempo <span style="color: red;">*</span></label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" class="form-control @error('time_percentage') is-invalid @enderror"
+                                            id="time_percentage" name="time_percentage"
+                                            value="{{ old('time_percentage', 100) }}" min="1" max="200" required>
                                         <div class="input-group-append">
                                             <span class="input-group-text">%</span>
                                         </div>
@@ -67,24 +66,24 @@
                                     @error('time_percentage')
                                         <div class="invalid-feedback d-block">{{ $message }}</div>
                                     @enderror
-                                    <small class="text-muted">100% = tiempo normal, 50% = mitad del tiempo, 25% = un cuarto</small>
+                                    <small class="text-muted">100% = tiempo normal, 50% = mitad del tiempo</small>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="price_multiplier">Multiplicador de Precio <span class="text-danger">*</span></label>
-                                    <div class="input-group">
+                                    <label for="price_multiplier">Multiplicador de Precio <span style="color: red;">*</span></label>
+                                    <div class="input-group input-group-sm">
                                         <div class="input-group-prepend">
                                             <span class="input-group-text">x</span>
                                         </div>
-                                        <input type="number" name="price_multiplier" id="price_multiplier"
-                                               class="form-control @error('price_multiplier') is-invalid @enderror"
-                                               value="{{ old('price_multiplier', '1.00') }}" min="0.5" max="5" step="0.05" required>
+                                        <input type="number" class="form-control @error('price_multiplier') is-invalid @enderror"
+                                            id="price_multiplier" name="price_multiplier"
+                                            value="{{ old('price_multiplier', '1.00') }}" min="0.5" max="5" step="0.05" required>
                                     </div>
                                     @error('price_multiplier')
                                         <div class="invalid-feedback d-block">{{ $message }}</div>
                                     @enderror
-                                    <small class="text-muted">1.00 = precio normal, 1.25 = 25% más, 1.50 = 50% más</small>
+                                    <small class="text-muted">1.00 = precio normal, 1.50 = 50% más</small>
                                 </div>
                             </div>
                         </div>
@@ -92,13 +91,12 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="color">Color <span class="text-danger">*</span></label>
-                                    <div class="input-group">
+                                    <label for="color">Color <span style="color: red;">*</span></label>
+                                    <div class="input-group input-group-sm">
                                         <input type="color" id="colorPicker" value="{{ old('color', '#28a745') }}"
-                                               style="width: 50px; height: 38px; padding: 2px;">
-                                        <input type="text" name="color" id="color"
-                                               class="form-control @error('color') is-invalid @enderror"
-                                               value="{{ old('color', '#28a745') }}" maxlength="20" required>
+                                            style="width: 40px; height: 31px; padding: 2px; border: 1px solid #ced4da;">
+                                        <input type="text" class="form-control @error('color') is-invalid @enderror"
+                                            id="color" name="color" value="{{ old('color', '#28a745') }}" maxlength="20" required>
                                     </div>
                                     @error('color')
                                         <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -108,72 +106,72 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="icon">Icono (FontAwesome)</label>
-                                    <div class="input-group">
+                                    <div class="input-group input-group-sm">
                                         <div class="input-group-prepend">
                                             <span class="input-group-text"><i id="iconPreview" class="fas fa-clock"></i></span>
                                         </div>
-                                        <input type="text" name="icon" id="icon"
-                                               class="form-control @error('icon') is-invalid @enderror"
-                                               value="{{ old('icon', 'fa-clock') }}" maxlength="50"
-                                               placeholder="fa-clock, fa-bolt, fa-exclamation-triangle">
+                                        <input type="text" class="form-control @error('icon') is-invalid @enderror"
+                                            id="icon" name="icon" value="{{ old('icon', 'fa-clock') }}" maxlength="50"
+                                            placeholder="fa-clock, fa-bolt, fa-exclamation-triangle">
                                     </div>
                                     @error('icon')
                                         <div class="invalid-feedback d-block">{{ $message }}</div>
                                     @enderror
-                                    <small class="text-muted">Ejemplos: fa-clock, fa-bolt, fa-exclamation-triangle</small>
+                                    <small class="text-muted">Ejemplos: fa-clock, fa-bolt, fa-fire</small>
                                 </div>
                             </div>
                         </div>
 
                         <div class="form-group">
                             <label for="description">Descripción</label>
-                            <textarea name="description" id="description" rows="2"
-                                      class="form-control @error('description') is-invalid @enderror"
-                                      maxlength="500" placeholder="Descripción opcional del nivel de urgencia">{{ old('description') }}</textarea>
+                            <textarea class="form-control form-control-sm @error('description') is-invalid @enderror"
+                                id="description" name="description" rows="2" maxlength="500"
+                                placeholder="Descripción opcional del nivel de urgencia">{{ old('description') }}</textarea>
                             @error('description')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
-                    </div>
-                </div>
-            </div>
 
-            <div class="col-md-4">
-                <div class="card card-secondary">
-                    <div class="card-header">
-                        <h3 class="card-title">Vista Previa</h3>
-                    </div>
-                    <div class="card-body text-center">
-                        <div id="preview" class="p-3 rounded mb-3" style="background-color: #f8f9fa;">
+                        {{-- Vista Previa --}}
+                        <div style="border-bottom: 3px solid #6c757d; padding-bottom: 8px; margin-bottom: 20px; margin-top: 30px;">
+                            <h5 style="color: #6c757d; font-weight: 600; margin: 0; display: flex; align-items: center;">
+                                <i class="fas fa-eye" style="margin-right: 10px;"></i>
+                                Vista Previa
+                            </h5>
+                        </div>
+                        <div class="text-center p-3 rounded mb-3" style="background-color: #f8f9fa;">
                             <span id="previewBadge" class="badge p-2" style="background-color: #28a745; color: white; font-size: 1.1rem;">
                                 <i class="fas fa-clock mr-1"></i> <span id="previewName">NORMAL</span>
                             </span>
+                            <div class="mt-2">
+                                <small><strong>Tiempo:</strong> <span id="previewTime">100</span>% | <strong>Precio:</strong> x<span id="previewPrice">1.00</span></small>
+                            </div>
                         </div>
-                        <div class="text-left">
-                            <p class="mb-1"><strong>Tiempo:</strong> <span id="previewTime">100</span>% del normal</p>
-                            <p class="mb-1"><strong>Precio:</strong> x<span id="previewPrice">1.00</span></p>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="card">
-                    <div class="card-body">
-                        <a href="{{ route('admin.urgency-levels.index') }}" class="btn btn-secondary btn-block">
-                            <i class="fas fa-arrow-left mr-1"></i> Regresar
-                        </a>
-                        <button type="submit" class="btn btn-success btn-block">
-                            <i class="fas fa-save mr-1"></i> Guardar
-                        </button>
+                        <!-- Botones de acción -->
+                        <div class="d-flex justify-content-end align-items-center mt-4">
+                            <a href="{{ route('admin.urgency-levels.index') }}" class="btn btn-secondary mr-2"
+                                style="padding: 8px 20px;">
+                                <i class="fas fa-times-circle"></i> Regresar
+                            </a>
+                            <button type="submit" class="btn btn-primary" id="btnGuardar" style="padding: 8px 20px;">
+                                <i class="fas fa-save"></i> Guardar
+                            </button>
+                        </div>
+
                     </div>
-                </div>
+                </form>
             </div>
         </div>
-    </form>
+    </div>
+@stop
+
+@section('css')
 @stop
 
 @section('js')
     <script>
-        $(document).ready(function() {
+        $(function() {
             // Sincronizar color picker
             $('#colorPicker').on('input', function() {
                 $('#color').val($(this).val());
@@ -186,7 +184,7 @@
 
             // Actualizar icono preview
             $('#icon').on('input', function() {
-                const icon = $(this).val() || 'fa-clock';
+                var icon = $(this).val() || 'fa-clock';
                 $('#iconPreview').attr('class', 'fas ' + icon);
                 updatePreview();
             });
@@ -195,11 +193,11 @@
             $('#name, #time_percentage, #price_multiplier').on('input', updatePreview);
 
             function updatePreview() {
-                const name = $('#name').val() || 'NOMBRE';
-                const color = $('#color').val() || '#28a745';
-                const icon = $('#icon').val() || 'fa-clock';
-                const time = $('#time_percentage').val() || 100;
-                const price = $('#price_multiplier').val() || '1.00';
+                var name = $('#name').val() || 'NOMBRE';
+                var color = $('#color').val() || '#28a745';
+                var icon = $('#icon').val() || 'fa-clock';
+                var time = $('#time_percentage').val() || 100;
+                var price = $('#price_multiplier').val() || '1.00';
 
                 $('#previewBadge').css('background-color', color);
                 $('#previewBadge i').attr('class', 'fas ' + icon + ' mr-1');
@@ -209,6 +207,12 @@
             }
 
             updatePreview();
+
+            // Submit con loading
+            $('#formCreate').on('submit', function() {
+                var $btn = $('#btnGuardar');
+                $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Guardando...');
+            });
         });
     </script>
 @stop

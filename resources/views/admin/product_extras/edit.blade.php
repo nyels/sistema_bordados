@@ -67,6 +67,22 @@
                                 @enderror
                             </div>
 
+                            {{-- Categoría --}}
+                            <div class="form-group">
+                                <label>Categoría</label>
+                                <select name="extra_category_id" class="form-control form-control-sm @error('extra_category_id') is-invalid @enderror">
+                                    <option value="">-- Sin categoría --</option>
+                                    @foreach ($categories ?? [] as $cat)
+                                        <option value="{{ $cat->id }}" {{ old('extra_category_id', $extra->extra_category_id) == $cat->id ? 'selected' : '' }}>
+                                            {{ $cat->nombre }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('extra_category_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
                             {{-- Costo y Precio --}}
                             <div class="row">
                                 <div class="col-md-6">
@@ -161,7 +177,7 @@
                                         <small style="color: #495057;">
                                             Este servicio descontará inventario al usarse en producción.
                                         </small>
-                                    </div>f
+                                    </div>
                                     {{-- Fila 1: Select de material --}}
                                     <div class="form-group mb-2">
                                         <select id="material-select" class="form-control form-control-sm">
@@ -210,10 +226,10 @@
 
                             {{-- Botones --}}
                             <div class="d-flex justify-content-end align-items-center mt-4">
-                                <a href="{{ route('admin.product_extras.index') }}" class="btn btn-secondary mr-2">
+                                <a href="{{ route('admin.product_extras.index') }}" class="btn btn-secondary mr-2" id="btnRegresar">
                                     <i class="fas fa-times-circle"></i> Regresar
                                 </a>
-                                <button type="submit" class="btn btn-warning">
+                                <button type="button" class="btn btn-warning" id="btnActualizar">
                                     <i class="fas fa-save"></i> Actualizar
                                 </button>
                             </div>
@@ -230,78 +246,59 @@
     @section('js')
         <script>
             $(document).ready(function() {
-                // === DATOS DE MATERIALES DISPONIBLES Y EXISTENTES ===
+                // ============================================================
+                // DATOS
+                // ============================================================
                 var materialVariants = @json($materialVariants ?? []);
                 var existingMaterials = @json($extraMaterials ?? []);
                 var materialIndex = 0;
-                var addedMaterials = []; // Track de materiales agregados
-
-                // === FAMILIAS QUE PERMITEN DECIMALES ===
+                var addedMaterials = [];
                 var decimalFamilies = ['linear'];
 
-                // === INICIALIZAR SELECT DE MATERIALES ===
+                // ============================================================
+                // FUNCIONES DE MATERIALES
+                // ============================================================
                 function initMaterialSelect() {
                     var $select = $('#material-select');
-                    $select.empty();
-                    $select.append('<option value="" data-unit="-" data-family="">-- Seleccione material --</option>');
+                    $select.empty().append('<option value="" data-unit="-" data-family="">-- Seleccione material --</option>');
 
                     materialVariants.forEach(function(v) {
-                        // No mostrar materiales ya agregados
                         if (addedMaterials.includes(v.id)) return;
 
-                        // Laravel usa camelCase para relaciones: consumptionUnit (no consumption_unit)
-                        var unit = null;
-                        if (v.material) {
-                            unit = v.material.consumptionUnit || v.material.consumption_unit || null;
-                        }
+                        var unit = v.material ? (v.material.consumptionUnit || v.material.consumption_unit || null) : null;
                         var unitSymbol = unit ? unit.symbol : '';
                         var unitFamily = unit ? (unit.measurement_family || '') : '';
                         var materialName = v.material ? v.material.name : 'Material #' + v.id;
-                        var colorName = v.color ? ' - ' + v.color : '';
-                        var label = materialName + colorName;
+                        var label = materialName + (v.color ? ' - ' + v.color : '');
 
                         $select.append('<option value="' + v.id + '" data-unit="' + unitSymbol +
-                            '" data-family="' + unitFamily + '" data-name="' + label + '">' + label +
-                            '</option>');
+                            '" data-family="' + unitFamily + '" data-name="' + label + '">' + label + '</option>');
                     });
                 }
 
-                // === ACTUALIZAR FORMATO DE CANTIDAD SEGÚN UNIDAD ===
                 function updateQuantityInput() {
-                    var $select = $('#material-select');
-                    var $input = $('#material-quantity');
-                    var $unit = $('#material-unit');
+                    var $selected = $('#material-select option:selected');
+                    var unit = $selected.data('unit') || '-';
+                    var family = $selected.data('family') || '';
 
-                    var unit = $select.find('option:selected').data('unit') || '-';
-                    var family = $select.find('option:selected').data('family') || '';
+                    $('#material-unit').text(unit);
+                    $('#material-quantity').val('');
 
-                    $unit.text(unit);
-                    $input.val('');
-
-                    var allowsDecimals = decimalFamilies.includes(family);
-                    if (allowsDecimals) {
-                        $input.attr('step', '0.01').attr('min', '0.01').attr('placeholder', '0.00');
+                    if (decimalFamilies.includes(family)) {
+                        $('#material-quantity').attr({ step: '0.01', min: '0.01', placeholder: '0.00' });
                     } else {
-                        $input.attr('step', '1').attr('min', '1').attr('placeholder', '0');
+                        $('#material-quantity').attr({ step: '1', min: '1', placeholder: '0' });
                     }
                 }
 
-                // === AGREGAR MATERIAL A LA TABLA (usado para cargar existentes y agregar nuevos) ===
                 function addMaterialToTable(variantId, quantity, materialName, unit) {
-                    var html = '<tr data-index="' + materialIndex + '" data-variant-id="' + variantId + '">' +
+                    var html = '<tr data-variant-id="' + variantId + '">' +
                         '<td>' + materialName +
-                        '<input type="hidden" name="materials[' + materialIndex + '][variant_id]" value="' + variantId +
-                        '">' +
-                        '</td>' +
+                        '<input type="hidden" name="materials[' + materialIndex + '][variant_id]" value="' + variantId + '"></td>' +
                         '<td class="text-center">' + quantity + ' ' + unit +
-                        '<input type="hidden" name="materials[' + materialIndex + '][quantity]" value="' + quantity +
-                        '">' +
-                        '</td>' +
-                        '<td class="text-center">' +
-                        '<button type="button" class="btn btn-sm btn-danger btn-remove-material" title="Eliminar">' +
-                        '<i class="fas fa-trash-alt"></i></button>' +
-                        '</td>' +
-                        '</tr>';
+                        '<input type="hidden" name="materials[' + materialIndex + '][quantity]" value="' + quantity + '"></td>' +
+                        '<td class="text-center"><button type="button" class="btn btn-sm btn-danger btn-remove-material">' +
+                        '<i class="fas fa-trash-alt"></i></button></td></tr>';
 
                     $('#materials-list').append(html);
                     $('#materials-table-container').show();
@@ -309,22 +306,12 @@
                     addedMaterials.push(parseInt(variantId));
                 }
 
-                // === TOGGLE SECCIÓN DE MATERIALES ===
-                $('#consumes_inventory').on('change', function() {
-                    if ($(this).is(':checked')) {
-                        $('#materials-section').slideDown(200);
-                        initMaterialSelect();
-                    } else {
-                        $('#materials-section').slideUp(200);
-                    }
-                });
-
-                // === CARGAR MATERIALES EXISTENTES ===
+                // ============================================================
+                // CARGAR MATERIALES EXISTENTES
+                // ============================================================
                 if (existingMaterials && existingMaterials.length > 0) {
                     existingMaterials.forEach(function(m) {
-                        var variant = materialVariants.find(function(v) {
-                            return v.id == m.id;
-                        });
+                        var variant = materialVariants.find(function(v) { return v.id == m.id; });
                         var materialName = 'Material #' + m.id;
                         var unit = '';
 
@@ -340,112 +327,100 @@
                     });
                 }
 
-                // Inicializar select
-                initMaterialSelect();
-
-                // === CAMBIO EN SELECT DE MATERIAL ===
-                $('#material-select').on('change', function() {
-                    updateQuantityInput();
+                // ============================================================
+                // EVENTOS DE MATERIALES
+                // ============================================================
+                $('#consumes_inventory').on('change', function() {
+                    if ($(this).is(':checked')) {
+                        $('#materials-section').slideDown(200);
+                        initMaterialSelect();
+                    } else {
+                        $('#materials-section').slideUp(200);
+                    }
                 });
 
-                // === AGREGAR MATERIAL A LA TABLA ===
+                $('#material-select').on('change', updateQuantityInput);
+
                 $('#btn-add-material').on('click', function() {
-                    var $select = $('#material-select');
-                    var $quantity = $('#material-quantity');
-                    var variantId = $select.val();
-                    var quantity = $quantity.val();
-                    var materialName = $select.find('option:selected').data('name');
-                    var unit = $select.find('option:selected').data('unit') || '';
+                    var $selected = $('#material-select option:selected');
+                    var variantId = $('#material-select').val();
+                    var quantity = $('#material-quantity').val();
 
                     if (!variantId) {
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Seleccione un material',
-                            timer: 1500,
-                            showConfirmButton: false
-                        });
+                        Swal.fire({ icon: 'warning', title: 'Seleccione un material', timer: 1500, showConfirmButton: false });
                         return;
                     }
                     if (!quantity || parseFloat(quantity) <= 0) {
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Ingrese una cantidad válida',
-                            timer: 1500,
-                            showConfirmButton: false
-                        });
+                        Swal.fire({ icon: 'warning', title: 'Ingrese una cantidad válida', timer: 1500, showConfirmButton: false });
                         return;
                     }
 
-                    addMaterialToTable(variantId, quantity, materialName, unit);
-
-                    // Resetear selector
+                    addMaterialToTable(variantId, quantity, $selected.data('name'), $selected.data('unit') || '');
                     initMaterialSelect();
-                    $quantity.val('');
+                    $('#material-quantity').val('');
                     $('#material-unit').text('-');
                 });
 
-                // === ELIMINAR MATERIAL DE LA TABLA ===
                 $(document).on('click', '.btn-remove-material', function() {
                     var $row = $(this).closest('tr');
                     var variantId = parseInt($row.data('variant-id'));
-
-                    // Quitar del track
-                    addedMaterials = addedMaterials.filter(function(id) {
-                        return id !== variantId;
-                    });
-
+                    addedMaterials = addedMaterials.filter(function(id) { return id !== variantId; });
                     $row.remove();
-
-                    // Ocultar tabla si está vacía
-                    if ($('#materials-list tr').length === 0) {
-                        $('#materials-table-container').hide();
-                    }
-
-                    // Actualizar select
+                    if ($('#materials-list tr').length === 0) $('#materials-table-container').hide();
                     initMaterialSelect();
                 });
 
-                // === VALIDACIÓN DEL FORMULARIO ===
-                $('#formExtra').on('submit', function(e) {
+                // ============================================================
+                // VALIDACIÓN Y SUBMIT - LÓGICA SIMPLE Y DIRECTA
+                // ============================================================
+                $('#btnActualizar').on('click', function(e) {
+                    e.preventDefault();
+
+                    var $btn = $(this);
+                    var $btnRegresar = $('#btnRegresar');
+
+                    // Si ya está procesando, ignorar
+                    if ($btn.prop('disabled')) return;
+
+                    // Validar
+                    var errors = [];
                     var name = $('input[name="name"]').val().trim();
                     var cost = $('input[name="cost_addition"]').val();
                     var price = $('input[name="price_addition"]').val();
                     var consumesInventory = $('#consumes_inventory').is(':checked');
 
-                    var errors = [];
-
-                    if (!name || name === '') {
-                        errors.push('El nombre del extra es obligatorio');
-                    }
-                    if (!cost || cost === '' || parseFloat(cost) < 0) {
-                        errors.push('El costo adicional es obligatorio');
-                    }
-                    if (!price || price === '' || parseFloat(price) < 0) {
-                        errors.push('El precio al cliente es obligatorio');
+                    if (!name) errors.push('El nombre del extra es obligatorio');
+                    if (!cost || parseFloat(cost) < 0) errors.push('El costo adicional es obligatorio');
+                    if (!price || parseFloat(price) < 0) errors.push('El precio al cliente es obligatorio');
+                    if (consumesInventory && $('#materials-list tr').length === 0) {
+                        errors.push('Debe agregar al menos un material si el extra consume inventario');
                     }
 
-                    // Validar materiales si consume inventario
-                    if (consumesInventory) {
-                        if ($('#materials-list tr').length === 0) {
-                            errors.push('Debe agregar al menos un material si el extra consume inventario');
-                        }
-                    }
-
+                    // Si hay errores, mostrar y NO HACER NADA MÁS
                     if (errors.length > 0) {
-                        e.preventDefault();
                         Swal.fire({
                             icon: 'error',
                             title: 'Campos requeridos',
-                            html: '<ul style="text-align:left;">' + errors.map(function(err) {
-                                return '<li>' + err + '</li>';
+                            html: '<ul style="text-align:left;">' + errors.map(function(e) {
+                                return '<li>' + e + '</li>';
                             }).join('') + '</ul>',
                             confirmButtonText: 'Entendido'
                         });
-                        return false;
+                        return; // SALIR - no deshabilitar nada
                     }
 
-                    return true;
+                    // Sin errores - AHORA SÍ deshabilitar y enviar
+                    $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Actualizando...');
+                    $btnRegresar.addClass('disabled').css('pointer-events', 'none');
+
+                    // Enviar formulario
+                    $('#formExtra').submit();
                 });
+
+                // ============================================================
+                // INICIALIZACIÓN
+                // ============================================================
+                initMaterialSelect();
             });
         </script>
     @stop

@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cliente;
+use App\Models\Estado;
 use App\Models\FinishedGoodsMovement;
 use App\Models\MotivoDescuento;
 use App\Models\Order;
 use App\Models\ProductVariant;
+use App\Models\Recomendacion;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -47,10 +49,11 @@ class PosController extends Controller
      *
      * Vista principal del POS.
      * Carga variantes de producto activas con stock calculado desde ledger.
+     * Muestra TODOS los productos (con y sin stock) - sin stock se muestran deshabilitados.
      */
     public function index(): View
     {
-        // Obtener variantes activas con su producto
+        // Obtener variantes activas con su producto (TODAS, incluyendo sin stock)
         $variants = ProductVariant::with(['product'])
             ->where('activo', true)
             ->whereHas('product', function ($q) {
@@ -62,9 +65,9 @@ class PosController extends Controller
                 $variant->stock_finished = $this->calculateRealStock($variant->id);
                 return $variant;
             })
-            ->filter(function ($variant) {
-                // Solo mostrar variantes con stock > 0
-                return $variant->stock_finished > 0;
+            // Ordenar alfabéticamente por nombre del producto
+            ->sortBy(function ($variant) {
+                return strtolower($variant->product?->name ?? '');
             })
             ->values();
 
@@ -73,7 +76,20 @@ class PosController extends Controller
             ->orderBy('nombre', 'asc')
             ->get();
 
-        return view('pos.index', compact('variants', 'motivosDescuento'));
+        // Obtener estados activos para el formulario de cliente rápido
+        $estados = Estado::where('activo', true)
+            ->orderBy('nombre_estado', 'asc')
+            ->get();
+
+        // Obtener recomendaciones activas para el formulario de cliente rápido
+        $recomendaciones = Recomendacion::where('activo', true)
+            ->orderBy('nombre_recomendacion', 'asc')
+            ->get();
+
+        // Tasa de IVA desde configuración del sistema
+        $defaultTaxRate = Order::getDefaultTaxRate();
+
+        return view('pos.index', compact('variants', 'motivosDescuento', 'estados', 'recomendaciones', 'defaultTaxRate'));
     }
 
     /**
@@ -241,8 +257,10 @@ class PosController extends Controller
                 $subtotalAfterDiscount = $subtotalGeneral - $discountGeneral;
 
                 // CIERRE POS: Cálculo de IVA como snapshot (sobre subtotal - descuento)
-                $ivaRate = $applyIva ? 16.00 : 0.00;
-                $ivaAmount = $applyIva ? round($subtotalAfterDiscount * 0.16, 2) : 0.00;
+                // Obtener tasa de IVA desde configuración del sistema
+                $defaultTaxRate = Order::getDefaultTaxRate();
+                $ivaRate = $applyIva ? $defaultTaxRate : 0.00;
+                $ivaAmount = $applyIva ? round($subtotalAfterDiscount * ($defaultTaxRate / 100), 2) : 0.00;
                 $totalWithTax = $subtotalAfterDiscount + $ivaAmount;
 
                 // -----------------------------------------------------------------
@@ -834,6 +852,62 @@ class PosController extends Controller
             'success' => true,
             'data' => $clientes,
         ]);
+    }
+
+    /**
+     * POST /pos/clientes
+     *
+     * Crear cliente rápido desde el POS.
+     * Campos mínimos: nombre, teléfono.
+     */
+    public function storeCliente(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'nombre' => 'required|string|max:100',
+            'apellidos' => 'nullable|string|max:100',
+            'telefono' => 'required|string|max:20',
+            'email' => 'nullable|email|max:100',
+            'estado_id' => 'required|exists:estados,id',
+            'recomendacion_id' => 'required|exists:recomendacion,id',
+        ], [
+            'nombre.required' => 'El nombre es obligatorio.',
+            'telefono.required' => 'El teléfono es obligatorio.',
+            'email.email' => 'El email no tiene un formato válido.',
+            'estado_id.required' => 'El estado es obligatorio.',
+            'estado_id.exists' => 'El estado seleccionado no es válido.',
+            'recomendacion_id.required' => 'La recomendación es obligatoria.',
+            'recomendacion_id.exists' => 'La recomendación seleccionada no es válida.',
+        ]);
+
+        try {
+            $cliente = Cliente::create([
+                'nombre' => $validated['nombre'],
+                'apellidos' => $validated['apellidos'] ?? null,
+                'telefono' => $validated['telefono'],
+                'email' => $validated['email'] ?? null,
+                'estado_id' => $validated['estado_id'],
+                'recomendacion_id' => $validated['recomendacion_id'],
+                'activo' => true,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cliente creado exitosamente.',
+                'data' => [
+                    'id' => $cliente->id,
+                    'nombre' => $cliente->nombre,
+                    'apellidos' => $cliente->apellidos,
+                    'telefono' => $cliente->telefono,
+                    'email' => $cliente->email,
+                ],
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Error al crear el cliente: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
 }

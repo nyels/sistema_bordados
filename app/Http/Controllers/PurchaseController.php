@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Auth;
 use App\Models\MaterialUnitConversion;
+use App\Models\SystemSetting;
 use App\Services\ReceptionService;
 use App\Exceptions\InventoryException;
 use App\Models\PurchaseReception;
@@ -179,7 +180,10 @@ class PurchaseController extends Controller
                 }
             }
 
-            return view('admin.purchases.create', compact('proveedores', 'categories', 'oldItemsForJs'));
+            // Obtener tasa de IVA desde configuración del sistema
+            $defaultTaxRate = (float) SystemSetting::getValue('default_tax_rate', 16);
+
+            return view('admin.purchases.create', compact('proveedores', 'categories', 'oldItemsForJs', 'defaultTaxRate'));
         } catch (\Exception $e) {
             Log::error('Error al cargar formulario de compra: ' . $e->getMessage(), [
                 'user_id' => Auth::id(),
@@ -334,8 +338,11 @@ class PurchaseController extends Controller
                 ->ordered()
                 ->get();
 
+            // Obtener tasa de IVA desde configuración del sistema
+            $defaultTaxRate = (float) SystemSetting::getValue('default_tax_rate', 16);
+
             // Agregamos 'itemsForJs' al compact
-            return view('admin.purchases.edit', compact('purchase', 'proveedores', 'categories', 'itemsForJs'));
+            return view('admin.purchases.edit', compact('purchase', 'proveedores', 'categories', 'itemsForJs', 'defaultTaxRate'));
         } catch (ModelNotFoundException $e) {
             return redirect()->route('admin.purchases.index')
                 ->with('error', 'Compra no encontrada');

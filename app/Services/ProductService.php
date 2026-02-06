@@ -553,43 +553,53 @@ class ProductService
 
     /**
      * Sincronizar diseños con application_type (Legacy Wrapper)
+     *
+     * NOTA: Este método recibe design_ids y debe encontrar el export aprobado
+     * para pasarlo a syncDesignsList que espera export_id.
      */
     protected function syncDesigns(Product $product, array $designIds, array $applications = []): void
     {
         $syncData = [];
         foreach ($designIds as $designId) {
             $appTypeId = $applications[$designId] ?? null;
+            $exportId = null;
 
-            // FALLBACK: If no position specified, try to infer it from the Design Export metadata
-            if (!$appTypeId) {
-                // 1. Try to find the design and its approved export
-                $design = \App\Models\Design::with(['generalExports' => fn($q) => $q->where('status', 'aprobado')])->find($designId);
+            // 1. Buscar el diseño y su primer export aprobado
+            $design = \App\Models\Design::with(['generalExports' => fn($q) => $q->where('status', 'aprobado')])->find($designId);
 
-                if ($design) {
-                    $export = $design->generalExports->first();
+            if ($design) {
+                $export = $design->generalExports->first();
+
+                if ($export) {
+                    // Guardar el export_id para pasarlo a syncDesignsList
+                    $exportId = $export->id;
+
                     // 2. If export exists and has an application type slug, look up the ID
-                    if ($export && $export->application_type) {
+                    if (!$appTypeId && $export->application_type) {
                         $appType = \App\Models\Application_types::where('slug', $export->application_type)->first();
                         if ($appType) {
                             $appTypeId = $appType->id;
                         }
                     }
                 }
-
-                // 3. Absolute Fallback (Safety Net)
-                if (!$appTypeId) {
-                    $appTypeId = 1;
-                    Log::warning("Design $designId has no position defined or inferable. Defaulting to $appTypeId", ['product_id' => $product->id]);
-                }
             }
-            // Ensure we don't continue if it's still null, but with fallback it shouldn't be
+
+            // 3. Absolute Fallback for appTypeId (Safety Net)
             if (!$appTypeId) {
+                $appTypeId = 1;
+                Log::warning("Design $designId has no position defined or inferable. Defaulting to $appTypeId", ['product_id' => $product->id]);
+            }
+
+            // Si no encontramos export, no podemos continuar
+            if (!$exportId) {
+                Log::warning("Design $designId has no approved export. Skipping.", ['product_id' => $product->id]);
                 continue;
             }
-            // Construct list format for the new method
+
+            // Construct list format for syncDesignsList (needs export_id, not design_id)
             $syncData[] = [
-                'design_id' => $designId,
-                'application_type_id' => $appTypeId
+                'export_id' => $exportId,
+                'app_type_slug' => null, // syncDesignsList usará application_type del export
             ];
         }
         $this->syncDesignsList($product, $syncData);

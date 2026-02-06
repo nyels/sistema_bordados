@@ -78,8 +78,8 @@
                            placeholder="Buscar en notas...">
                 </div>
                 <div class="col-md-2">
-                    <button type="button" id="btn-clear-filters" class="btn btn-sm btn-outline-secondary">
-                        Limpiar
+                    <button type="button" id="btn-clear-filters" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-eraser mr-1"></i> Limpiar
                     </button>
                 </div>
             </div>

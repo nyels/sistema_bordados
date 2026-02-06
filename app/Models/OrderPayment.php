@@ -54,9 +54,16 @@ class OrderPayment extends Model
         // ================================================================
         // v2.5: PROTECCIÓN CONTRA ELIMINACIÓN DE PAGOS
         // REGLA CONTABLE: amount_paid SOLO puede CRECER, nunca decrecer
+        // EXCEPCIÓN: En estado DRAFT los anticipos pueden eliminarse
         // ================================================================
         static::deleting(function (self $model): void {
             $order = $model->order;
+
+            // R0: En estado DRAFT sí se permite eliminar anticipos
+            // (El pedido aún no ha sido confirmado, es editable)
+            if ($order->status === Order::STATUS_DRAFT) {
+                return; // Permitir eliminación
+            }
 
             // R1: Pedidos financieramente cerrados NO permiten eliminación de pagos
             if ($order->isFinanciallyClosed()) {
@@ -67,7 +74,7 @@ class OrderPayment extends Model
                 );
             }
 
-            // R2: Regla de negocio - pagos solo pueden crecer
+            // R2: Regla de negocio - pagos solo pueden crecer (después de DRAFT)
             // En un ERP contable, los pagos NO se eliminan, se hacen notas de crédito
             throw new \Exception(
                 "VIOLACIÓN CONTABLE: Los pagos registrados NO pueden eliminarse. " .

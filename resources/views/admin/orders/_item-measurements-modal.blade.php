@@ -151,9 +151,20 @@
                     <div id="editHistoryList" class="list-group" style="max-height: 350px; overflow-y: auto;">
                         {{-- Se llena dinámicamente --}}
                     </div>
-                    <div class="alert alert-warning py-2 mt-2" id="editNoHistoryAlert" style="display: none; font-size: 14px;">
-                        <i class="fas fa-exclamation-triangle mr-1"></i>
-                        Este cliente no tiene medidas registradas en el historial. Capture nuevas medidas.
+                    {{-- Empty state mejorado --}}
+                    <div id="editNoHistoryAlert" style="display: none;" class="text-center py-4">
+                        <div class="rounded-lg p-4" style="background: linear-gradient(135deg, #fef3f2 0%, #fce7f3 100%); border: 2px dashed #f9a8d4;">
+                            <i class="fas fa-ruler-combined fa-3x mb-3" style="color: #ec4899; opacity: 0.6;"></i>
+                            <h6 class="font-weight-bold mb-2" style="color: #be185d;">Sin medidas en el historial</h6>
+                            <p class="mb-3" style="color: #9d174d; font-size: 14px;">
+                                Este cliente aún no tiene medidas registradas.<br>
+                                <small class="text-muted">Capture nuevas medidas para continuar.</small>
+                            </p>
+                            <button type="button" class="btn btn-sm px-4" id="btnGoToCaptureFromEmpty"
+                                    style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%); color: white; border: none; border-radius: 20px;">
+                                <i class="fas fa-plus-circle mr-1"></i> Capturar Nuevas Medidas
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -186,15 +197,24 @@
 {{-- Estilos para el modal --}}
 <style>
     .medida-card-edit {
-        border: 1px solid #e5e7eb;
+        border: 2px solid #e5e7eb;
         border-radius: 8px;
         padding: 10px;
         background: #ffffff;
-        transition: border-color 0.2s ease;
+        transition: all 0.2s ease;
+        cursor: pointer;
     }
-    .medida-card-edit:focus-within {
-        border-color: #6f42c1;
-        box-shadow: 0 0 0 0.2rem rgba(111, 66, 193, 0.15);
+    .medida-card-edit:hover {
+        border-color: #f472b6;
+        background: #fdf2f8;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(236, 72, 153, 0.15);
+    }
+    .medida-card-edit:focus-within,
+    .medida-card-edit.active {
+        border-color: #ec4899;
+        background: #fdf2f8;
+        box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.25);
     }
     .medida-img-edit {
         width: 100%;
@@ -202,9 +222,36 @@
         object-fit: contain;
         margin-bottom: 8px;
     }
+    /* INPUT: Border rosa por defecto */
+    .medida-input-edit {
+        border: 2px solid #f9a8d4 !important;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+    }
+    /* INPUT: Hover rosa más intenso */
+    .medida-input-edit:hover {
+        border-color: #ec4899 !important;
+        background: #fdf2f8;
+    }
+    /* INPUT: Focus azul visible */
     .medida-input-edit:focus {
-        border-color: #6f42c1;
-        box-shadow: none;
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35) !important;
+        background: #eff6ff;
+        outline: none;
+    }
+    /* Responsive touch support */
+    @media (max-width: 768px) {
+        .medida-card-edit:active {
+            border-color: #ec4899;
+            background: #fdf2f8;
+            box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.25);
+        }
+        /* Touch hover para inputs en móvil */
+        .medida-input-edit:active {
+            border-color: #ec4899 !important;
+            background: #fdf2f8;
+        }
     }
     .history-item {
         cursor: pointer;
@@ -438,6 +485,32 @@
         document.getElementById('editExistingMeasurementsPanel').style.display = 'block';
         document.querySelectorAll('.history-item').forEach(function(el) {
             el.classList.remove('selected');
+        });
+    });
+
+    // Botón para ir a capturar desde empty state
+    document.getElementById('btnGoToCaptureFromEmpty')?.addEventListener('click', function() {
+        document.querySelector('input[name="editMeasurementSource"][value="capture"]').checked = true;
+        document.getElementById('lblEditNewMeasures').classList.add('active');
+        document.getElementById('lblEditExistingMeasures').classList.remove('active');
+        document.getElementById('editNewMeasurementsPanel').style.display = 'block';
+        document.getElementById('editExistingMeasurementsPanel').style.display = 'none';
+        // Focus en el primer input
+        setTimeout(function() {
+            document.getElementById('editMedBusto').focus();
+        }, 100);
+    });
+
+    // Marcar card activa cuando input tiene focus (para mejor UX en móvil)
+    document.querySelectorAll('.medida-input-edit').forEach(function(input) {
+        input.addEventListener('focus', function() {
+            document.querySelectorAll('.medida-card-edit').forEach(function(card) {
+                card.classList.remove('active');
+            });
+            this.closest('.medida-card-edit').classList.add('active');
+        });
+        input.addEventListener('blur', function() {
+            this.closest('.medida-card-edit').classList.remove('active');
         });
     });
 

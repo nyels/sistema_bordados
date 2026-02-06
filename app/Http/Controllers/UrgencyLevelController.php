@@ -4,36 +4,27 @@ namespace App\Http\Controllers;
 
 use App\Models\UrgencyLevel;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
+use Throwable;
 
 class UrgencyLevelController extends Controller
 {
-    /**
-     * Listado de niveles de urgencia
-     */
     public function index()
     {
-        $urgencyLevels = UrgencyLevel::where('activo', true)
-            ->orderBy('sort_order')
-            ->get();
-
+        $urgencyLevels = UrgencyLevel::where('activo', true)->orderBy('sort_order')->get();
         return view('admin.urgency-levels.index', compact('urgencyLevels'));
     }
 
-    /**
-     * Formulario para crear nuevo nivel
-     */
     public function create()
     {
         return view('admin.urgency-levels.create');
     }
 
-    /**
-     * Guardar nuevo nivel
-     */
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse|RedirectResponse
     {
         $validated = $request->validate([
             'name' => 'required|string|max:100',
@@ -46,16 +37,49 @@ class UrgencyLevelController extends Controller
         ]);
 
         try {
+            $name = mb_strtoupper(trim($validated['name']), 'UTF-8');
+            $existing = UrgencyLevel::where('name', $name)->first();
+
+            if ($existing) {
+                if ($existing->activo) {
+                    $msg = 'Ya existe un nivel de urgencia con ese nombre.';
+                    if ($request->ajax() || $request->wantsJson()) {
+                        return response()->json(['success' => false, 'message' => $msg], 422);
+                    }
+                    return back()->withErrors(['name' => $msg])->withInput();
+                }
+
+                // Reactivar
+                $existing->fill([
+                    'time_percentage' => $validated['time_percentage'],
+                    'price_multiplier' => $validated['price_multiplier'],
+                    'color' => $validated['color'],
+                    'icon' => $validated['icon'] ?? null,
+                    'description' => $validated['description'] ?? null,
+                    'sort_order' => $validated['sort_order'] ?? 0,
+                    'activo' => true,
+                ]);
+                $existing->save();
+
+                Log::info('[UrgencyLevel@store] Nivel reactivado', ['id' => $existing->id, 'user_id' => Auth::id()]);
+
+                $msg = 'Nivel de urgencia reactivado correctamente.';
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json(['success' => true, 'message' => $msg, 'data' => $existing]);
+                }
+                return redirect()->route('admin.urgency-levels.index')->with('success', $msg);
+            }
+
             // Generar slug único
-            $slug = Str::slug($validated['name']);
+            $slug = Str::slug($name);
             $originalSlug = $slug;
             $counter = 1;
             while (UrgencyLevel::where('slug', $slug)->exists()) {
                 $slug = $originalSlug . '-' . $counter++;
             }
 
-            UrgencyLevel::create([
-                'name' => mb_strtoupper($validated['name']),
+            $level = UrgencyLevel::create([
+                'name' => $name,
                 'slug' => $slug,
                 'time_percentage' => $validated['time_percentage'],
                 'price_multiplier' => $validated['price_multiplier'],
@@ -66,34 +90,34 @@ class UrgencyLevelController extends Controller
                 'activo' => true,
             ]);
 
-            return redirect()
-                ->route('admin.urgency-levels.index')
-                ->with('success', 'Nivel de urgencia creado correctamente.');
+            Log::info('[UrgencyLevel@store] Nivel creado', ['id' => $level->id, 'user_id' => Auth::id()]);
 
-        } catch (\Exception $e) {
-            Log::error('Error al crear nivel de urgencia: ' . $e->getMessage());
-            return redirect()
-                ->back()
-                ->withInput()
-                ->with('error', 'Error al crear el nivel de urgencia.');
+            $msg = 'Nivel de urgencia creado correctamente.';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => true, 'message' => $msg, 'data' => $level]);
+            }
+            return redirect()->route('admin.urgency-levels.index')->with('success', $msg);
+
+        } catch (Throwable $e) {
+            Log::error('[UrgencyLevel@store] Error', ['error' => $e->getMessage(), 'user_id' => Auth::id()]);
+
+            $msg = 'Error al crear el nivel de urgencia.';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 500);
+            }
+            return back()->withInput()->with('error', $msg);
         }
     }
 
-    /**
-     * Formulario para editar nivel
-     */
     public function edit($id)
     {
-        $urgencyLevel = UrgencyLevel::findOrFail($id);
+        $urgencyLevel = UrgencyLevel::where('activo', true)->findOrFail($id);
         return view('admin.urgency-levels.edit', compact('urgencyLevel'));
     }
 
-    /**
-     * Actualizar nivel
-     */
-    public function update(Request $request, $id)
+    public function update(Request $request, $id): JsonResponse|RedirectResponse
     {
-        $urgencyLevel = UrgencyLevel::findOrFail($id);
+        $urgencyLevel = UrgencyLevel::where('activo', true)->findOrFail($id);
 
         $validated = $request->validate([
             'name' => 'required|string|max:100',
@@ -107,7 +131,7 @@ class UrgencyLevelController extends Controller
 
         try {
             $urgencyLevel->fill([
-                'name' => mb_strtoupper($validated['name']),
+                'name' => mb_strtoupper(trim($validated['name']), 'UTF-8'),
                 'time_percentage' => $validated['time_percentage'],
                 'price_multiplier' => $validated['price_multiplier'],
                 'color' => $validated['color'],
@@ -116,63 +140,75 @@ class UrgencyLevelController extends Controller
                 'sort_order' => $validated['sort_order'] ?? 0,
             ]);
 
-            if ($urgencyLevel->isDirty()) {
-                $urgencyLevel->save();
-                return redirect()
-                    ->route('admin.urgency-levels.index')
-                    ->with('success', 'Nivel de urgencia actualizado correctamente.');
+            if (!$urgencyLevel->isDirty()) {
+                $msg = 'No se realizaron cambios.';
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json(['success' => true, 'message' => $msg, 'type' => 'info']);
+                }
+                return redirect()->route('admin.urgency-levels.index')->with('info', $msg);
             }
 
-            return redirect()
-                ->route('admin.urgency-levels.index')
-                ->with('info', 'No se detectaron cambios.');
+            $urgencyLevel->save();
 
-        } catch (\Exception $e) {
-            Log::error('Error al actualizar nivel de urgencia: ' . $e->getMessage());
-            return redirect()
-                ->back()
-                ->withInput()
-                ->with('error', 'Error al actualizar el nivel de urgencia.');
+            Log::info('[UrgencyLevel@update] Nivel actualizado', ['id' => $urgencyLevel->id, 'user_id' => Auth::id()]);
+
+            $msg = 'Nivel de urgencia actualizado correctamente.';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => true, 'message' => $msg, 'type' => 'success', 'data' => $urgencyLevel]);
+            }
+            return redirect()->route('admin.urgency-levels.index')->with('success', $msg);
+
+        } catch (Throwable $e) {
+            Log::error('[UrgencyLevel@update] Error', ['id' => $id, 'error' => $e->getMessage(), 'user_id' => Auth::id()]);
+
+            $msg = 'Error al actualizar el nivel de urgencia.';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 500);
+            }
+            return back()->withInput()->with('error', $msg);
         }
     }
 
-    /**
-     * Confirmación de eliminación
-     */
     public function confirmDelete($id)
     {
-        $urgencyLevel = UrgencyLevel::findOrFail($id);
+        $urgencyLevel = UrgencyLevel::where('activo', true)->findOrFail($id);
         return view('admin.urgency-levels.delete', compact('urgencyLevel'));
     }
 
-    /**
-     * Eliminar nivel (borrado lógico)
-     */
-    public function destroy($id)
+    public function destroy(Request $request, $id): JsonResponse|RedirectResponse
     {
-        $urgencyLevel = UrgencyLevel::findOrFail($id);
-
         try {
+            $urgencyLevel = UrgencyLevel::where('activo', true)->findOrFail($id);
+
             // Verificar que no sea el único nivel activo
             $activeCount = UrgencyLevel::where('activo', true)->count();
             if ($activeCount <= 1) {
-                return redirect()
-                    ->route('admin.urgency-levels.index')
-                    ->with('error', 'No se puede eliminar. Debe existir al menos un nivel de urgencia.');
+                $msg = 'No se puede eliminar. Debe existir al menos un nivel de urgencia.';
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json(['success' => false, 'message' => $msg], 422);
+                }
+                return redirect()->route('admin.urgency-levels.index')->with('error', $msg);
             }
 
             $urgencyLevel->activo = false;
             $urgencyLevel->save();
 
-            return redirect()
-                ->route('admin.urgency-levels.index')
-                ->with('success', 'Nivel de urgencia eliminado correctamente.');
+            Log::info('[UrgencyLevel@destroy] Nivel eliminado', ['id' => $id, 'user_id' => Auth::id()]);
 
-        } catch (\Exception $e) {
-            Log::error('Error al eliminar nivel de urgencia: ' . $e->getMessage());
-            return redirect()
-                ->route('admin.urgency-levels.index')
-                ->with('error', 'Error al eliminar el nivel de urgencia.');
+            $msg = 'Nivel de urgencia eliminado correctamente.';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => true, 'message' => $msg, 'type' => 'success']);
+            }
+            return redirect()->route('admin.urgency-levels.index')->with('success', $msg);
+
+        } catch (Throwable $e) {
+            Log::error('[UrgencyLevel@destroy] Error', ['id' => $id, 'error' => $e->getMessage(), 'user_id' => Auth::id()]);
+
+            $msg = 'Error al eliminar el nivel de urgencia.';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 500);
+            }
+            return redirect()->route('admin.urgency-levels.index')->with('error', $msg);
         }
     }
 }

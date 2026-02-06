@@ -38,6 +38,7 @@ class DesignExport extends Model
         'approved_at',
         'auto_read_success',
         'svg_content',
+        'application_type_id',
     ];
 
     /**
@@ -202,5 +203,13 @@ class DesignExport extends Model
     public function productVariants()
     {
         return $this->belongsToMany(ProductVariant::class, 'product_variant_design');
+    }
+
+    /**
+     * Relación con el tipo de aplicación (pecho, manga, espalda, etc.)
+     */
+    public function applicationType()
+    {
+        return $this->belongsTo(Application_types::class, 'application_type_id');
     }
 }

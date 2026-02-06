@@ -540,6 +540,12 @@ return [
                     'icon' => 'fas fa-fw fa-plus-circle',
                     'active' => ['product_extras*'],
                 ],
+                [
+                    'text' => 'Categorías de Extras',
+                    'url' => 'extra_categories',
+                    'icon' => 'fas fa-fw fa-tags',
+                    'active' => ['extra_categories*'],
+                ],
             ],
         ],
 

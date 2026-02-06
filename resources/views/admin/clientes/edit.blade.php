@@ -238,6 +238,28 @@
                             </h5>
                         </div>
 
+                        {{-- TABS DE MEDIDAS --}}
+                        <div class="measures-edit-tabs">
+                            <button type="button" class="measures-edit-tab active" data-tab="current">
+                                <i class="fas fa-ruler-combined"></i> Editar Medidas
+                            </button>
+                            <button type="button" class="measures-edit-tab" data-tab="history">
+                                <i class="fas fa-history"></i> Historial
+                                @php
+                                    $historyCount = $cliente->measurementHistory()->count();
+                                @endphp
+                                @if($historyCount > 0)
+                                    <span class="history-count-badge">{{ $historyCount }}</span>
+                                @endif
+                            </button>
+                        </div>
+
+                        {{-- TAB: EDITAR MEDIDAS (actual) --}}
+                        <div class="measures-edit-content active" data-content="current">
+                        @php
+                            // Obtener las últimas medidas (del historial o campos legacy)
+                            $currentMeasurements = $cliente->latest_measurements;
+                        @endphp
                         {{-- BUSTO --}}
                         <div class="row">
                             <div class="form-group col-md-4 text-center">
@@ -247,7 +269,7 @@
                                         class="img-fluid medida-img">
                                     <input type="text" name="busto" id="busto"
                                         class="form-control form-control-sm medida-input @error('busto') is-invalid @enderror"
-                                        value="{{ old('busto', $cliente->busto) }}" placeholder="Ej: 80.56"
+                                        value="{{ old('busto', $currentMeasurements['busto'] ?? '') }}" placeholder="Ej: 80.56"
                                         maxlength="6" inputmode="decimal" oninput="validateMedida(this)">
                                     @error('busto')
                                         <div class="invalid-feedback">{{ $message }}</div>
@@ -262,7 +284,7 @@
                                         class="img-fluid medida-img">
                                     <input type="text" name="alto_cintura" id="alto_cintura"
                                         class="form-control form-control-sm medida-input @error('alto_cintura') is-invalid @enderror"
-                                        value="{{ old('alto_cintura', $cliente->alto_cintura) }}" placeholder="Ej: 80.56"
+                                        value="{{ old('alto_cintura', $currentMeasurements['alto_cintura'] ?? '') }}" placeholder="Ej: 80.56"
                                         maxlength="6" inputmode="decimal" oninput="validateMedida(this)">
                                     @error('alto_cintura')
                                         <div class="invalid-feedback">{{ $message }}</div>
@@ -277,7 +299,7 @@
                                         class="img-fluid medida-img">
                                     <input type="text" name="cintura" id="cintura"
                                         class="form-control form-control-sm medida-input @error('cintura') is-invalid @enderror"
-                                        value="{{ old('cintura', $cliente->cintura) }}" placeholder="Ej: 80.56"
+                                        value="{{ old('cintura', $currentMeasurements['cintura'] ?? '') }}" placeholder="Ej: 80.56"
                                         maxlength="6" inputmode="decimal" oninput="validateMedida(this)">
                                     @error('cintura')
                                         <div class="invalid-feedback">{{ $message }}</div>
@@ -292,7 +314,7 @@
                                         class="img-fluid medida-img">
                                     <input type="text" name="cadera" id="cadera"
                                         class="form-control form-control-sm medida-input @error('cadera') is-invalid @enderror"
-                                        value="{{ old('cadera', $cliente->cadera) }}" placeholder="Ej: 80.56"
+                                        value="{{ old('cadera', $currentMeasurements['cadera'] ?? '') }}" placeholder="Ej: 80.56"
                                         maxlength="6" inputmode="decimal" oninput="validateMedida(this)">
                                     @error('cadera')
                                         <div class="invalid-feedback">{{ $message }}</div>
@@ -307,7 +329,7 @@
                                         class="img-fluid medida-img">
                                     <input type="text" name="largo" id="largo"
                                         class="form-control form-control-sm medida-input @error('largo') is-invalid @enderror"
-                                        value="{{ old('largo', $cliente->largo) }}"placeholder="Ej: 80.56" maxlength="6"
+                                        value="{{ old('largo', $currentMeasurements['largo'] ?? '') }}" placeholder="Ej: 80.56" maxlength="6"
                                         inputmode="decimal" oninput="validateMedida(this)">
                                     @error('largo')
                                         <div class="invalid-feedback">{{ $message }}</div>
@@ -323,7 +345,7 @@
                                         class="img-fluid medida-img">
                                     <input type="text" name="largo_vestido" id="largo_vestido"
                                         class="form-control form-control-sm medida-input @error('largo_vestido') is-invalid @enderror"
-                                        value="{{ old('largo_vestido', $cliente->largo_vestido) }}"
+                                        value="{{ old('largo_vestido', $currentMeasurements['largo_vestido'] ?? '') }}"
                                         placeholder="Ej: 80.56" maxlength="6" inputmode="decimal"
                                         oninput="validateMedida(this)">
                                     @error('largo_vestido')
@@ -332,6 +354,77 @@
                                 </div>
                             </div>
                             {{-- FIN LARGO VESTIDO --}}
+                        </div>
+                        </div>
+
+                        {{-- TAB: HISTORIAL DE MEDIDAS --}}
+                        <div class="measures-edit-content" data-content="history">
+                            @php
+                                $allHistory = $cliente->measurementHistory()->with(['order', 'product'])->orderBy('captured_at', 'desc')->get();
+                                $measurementLabels = [
+                                    'busto' => 'Busto',
+                                    'cintura' => 'Cintura',
+                                    'cadera' => 'Cadera',
+                                    'alto_cintura' => 'Alto Cintura',
+                                    'largo' => 'Largo',
+                                    'largo_vestido' => 'Largo Vestido',
+                                ];
+                                $sourceLabels = [
+                                    'order' => ['label' => 'Pedido', 'icon' => 'fa-shopping-cart'],
+                                    'manual' => ['label' => 'Manual', 'icon' => 'fa-user-edit'],
+                                    'import' => ['label' => 'Importado', 'icon' => 'fa-file-import'],
+                                ];
+                            @endphp
+
+                            @if($allHistory->count() > 0)
+                                <div class="history-scroll-container-edit">
+                                    @foreach($allHistory as $index => $record)
+                                        @php
+                                            $recSourceInfo = $sourceLabels[$record->source] ?? ['label' => 'Desconocido', 'icon' => 'fa-question'];
+                                            $recMeasurements = $record->measurements ?? [];
+                                        @endphp
+                                        <div class="history-item-edit {{ $index === 0 ? 'history-item-current' : '' }}">
+                                            <div class="history-header-edit">
+                                                @if($index === 0)
+                                                    <span class="history-badge-edit history-badge-current">
+                                                        <i class="fas fa-star"></i> Actual
+                                                    </span>
+                                                @endif
+                                                <span class="history-badge-edit">
+                                                    <i class="fas {{ $recSourceInfo['icon'] }}"></i> {{ $recSourceInfo['label'] }}
+                                                </span>
+                                                <span class="history-badge-edit">
+                                                    <i class="fas fa-calendar-alt"></i> {{ $record->captured_at->format('d/m/Y H:i') }}
+                                                </span>
+                                                @if($record->order)
+                                                    <span class="history-badge-edit">
+                                                        <i class="fas fa-file-invoice"></i> {{ $record->order->order_number }}
+                                                    </span>
+                                                @endif
+                                                @if($record->product)
+                                                    <span class="history-badge-edit">
+                                                        <i class="fas fa-tshirt"></i> {{ $record->product->name }}
+                                                    </span>
+                                                @endif
+                                            </div>
+                                            <div class="history-measurements-edit">
+                                                @foreach($measurementLabels as $key => $label)
+                                                    @if(!empty($recMeasurements[$key]) && $recMeasurements[$key] !== '0')
+                                                        <div class="history-measure-edit">
+                                                            {{ $label }}: <span>{{ $recMeasurements[$key] }} cm</span>
+                                                        </div>
+                                                    @endif
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="history-empty-edit">
+                                    <i class="fas fa-history"></i>
+                                    <p>No hay historial de medidas registrado.</p>
+                                </div>
+                            @endif
                         </div>
 
                     </div>
@@ -343,6 +436,168 @@
 
 @section('css')
     <style>
+        /* === TABS DE MEDIDAS === */
+        .measures-edit-tabs {
+            display: flex;
+            border-bottom: 2px solid #e9ecef;
+            margin-bottom: 16px;
+        }
+
+        .measures-edit-tab {
+            flex: 1;
+            padding: 12px 16px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            color: #6c757d;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s ease;
+        }
+
+        .measures-edit-tab:hover {
+            color: #6f42c1;
+            background: #f8f9fa;
+        }
+
+        .measures-edit-tab.active {
+            color: #6f42c1;
+            border-bottom-color: #6f42c1;
+        }
+
+        .measures-edit-tab i {
+            margin-right: 6px;
+        }
+
+        .history-count-badge {
+            background: #6f42c1;
+            color: white;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 4px;
+        }
+
+        .measures-edit-content {
+            display: none;
+        }
+
+        .measures-edit-content.active {
+            display: block;
+        }
+
+        /* === HISTORIAL EN EDIT === */
+        .history-scroll-container-edit {
+            max-height: 420px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .history-scroll-container-edit::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .history-scroll-container-edit::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .history-scroll-container-edit::-webkit-scrollbar-thumb {
+            background: #6f42c1;
+            border-radius: 3px;
+        }
+
+        .history-item-edit {
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+            transition: border-color 0.2s ease;
+        }
+
+        .history-item-edit:hover {
+            border-color: #6f42c1;
+        }
+
+        .history-item-edit.history-item-current {
+            border-color: #6f42c1;
+            border-width: 2px;
+        }
+
+        .history-item-edit:last-child {
+            margin-bottom: 0;
+        }
+
+        .history-header-edit {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .history-badge-edit {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            background: #f3e5f5;
+            color: #6f42c1;
+        }
+
+        .history-badge-edit.history-badge-current {
+            background: #6f42c1;
+            color: white;
+        }
+
+        .history-measurements-edit {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .history-measure-edit {
+            background: #f8f9fa;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .history-measure-edit span {
+            color: #6f42c1;
+            font-weight: 700;
+            font-size: 17px;
+        }
+
+        .history-empty-edit {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+        }
+
+        .history-empty-edit i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.4;
+            display: block;
+        }
+
+        .history-empty-edit p {
+            margin: 0;
+            font-size: 15px;
+        }
+
         /* === CONTENEDOR PRINCIPAL === */
         .medida-card {
             border: 1px solid #e5e7eb;
@@ -460,6 +715,27 @@
 
 @section('js')
     <script>
+        // === TABS DE MEDIDAS ===
+        (function() {
+            document.querySelectorAll('.measures-edit-tab').forEach(function(tab) {
+                tab.addEventListener('click', function() {
+                    var targetTab = this.getAttribute('data-tab');
+
+                    // Quitar active de todos los tabs y contenidos
+                    document.querySelectorAll('.measures-edit-tab').forEach(function(t) {
+                        t.classList.remove('active');
+                    });
+                    document.querySelectorAll('.measures-edit-content').forEach(function(c) {
+                        c.classList.remove('active');
+                    });
+
+                    // Activar el tab y contenido seleccionado
+                    this.classList.add('active');
+                    document.querySelector('[data-content="' + targetTab + '"]').classList.add('active');
+                });
+            });
+        })();
+
         function validateMedida(input) {
             let value = input.value;
 

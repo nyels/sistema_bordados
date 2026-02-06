@@ -12,9 +12,9 @@
     </thead>
     <tbody>
         @foreach ($categories as $category)
-            <tr>
+            <tr data-id="{{ $category->id }}">
                 <td>{{ $loop->iteration }}</td>
-                <td>{{ $category->name }}</td>
+                <td class="category-name">{{ $category->name }}</td>
                 <td>{{ $category->description ?? 'N/A' }}</td>
                 <td>
                     @if ($category->defaultInventoryUnit)
@@ -42,14 +42,22 @@
                 </td>
                 <td>
                     <div class="d-flex justify-content-center align-items-center gap-1">
-                        <a href="{{ route('admin.material-categories.edit', $category->id) }}"
-                            class="btn btn-warning btn-sm" title="Editar">
+                        <button type="button" class="btn btn-warning btn-sm btn-edit"
+                            data-id="{{ $category->id }}"
+                            data-name="{{ $category->name }}"
+                            data-description="{{ $category->description }}"
+                            data-unit="{{ $category->default_inventory_unit_id }}"
+                            title="Editar">
                             <i class="fas fa-edit"></i>
-                        </a>
-                        <a href="{{ route('admin.material-categories.confirm_delete', $category->id) }}"
-                            class="btn btn-danger btn-sm" title="Eliminar">
+                        </button>
+                        <button type="button" class="btn btn-danger btn-sm btn-delete"
+                            data-id="{{ $category->id }}"
+                            data-name="{{ $category->name }}"
+                            data-description="{{ $category->description }}"
+                            data-materials="{{ $category->materials_count }}"
+                            title="Eliminar">
                             <i class="fas fa-trash"></i>
-                        </a>
+                        </button>
                     </div>
                 </td>
             </tr>

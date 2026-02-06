@@ -8,15 +8,15 @@
 @section('content')
     <br>
     <div class="card card-primary">
-
         <div class="card-header">
             <h3 class="card-title" style="font-weight: bold;font-size: 20px;"> CATEGORÍAS DE PRODUCTOS</h3>
         </div>
 
         <div class="card-body">
             <div class="row">
-                <a href="{{ route('admin.product_categories.create') }}" type="button" class="btn btn-primary">
-                    Nuevo <i class="fas fa-plus"></i></a>
+                <button type="button" class="btn btn-primary" id="btnNuevo">
+                    Nuevo <i class="fas fa-plus"></i>
+                </button>
             </div>
             <hr>
             <div class="col-12">
@@ -32,38 +32,182 @@
                             </tr>
                         </thead>
                         <tbody>
-
                             @foreach ($categories as $category)
-                                <tr>
+                                <tr data-id="{{ $category->id }}">
                                     <td>{{ $loop->iteration }}</td>
-                                    <td>
+                                    <td class="cat-nombre">
                                         <strong>{{ $category->name }}</strong>
                                     </td>
-                                    <td>{{ Str::limit($category->description, 80) ?? '-' }}</td>
+                                    <td class="cat-descripcion">{{ Str::limit($category->description, 80) ?? '-' }}</td>
                                     <td class="text-center">
-                                        <span
-                                            class="badge badge-{{ $category->products_count > 0 ? 'info' : 'secondary' }}">
+                                        <span class="badge badge-{{ $category->products_count > 0 ? 'info' : 'secondary' }}">
                                             {{ $category->products_count }}
                                         </span>
                                     </td>
                                     <td class="text-center">
                                         <div class="d-flex justify-content-center align-items-center gap-1">
-                                            <a href="{{ route('admin.product_categories.edit', $category->id) }}"
-                                                class="btn btn-warning btn-sm" title="Editar">
+                                            <button type="button" class="btn btn-warning btn-sm btn-edit"
+                                                data-id="{{ $category->id }}"
+                                                data-nombre="{{ $category->name }}"
+                                                data-descripcion="{{ $category->description }}"
+                                                title="Editar">
                                                 <i class="fas fa-edit"></i>
-                                            </a>
-
-                                            <a href="{{ route('admin.product_categories.confirm_delete', $category->id) }}"
-                                                class="btn btn-danger btn-sm" title="Eliminar">
+                                            </button>
+                                            <button type="button" class="btn btn-danger btn-sm btn-delete"
+                                                data-id="{{ $category->id }}"
+                                                data-nombre="{{ $category->name }}"
+                                                data-productos="{{ $category->products_count }}"
+                                                title="Eliminar">
                                                 <i class="fas fa-trash"></i>
-                                            </a>
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
                             @endforeach
-
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- MODAL NUEVO --}}
+    <div class="modal fade" id="modalCreate" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary">
+                    <h5 class="modal-title text-white" style="font-weight: bold;">
+                        <i class="fas fa-plus-circle mr-2"></i> NUEVA CATEGORÍA DE PRODUCTO
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form id="formCreate">
+                    <div class="modal-body">
+                        <div style="border-bottom: 3px solid #007bff; padding-bottom: 8px; margin-bottom: 20px;">
+                            <h5 style="color: #007bff; font-weight: 600; margin: 0; display: flex; align-items: center;">
+                                <i class="fas fa-box" style="margin-right: 10px;"></i>
+                                Datos de la Categoría
+                            </h5>
+                        </div>
+                        <div class="form-group">
+                            <label>Nombre <span style="color: red;">*</span></label>
+                            <input type="text" class="form-control form-control-sm" id="create_name"
+                                name="name" placeholder="Ej: Playeras, Camisas, Gorras..." required>
+                            <div class="invalid-feedback" id="create_error_name"></div>
+                        </div>
+                        <div class="form-group">
+                            <label>Descripción</label>
+                            <textarea class="form-control form-control-sm" id="create_description" name="description" rows="3" placeholder="Descripción opcional de la categoría..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" id="create_supports_measurements"
+                                    name="supports_measurements" value="1">
+                                <label class="custom-control-label" for="create_supports_measurements">
+                                    Esta categoria admite productos con medidas personalizadas
+                                </label>
+                            </div>
+                            <small class="form-text text-muted">
+                                Ej: Vestidos, faldas, prendas a medida. Si se activa, los pedidos podran solicitar medidas.
+                            </small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                            <i class="fas fa-times-circle"></i> Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="btnSaveCreate">
+                            <i class="fas fa-save"></i> Guardar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {{-- MODAL EDITAR --}}
+    <div class="modal fade" id="modalEdit" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title" style="font-weight: bold;">
+                        <i class="fas fa-edit mr-2"></i> EDITAR CATEGORÍA
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form id="formEdit">
+                    <div class="modal-body">
+                        <input type="hidden" id="edit_id">
+                        <div style="border-bottom: 3px solid #ffc107; padding-bottom: 8px; margin-bottom: 20px;">
+                            <h5 style="color: #856404; font-weight: 600; margin: 0; display: flex; align-items: center;">
+                                <i class="fas fa-box" style="margin-right: 10px;"></i>
+                                Datos de la Categoría
+                            </h5>
+                        </div>
+                        <div class="form-group">
+                            <label>Nombre <span style="color: red;">*</span></label>
+                            <input type="text" class="form-control form-control-sm" id="edit_name"
+                                name="name" placeholder="Ej: BLUSAS" required>
+                            <div class="invalid-feedback" id="edit_error_nombre"></div>
+                        </div>
+                        <div class="form-group">
+                            <label>Descripción</label>
+                            <textarea class="form-control form-control-sm" id="edit_description" name="description" rows="3" placeholder="Descripción opcional..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                            <i class="fas fa-times-circle"></i> Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-warning" id="btnSaveEdit">
+                            <i class="fas fa-save"></i> Actualizar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {{-- MODAL ELIMINAR --}}
+    <div class="modal fade" id="modalDelete" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" style="font-weight: bold;">
+                        <i class="fas fa-trash mr-2"></i> ELIMINAR CATEGORÍA
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="delete_id">
+                    <div style="border-bottom: 3px solid #dc3545; padding-bottom: 8px; margin-bottom: 20px;">
+                        <h5 style="color: #dc3545; font-weight: 600; margin: 0; display: flex; align-items: center;">
+                            <i class="fas fa-box" style="margin-right: 10px;"></i>
+                            Datos de la Categoría
+                        </h5>
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre</label>
+                        <input type="text" class="form-control form-control-sm" id="delete_name" disabled>
+                    </div>
+                    <div class="alert alert-warning text-center mt-3">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                        <p class="mb-0" style="font-weight: bold; font-size: 16px;">¿Deseas eliminar esta categoría?</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <i class="fas fa-times-circle"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-danger" id="btnConfirmDelete">
+                        <i class="fas fa-trash"></i> Eliminar
+                    </button>
                 </div>
             </div>
         </div>
@@ -82,47 +226,25 @@
             gap: 10px;
             margin-bottom: 15px;
         }
-
         #example1_wrapper .btn {
             color: #fff;
             border-radius: 4px;
             padding: 5px 15px;
             font-size: 14px;
         }
-
-        .btn-danger {
-            background-color: #dc3545;
-            border: none;
-        }
-
-        .btn-success {
-            background-color: #28a745;
-            border: none;
-        }
-
-        .btn-info {
-            background-color: #17a2b8;
-            border: none;
-        }
-
-        .btn-warning {
-            background-color: #ffc107;
-            color: #212529;
-            border: none;
-        }
-
-        .btn-default {
-            background-color: #6e7176;
-            color: #212529;
-            border: none;
-        }
+        .btn-danger { background-color: #dc3545; border: none; }
+        .btn-success { background-color: #28a745; border: none; }
+        .btn-info { background-color: #17a2b8; border: none; }
+        .btn-warning { background-color: #ffc107; color: #212529; border: none; }
+        .btn-default { background-color: #6e7176; color: #212529; border: none; }
+        .modal-header.bg-warning .close, .modal-header.bg-danger .close { opacity: 1; }
     </style>
 @stop
 
 @section('js')
     <script>
         $(function() {
-            $("#example1").DataTable({
+            var table = $("#example1").DataTable({
                 "pageLength": 10,
                 "language": {
                     "emptyTable": "No hay información",
@@ -134,38 +256,193 @@
                     "processing": "Procesando...",
                     "search": "Buscador:",
                     "zeroRecords": "Sin resultados encontrados",
-                    "paginate": {
-                        "first": "Primero",
-                        "last": "Ultimo",
-                        "next": "Siguiente",
-                        "previous": "Anterior"
-                    }
+                    "paginate": { "first": "Primero", "last": "Ultimo", "next": "Siguiente", "previous": "Anterior" }
                 },
                 "responsive": true,
                 "lengthChange": true,
                 "autoWidth": false,
-                buttons: [{
-                        text: '<i class="fas fa-copy"></i> COPIAR',
-                        extend: 'copy',
-                        className: 'btn btn-default'
-                    },
-                    {
-                        text: '<i class="fas fa-file-pdf"></i> PDF',
-                        extend: 'pdf',
-                        className: 'btn btn-danger'
-                    },
-                    {
-                        text: '<i class="fas fa-file-excel"></i> EXCEL',
-                        extend: 'excel',
-                        className: 'btn btn-success'
-                    },
-                    {
-                        text: '<i class="fas fa-print"></i> IMPRIMIR',
-                        extend: 'print',
-                        className: 'btn btn-info'
-                    }
+                buttons: [
+                    { text: '<i class="fas fa-copy"></i> COPIAR', extend: 'copy', className: 'btn btn-default' },
+                    { text: '<i class="fas fa-file-pdf"></i> PDF', extend: 'pdf', className: 'btn btn-danger' },
+                    { text: '<i class="fas fa-file-excel"></i> EXCEL', extend: 'excel', className: 'btn btn-success' },
+                    { text: '<i class="fas fa-print"></i> IMPRIMIR', extend: 'print', className: 'btn btn-info' }
                 ]
-            }).buttons().container().appendTo('#example1_wrapper .row:eq(0)');
+            });
+            table.buttons().container().appendTo('#example1_wrapper .row:eq(0)');
+
+            // === NUEVO ===
+            $('#btnNuevo').on('click', function() {
+                $('#create_name').val('').removeClass('is-invalid');
+                $('#create_description').val('');
+                $('#create_supports_measurements').prop('checked', false);
+                $('#create_error_name').text('');
+                $('#modalCreate').modal('show');
+            });
+
+            $('#formCreate').on('submit', function(e) {
+                e.preventDefault();
+                var name = $('#create_name').val().trim();
+                if (!name) {
+                    $('#create_name').addClass('is-invalid');
+                    $('#create_error_name').text('El nombre es obligatorio');
+                    return;
+                }
+                $('#btnSaveCreate').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Guardando...');
+                $.ajax({
+                    url: '{{ route("admin.product_categories.store") }}',
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        name: name,
+                        description: $('#create_description').val(),
+                        is_active: 1,
+                        supports_measurements: $('#create_supports_measurements').is(':checked') ? 1 : 0
+                    },
+                    success: function(response) {
+                        $('#modalCreate').modal('hide');
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Guardado',
+                                text: response.message,
+                                timer: 2000,
+                                showConfirmButton: false
+                            }).then(function() {
+                                location.reload();
+                            });
+                        }
+                    },
+                    error: function(xhr) {
+                        if (xhr.status === 422) {
+                            var errors = xhr.responseJSON.errors;
+                            if (errors && errors.name) {
+                                $('#create_name').addClass('is-invalid');
+                                $('#create_error_name').text(errors.name[0]);
+                            } else if (xhr.responseJSON.message) {
+                                $('#create_name').addClass('is-invalid');
+                                $('#create_error_name').text(xhr.responseJSON.message);
+                            }
+                        } else {
+                            $('#modalCreate').modal('hide');
+                            Swal.fire({ icon: 'error', title: 'Error', text: xhr.responseJSON?.message || 'Error al guardar' });
+                        }
+                    },
+                    complete: function() {
+                        $('#btnSaveCreate').prop('disabled', false).html('<i class="fas fa-save"></i> Guardar');
+                    }
+                });
+            });
+
+            // === EDITAR ===
+            $(document).on('click', '.btn-edit', function() {
+                var id = $(this).data('id');
+                var nombre = $(this).data('nombre');
+                var descripcion = $(this).data('descripcion') || '';
+                $('#edit_id').val(id);
+                $('#edit_name').val(nombre).removeClass('is-invalid');
+                $('#edit_description').val(descripcion);
+                $('#edit_error_nombre').text('');
+                $('#modalEdit').modal('show');
+            });
+
+            $('#formEdit').on('submit', function(e) {
+                e.preventDefault();
+                var id = $('#edit_id').val();
+                var nombre = $('#edit_name').val().trim();
+                var descripcion = $('#edit_description').val().trim();
+                if (!nombre) {
+                    $('#edit_name').addClass('is-invalid');
+                    $('#edit_error_nombre').text('El nombre es obligatorio');
+                    return;
+                }
+                $('#btnSaveEdit').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Guardando...');
+                $.ajax({
+                    url: '/admin/product-categories/' + id,
+                    type: 'PUT',
+                    data: { _token: '{{ csrf_token() }}', name: nombre, description: descripcion },
+                    success: function(response) {
+                        $('#modalEdit').modal('hide');
+                        if (response.success) {
+                            var row = $('tr[data-id="' + id + '"]');
+                            row.find('.cat-nombre strong').text(response.data.name);
+                            row.find('.cat-descripcion').text(response.data.description ? (response.data.description.length > 80 ? response.data.description.substring(0, 80) + '...' : response.data.description) : '-');
+                            row.find('.btn-edit').data('nombre', response.data.name);
+                            row.find('.btn-edit').data('descripcion', response.data.description);
+                            row.find('.btn-delete').data('nombre', response.data.name);
+                            Swal.fire({
+                                icon: response.type || 'success',
+                                title: response.type === 'info' ? 'Aviso' : 'Actualizado',
+                                text: response.message,
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
+                        }
+                    },
+                    error: function(xhr) {
+                        if (xhr.status === 422) {
+                            var errors = xhr.responseJSON.errors;
+                            if (errors && errors.name) {
+                                $('#edit_name').addClass('is-invalid');
+                                $('#edit_error_nombre').text(errors.name[0]);
+                            } else if (xhr.responseJSON.message) {
+                                $('#modalEdit').modal('hide');
+                                Swal.fire({ icon: 'error', title: 'Error', text: xhr.responseJSON.message });
+                            }
+                        } else {
+                            $('#modalEdit').modal('hide');
+                            Swal.fire({ icon: 'error', title: 'Error', text: xhr.responseJSON?.message || 'Error al actualizar' });
+                        }
+                    },
+                    complete: function() {
+                        $('#btnSaveEdit').prop('disabled', false).html('<i class="fas fa-save"></i> Actualizar');
+                    }
+                });
+            });
+
+            // === ELIMINAR ===
+            $(document).on('click', '.btn-delete', function() {
+                var id = $(this).data('id');
+                var nombre = $(this).data('nombre');
+                var productos = $(this).data('productos');
+                $('#delete_id').val(id);
+                $('#delete_name').val(nombre);
+                $('#modalDelete').modal('show');
+            });
+
+            $('#btnConfirmDelete').on('click', function() {
+                var id = $('#delete_id').val();
+                Swal.fire({
+                    title: '¿Estas seguro?',
+                    text: "Esta accion no se puede revertir",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Si, eliminar',
+                    cancelButtonText: 'Cancelar',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $('#modalDelete').modal('hide');
+                        Swal.fire({ title: 'Eliminando...', allowOutsideClick: false, showConfirmButton: false, didOpen: () => Swal.showLoading() });
+                        $.ajax({
+                            url: '/admin/product-categories/' + id,
+                            type: 'DELETE',
+                            data: { _token: '{{ csrf_token() }}' },
+                            success: function(response) {
+                                if (response.success) {
+                                    var row = $('tr[data-id="' + id + '"]');
+                                    table.row(row).remove().draw(false);
+                                    Swal.fire({ icon: 'success', title: 'Eliminado', text: response.message, timer: 2000, showConfirmButton: false });
+                                }
+                            },
+                            error: function(xhr) {
+                                Swal.fire({ icon: 'error', title: 'Error', text: xhr.responseJSON?.message || 'Error al eliminar' });
+                            }
+                        });
+                    }
+                });
+            });
         });
     </script>
 @stop

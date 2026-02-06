@@ -536,8 +536,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         var subtotalAfterDiscount = subtotal - discount;
 
-        // IVA 16%
-        var ivaRate = 0.16;
+        // IVA desde configuración del sistema
+        var ivaRate = {{ ($defaultTaxRate ?? 16) / 100 }};
         var ivaAmount = cart.apply_iva ? (subtotalAfterDiscount * ivaRate) : 0;
 
         var total = subtotalAfterDiscount + ivaAmount;
@@ -560,7 +560,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 html += '<div class="pos-total-row pos-total-row-iva">';
                 html += '<div class="pos-iva-label">';
                 html += '<label class="pos-toggle-mini"><input type="checkbox" id="apply-iva" ' + (cart.apply_iva ? 'checked' : '') + '><span class="pos-toggle-mini-slider"></span></label>';
-                html += '<span>IVA (16%)</span>';
+                html += '<span>IVA ({{ $defaultTaxRate ?? 16 }}%)</span>';
                 html += '</div>';
                 html += '<span class="pos-iva-amount">' + (cart.apply_iva ? '+$' + formatMoney(ivaAmount) : '$0.00') + '</span>';
                 html += '</div>';
@@ -1064,6 +1064,23 @@ document.addEventListener('DOMContentLoaded', function() {
             closeModal('modal-cancel');
         });
     }
+
+    // =========================================================================
+    // ALERTA DE PRODUCTO SIN STOCK
+    // =========================================================================
+    function showNoStockAlert(productName) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Sin Stock',
+            html: '<p>No se puede agregar el producto:</p><p><strong>' + productName + '</strong></p><p>No hay unidades disponibles en inventario.</p>',
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#dc3545',
+            customClass: {
+                popup: 'pos-swal-popup'
+            }
+        });
+    }
+    window.showNoStockAlert = showNoStockAlert;
 
     // =========================================================================
     // INICIALIZAR

@@ -112,6 +112,55 @@
         </div>
     </div>
 
+    {{-- UBICACIÓN/APLICACIÓN --}}
+    <div class="detail-app-section mb-4">
+        <h6 class="section-title-sm"
+            style="font-weight: 700; color: #374151; font-size: 12px; text-transform: uppercase; margin-bottom: 12px;">
+            Aplicación</h6>
+        @php
+            // Obtener el tipo de aplicación desde la relación o el campo legacy
+            $appTypeName = null;
+            if ($export->application_type_id && $export->applicationType) {
+                $appTypeName = $export->applicationType->nombre_aplicacion;
+            } elseif ($export->application_type && $export->application_type !== 'general') {
+                $appTypeName = ucfirst(str_replace('_', ' ', $export->application_type));
+            }
+        @endphp
+        <div class="info-grid" style="background: #f9fafb; border-radius: 12px; padding: 16px;">
+            @if ($appTypeName)
+                <div class="info-row"
+                    style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+                    <span class="info-key" style="font-size: 14px; color: #6b7280;">
+                        <i class="fas fa-map-marker-alt mr-1" style="color: #e65100;"></i> Ubicación:
+                    </span>
+                    <span class="info-val"
+                        style="font-size: 14px; font-weight: 600; color: #e65100;">{{ $appTypeName }}</span>
+                </div>
+            @endif
+            <div class="info-row"
+                style="display: flex; justify-content: space-between; padding: 10px 0; {{ $export->placement_description || $export->notes ? 'border-bottom: 1px solid #e5e7eb;' : '' }}">
+                <span class="info-key" style="font-size: 14px; color: #6b7280;">Etiqueta:</span>
+                <span class="info-val"
+                    style="font-size: 14px; font-weight: 600; color: #111827;">{{ $export->application_label ?? '-' }}</span>
+            </div>
+            @if ($export->placement_description)
+                <div class="info-row"
+                    style="display: flex; justify-content: space-between; padding: 10px 0; {{ $export->notes ? 'border-bottom: 1px solid #e5e7eb;' : '' }}">
+                    <span class="info-key" style="font-size: 14px; color: #6b7280;">Descripción:</span>
+                    <span class="info-val"
+                        style="font-size: 14px; font-weight: 600; color: #111827;">{{ $export->placement_description }}</span>
+                </div>
+            @endif
+            @if ($export->notes)
+                <div class="info-row" style="display: flex; justify-content: space-between; padding: 10px 0;">
+                    <span class="info-key" style="font-size: 14px; color: #6b7280;">Notas:</span>
+                    <span class="info-val info-notes"
+                        style="font-size: 14px; font-weight: 600; color: #111827; max-width: 200px; white-space: pre-wrap; word-break: break-word;">{{ $export->notes }}</span>
+                </div>
+            @endif
+        </div>
+    </div>
+
     <!-- Colors Section -->
     <div class="detail-colors-section mb-4">
         <h6 class="section-title-sm"

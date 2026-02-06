@@ -88,7 +88,9 @@
                 </div>
                 <div class="col-md-2">
                     <button type="button" id="btn-filter" class="btn btn-sm btn-primary">Filtrar</button>
-                    <button type="button" id="btn-clear-filters" class="btn btn-sm btn-outline-secondary">Limpiar</button>
+                    <button type="button" id="btn-clear-filters" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-eraser mr-1"></i> Limpiar
+                    </button>
                 </div>
                 <div class="col-md-4 text-right">
                     <a href="{{ route('admin.inventory.adjustment', $variant) }}" class="btn btn-sm btn-warning">

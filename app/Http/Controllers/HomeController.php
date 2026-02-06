@@ -138,15 +138,17 @@ class HomeController extends Controller
             ->count();
 
         // ========================================
-        // KPI: PRODUCTOS TERMINADOS BAJO STOCK (LEDGER-BASED)
+        // KPI: PRODUCTOS TERMINADOS EN RIESGO (BAJO STOCK + AGOTADOS)
         // Fuente: finished_goods_movements (SUM) vs stock_alert
-        // REGLA ERP: Solo variantes CON movimientos reales cuentan
-        // Si no existe ledger → NO existe inventario → NO cuenta
+        // REGLA: Misma lógica que FinishedGoodsStockController
+        // Incluye: Bajo Stock (0 < stock <= alert) + Agotados (stock <= 0)
         // ========================================
-        $productosBajoStock = ProductVariant::where('activo', true)
-            ->whereHas('finishedGoodsMovements') // SOLO variantes con ledger real
+        $variantesActivas = ProductVariant::where('activo', true)
+            ->whereHas('product', function ($q) {
+                $q->where('status', 'active');
+            })
             ->get()
-            ->filter(function ($variant) {
+            ->map(function ($variant) {
                 // Calcular stock real desde el ledger (fórmula canónica)
                 $stockReal = FinishedGoodsMovement::where('product_variant_id', $variant->id)
                     ->selectRaw("
@@ -157,11 +159,22 @@ class HomeController extends Controller
                     ")
                     ->value('stock_calculado') ?? 0;
 
-                // Comparar con el umbral de alerta
-                $stockAlert = $variant->stock_alert ?? 0;
-                return (float) $stockReal <= (float) $stockAlert;
-            })
-            ->count();
+                $variant->stock_real = (float) $stockReal;
+                return $variant;
+            });
+
+        // Contar: Stock Bajo (stock > 0 Y stock <= alert)
+        // Solo muestra cuando hay stock pero está en el límite de alerta
+        $productosBajoStock = $variantesActivas->filter(function ($variant) {
+            $stockAlert = $variant->stock_alert ?? 0;
+            // Tiene stock > 0 pero está en o bajo el umbral de alerta
+            return $variant->stock_real > 0 && $variant->stock_real <= $stockAlert;
+        })->count();
+
+        // Contar: Agotados (stock <= 0)
+        $productosAgotados = $variantesActivas->filter(function ($variant) {
+            return $variant->stock_real <= 0;
+        })->count();
 
         // ========================================
         // ANALYTICS: MESES CON VENTAS (para selector)
@@ -199,6 +212,7 @@ class HomeController extends Controller
             'ventasSegmentadas',
             'insumosEnRiesgo',
             'productosBajoStock',
+            'productosAgotados',
             'nombreMes',
             'mesesConVentas',
             'analyticsData'

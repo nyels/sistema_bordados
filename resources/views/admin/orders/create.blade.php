@@ -24,6 +24,10 @@
                     style="background: linear-gradient(135deg, #6f42c1 0%, #8969c7 100%); color: white; border: none;">
                     <i class="fas fa-redo mr-2"></i> Crear Pedido Post-Venta
                 </button>
+            @elseif (isset($isEdit) && $isEdit)
+                <button type="submit" form="orderForm" class="btn btn-warning shadow-sm">
+                    <i class="fas fa-save mr-2"></i> Actualizar Pedido
+                </button>
             @else
                 <button type="submit" form="orderForm" class="btn btn-success shadow-sm">
                     <i class="fas fa-save mr-2"></i> Crear Pedido
@@ -808,6 +812,35 @@
             z-index: 10;
         }
 
+        /* === CLIENTE RÁPIDO: Estilos mejorados === */
+        #quickClientModal .form-control.is-invalid {
+            border-color: #dc3545;
+            background-color: rgba(220, 53, 69, 0.05);
+        }
+
+        #quickClientModal .form-control.is-invalid:focus {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+        }
+
+        #quickClientModal .invalid-feedback {
+            display: none;
+            font-size: 12px;
+            color: #dc3545;
+        }
+
+        #quickClientModal .form-control.is-invalid ~ .invalid-feedback {
+            display: block;
+        }
+
+        #quickClientModal select.form-control.is-invalid ~ .invalid-feedback {
+            display: block;
+        }
+
+        #quickClientModal .form-group label .text-danger {
+            font-weight: bold;
+        }
+
         /* Selector de intención */
         .intent-btn:hover {
             transform: translateY(-3px);
@@ -834,24 +867,33 @@
         /* === MEDIDAS MODAL: CARDS CON IMÁGENES ============ */
         /* ================================================== */
         #measurementsModal .medida-card {
-            border: 1px solid #e5e7eb;
+            border: 2px solid #f9a8d4;
             border-radius: 12px;
             padding: 12px 10px 10px;
             background: #ffffff;
             transition:
                 box-shadow 0.25s ease,
                 transform 0.25s ease,
-                border-color 0.25s ease;
+                border-color 0.25s ease,
+                background 0.25s ease;
             cursor: pointer;
             position: relative;
         }
 
         #measurementsModal .medida-card:hover {
             transform: translateY(-4px);
-            border-color: #dee2e6;
+            border-color: #ec4899;
+            background: #fdf2f8;
             box-shadow:
-                0 10px 22px rgba(0, 0, 0, 0.06),
-                0 4px 8px rgba(0, 0, 0, 0.04);
+                0 10px 22px rgba(236, 72, 153, 0.15),
+                0 4px 8px rgba(236, 72, 153, 0.1);
+        }
+
+        #measurementsModal .medida-card:focus-within {
+            border-color: #3b82f6;
+            background: #eff6ff;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35);
+            transform: translateY(-2px);
         }
 
         #measurementsModal .medida-img {
@@ -868,17 +910,17 @@
         }
 
         #measurementsModal .medida-input {
+            border: 1px solid #ced4da;
             border-radius: 8px;
             text-align: center;
             font-weight: 600;
-            transition:
-                box-shadow 0.2s ease,
-                border-color 0.2s ease;
+            transition: border-color 0.2s ease;
         }
 
         #measurementsModal .medida-input:focus {
-            border-color: #dee2e6;
-            box-shadow: 0 0 0 3px rgba(111, 66, 193, 0.15);
+            border-color: #3b82f6;
+            box-shadow: none;
+            outline: none;
         }
 
         #measurementsModal .medida-label {
@@ -1114,19 +1156,22 @@
                                 <div class="form-group mb-2">
                                     <label class="font-weight-bold mb-1">Método de Pago <span
                                             class="text-danger">*</span></label>
+                                    @php
+                                        $selectedPayment = old('payment_method', isset($order) ? $order->payment_method : '');
+                                    @endphp
                                     <select name="payment_method" id="paymentMethod" class="form-control form-control-sm"
                                         required>
                                         <option value="">-- Seleccionar --</option>
-                                        <option value="cash" {{ old('payment_method') == 'cash' ? 'selected' : '' }}>
+                                        <option value="cash" {{ $selectedPayment == 'cash' ? 'selected' : '' }}>
                                             Efectivo
                                         </option>
-                                        <option value="transfer"
-                                            {{ old('payment_method') == 'transfer' ? 'selected' : '' }}>
-                                            Transferencia</option>
-                                        <option value="card" {{ old('payment_method') == 'card' ? 'selected' : '' }}>
+                                        <option value="transfer" {{ $selectedPayment == 'transfer' ? 'selected' : '' }}>
+                                            Transferencia
+                                        </option>
+                                        <option value="card" {{ $selectedPayment == 'card' ? 'selected' : '' }}>
                                             Tarjeta
                                         </option>
-                                        <option value="other" {{ old('payment_method') == 'other' ? 'selected' : '' }}>
+                                        <option value="other" {{ $selectedPayment == 'other' ? 'selected' : '' }}>
                                             Otro
                                         </option>
                                     </select>
@@ -1147,8 +1192,12 @@
                                     <div class="input-group input-group-sm">
                                         <div class="input-group-prepend"><span class="input-group-text">$</span></div>
                                         <input type="number" name="initial_payment" id="initialPayment"
-                                            class="form-control" value="{{ old('initial_payment') }}" min="0"
+                                            class="form-control" value="{{ old('initial_payment', isset($order) ? $order->initial_payment : '') }}" min="0"
                                             step="0.01">
+                                    </div>
+                                    <div id="anticipoError" class="text-danger small mt-1" style="display: none;">
+                                        <i class="fas fa-exclamation-circle mr-1"></i>
+                                        <span id="anticipoErrorText">El anticipo no puede ser mayor al total</span>
                                     </div>
                                 </div>
                             </div>
@@ -1196,13 +1245,13 @@
                                     <label class="font-weight-bold mb-1">Fecha Prometida</label>
                                     <input type="date" name="promised_date" id="promisedDate"
                                         class="form-control form-control-sm @error('promised_date') is-invalid @enderror"
-                                        value="{{ old('promised_date') }}" min="{{ date('Y-m-d') }}" required>
+                                        value="{{ old('promised_date', isset($order) ? $order->promised_date?->format('Y-m-d') : '') }}" min="{{ date('Y-m-d') }}" required>
                                     @error('promised_date')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
-                                    <div class="invalid-feedback" id="dateWarning" style="display: none;">
-                                        Fecha anterior a la mínima de producción
-                                    </div>
+                                    <small class="d-block mt-1" id="dateWarning" style="display: none;">
+                                        <!-- Contenido dinámico desde JS -->
+                                    </small>
                                 </div>
 
                                 {{-- FEEDBACK VISUAL DE CAPACIDAD SEMANAL --}}
@@ -1298,7 +1347,7 @@
                                     <i class="fas fa-sticky-note mr-1"></i> Notas
                                 </label>
                                 <textarea name="notes" class="form-control form-control-sm" rows="4" maxlength="2000"
-                                    placeholder="Observaciones generales del pedido...">{{ old('notes') }}</textarea>
+                                    placeholder="Observaciones generales del pedido...">{{ old('notes', isset($order) ? $order->notes : '') }}</textarea>
                             </div>
                             {{-- COLUMNA DERECHA: RESUMEN --}}
                             <div class="col-md-6 pl-md-3">
@@ -1312,16 +1361,16 @@
                                         <div class="input-group input-group-sm" style="width: 100px;">
                                             <div class="input-group-prepend"><span class="input-group-text py-0 px-2">$</span></div>
                                             <input type="number" name="discount" id="discount" class="form-control py-0"
-                                                value="{{ old('discount', 0) }}" min="0" step="0.01">
+                                                value="{{ old('discount', isset($order) ? $order->discount : 0) }}" min="0" step="0.01">
                                         </div>
                                     </div>
                                     <div class="resumen-row iva-row-resumen">
                                         <div class="custom-control custom-checkbox">
                                             <input type="checkbox" class="custom-control-input" id="requiresInvoice"
                                                 name="requires_invoice" value="1"
-                                                {{ old('requires_invoice') ? 'checked' : '' }}>
+                                                {{ old('requires_invoice', isset($order) ? $order->requires_invoice : false) ? 'checked' : '' }}>
                                             <label class="custom-control-label" for="requiresInvoice">
-                                                IVA 16% <small class="text-muted">(Factura)</small>
+                                                IVA {{ $defaultTaxRate ?? 16 }}% <small class="text-muted">(Factura)</small>
                                             </label>
                                         </div>
                                         <strong id="ivaDisplay" class="iva-amount-disabled">$0.00</strong>
@@ -1385,25 +1434,74 @@
     {{-- MODAL: CLIENTE RÁPIDO --}}
     {{-- ============================================== --}}
     <div class="modal fade" id="quickClientModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header" style="background: #343a40; color: white;">
-                    <h5 class="modal-title"><i class="fas fa-user-plus mr-2"></i> Cliente Rápido</h5>
+                    <h5 class="modal-title"><i class="fas fa-user-plus mr-2"></i> Nuevo Cliente</h5>
                     <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <div class="form-group">
-                        <label class="font-weight-bold">Nombre *</label>
-                        <input type="text" id="quickClientNombre" class="form-control" maxlength="255" required>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="font-weight-bold">Nombre <span class="text-danger">*</span></label>
+                                <input type="text" id="quickClientNombre" class="form-control" maxlength="255"
+                                    placeholder="Nombre del cliente" required>
+                                <div class="invalid-feedback" id="errorNombre">El nombre es obligatorio</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="font-weight-bold">Apellidos <span class="text-danger">*</span></label>
+                                <input type="text" id="quickClientApellidos" class="form-control" maxlength="255"
+                                    placeholder="Apellidos del cliente" required>
+                                <div class="invalid-feedback" id="errorApellidos">Los apellidos son obligatorios</div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Apellidos</label>
-                        <input type="text" id="quickClientApellidos" class="form-control" maxlength="255">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="font-weight-bold">Teléfono <span class="text-danger">*</span></label>
+                                <input type="text" id="quickClientTelefono" class="form-control" maxlength="10"
+                                    placeholder="10 dígitos" pattern="[0-9]{10}" required>
+                                <div class="invalid-feedback" id="errorTelefono">El teléfono debe tener 10 dígitos</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" id="quickClientEmail" class="form-control" maxlength="255"
+                                    placeholder="correo@ejemplo.com">
+                                <div class="invalid-feedback" id="errorEmail">El email no es válido</div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group mb-0">
-                        <label>Teléfono <small class="text-muted">(opcional, 10 dígitos)</small></label>
-                        <input type="text" id="quickClientTelefono" class="form-control" maxlength="10"
-                            pattern="[0-9]{10}">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="font-weight-bold">Estado <span class="text-danger">*</span></label>
+                                <select id="quickClientEstado" class="form-control" required>
+                                    <option value="">Seleccionar...</option>
+                                    @foreach($estados ?? [] as $estado)
+                                        <option value="{{ $estado->id }}">{{ $estado->nombre_estado }}</option>
+                                    @endforeach
+                                </select>
+                                <div class="invalid-feedback" id="errorEstado">Selecciona un estado</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="font-weight-bold">Recomendación <span class="text-danger">*</span></label>
+                                <select id="quickClientRecomendacion" class="form-control" required>
+                                    <option value="">Seleccionar...</option>
+                                    @foreach($recomendaciones ?? [] as $recomendacion)
+                                        <option value="{{ $recomendacion->id }}">{{ $recomendacion->nombre_recomendacion }}</option>
+                                    @endforeach
+                                </select>
+                                <div class="invalid-feedback" id="errorRecomendacion">Selecciona una recomendación</div>
+                            </div>
+                        </div>
                     </div>
                     <div class="alert alert-danger mt-3 mb-0" id="quickClientError" style="display: none;"></div>
                 </div>
@@ -1647,24 +1745,23 @@
                                         <div class="col-md-6 mb-3 mb-md-0">
                                             <div class="form-group mb-0" id="productExtrasSection"
                                                 style="display: none;">
-                                                <label class="font-weight-bold mb-1">
-                                                    <i class="fas fa-plus-circle mr-1 text-success"></i> Extras
-                                                    <span class="ml-2 text-info font-weight-bold"
-                                                        id="extrasSubtotalDisplay">+$0.00</span>
-                                                </label>
-                                                <div class="d-flex align-items-center mb-2">
-                                                    <button type="button" class="btn btn-outline-success btn-sm"
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <label class="font-weight-bold mb-0">
+                                                        <i class="fas fa-plus-circle mr-1 text-success"></i> Extras
+                                                    </label>
+                                                    <button type="button" class="btn btn-success btn-sm"
                                                         id="btnOpenExtrasModal">
-                                                        <i class="fas fa-list-ul mr-1"></i> Seleccionar Extras
+                                                        <i class="fas fa-plus mr-1"></i> Agregar
                                                     </button>
                                                 </div>
-                                                <div id="selectedExtrasList" class="border rounded"
-                                                    style="display: none; max-height: 150px; overflow-y: auto;">
+                                                <div id="selectedExtrasList" class="rounded"
+                                                    style="display: none; max-height: 220px; overflow-y: auto;">
                                                     {{-- Se llena dinámicamente con JS --}}
                                                 </div>
                                                 <small id="noExtrasSelectedMsg"
-                                                    style="font-size: 14px; color: #495057;">Sin extras
-                                                    seleccionados</small>
+                                                    style="font-size: 13px; color: #6c757d; font-style: italic;">
+                                                    <i class="fas fa-info-circle mr-1"></i>Sin extras seleccionados
+                                                </small>
                                             </div>
 
                                         </div>
@@ -1936,10 +2033,10 @@
                             <div id="existingMeasuresList" style="max-height: 350px; overflow-y: auto;">
                                 {{-- Se llena dinámicamente con historial enriquecido --}}
                             </div>
-                            <div class="alert alert-secondary py-3 mt-2 text-center" id="noExistingMeasuresAlert"
-                                style="display: none;">
-                                <i class="fas fa-inbox fa-2x mb-2 d-block" style="color: #6c757d;"></i>
-                                <span style="color: #495057; font-size: 14px;">Este cliente no tiene medidas
+                            <div class="py-3 mt-2 text-center" id="noExistingMeasuresAlert"
+                                style="display: none; background: #fff3cd; border: 2px solid #ff9800; border-radius: 8px;">
+                                <i class="fas fa-exclamation-circle fa-2x mb-2 d-block" style="color: #e65100;"></i>
+                                <span style="color: #212529; font-size: 15px; font-weight: 600;">Este cliente no tiene medidas
                                     registradas en el historial.</span>
                             </div>
                         </div>
@@ -2019,6 +2116,7 @@
             let selectedProduct = null;
             let selectedClientData = null;
             let productLeadTimes = {};
+            let currentTotal = 0; // Total actual para validación de anticipo
             let clientSearchTimeout = null;
             // MEDIDAS DEL ITEM ACTUAL (pertenecen al item, no al cliente)
             let currentItemMeasurements = null; // {busto, cintura, cadera, alto_cintura, largo, largo_vestido}
@@ -2106,13 +2204,14 @@
                 updateAddButtonState();
             }
 
-            const urgencyMultipliers = {
-                'normal': 1.0,
-                'urgente': 0.7,
-                'express': 0.5
-            };
+            // Función para obtener el multiplicador de tiempo desde el select dinámico
+            function getUrgencyTimeMultiplier() {
+                const $selected = $('#urgencyLevel option:selected');
+                const timePercentage = parseFloat($selected.data('time')) || 100;
+                return timePercentage / 100; // Convertir porcentaje a decimal (25% → 0.25)
+            }
 
-            const IVA_RATE = 0.16;
+            const IVA_RATE = {{ ($defaultTaxRate ?? 16) / 100 }}; // Desde configuración del sistema
 
             // ==========================================
             // BÚSQUEDA DE CLIENTES ERP (MODAL)
@@ -2234,6 +2333,9 @@
 
                 // Limpiar cache de medidas del cliente anterior
                 clearMeasurementsCache();
+
+                // Actualizar indicador de estado del formulario
+                updateReadinessIndicator();
             }
 
             // Reset al abrir modal de búsqueda
@@ -2252,21 +2354,102 @@
             });
 
             // ==========================================
-            // CLIENTE RÁPIDO
+            // CLIENTE RÁPIDO - Validaciones y envío
             // ==========================================
+
+            // Limpiar errores al escribir
+            $('#quickClientNombre, #quickClientApellidos, #quickClientTelefono, #quickClientEmail').on('input', function() {
+                $(this).removeClass('is-invalid');
+            });
+
+            $('#quickClientEstado, #quickClientRecomendacion').on('change', function() {
+                $(this).removeClass('is-invalid');
+            });
+
+            // Validar teléfono solo números
+            $('#quickClientTelefono').on('input', function() {
+                this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);
+            });
+
+            // Validar email en tiempo real
+            $('#quickClientEmail').on('blur', function() {
+                const email = $(this).val().trim();
+                if (email && !isValidEmail(email)) {
+                    $(this).addClass('is-invalid');
+                }
+            });
+
+            function isValidEmail(email) {
+                return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+            }
+
+            function clearQuickClientErrors() {
+                $('#quickClientNombre, #quickClientApellidos, #quickClientTelefono, #quickClientEmail, #quickClientEstado, #quickClientRecomendacion')
+                    .removeClass('is-invalid');
+                $('#quickClientError').hide();
+            }
+
+            function resetQuickClientForm() {
+                $('#quickClientNombre').val('');
+                $('#quickClientApellidos').val('');
+                $('#quickClientTelefono').val('');
+                $('#quickClientEmail').val('');
+                $('#quickClientEstado').val('');
+                $('#quickClientRecomendacion').val('');
+                clearQuickClientErrors();
+            }
+
             $('#saveQuickClient').on('click', function() {
                 const nombre = $('#quickClientNombre').val().trim();
                 const apellidos = $('#quickClientApellidos').val().trim();
                 const telefono = $('#quickClientTelefono').val().trim();
+                const email = $('#quickClientEmail').val().trim();
+                const estadoId = $('#quickClientEstado').val();
+                const recomendacionId = $('#quickClientRecomendacion').val();
 
+                // Limpiar errores previos
+                clearQuickClientErrors();
+                let hasError = false;
+
+                // Validación: Nombre requerido
                 if (!nombre) {
-                    $('#quickClientError').text('El nombre es requerido').show();
-                    return;
+                    $('#quickClientNombre').addClass('is-invalid');
+                    hasError = true;
                 }
 
-                // Validar teléfono solo si se proporciona
-                if (telefono && telefono.length !== 10) {
-                    $('#quickClientError').text('El teléfono debe tener 10 dígitos').show();
+                // Validación: Apellidos requeridos
+                if (!apellidos) {
+                    $('#quickClientApellidos').addClass('is-invalid');
+                    hasError = true;
+                }
+
+                // Validación: Teléfono requerido y 10 dígitos
+                if (!telefono || telefono.length !== 10) {
+                    $('#quickClientTelefono').addClass('is-invalid');
+                    hasError = true;
+                }
+
+                // Validación: Email válido si se proporciona
+                if (email && !isValidEmail(email)) {
+                    $('#quickClientEmail').addClass('is-invalid');
+                    hasError = true;
+                }
+
+                // Validación: Estado requerido
+                if (!estadoId) {
+                    $('#quickClientEstado').addClass('is-invalid');
+                    hasError = true;
+                }
+
+                // Validación: Recomendación requerida
+                if (!recomendacionId) {
+                    $('#quickClientRecomendacion').addClass('is-invalid');
+                    hasError = true;
+                }
+
+                if (hasError) {
+                    // Focus en el primer campo con error
+                    $('.is-invalid:first').focus();
                     return;
                 }
 
@@ -2281,36 +2464,47 @@
                         _token: '{{ csrf_token() }}',
                         nombre: nombre,
                         apellidos: apellidos,
-                        telefono: telefono || null
+                        telefono: telefono,
+                        email: email || null,
+                        estado_id: estadoId,
+                        recomendacion_id: recomendacionId
                     },
                     success: function(response) {
                         if (response.success) {
                             selectClient(response.id, response.text, telefono);
-
-                            $('#quickClientNombre').val('');
-                            $('#quickClientApellidos').val('');
-                            $('#quickClientTelefono').val('');
+                            resetQuickClientForm();
                             $('#quickClientModal').modal('hide');
 
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Cliente creado',
+                                text: 'El cliente ha sido registrado y seleccionado',
                                 toast: true,
                                 position: 'top-end',
                                 showConfirmButton: false,
-                                timer: 2000
+                                timer: 2500
                             });
                         }
                     },
                     error: function(xhr) {
-                        const msg = xhr.responseJSON?.message || 'Error al crear cliente';
-                        $('#quickClientError').text(msg).show();
+                        let msg = xhr.responseJSON?.message || 'Error al crear cliente';
+                        // Mostrar errores de validación específicos
+                        if (xhr.responseJSON?.errors) {
+                            const errors = xhr.responseJSON.errors;
+                            msg = Object.values(errors).flat().join('<br>');
+                        }
+                        $('#quickClientError').html(msg).show();
                     },
                     complete: function() {
                         $btn.prop('disabled', false).html(
                             '<i class="fas fa-save mr-1"></i> Crear y Seleccionar');
                     }
                 });
+            });
+
+            // Limpiar formulario al cerrar modal
+            $('#quickClientModal').on('hidden.bs.modal', function() {
+                resetQuickClientForm();
             });
 
             // ==========================================
@@ -2407,7 +2601,7 @@
             $('#modalProductSelect').select2({
                 theme: 'bootstrap-5',
                 dropdownParent: $('#addProductModal'),
-                placeholder: 'Buscar producto por nombre o SKU...',
+                placeholder: 'Buscar producto por nombre...',
                 allowClear: true,
                 minimumInputLength: 1,
                 ajax: {
@@ -2545,26 +2739,75 @@
                     $noMsg.hide();
                     $list.show();
 
+                    // Calcular total de extras
+                    let grandTotal = 0;
+                    selectedExtras.forEach(e => {
+                        const qty = e.quantity || 1;
+                        const unitPrice = e.unit_price || e.price_addition || e.price || 0;
+                        grandTotal += unitPrice * qty;
+                    });
+
+                    // Crear tabla con diseño profesional
+                    let tableHtml = `
+                        <table class="table table-sm table-bordered mb-0" style="font-size: 14px;">
+                            <thead style="background: #343a40;">
+                                <tr>
+                                    <th style="padding: 8px 10px; font-weight: 600; color: #fff;">Extra</th>
+                                    <th style="padding: 8px 10px; font-weight: 600; color: #fff; text-align: center; width: 60px;">Cant.</th>
+                                    <th style="padding: 8px 10px; font-weight: 600; color: #fff; text-align: right; width: 80px;">Precio</th>
+                                    <th style="padding: 8px 10px; font-weight: 600; color: #fff; text-align: right; width: 90px;">Subtotal</th>
+                                    <th style="padding: 8px 6px; width: 40px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+
                     selectedExtras.forEach(extra => {
                         const qty = extra.quantity || 1;
-                        const unitPrice = extra.unit_price || extra.price;
-                        const totalPrice = extra.price || (unitPrice * qty);
-                        const qtyLabel = qty > 1 ?
-                            `<span class="badge badge-secondary mr-1">${qty}x</span>` : '';
+                        const unitPrice = extra.unit_price || extra.price_addition || extra.price || 0;
+                        const subtotal = unitPrice * qty;
 
-                        const itemHtml = `
-                            <div class="d-flex justify-content-between align-items-center px-2 py-2 border-bottom" data-extra-id="${extra.id}">
-                                <span style="font-size: 14px; font-weight: 500;">${qtyLabel}${extra.name.toUpperCase()}</span>
-                                <div class="d-flex align-items-center">
-                                    <span class="text-success font-weight-bold mr-2" style="font-size: 14px;">+$${totalPrice.toFixed(2)}</span>
-                                    <button type="button" class="btn btn-xs btn-outline-danger remove-extra-btn" data-id="${extra.id}" title="Quitar">
+                        tableHtml += `
+                            <tr data-extra-id="${extra.id}" style="background: #fff;">
+                                <td style="padding: 8px 10px; vertical-align: middle; font-weight: 500; color: #212529;">
+                                    ${extra.name.toUpperCase()}
+                                </td>
+                                <td style="padding: 8px 10px; text-align: center; vertical-align: middle;">
+                                    <span style="font-weight: 600; color: #495057;">${qty}</span>
+                                </td>
+                                <td style="padding: 8px 10px; text-align: right; vertical-align: middle;">
+                                    <span style="color: #495057;">$${unitPrice.toFixed(2)}</span>
+                                </td>
+                                <td style="padding: 8px 10px; text-align: right; vertical-align: middle;">
+                                    <span style="color: #212529; font-weight: 600;">$${subtotal.toFixed(2)}</span>
+                                </td>
+                                <td style="padding: 8px 6px; text-align: center; vertical-align: middle;">
+                                    <button type="button" class="btn btn-xs btn-outline-danger remove-extra-btn" data-id="${extra.id}" title="Quitar" style="padding: 2px 6px; line-height: 1;">
                                         <i class="fas fa-times"></i>
                                     </button>
-                                </div>
-                            </div>
+                                </td>
+                            </tr>
                         `;
-                        $list.append(itemHtml);
                     });
+
+                    // Fila de total
+                    tableHtml += `
+                            </tbody>
+                            <tfoot style="background: #e9ecef;">
+                                <tr>
+                                    <td colspan="3" style="padding: 10px; text-align: right; font-weight: 700; color: #212529;">
+                                        TOTAL EXTRAS:
+                                    </td>
+                                    <td style="padding: 10px; text-align: right;">
+                                        <span style="color: #28a745; font-weight: 700; font-size: 16px;">+$${grandTotal.toFixed(2)}</span>
+                                    </td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    `;
+
+                    $list.html(tableHtml);
                 }
 
                 updateExtrasSubtotal();
@@ -2582,8 +2825,12 @@
 
             // Actualizar subtotal de extras
             function updateExtrasSubtotal() {
-                const total = selectedExtras.reduce((sum, e) => sum + e.price, 0);
-                $('#extrasSubtotalDisplay').text('+$' + total.toFixed(2));
+                const total = selectedExtras.reduce((sum, e) => {
+                    const qty = e.quantity || 1;
+                    const unitPrice = e.unit_price || e.price_addition || e.price || 0;
+                    return sum + (unitPrice * qty);
+                }, 0);
+                // Ya no se muestra al lado de "Extras" - se muestra en la tabla
             }
 
             // ==========================================
@@ -3844,11 +4091,12 @@
                                 `<ul class="mb-0 mt-1 pl-3" style="font-size: 0.9rem;">${extrasList}</ul>`;
                         }
 
-                        // Notas
+                        // Notas - Estilo badge naranja
                         let notesRow = '';
                         if (item.customization_notes) {
+                            const notesText = item.customization_notes.length > 50 ? item.customization_notes.substring(0, 50) + '...' : item.customization_notes;
                             notesRow =
-                                `<div class="mt-1" style="font-size: 0.95rem;"><strong>Notas:</strong> ${item.customization_notes}</div>`;
+                                `<div class="mt-1"><span style="background: #fff3e0; color: #e65100; padding: 4px 8px; border-radius: 4px; font-size: 14px; display: inline-block;" title="${item.customization_notes}"><i class="fas fa-sticky-note mr-1"></i>${notesText}</span></div>`;
                         }
 
                         $tbody.append(`
@@ -3904,18 +4152,19 @@
                         }
                     }
 
-                    // FILA 2: Texto personalizado (embroidery_text)
+                    // FILA 2: Texto personalizado (embroidery_text) - Estilo badge azul
                     let embroideryRow = '';
                     if (item.embroidery_text) {
                         embroideryRow =
-                            `<div class="mt-1" style="font-size: 1.05rem;"><strong>Texto:</strong> ${item.embroidery_text}</div>`;
+                            `<div class="mt-1"><span style="background: #e3f2fd; color: #1565c0; padding: 4px 8px; border-radius: 4px; font-size: 14px; display: inline-block;"><i class="fas fa-pen-fancy mr-1"></i>${item.embroidery_text}</span></div>`;
                     }
 
-                    // FILA 3: Notas
+                    // FILA 3: Notas - Estilo badge naranja
                     let notesRow = '';
                     if (item.customization_notes) {
+                        const notesText = item.customization_notes.length > 50 ? item.customization_notes.substring(0, 50) + '...' : item.customization_notes;
                         notesRow =
-                            `<div class="mt-1" style="font-size: 1.05rem;"><strong>Notas:</strong> ${item.customization_notes}</div>`;
+                            `<div class="mt-1"><span style="background: #fff3e0; color: #e65100; padding: 4px 8px; border-radius: 4px; font-size: 14px; display: inline-block;" title="${item.customization_notes}"><i class="fas fa-sticky-note mr-1"></i>${notesText}</span></div>`;
                     }
 
                     // Badge: Tiene extras (de BD)
@@ -4215,6 +4464,17 @@
             // ==========================================
             function updateHiddenInputs() {
                 const $container = $('#hiddenItemsContainer');
+
+                // DEBUG: Verificar que el contenedor existe
+                if ($container.length === 0) {
+                    console.error('[updateHiddenInputs] ❌ ERROR CRÍTICO: #hiddenItemsContainer NO EXISTE en el DOM!');
+                    return;
+                }
+
+                // DEBUG: Verificar que está dentro del form
+                const isInForm = $container.closest('form').length > 0;
+                console.log('[updateHiddenInputs] Contenedor existe:', $container.length > 0, '| Dentro de form:', isInForm, '| Items a procesar:', orderItems.length);
+
                 $container.empty();
 
                 orderItems.forEach((item, idx) => {
@@ -4244,7 +4504,7 @@
                         });
                     }
 
-                    // Medidas del item
+                    // Medidas del item (se guardan automáticamente en historial del cliente)
                     if (item.measurements) {
                         $container.append(`
                             <input type="hidden" name="items[${idx}][measurements][busto]" value="${item.measurements.busto || ''}">
@@ -4253,10 +4513,17 @@
                             <input type="hidden" name="items[${idx}][measurements][alto_cintura]" value="${item.measurements.alto_cintura || ''}">
                             <input type="hidden" name="items[${idx}][measurements][largo]" value="${item.measurements.largo || ''}">
                             <input type="hidden" name="items[${idx}][measurements][largo_vestido]" value="${item.measurements.largo_vestido || ''}">
-                            <input type="hidden" name="items[${idx}][measurements][save_to_client]" value="${item.measurements.save_to_client ? '1' : '0'}">
                         `);
                     }
                 });
+
+                // Verificación post-generación
+                const generatedCount = $container.find('input[name$="[product_id]"]').length;
+                console.log('[updateHiddenInputs] ✓ Generados:', generatedCount, 'product_id inputs para', orderItems.length, 'items');
+
+                if (orderItems.length > 0 && generatedCount !== orderItems.length) {
+                    console.error('[updateHiddenInputs] ❌ DESINCRONIZACIÓN: orderItems=' + orderItems.length + ' vs hidden=' + generatedCount);
+                }
             }
 
             // ==========================================
@@ -4275,6 +4542,9 @@
                 const iva = requiresInvoice ? subtotalAfterDiscount * IVA_RATE : 0;
                 const total = subtotalAfterDiscount + iva;
 
+                // Guardar total global para validación de anticipo
+                currentTotal = total;
+
                 $('#subtotalDisplay').text('$' + subtotal.toFixed(2));
 
                 // IVA en resumen (integrado con checkbox)
@@ -4287,10 +4557,60 @@
                 }
 
                 $('#totalDisplay').text('$' + total.toFixed(2));
+
+                // Validar anticipo si está visible
+                validateAnticipo();
             }
 
             $('#discount').on('input', calculateTotals);
-            $('#requiresInvoice').on('change', calculateTotals);
+            $('#requiresInvoice').on('change', function() {
+                console.log('[IVA Change] Checkbox cambiado. Estado:', $(this).is(':checked'));
+                console.log('[IVA Change] orderItems antes de calcular:', orderItems.length);
+                calculateTotals();
+                console.log('[IVA Change] orderItems después de calcular:', orderItems.length);
+                // Verificar integridad
+                const hiddenProductIds = $('#hiddenItemsContainer input[name$="[product_id]"]').length;
+                if (orderItems.length > 0 && hiddenProductIds !== orderItems.length) {
+                    console.error('[IVA Change] ❌ DESINCRONIZACIÓN DETECTADA:', orderItems.length, 'items vs', hiddenProductIds, 'hidden inputs');
+                }
+            });
+
+            // ==========================================
+            // VALIDACIÓN DE ANTICIPO EN TIEMPO REAL
+            // ==========================================
+            function validateAnticipo() {
+                const $input = $('#initialPayment');
+                const $error = $('#anticipoError');
+                const $errorText = $('#anticipoErrorText');
+                const anticipo = parseFloat($input.val()) || 0;
+
+                // Solo validar si hay un anticipo ingresado y el grupo está visible
+                if (anticipo > 0 && $('#anticipoGroup').is(':visible')) {
+                    if (anticipo > currentTotal) {
+                        // Anticipo mayor al total - mostrar error
+                        $input.addClass('is-invalid');
+                        $errorText.text(`El anticipo ($${anticipo.toFixed(2)}) no puede ser mayor al total ($${currentTotal.toFixed(2)})`);
+                        $error.show();
+                        return false;
+                    } else if (anticipo === currentTotal) {
+                        // Anticipo igual al total - sugerir usar "Pagar Total"
+                        $input.removeClass('is-invalid').addClass('is-valid');
+                        $errorText.html('<i class="fas fa-info-circle mr-1"></i>El anticipo es igual al total. Considera usar "Pagar Total".');
+                        $error.removeClass('text-danger').addClass('text-info').show();
+                        return true;
+                    } else {
+                        // Anticipo válido
+                        $input.removeClass('is-invalid').addClass('is-valid');
+                        $error.removeClass('text-info').addClass('text-danger').hide();
+                        return true;
+                    }
+                } else {
+                    // Sin anticipo o grupo oculto - limpiar estado
+                    $input.removeClass('is-invalid is-valid');
+                    $error.removeClass('text-info').addClass('text-danger').hide();
+                    return true;
+                }
+            }
 
             // ==========================================
             // INDICADOR DE ESTADO OPERATIVO (READY/PENDING)
@@ -4308,9 +4628,40 @@
                 // Analizar items para detectar pendientes
                 let pendingItems = [];
 
+                // === VALIDACIÓN 1: Cliente seleccionado ===
+                const clienteId = $('#cliente_id').val();
+                const forStock = $('#forStockSwitch').is(':checked');
+                if (!clienteId && !forStock) {
+                    pendingItems.push({
+                        type: 'cliente',
+                        message: 'Seleccionar cliente'
+                    });
+                }
+
+                // === VALIDACIÓN 2: Fecha de entrega ===
+                const promisedDate = $('#promisedDate').val();
+                if (!promisedDate) {
+                    pendingItems.push({
+                        type: 'fecha',
+                        message: 'Fecha de entrega'
+                    });
+                }
+
+                // === VALIDACIÓN 3: Método de pago (SIEMPRE requerido) ===
+                const paymentMethod = $('#paymentMethod').val();
+                if (!paymentMethod) {
+                    pendingItems.push({
+                        type: 'pago',
+                        message: 'Método de pago'
+                    });
+                }
+
+                // === VALIDACIÓN 4: Items con medidas pendientes ===
                 orderItems.forEach(function(item) {
-                    // Items que requieren medidas pero no las tienen
-                    if (item.requires_measurements && !item.measurements) {
+                    // Items personalizados que requieren medidas pero no las tienen
+                    // Solo aplica si el item es personalizado (is_customized = true)
+                    // Los productos base/estándar no requieren medidas aunque el producto las soporte
+                    if (item.is_customized && item.requires_measurements && !item.measurements) {
                         pendingItems.push({
                             type: 'measurements',
                             product: item.product_name,
@@ -4333,6 +4684,9 @@
                 const isReady = pendingItems.length === 0;
                 const hasMeasurementsPending = pendingItems.some(p => p.type === 'measurements');
                 const hasDesignPending = pendingItems.some(p => p.type === 'design');
+                const hasClientePending = pendingItems.some(p => p.type === 'cliente');
+                const hasFechaPending = pendingItems.some(p => p.type === 'fecha');
+                const hasPagoPending = pendingItems.some(p => p.type === 'pago');
 
                 // Actualizar clases
                 $indicator
@@ -4358,12 +4712,26 @@
                 } else {
                     let pendingList = '';
 
+                    // Campos básicos requeridos
+                    if (hasClientePending) {
+                        pendingList += `<li><i class="fas fa-user text-warning mr-1"></i> <strong>Cliente:</strong> Seleccionar cliente</li>`;
+                    }
+
+                    if (hasFechaPending) {
+                        pendingList += `<li><i class="fas fa-calendar text-warning mr-1"></i> <strong>Fecha de entrega:</strong> Seleccionar fecha</li>`;
+                    }
+
+                    if (hasPagoPending) {
+                        pendingList += `<li><i class="fas fa-credit-card text-warning mr-1"></i> <strong>Método de pago:</strong> Requerido para registrar anticipo</li>`;
+                    }
+
+                    // Items con pendientes
                     if (hasMeasurementsPending) {
                         const measurementItems = pendingItems
                             .filter(p => p.type === 'measurements')
                             .map(p => p.product)
                             .join(', ');
-                        pendingList += `<li><strong>Medidas pendientes:</strong> ${measurementItems}</li>`;
+                        pendingList += `<li><i class="fas fa-ruler text-warning mr-1"></i> <strong>Medidas pendientes:</strong> ${measurementItems}</li>`;
                     }
 
                     if (hasDesignPending) {
@@ -4371,7 +4739,7 @@
                             .filter(p => p.type === 'design')
                             .map(p => p.product)
                             .join(', ');
-                        pendingList += `<li><strong>Requiere aprobación de diseño:</strong> ${designItems}</li>`;
+                        pendingList += `<li><i class="fas fa-pencil-ruler text-info mr-1"></i> <strong>Requiere aprobación de diseño:</strong> ${designItems}</li>`;
                     }
 
                     html = `
@@ -4400,61 +4768,114 @@
                 const hasMethod = $(this).val() !== '';
                 $('#payFullGroup').toggle(hasMethod);
                 $('#anticipoGroup').toggle(hasMethod && !$('#payFull').is(':checked'));
+                updateReadinessIndicator(); // Actualizar indicador
             });
 
             $('#payFull').on('change', function() {
                 $('#anticipoGroup').toggle(!$(this).is(':checked'));
                 if ($(this).is(':checked')) $('#initialPayment').val('');
+                updateReadinessIndicator(); // Actualizar indicador
+            });
+
+            $('#initialPayment').on('input', function() {
+                validateAnticipo(); // Validar anticipo en tiempo real
+                updateReadinessIndicator(); // Actualizar indicador cuando cambia el anticipo
+            });
+
+            // Actualizar indicador cuando cambia la fecha
+            $('#promisedDate').on('change', function() {
+                updateReadinessIndicator();
             });
 
             $('#paymentMethod').trigger('change');
 
             // ==========================================
-            // FECHA MÍNIMA Y URGENCIA
+            // FECHA RECOMENDADA Y URGENCIA
+            // NOTA: La fecha es una SUGERENCIA, no una restricción
+            // El usuario puede seleccionar fechas más tempranas (urgencias reales)
             // ==========================================
+            let recommendedDateStr = null; // Guardar fecha recomendada para comparación
+
             function calculateMinimumDate() {
+                const today = new Date();
+                const todayStr = today.toISOString().split('T')[0];
+
                 if (orderItems.length === 0) {
+                    // Sin productos: mínimo es hoy
+                    $('#promisedDate').attr('min', todayStr);
                     $('#minimumDateAlert').hide();
-                    $('#promisedDate').attr('min', '{{ date('Y-m-d') }}');
+                    $('#dateWarning').hide();
+                    $('#promisedDate').removeClass('is-invalid');
+                    recommendedDateStr = null;
                     return;
                 }
 
+                // Obtener el máximo lead time de los productos
                 let maxLeadTime = 0;
                 orderItems.forEach(item => {
                     if (item.lead_time > maxLeadTime) maxLeadTime = item.lead_time;
                 });
 
-                const urgency = $('#urgencyLevel').val() || 'normal';
-                const adjustedDays = Math.ceil(maxLeadTime * urgencyMultipliers[urgency]);
+                // Obtener el multiplicador de tiempo desde el nivel de urgencia seleccionado
+                const timeMultiplier = getUrgencyTimeMultiplier();
 
-                const minDate = new Date();
-                minDate.setDate(minDate.getDate() + adjustedDays);
+                // Calcular días ajustados según urgencia (mínimo 1 día siempre)
+                const adjustedDays = Math.max(1, Math.ceil(maxLeadTime * timeMultiplier));
 
-                const minDateStr = minDate.toISOString().split('T')[0];
-                const displayDate = minDate.toLocaleDateString('es-MX', {
+                // Calcular fecha RECOMENDADA (hoy + días ajustados)
+                const recommendedDate = new Date();
+                recommendedDate.setDate(recommendedDate.getDate() + adjustedDays);
+
+                // Guardar fecha recomendada para comparación (advertencia, no bloqueo)
+                recommendedDateStr = recommendedDate.toISOString().split('T')[0];
+
+                // El input permite desde HOY (no la recomendada) para fechas urgentes
+                $('#promisedDate').attr('min', todayStr);
+
+                // Formatear para mostrar al usuario
+                const displayDate = recommendedDate.toLocaleDateString('es-MX', {
                     weekday: 'long',
                     day: 'numeric',
                     month: 'long'
                 });
 
-                $('#minimumDateDisplay').text(displayDate + ' (' + adjustedDays + ' días)');
+                const daysLabel = adjustedDays === 1 ? '1 día' : adjustedDays + ' días';
+                $('#minimumDateDisplay').text(displayDate + ' (' + daysLabel + ')');
                 $('#minimumDateAlert').show();
-                $('#promisedDate').attr('min', minDateStr);
 
                 validatePromisedDate();
             }
 
             function validatePromisedDate() {
                 const promised = $('#promisedDate').val();
-                const minDate = $('#promisedDate').attr('min');
 
-                if (promised && minDate && promised < minDate) {
-                    $('#promisedDate').addClass('is-invalid');
-                    $('#dateWarning').show();
+                if (!promised || !recommendedDateStr) {
+                    $('#promisedDate').removeClass('is-invalid border-warning');
+                    $('#dateWarning').hide();
+                    return true;
+                }
+
+                if (promised < recommendedDateStr) {
+                    // Fecha URGENTE - mostrar ADVERTENCIA pero PERMITIR
+                    // El cliente puede necesitar fecha específica (viaje, evento, etc.)
+                    const minDateFormatted = new Date(recommendedDateStr + 'T00:00:00').toLocaleDateString('es-MX', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                    });
+                    $('#promisedDate').removeClass('is-invalid').addClass('border-warning');
+                    $('#dateWarning')
+                        .attr('style', 'color: #e65100 !important; display: block;')
+                        .html('<i class="fas fa-exclamation-triangle mr-1"></i> ' +
+                            '<strong>Pedido urgente:</strong> La fecha recomendada es a partir del ' + minDateFormatted + '. ' +
+                            'Este pedido requerirá producción prioritaria.');
                 } else {
-                    $('#promisedDate').removeClass('is-invalid');
+                    // Fecha OK
+                    $('#promisedDate').removeClass('is-invalid border-warning');
                     $('#dateWarning').hide();
                 }
+                updateReadinessIndicator();
+                return true; // SIEMPRE permitir
             }
 
             $('#urgencyLevel').on('change', calculateMinimumDate);
@@ -4695,15 +5116,36 @@
                         '<li><i class="fas fa-box mr-1"></i> Debe agregar al menos un producto</li>');
                 }
 
-                // 3. Validar método de pago (SOLO si NO es modo stock Y hay anticipo)
-                if (!isStockMode) {
-                    const initialPaymentVal = parseFloat($('#initialPayment').val()) || 0;
-                    const payFullChecked = $('#payFull').is(':checked');
-                    if ((initialPaymentVal > 0 || payFullChecked) && !$('#paymentMethod').val()) {
-                        errors.push(
-                            '<li><i class="fas fa-dollar-sign mr-1"></i> Debe seleccionar un método de pago para registrar el anticipo</li>'
-                        );
+                // 2b. PROTECCIÓN: Verificar que hidden inputs están sincronizados
+                // Si hay items en el array pero no hay hidden inputs, regenerarlos
+                if (orderItems.length > 0) {
+                    const hiddenProductIds = $('#hiddenItemsContainer input[name$="[product_id]"]');
+                    if (hiddenProductIds.length === 0) {
+                        console.warn('[Submit] ⚠️ Hidden inputs no encontrados, regenerando...');
+                        updateHiddenInputs();
                     }
+                    // Verificar nuevamente después de regenerar
+                    const finalHiddenCount = $('#hiddenItemsContainer input[name$="[product_id]"]').length;
+                    console.log('[Submit] Items en array:', orderItems.length, '| Hidden inputs:', finalHiddenCount);
+                    if (finalHiddenCount !== orderItems.length) {
+                        console.error('[Submit] ❌ Desincronización entre items y hidden inputs!');
+                        errors.push('<li><i class="fas fa-exclamation-triangle mr-1"></i> Error interno: productos no sincronizados. Recargue la página.</li>');
+                    }
+                }
+
+                // 3. Validar método de pago (SIEMPRE requerido si NO es modo stock)
+                if (!isStockMode && !$('#paymentMethod').val()) {
+                    errors.push(
+                        '<li><i class="fas fa-credit-card mr-1"></i> Debe seleccionar un método de pago</li>'
+                    );
+                }
+
+                // 3b. Validar anticipo no mayor al total
+                const anticipo = parseFloat($('#initialPayment').val()) || 0;
+                if (anticipo > 0 && anticipo > currentTotal) {
+                    errors.push(
+                        '<li><i class="fas fa-exclamation-circle mr-1"></i> El anticipo ($' + anticipo.toFixed(2) + ') no puede ser mayor al total ($' + currentTotal.toFixed(2) + ')</li>'
+                    );
                 }
 
                 // 4. Validar fecha prometida (SOLO si NO es modo stock)
@@ -4713,29 +5155,16 @@
                     );
                 }
 
-                // 5. Validar que fecha prometida sea mayor o igual a la fecha mínima (SOLO si NO es modo stock)
-                if (!isStockMode) {
-                    const promisedDate = $('#promisedDate').val();
-                    const minDate = $('#promisedDate').attr('min');
-                    if (promisedDate && minDate && promisedDate < minDate) {
-                        const minDateFormatted = new Date(minDate + 'T00:00:00').toLocaleDateString(
-                        'es-MX', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric'
-                        });
-                        errors.push(
-                            '<li><i class="fas fa-exclamation-triangle mr-1"></i> La fecha de entrega debe ser posterior o igual a ' +
-                            minDateFormatted + '</li>');
-                    }
-                }
+                // NOTA: La validación de fecha vs lead time es SOLO advertencia (no bloqueo)
+                // El cliente puede necesitar fechas urgentes (viajes, eventos, etc.)
+                // El pedido se crea y se marca como URGENTE automáticamente
 
                 // Si hay errores, mostrar SweetAlert y cancelar envío
                 if (errors.length > 0) {
                     e.preventDefault();
                     Swal.fire({
-                        icon: 'warning',
-                        title: 'Campos requeridos',
+                        icon: 'error',
+                        title: 'No se puede crear el pedido',
                         html: '<ul style="text-align:left;margin:0;padding-left:10px;list-style:none;">' +
                             errors.join('') + '</ul>',
                         confirmButtonColor: '#7f00ff'
@@ -4743,20 +5172,134 @@
                     return false;
                 }
 
-                // === BLOQUEAR BOTÓN PARA EVITAR DOBLE SUBMIT ===
+                // === ENVÍO AJAX PARA NO PERDER DATOS ===
+                e.preventDefault();
+
                 const $submitBtn = $('button[type="submit"][form="orderForm"]');
+                const originalBtnHtml = $submitBtn.html();
                 $submitBtn.prop('disabled', true).html(
                     '<i class="fas fa-spinner fa-spin mr-2"></i> Procesando...');
+
+                // FORZAR regeneración de hidden inputs antes de enviar
+                console.log('[Submit] Forzando regeneración de hidden inputs...');
+                console.log('[Submit] orderItems ANTES de regenerar:', orderItems.length, JSON.stringify(orderItems.slice(0, 2)));
+                updateHiddenInputs();
+
+                // Verificar el contenido del contenedor
+                const hiddenContainer = document.getElementById('hiddenItemsContainer');
+                const hiddenInputsCount = hiddenContainer?.querySelectorAll('input[name$="[product_id]"]').length || 0;
+                console.log('[Submit] Contenido hiddenItemsContainer:', hiddenContainer?.innerHTML?.substring(0, 500));
+                console.log('[Submit] Total inputs en contenedor:', hiddenContainer?.querySelectorAll('input').length);
+                console.log('[Submit] Product IDs en hidden inputs:', hiddenInputsCount);
+
+                // ================================================================
+                // VALIDACIÓN CRÍTICA: Verificar sincronización items ↔ hidden inputs
+                // ================================================================
+                if (orderItems.length > 0 && hiddenInputsCount === 0) {
+                    console.error('[Submit] ❌ ERROR CRÍTICO: orderItems tiene datos pero hidden inputs están vacíos!');
+                    console.error('[Submit] orderItems:', JSON.stringify(orderItems));
+                    console.error('[Submit] hiddenContainer HTML:', hiddenContainer?.innerHTML);
+
+                    $submitBtn.prop('disabled', false).html(originalBtnHtml);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de sincronización',
+                        html: '<p>Los productos no se pudieron preparar para enviar.</p>' +
+                              '<p><strong>Items en memoria:</strong> ' + orderItems.length + '</p>' +
+                              '<p><strong>Hidden inputs:</strong> ' + hiddenInputsCount + '</p>' +
+                              '<p class="text-danger">Por favor recargue la página e intente de nuevo.</p>',
+                        confirmButtonColor: '#dc3545'
+                    });
+                    return false;
+                }
+
+                // Recopilar datos del formulario
+                const formData = new FormData(document.getElementById('orderForm'));
+
+                // DEBUG: Ver qué datos se están enviando
+                const itemsInFormData = [];
+                let hasMethodField = false;
+                let methodValue = '';
+                for (let [key, value] of formData.entries()) {
+                    if (key.startsWith('items[')) {
+                        itemsInFormData.push({key, value});
+                    }
+                    if (key === '_method') {
+                        hasMethodField = true;
+                        methodValue = value;
+                    }
+                }
+                console.log('[Submit] Método HTTP:', hasMethodField ? methodValue : 'POST (sin _method)');
+                console.log('[Submit] Items en FormData:', itemsInFormData.length, itemsInFormData.slice(0, 10));
+                console.log('[Submit] URL destino:', $('#orderForm').attr('action'));
+
+                $.ajax({
+                    url: $('#orderForm').attr('action'),
+                    method: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    },
+                    success: function(response) {
+                        // Redirigir a la página del pedido creado
+                        if (response.redirect) {
+                            window.location.href = response.redirect;
+                        } else if (response.order_id) {
+                            window.location.href = '{{ url("admin/orders") }}/' + response.order_id;
+                        } else {
+                            window.location.href = '{{ route("admin.orders.index") }}';
+                        }
+                    },
+                    error: function(xhr) {
+                        // Restaurar botón
+                        $submitBtn.prop('disabled', false).html(originalBtnHtml);
+
+                        // Manejar errores de validación (422)
+                        if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
+                            const serverErrors = xhr.responseJSON.errors;
+                            let errorList = [];
+
+                            for (const field in serverErrors) {
+                                serverErrors[field].forEach(function(msg) {
+                                    errorList.push('<li><i class="fas fa-times-circle mr-1 text-danger"></i> ' + msg + '</li>');
+                                });
+                            }
+
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Errores de validación',
+                                html: '<ul style="text-align:left;margin:0;padding-left:10px;list-style:none;">' +
+                                    errorList.join('') + '</ul>',
+                                confirmButtonColor: '#dc3545'
+                            });
+                        } else {
+                            // Error general del servidor
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error del servidor',
+                                text: xhr.responseJSON?.message || 'Ocurrió un error al procesar el pedido. Intente nuevamente.',
+                                confirmButtonColor: '#dc3545'
+                            });
+                        }
+                    }
+                });
             });
 
             // ==========================================
             // FASE 3: INICIALIZACIÓN MODO EDICIÓN
             // ==========================================
-            @if (isset($isEdit) && isset($order) && isset($orderItems))
+            @if (isset($isEdit) && $isEdit && isset($order))
                 (function initEditMode() {
+                    try {
+                    console.log('[EditMode] Iniciando carga de pedido {{ $order->order_number }}...');
+
                     // Precargar cliente
                     const cliente = @json($order->cliente);
                     if (cliente) {
+                        console.log('[EditMode] Cliente cargado:', cliente.nombre);
                         selectedClientData = cliente;
                         $('#cliente_id').val(cliente.id);
                         $('.cliente-selector-btn').addClass('has-client')
@@ -4774,7 +5317,12 @@
                     }
 
                     // Precargar items - CORREGIDO: usar 'index' en lugar de 'tempId'
-                    const existingItems = @json($orderItems);
+                    const existingItems = @json($orderItems ?? []);
+                    console.log('[EditMode] ==========================================');
+                    console.log('[EditMode] Items recibidos del servidor:', existingItems?.length || 0);
+                    console.log('[EditMode] Datos de items:', JSON.stringify(existingItems, null, 2));
+                    console.log('[EditMode] orderItems ANTES de cargar:', orderItems.length);
+
                     if (existingItems && existingItems.length > 0) {
                         existingItems.forEach(function(item) {
                             const newItem = {
@@ -4810,11 +5358,36 @@
                             itemIndex++; // Incrementar DESPUÉS de asignar
                         });
 
+                        console.log('[EditMode] Items cargados en array:', orderItems.length);
+                        console.log('[EditMode] orderItems DESPUÉS de cargar:', JSON.stringify(orderItems.slice(0, 2)));
+
                         // Renderizar tabla usando función correcta
                         renderItemsTable();
                         updateHiddenInputs();
                         calculateTotals();
                         calculateMinimumDate();
+
+                        // Verificar hidden inputs generados
+                        const hiddenInputsCount = $('#hiddenItemsContainer input[name^="items"]').length;
+                        const productIdInputs = $('#hiddenItemsContainer input[name$="[product_id]"]').length;
+                        console.log('[EditMode] Hidden inputs generados:', hiddenInputsCount);
+                        console.log('[EditMode] Product IDs generados:', productIdInputs);
+                        console.log('[EditMode] ==========================================');
+
+                        // ALERTA si hay desincronización
+                        if (orderItems.length > 0 && productIdInputs === 0) {
+                            console.error('[EditMode] ❌ ALERTA: Items cargados pero hidden inputs NO generados!');
+                            alert('⚠️ Error de sincronización: Los productos se cargaron pero no se generaron los campos ocultos. Esto puede causar pérdida de datos. Por favor recargue la página.');
+                        }
+                    } else {
+                        console.warn('[EditMode] ⚠️ No se recibieron items del servidor!');
+                        // Mostrar alerta visual al usuario
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Pedido sin productos',
+                            html: 'Este pedido no tiene productos registrados.<br><br>Esto puede deberse a un error anterior. Por favor agregue los productos manualmente.',
+                            confirmButtonColor: '#7f00ff'
+                        });
                     }
 
                     // Precargar valores del formulario
@@ -4824,9 +5397,22 @@
                     );
                     $('#discount').val('{{ $order->discount ?? 0 }}');
                     $('#notes').val(@json($order->notes ?? ''));
+
+                    // Cargar método de pago guardado
+                    @if ($order->payment_method)
+                        $('#paymentMethod').val('{{ $order->payment_method }}');
+                        console.log('[EditMode] Método de pago cargado:', '{{ $order->payment_method }}');
+                    @endif
+
                     @if ($order->requires_invoice)
                         $('#requiresInvoice').prop('checked', true).trigger('change');
                     @endif
+
+                    console.log('[EditMode] Inicialización completa');
+                    } catch (error) {
+                        console.error('[EditMode] ❌ Error durante inicialización:', error);
+                        alert('Error al cargar los datos del pedido. Por favor recargue la página. Error: ' + error.message);
+                    }
                 })();
             @endif
 

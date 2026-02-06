@@ -11,6 +11,8 @@ use App\Models\Product;
 use App\Models\ClientMeasurement;
 use App\Models\DesignExport;
 use App\Models\UrgencyLevel;
+use App\Models\Estado;
+use App\Models\Recomendacion;
 use App\Events\OrderStatusChanged;
 use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\StoreOrderPaymentRequest;
@@ -187,20 +189,86 @@ class OrderController extends Controller
         // Niveles de urgencia desde la base de datos
         $urgencyLevels = UrgencyLevel::activo()->ordered()->get();
 
-        return view('admin.orders.create', compact('products', 'relatedOrder', 'capacityInfo', 'urgencyLevels'));
+        // Estados y recomendaciones para el modal de cliente rápido
+        $estados = Estado::where('activo', true)->orderBy('nombre_estado')->get();
+        $recomendaciones = Recomendacion::where('activo', true)->orderBy('nombre_recomendacion')->get();
+
+        // Tasa de IVA desde configuración del sistema
+        $defaultTaxRate = Order::getDefaultTaxRate();
+
+        return view('admin.orders.create', compact('products', 'relatedOrder', 'capacityInfo', 'urgencyLevels', 'estados', 'recomendaciones', 'defaultTaxRate'));
     }
 
     // === GUARDAR NUEVO PEDIDO ===
+    // Soporta AJAX para no perder datos en caso de error de validación
     public function store(StoreOrderRequest $request)
     {
+        // DEBUG: Log de datos recibidos
+        Log::info('[OrderController@store] Datos recibidos:', [
+            'items_count' => count($request->input('items', [])),
+            'items_raw' => $request->input('items', []),
+            'cliente_id' => $request->input('cliente_id'),
+        ]);
+
         $validated = $request->validated();
+
+        // DEBUG: Log de datos validados
+        Log::info('[OrderController@store] Datos validados:', [
+            'items_count' => count($validated['items'] ?? []),
+            'items' => $validated['items'] ?? [],
+        ]);
+
+        // ================================================================
+        // PROTECCIÓN CRÍTICA: No crear pedidos sin items
+        // Esto previene pérdida de datos por errores de JavaScript
+        // ================================================================
+        $items = $validated['items'] ?? [];
+        if (empty($items)) {
+            Log::error('[OrderController@store] ❌ Intento de crear pedido sin items. Abortando.');
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error: No se recibieron los productos del pedido. Por favor, recargue la página e intente de nuevo.',
+                    'errors' => ['items' => ['Debe agregar al menos un producto al pedido.']],
+                ], 422);
+            }
+
+            return redirect()->back()
+                ->with('error', 'Error: No se recibieron los productos del pedido. Por favor, recargue la página e intente de nuevo.')
+                ->withInput();
+        }
 
         try {
             $order = $this->orderService->createOrder($validated);
 
+            // Respuesta AJAX para no perder datos en caso de error
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'redirect' => route('admin.orders.show', $order),
+                    'message' => "Pedido {$order->order_number} creado exitosamente.",
+                ]);
+            }
+
             return redirect()->route('admin.orders.show', $order)
                 ->with('success', "Pedido {$order->order_number} creado exitosamente.");
         } catch (\Exception $e) {
+            Log::error('[OrderController@store] Error al crear pedido: ' . $e->getMessage(), [
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+
+            // Respuesta AJAX
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al crear pedido: ' . $e->getMessage(),
+                ], 500);
+            }
+
             return redirect()->back()
                 ->with('error', 'Error al crear pedido: ' . $e->getMessage())
                 ->withInput();
@@ -260,18 +328,35 @@ class OrderController extends Controller
         // Niveles de urgencia desde la base de datos
         $urgencyLevels = UrgencyLevel::activo()->ordered()->get();
 
+        // Estados y recomendaciones para el modal de cliente rápido
+        $estados = Estado::where('activo', true)->orderBy('nombre_estado')->get();
+        $recomendaciones = Recomendacion::where('activo', true)->orderBy('nombre_recomendacion')->get();
+
+        // Tasa de IVA desde configuración del sistema
+        $defaultTaxRate = Order::getDefaultTaxRate();
+
         return view('admin.orders.create', [
             'products' => $products,
             'order' => $order,
             'orderItems' => $orderItems,
             'isEdit' => true,
             'urgencyLevels' => $urgencyLevels,
+            'estados' => $estados,
+            'recomendaciones' => $recomendaciones,
+            'defaultTaxRate' => $defaultTaxRate,
         ]);
     }
 
     // === FASE 3: ACTUALIZAR PEDIDO (SOLO DRAFT) ===
     public function update(StoreOrderRequest $request, Order $order)
     {
+        // DEBUG: Log de datos recibidos en UPDATE
+        Log::info('[OrderController@update] Iniciando actualización de pedido:', [
+            'order_id' => $order->id,
+            'order_number' => $order->order_number,
+            'items_count_raw' => count($request->input('items', [])),
+        ]);
+
         // Bloquear si no está en draft
         if ($order->status !== Order::STATUS_DRAFT) {
             return redirect()->route('admin.orders.show', $order)
@@ -280,31 +365,105 @@ class OrderController extends Controller
 
         $validated = $request->validated();
 
-        try {
-            // Eliminar items existentes y recrear
-            $order->items()->delete();
+        // DEBUG: Log de datos validados en UPDATE
+        Log::info('[OrderController@update] Datos validados:', [
+            'items_count' => count($validated['items'] ?? []),
+            'items' => $validated['items'] ?? [],
+        ]);
 
-            // Actualizar datos del pedido
-            $order->update([
-                'cliente_id' => $validated['cliente_id'],
-                'client_measurement_id' => $validated['client_measurement_id'] ?? null,
-                'urgency_level' => $validated['urgency_level'],
-                'promised_date' => $validated['promised_date'],
-                'notes' => $validated['notes'] ?? null,
-                'discount' => $validated['discount'] ?? 0,
-                'requires_invoice' => $validated['requires_invoice'] ?? false,
-                'updated_by' => Auth::id(),
+        // ================================================================
+        // PROTECCIÓN CRÍTICA: No eliminar items si no vienen nuevos
+        // Esto previene pérdida de datos por errores de JavaScript
+        // ================================================================
+        $newItems = $validated['items'] ?? [];
+        $existingItemsCount = $order->items()->count();
+
+        if (empty($newItems) && $existingItemsCount > 0) {
+            Log::error("[OrderController@update] ❌ PROTECCIÓN ACTIVADA: Intento de actualizar pedido {$order->order_number} sin items.", [
+                'order_id' => $order->id,
+                'existing_items' => $existingItemsCount,
+                'request_method' => $request->method(),
+                'is_ajax' => $request->ajax(),
+                'content_type' => $request->header('Content-Type'),
             ]);
 
-            // Recrear items (reutiliza lógica de syncOrderItems vía reflection o directamente)
-            $this->orderService->syncOrderItemsPublic($order, $validated['items']);
+            // CRÍTICO: Respuesta JSON para AJAX, redirect para navegación normal
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error: No se recibieron los productos del pedido. Por favor, recargue la página e intente de nuevo.',
+                    'errors' => ['items' => ['Debe mantener al menos un producto en el pedido.']],
+                    'debug' => [
+                        'existing_items' => $existingItemsCount,
+                        'received_items' => 0,
+                    ],
+                ], 422);
+            }
 
-            // Recalcular totales
-            $order->recalculateTotals();
+            return redirect()->back()
+                ->with('error', 'Error: No se recibieron los productos del pedido. Por favor, recargue la página e intente de nuevo.')
+                ->withInput();
+        }
+
+        try {
+            // ================================================================
+            // TRANSACCIÓN: Garantiza que si algo falla, los items NO se pierden
+            // ================================================================
+            \DB::transaction(function () use ($order, $validated) {
+                // Eliminar items existentes y recrear (solo si hay items nuevos)
+                $order->items()->delete();
+
+                Log::info('[OrderController@update] Items eliminados, recreando ' . count($validated['items']) . ' items...');
+
+                // Actualizar datos del pedido
+                $order->update([
+                    'cliente_id' => $validated['cliente_id'],
+                    'client_measurement_id' => $validated['client_measurement_id'] ?? null,
+                    'urgency_level' => $validated['urgency_level'],
+                    'promised_date' => $validated['promised_date'],
+                    'payment_method' => $validated['payment_method'] ?? null,
+                    'notes' => $validated['notes'] ?? null,
+                    'discount' => $validated['discount'] ?? 0,
+                    'requires_invoice' => $validated['requires_invoice'] ?? false,
+                    'updated_by' => Auth::id(),
+                ]);
+
+                // Recrear items (reutiliza lógica de syncOrderItems vía reflection o directamente)
+                $this->orderService->syncOrderItemsPublic($order, $validated['items']);
+
+                // Recalcular totales
+                $order->recalculateTotals();
+            });
+
+            Log::info('[OrderController@update] ✅ Pedido actualizado exitosamente. Items finales: ' . $order->items()->count());
+
+            // Respuesta AJAX para no perder datos en caso de error
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'redirect' => route('admin.orders.show', $order),
+                    'message' => "Pedido {$order->order_number} actualizado exitosamente.",
+                ]);
+            }
 
             return redirect()->route('admin.orders.show', $order)
                 ->with('success', "Pedido {$order->order_number} actualizado exitosamente.");
         } catch (\Exception $e) {
+            Log::error('[OrderController@update] ❌ Error: ' . $e->getMessage(), [
+                'order_id' => $order->id,
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            // Respuesta AJAX para errores
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al actualizar pedido: ' . $e->getMessage(),
+                ], 500);
+            }
+
             return redirect()->back()
                 ->with('error', 'Error al actualizar pedido: ' . $e->getMessage())
                 ->withInput();
@@ -323,7 +482,13 @@ class OrderController extends Controller
             'items.product.materials.material.category',
             'items.product.materials.material.consumptionUnit',
             'items.product.materials.material.baseUnit',
+            // Cargar ajustes de BOM guardados
+            'items.bomAdjustments',
             'items.variant',
+            // Cargar diseños asignados al item con pivot (rate_per_thousand_adjusted)
+            'items.designExports',
+            // Cargar extras con su producto extra asociado
+            'items.extras.productExtra',
             'payments.receiver',
             'creator',
             'parentOrder',
@@ -462,17 +627,33 @@ class OrderController extends Controller
     }
 
     // === ELIMINAR PAGO ===
-    public function destroyPayment(OrderPayment $payment)
+    public function destroyPayment(Request $request, OrderPayment $payment)
     {
         $order = $payment->order;
 
         // Bloquear si pedido está en estado final
         if (in_array($order->status, [Order::STATUS_DELIVERED, Order::STATUS_CANCELLED])) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pueden eliminar pagos de pedidos finalizados o cancelados.',
+                ], 403);
+            }
             return redirect()->route('admin.orders.show', $order)
                 ->with('error', 'No se pueden eliminar pagos de pedidos finalizados o cancelados.');
         }
 
+        $amount = $payment->amount;
         $payment->delete();
+
+        // Respuesta AJAX
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Pago eliminado exitosamente.',
+                'deleted_amount' => $amount,
+            ]);
+        }
 
         return redirect()->route('admin.orders.show', $order)
             ->with('success', 'Pago eliminado exitosamente.');
@@ -721,10 +902,7 @@ class OrderController extends Controller
         $perPage = 15;
 
         $query = Product::where('status', 'active')
-            ->where(function ($q) use ($term) {
-                $q->where('name', 'like', "%{$term}%")
-                    ->orWhere('sku', 'like', "%{$term}%");
-            })
+            ->where('name', 'like', "%{$term}%")
             ->with(['variants.attributeValues', 'primaryImage', 'productType', 'extras', 'category'])
             ->orderBy('name', 'asc');
 
@@ -1550,14 +1728,11 @@ class OrderController extends Controller
                 ], 422);
             }
 
-            // Validar que el item requiere diseños (es personalizado)
-            if (!$item->requiresTechnicalDesigns()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Este producto no requiere diseños técnicos (no es personalizado).',
-                    'error_code' => 'ITEM_NOT_CUSTOMIZABLE',
-                ], 422);
-            }
+            // NOTA: Cualquier item puede recibir diseños adicionales (texto, logo, etc.)
+            // No se valida requiresTechnicalDesigns() porque:
+            // 1. Pueden agregar texto personalizado
+            // 2. Pueden cambiar/agregar diseño diferente al del producto
+            // 3. Pueden tener múltiples diseños (logo + texto)
 
             // Obtener el diseño y validar estado
             $designExport = DesignExport::findOrFail($designExportId);
@@ -1781,6 +1956,428 @@ class OrderController extends Controller
                 ] : null,
             ],
         ]);
+    }
+
+    /**
+     * Actualizar precio unitario de un item del pedido.
+     *
+     * REGLA ERP:
+     * - SOLO editable en DRAFT y CONFIRMED
+     * - INMUTABLE en IN_PRODUCTION y posteriores
+     * - Recalcula subtotal del item y totales del pedido
+     * - NO afecta BOM ni costos snapshot
+     */
+    public function updateItemPrice(Request $request, Order $order, OrderItem $item)
+    {
+        // Validar que el item pertenece al pedido
+        if ($item->order_id !== $order->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El item no pertenece a este pedido.',
+            ], 403);
+        }
+
+        // REGLA ERP: Solo permitir en estados comercialmente editables
+        if (!in_array($order->status, [Order::STATUS_DRAFT, Order::STATUS_CONFIRMED])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El precio no puede modificarse una vez iniciada la producción.',
+            ], 422);
+        }
+
+        // Validación
+        $validated = $request->validate([
+            'unit_price' => 'required|numeric|min:0|max:9999999.99',
+        ]);
+
+        $oldPrice = $item->unit_price;
+        $newPrice = (float) $validated['unit_price'];
+
+        // Si no hay cambio, retornar éxito sin hacer nada
+        if (abs($oldPrice - $newPrice) < 0.01) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Sin cambios.',
+                'data' => [
+                    'unit_price' => $item->unit_price,
+                    'subtotal' => $item->subtotal,
+                    'order_subtotal' => $order->subtotal,
+                    'order_iva' => $order->iva_amount,
+                    'order_total' => $order->total,
+                ],
+            ]);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Actualizar precio y recalcular subtotal del item
+            $item->unit_price = $newPrice;
+            $item->subtotal = $newPrice * $item->quantity;
+            $item->total = $item->subtotal - ($item->discount ?? 0);
+            $item->save();
+
+            // Recalcular totales del pedido (subtotal, IVA, total)
+            $order->recalculateTotals();
+
+            // Registrar evento de auditoría
+            OrderEvent::create([
+                'order_id' => $order->id,
+                'event_type' => 'item_price_updated',
+                'description' => "Precio actualizado: {$item->product_name}",
+                'user_id' => Auth::id(),
+                'metadata' => [
+                    'item_id' => $item->id,
+                    'product_name' => $item->product_name,
+                    'old_price' => $oldPrice,
+                    'new_price' => $newPrice,
+                    'quantity' => $item->quantity,
+                    'new_subtotal' => $item->subtotal,
+                ],
+            ]);
+
+            DB::commit();
+
+            // Refrescar para obtener valores actualizados
+            $order->refresh();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Precio actualizado correctamente.',
+                'item_subtotal' => $item->subtotal + ($item->extras->sum('total_price') ?? 0),
+                'order_totals' => [
+                    'subtotal' => $order->subtotal,
+                    'discount' => $order->discount ?? 0,
+                    'iva' => $order->iva_amount ?? 0,
+                    'total' => $order->total,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error actualizando precio de item', [
+                'order_id' => $order->id,
+                'item_id' => $item->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar el precio.',
+            ], 500);
+        }
+    }
+
+    // ============================================================
+    // ITEM EXTRAS - Gestión de extras por item del pedido
+    // Actualiza automáticamente el BOM al agregar/quitar extras
+    // ============================================================
+
+    /**
+     * Obtener extras de un item del pedido.
+     */
+    public function getItemExtras(Order $order, OrderItem $item)
+    {
+        if ($item->order_id !== $order->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El item no pertenece a este pedido.',
+            ], 404);
+        }
+
+        $extras = $item->extras()->with('productExtra')->get();
+
+        return response()->json([
+            'success' => true,
+            'extras' => $extras->map(fn($e) => [
+                'id' => $e->id,
+                'product_extra_id' => $e->product_extra_id,
+                'name' => $e->productExtra->name ?? 'Extra',
+                'quantity' => $e->quantity,
+                'unit_price' => (float) $e->unit_price,
+                'total_price' => (float) $e->total_price,
+                'consumes_inventory' => $e->productExtra->consumes_inventory ?? false,
+            ]),
+            'total' => $extras->sum('total_price'),
+        ]);
+    }
+
+    /**
+     * Obtener extras disponibles para agregar a un item.
+     * Retorna TODOS los extras del sistema que no estén ya asignados al item.
+     */
+    public function getAvailableExtrasForItem(Order $order, OrderItem $item)
+    {
+        if ($item->order_id !== $order->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El item no pertenece a este pedido.',
+            ], 404);
+        }
+
+        // Obtener extras ya asignados al item
+        $assignedExtraIds = $item->extras()->pluck('product_extra_id')->toArray();
+
+        // Obtener TODOS los extras activos que no estén ya asignados al item
+        $availableExtras = \App\Models\ProductExtra::whereNotIn('id', $assignedExtraIds)
+            ->orderBy('name')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'extras' => $availableExtras->map(fn($e) => [
+                'id' => $e->id,
+                'name' => $e->name,
+                'price_addition' => (float) $e->price_addition,
+                'cost_addition' => (float) $e->cost_addition,
+                'consumes_inventory' => $e->consumes_inventory,
+                'materials_summary' => $e->materials_summary,
+            ]),
+        ]);
+    }
+
+    /**
+     * Agregar un extra a un item del pedido.
+     * Recalcula totales y actualiza BOM automáticamente.
+     */
+    public function addExtraToItem(Request $request, Order $order, OrderItem $item)
+    {
+        if ($item->order_id !== $order->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El item no pertenece a este pedido.',
+            ], 404);
+        }
+
+        // Solo permitir en estados editables
+        if (!in_array($order->status, [Order::STATUS_DRAFT, Order::STATUS_CONFIRMED])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pueden modificar extras en este estado del pedido.',
+            ], 422);
+        }
+
+        $request->validate([
+            'product_extra_id' => 'required|exists:product_extras,id',
+            'quantity' => 'nullable|integer|min:1',
+        ]);
+
+        $productExtra = \App\Models\ProductExtra::findOrFail($request->product_extra_id);
+        $quantity = $request->input('quantity', 1);
+
+        // Verificar que no esté ya asignado
+        $exists = $item->extras()->where('product_extra_id', $productExtra->id)->exists();
+        if ($exists) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Este extra ya está asignado al producto.',
+            ], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Crear el extra del item
+            $orderItemExtra = \App\Models\OrderItemExtra::create([
+                'order_item_id' => $item->id,
+                'product_extra_id' => $productExtra->id,
+                'quantity' => $quantity,
+                'unit_price' => $productExtra->price_addition,
+                'total_price' => $productExtra->price_addition * $quantity,
+            ]);
+
+            // Recalcular unit_price del item (precio base + total extras)
+            $this->recalculateItemUnitPrice($item);
+
+            // Recalcular totales del pedido
+            $order->recalculateTotals();
+            $order->save();
+
+            DB::commit();
+
+            Log::info('EXTRA_ADDED_TO_ITEM', [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'item_id' => $item->id,
+                'product_name' => $item->product_name,
+                'extra_id' => $productExtra->id,
+                'extra_name' => $productExtra->name,
+                'quantity' => $quantity,
+                'user_id' => Auth::id(),
+            ]);
+
+            // Cargar datos frescos para la respuesta
+            $item->refresh();
+            $item->load('extras.productExtra');
+            $order->refresh();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Extra \"{$productExtra->name}\" agregado correctamente.",
+                'extra' => [
+                    'id' => $orderItemExtra->id,
+                    'product_extra_id' => $orderItemExtra->product_extra_id,
+                    'name' => $productExtra->name,
+                    'quantity' => $orderItemExtra->quantity,
+                    'unit_price' => (float) $orderItemExtra->unit_price,
+                    'total_price' => (float) $orderItemExtra->total_price,
+                    'consumes_inventory' => $productExtra->consumes_inventory,
+                ],
+                'item_extras_total' => $item->extras->sum('total_price'),
+                'item_unit_price' => (float) $item->unit_price,
+                'order_totals' => [
+                    'subtotal' => $order->subtotal,
+                    'discount' => $order->discount ?? 0,
+                    'iva' => $order->iva_amount ?? 0,
+                    'total' => $order->total,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('ERROR_ADDING_EXTRA_TO_ITEM', [
+                'order_id' => $order->id,
+                'item_id' => $item->id,
+                'extra_id' => $request->product_extra_id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al agregar el extra: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Eliminar un extra de un item del pedido.
+     * Recalcula totales y actualiza BOM automáticamente.
+     */
+    public function removeExtraFromItem(Order $order, OrderItem $item, \App\Models\OrderItemExtra $orderItemExtra)
+    {
+        if ($item->order_id !== $order->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El item no pertenece a este pedido.',
+            ], 404);
+        }
+
+        if ($orderItemExtra->order_item_id !== $item->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El extra no pertenece a este item.',
+            ], 404);
+        }
+
+        // Solo permitir en estados editables
+        if (!in_array($order->status, [Order::STATUS_DRAFT, Order::STATUS_CONFIRMED])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pueden modificar extras en este estado del pedido.',
+            ], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $extraName = $orderItemExtra->productExtra->name ?? 'Extra';
+
+            // Eliminar el extra
+            $orderItemExtra->delete();
+
+            // Recalcular unit_price del item
+            $this->recalculateItemUnitPrice($item);
+
+            // Recalcular totales del pedido
+            $order->recalculateTotals();
+            $order->save();
+
+            DB::commit();
+
+            Log::info('EXTRA_REMOVED_FROM_ITEM', [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'item_id' => $item->id,
+                'product_name' => $item->product_name,
+                'extra_name' => $extraName,
+                'user_id' => Auth::id(),
+            ]);
+
+            // Cargar datos frescos para la respuesta
+            $item->refresh();
+            $item->load('extras.productExtra');
+            $order->refresh();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Extra \"{$extraName}\" eliminado correctamente.",
+                'item_extras_total' => $item->extras->sum('total_price'),
+                'item_unit_price' => (float) $item->unit_price,
+                'order_totals' => [
+                    'subtotal' => $order->subtotal,
+                    'discount' => $order->discount ?? 0,
+                    'iva' => $order->iva_amount ?? 0,
+                    'total' => $order->total,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('ERROR_REMOVING_EXTRA_FROM_ITEM', [
+                'order_id' => $order->id,
+                'item_id' => $item->id,
+                'extra_id' => $orderItemExtra->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar el extra: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Recalcula el unit_price del item basado en el precio de la variante + extras.
+     */
+    private function recalculateItemUnitPrice(OrderItem $item): void
+    {
+        $item->refresh();
+
+        // Precio base de la variante o producto
+        $basePrice = $item->variant?->price ?? $item->product?->base_price ?? 0;
+
+        // Total de extras
+        $extrasTotal = $item->extras()->sum('total_price');
+
+        // unit_price = precio base + extras
+        $item->unit_price = $basePrice + $extrasTotal;
+        $item->save();
+    }
+
+    /**
+     * Obtener HTML del BOM para refrescar via AJAX.
+     * Solo devuelve el partial _bom-adjustment renderizado.
+     */
+    public function getBomHtml(Order $order)
+    {
+        // Cargar relaciones necesarias para el BOM
+        $order->load([
+            'cliente',
+            'items.product.primaryImage',
+            'items.product.productType',
+            'items.product.materials.material.category',
+            'items.product.materials.material.consumptionUnit',
+            'items.product.materials.material.baseUnit',
+            'items.bomAdjustments',
+            'items.variant',
+            'items.designExports',
+            'items.extras.productExtra.materials.material.consumptionUnit',
+            'items.extras.productExtra.materials.material.baseUnit',
+        ]);
+
+        $html = view('admin.orders._bom-adjustment', [
+            'order' => $order,
+        ])->render();
+
+        return response($html)->header('Content-Type', 'text/html; charset=UTF-8');
     }
 
     /**
@@ -2008,25 +2605,35 @@ class OrderController extends Controller
             ], 403);
         }
 
-        $designs = $item->designExports()->with(['design', 'applicationType'])->get();
+        $designs = $item->designExports()->with(['design'])->get();
+
+        // Calcular totales para el estimado técnico
+        $totalStitches = $designs->sum('stitches_count');
+        $embroideryRate = (float) ($item->product?->embroidery_rate_per_thousand ?? 0);
+        $quantity = $item->quantity;
 
         return response()->json([
             'success' => true,
+            'product_name' => $item->product_name,
+            'quantity' => $quantity,
+            'embroidery_rate_per_thousand' => $embroideryRate,
+            'total_stitches' => $totalStitches,
             'data' => $designs->map(function ($export) {
                 return [
                     'id' => $export->id,
-                    'name' => $export->application_label ?? $export->export_name,
+                    'name' => $export->application_label,
                     'design_name' => $export->design?->name,
-                    'stitches' => $export->stitches,
-                    'stitches_formatted' => $export->stitches ? number_format($export->stitches) : null,
+                    'stitches_count' => $export->stitches_count,
+                    'stitches_formatted' => $export->stitches_count ? number_format($export->stitches_count) : null,
                     'dimensions' => $export->width_mm && $export->height_mm
                         ? "{$export->width_mm}×{$export->height_mm}mm"
                         : null,
+                    'width_mm' => $export->width_mm,
+                    'height_mm' => $export->height_mm,
                     'file_format' => $export->file_format,
                     'status' => $export->status,
                     'svg_content' => $export->svg_content,
-                    'image_url' => $export->image_url,
-                    'application_type' => $export->applicationType?->name,
+                    'application_type' => $export->application_type,
                     'pivot' => [
                         'position' => $export->pivot->position,
                         'notes' => $export->pivot->notes,
@@ -2036,6 +2643,460 @@ class OrderController extends Controller
             }),
             'requires_designs' => $item->requiresTechnicalDesigns(),
             'is_complete' => $item->hasRequiredTechnicalDesigns(),
+        ]);
+    }
+
+    /**
+     * Obtiene resumen de diseños del pedido para AJAX refresh del sidebar.
+     * Retorna HTML renderizado de la sección de diseños.
+     */
+    public function getDesignsSummary(Order $order)
+    {
+        // Cargar designExports con sus relaciones necesarias (applicationType, design, variant)
+        $order->load(['items.designExports.applicationType', 'items.designExports.design', 'items.designExports.variant']);
+
+        // Recolectar todos los DesignExports únicos desde order_item_design_exports
+        // ARQUITECTURA: Única fuente de verdad - NO leer de product_design
+        $allDesigns = collect();
+
+        foreach ($order->items as $item) {
+            $itemDesigns = $item->designExports ?? collect();
+
+            foreach ($itemDesigns as $designExport) {
+                if (!$allDesigns->contains('id', $designExport->id)) {
+                    $allDesigns->push($designExport);
+                }
+            }
+        }
+
+        // Renderizar HTML de la sección
+        $html = view('admin.orders._designs-sidebar', [
+            'allDesigns' => $allDesigns,
+            'order' => $order,
+        ])->render();
+
+        return response()->json([
+            'success' => true,
+            'html' => $html,
+            'count' => $allDesigns->count(),
+        ]);
+    }
+
+    /**
+     * Obtiene resumen técnico del pedido para actualización AJAX.
+     * Calcula items con diseño, total diseños, puntadas y estimado técnico.
+     */
+    public function getTechnicalSummary(Order $order)
+    {
+        $order->load(['items.designExports', 'items.product']);
+
+        $totalDisenosGlobal = 0;
+        $totalPuntadasGlobal = 0;
+        $totalEstimadoGlobal = 0;
+        $itemsConDisenos = 0;
+
+        foreach ($order->items as $item) {
+            $itemDesigns = $item->designExports ?? collect();
+
+            if ($item->requiresTechnicalDesigns() && $itemDesigns->count() > 0) {
+                $itemsConDisenos++;
+                foreach ($itemDesigns as $designExport) {
+                    $totalDisenosGlobal++;
+                    $puntadas = $designExport->stitches_count ?? 0;
+                    $totalPuntadasGlobal += $puntadas;
+                }
+                // Usar embroidery_cost del producto si existe
+                if ($item->product && $item->product->embroidery_cost > 0) {
+                    $totalEstimadoGlobal += $item->product->embroidery_cost * $item->quantity;
+                }
+            } elseif ($item->product && $item->product->embroidery_cost > 0) {
+                // Productos estándar con diseño predefinido
+                $totalPuntadasGlobal += ($item->product->total_stitches ?? 0) * $item->quantity;
+                $totalEstimadoGlobal += $item->product->embroidery_cost * $item->quantity;
+            }
+        }
+
+        // Determinar complejidad basada en puntadas totales
+        if ($totalPuntadasGlobal > 100000) {
+            $complejidad = 'Alta';
+            $complejidadColor = '#c62828';
+            $complejidadBg = '#ffebee';
+        } elseif ($totalPuntadasGlobal > 30000) {
+            $complejidad = 'Media';
+            $complejidadColor = '#e65100';
+            $complejidadBg = '#fff3e0';
+        } else {
+            $complejidad = 'Baja';
+            $complejidadColor = '#2e7d32';
+            $complejidadBg = '#e8f5e9';
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'items_con_disenos' => $itemsConDisenos,
+                'total_disenos' => $totalDisenosGlobal,
+                'total_puntadas' => $totalPuntadasGlobal,
+                'total_puntadas_formatted' => number_format($totalPuntadasGlobal),
+                'estimado_tecnico' => $totalEstimadoGlobal,
+                'estimado_tecnico_formatted' => number_format($totalEstimadoGlobal, 2),
+                'complejidad' => $complejidad,
+                'complejidad_color' => $complejidadColor,
+                'complejidad_bg' => $complejidadBg,
+            ],
+        ]);
+    }
+
+    /**
+     * Eliminar pedido (solo permitido en estado DRAFT)
+     */
+    public function destroy(Request $request, Order $order)
+    {
+        // Solo permitir eliminar pedidos en DRAFT
+        if ($order->status !== Order::STATUS_DRAFT) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solo se pueden eliminar pedidos en estado borrador.',
+                ], 403);
+            }
+            return redirect()->route('admin.orders.show', $order)
+                ->with('error', 'Solo se pueden eliminar pedidos en estado borrador.');
+        }
+
+        // Verificar que no tenga pagos registrados
+        if ($order->payments()->count() > 0) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se puede eliminar un pedido con pagos registrados. Elimine primero los anticipos.',
+                ], 403);
+            }
+            return redirect()->route('admin.orders.show', $order)
+                ->with('error', 'No se puede eliminar un pedido con pagos registrados. Elimine primero los anticipos.');
+        }
+
+        $orderNumber = $order->order_number;
+
+        // Eliminar items y relaciones asociadas
+        foreach ($order->items as $item) {
+            // Desvincular diseños del item
+            $item->designExports()->detach();
+            $item->delete();
+        }
+
+        // Eliminar eventos
+        $order->events()->delete();
+
+        // Eliminar el pedido
+        $order->delete();
+
+        // Respuesta AJAX
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => "Pedido {$orderNumber} eliminado exitosamente.",
+                'redirect' => route('admin.orders.index'),
+            ]);
+        }
+
+        return redirect()->route('admin.orders.index')
+            ->with('success', "Pedido {$orderNumber} eliminado exitosamente.");
+    }
+
+    // ============================================================
+    // BOM ADJUSTMENTS - AJUSTES DE MATERIALES POR ITEM
+    // Permite modificar cantidades de BOM según medidas del cliente
+    // ============================================================
+
+    /**
+     * Guardar ajustes de BOM para un item del pedido.
+     * AJAX endpoint para persistir cambios de materiales.
+     */
+    public function saveBomAdjustments(Request $request, Order $order, OrderItem $item)
+    {
+        // Verificar que el item pertenece al pedido
+        if ($item->order_id !== $order->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El item no pertenece a este pedido.',
+            ], 404);
+        }
+
+        // Solo permitir ajustes en estados editables
+        if (!in_array($order->status, [Order::STATUS_DRAFT, Order::STATUS_CONFIRMED])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pueden modificar ajustes BOM en este estado del pedido.',
+            ], 403);
+        }
+
+        $request->validate([
+            'adjustments' => 'required|array',
+            'adjustments.*.material_variant_id' => 'required|integer|exists:material_variants,id',
+            'adjustments.*.base_quantity' => 'required|numeric|min:0',
+            'adjustments.*.adjusted_quantity' => 'required|numeric|min:0',
+            'adjustments.*.unit_cost' => 'nullable|numeric|min:0',
+            'adjustments.*.notes' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $savedCount = 0;
+            foreach ($request->adjustments as $adj) {
+                // Solo guardar si hay diferencia entre base y ajustado
+                $hasChange = abs($adj['adjusted_quantity'] - $adj['base_quantity']) > 0.0001;
+
+                if ($hasChange) {
+                    \App\Models\OrderItemBomAdjustment::updateOrCreate(
+                        [
+                            'order_item_id' => $item->id,
+                            'material_variant_id' => $adj['material_variant_id'],
+                        ],
+                        [
+                            'base_quantity' => $adj['base_quantity'],
+                            'adjusted_quantity' => $adj['adjusted_quantity'],
+                            'unit_cost' => $adj['unit_cost'] ?? null,
+                            'notes' => $adj['notes'] ?? null,
+                            'adjusted_by' => Auth::id(),
+                        ]
+                    );
+                    $savedCount++;
+                } else {
+                    // Si no hay cambio, eliminar ajuste previo si existe
+                    \App\Models\OrderItemBomAdjustment::where('order_item_id', $item->id)
+                        ->where('material_variant_id', $adj['material_variant_id'])
+                        ->delete();
+                }
+            }
+
+            DB::commit();
+
+            Log::info('BOM_ADJUSTMENTS_SAVED', [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'item_id' => $item->id,
+                'product_name' => $item->product_name,
+                'adjustments_count' => $savedCount,
+                'user_id' => Auth::id(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $savedCount > 0
+                    ? "Se guardaron {$savedCount} ajuste(s) de BOM."
+                    : 'No hay cambios para guardar.',
+                'saved_count' => $savedCount,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('BOM_ADJUSTMENTS_ERROR', [
+                'order_id' => $order->id,
+                'item_id' => $item->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al guardar ajustes: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Restaurar BOM original de un item (eliminar todos los ajustes).
+     *
+     * También restaura los ajustes de tarifa de bordado a sus valores por defecto.
+     */
+    public function restoreBomOriginal(Request $request, Order $order, OrderItem $item)
+    {
+        // Verificar que el item pertenece al pedido
+        if ($item->order_id !== $order->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El item no pertenece a este pedido.',
+            ], 404);
+        }
+
+        // Solo permitir restaurar en estados editables
+        if (!in_array($order->status, [Order::STATUS_DRAFT, Order::STATUS_CONFIRMED])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pueden modificar ajustes BOM en este estado del pedido.',
+            ], 403);
+        }
+
+        try {
+            // Restaurar ajustes de BOM (materiales)
+            $deletedBomCount = $item->bomAdjustments()->delete();
+
+            // Restaurar ajustes de tarifa de bordado (setear a NULL para usar valor por defecto)
+            $embroideryResetCount = \DB::table('order_item_design_exports')
+                ->where('order_item_id', $item->id)
+                ->whereNotNull('rate_per_thousand_adjusted')
+                ->update(['rate_per_thousand_adjusted' => null]);
+
+            Log::info('BOM_AND_EMBROIDERY_RESTORED', [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'item_id' => $item->id,
+                'product_name' => $item->product_name,
+                'deleted_bom_count' => $deletedBomCount,
+                'reset_embroidery_count' => $embroideryResetCount,
+                'user_id' => Auth::id(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'BOM y tarifas de bordado restaurados a valores originales.',
+                'deleted_count' => $deletedBomCount,
+                'embroidery_reset_count' => $embroideryResetCount,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('BOM_RESTORE_ERROR', [
+                'order_id' => $order->id,
+                'item_id' => $item->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al restaurar BOM: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // ============================================================
+    // EMBROIDERY RATE ADJUSTMENTS - AJUSTES DE PRECIO POR MILLAR
+    // Permite modificar precio de bordado por diseño en pre-producción
+    // ============================================================
+
+    /**
+     * Guardar ajustes de precio por millar de bordado para diseños de un item.
+     *
+     * REGLA DE NEGOCIO:
+     * - Solo se puede ajustar en estados DRAFT y CONFIRMED
+     * - El ajuste se guarda en el pivot order_item_design_exports.rate_per_thousand_adjusted
+     * - Si el valor es igual al del producto, se guarda NULL (usa valor por defecto)
+     * - Al pasar a producción, calculateEmbroideryCost() usa estos valores para el snapshot
+     */
+    public function saveEmbroideryRateAdjustments(Request $request, Order $order, OrderItem $item)
+    {
+        // Verificar que el item pertenece al pedido
+        if ($item->order_id !== $order->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El item no pertenece a este pedido.',
+            ], 404);
+        }
+
+        // Solo permitir ajustes en estados editables
+        if (!in_array($order->status, [Order::STATUS_DRAFT, Order::STATUS_CONFIRMED])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pueden modificar precios de bordado en este estado del pedido.',
+            ], 403);
+        }
+
+        $request->validate([
+            'adjustments' => 'required|array',
+            'adjustments.*.design_export_id' => 'required|integer',
+            'adjustments.*.rate_per_thousand' => 'required|numeric|min:0',
+            'adjustments.*.base_rate' => 'nullable|numeric|min:0',
+        ]);
+
+        try {
+            $savedCount = 0;
+            $baseRate = (float) ($item->product->embroidery_rate_per_thousand ?? 0);
+
+            foreach ($request->adjustments as $adj) {
+                $designExportId = $adj['design_export_id'];
+                $newRate = (float) $adj['rate_per_thousand'];
+
+                // Verificar que el diseño está vinculado al item
+                $pivotExists = $item->designExports()
+                    ->where('design_export_id', $designExportId)
+                    ->exists();
+
+                if (!$pivotExists) {
+                    continue; // Saltar diseños no vinculados
+                }
+
+                // Si el rate es igual al base, guardar NULL (usa valor por defecto)
+                $rateToSave = abs($newRate - $baseRate) > 0.0001 ? $newRate : null;
+
+                // Actualizar el pivot
+                $item->designExports()->updateExistingPivot($designExportId, [
+                    'rate_per_thousand_adjusted' => $rateToSave,
+                ]);
+
+                $savedCount++;
+            }
+
+            Log::info('EMBROIDERY_RATE_ADJUSTMENTS_SAVED', [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'item_id' => $item->id,
+                'product_name' => $item->product_name,
+                'adjustments_count' => $savedCount,
+                'user_id' => Auth::id(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $savedCount > 0
+                    ? "Se guardaron {$savedCount} ajuste(s) de precio de bordado."
+                    : 'No hay cambios para guardar.',
+                'saved_count' => $savedCount,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('EMBROIDERY_RATE_ADJUSTMENTS_ERROR', [
+                'order_id' => $order->id,
+                'item_id' => $item->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al guardar ajustes de bordado: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener ajustes BOM guardados para un item.
+     */
+    public function getBomAdjustments(Order $order, OrderItem $item)
+    {
+        // Verificar que el item pertenece al pedido
+        if ($item->order_id !== $order->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El item no pertenece a este pedido.',
+            ], 404);
+        }
+
+        $adjustments = $item->bomAdjustments()
+            ->with('materialVariant:id,sku')
+            ->get()
+            ->keyBy('material_variant_id')
+            ->map(fn($adj) => [
+                'id' => $adj->id,
+                'material_variant_id' => $adj->material_variant_id,
+                'base_quantity' => (float) $adj->base_quantity,
+                'adjusted_quantity' => (float) $adj->adjusted_quantity,
+                'unit_cost' => $adj->unit_cost ? (float) $adj->unit_cost : null,
+                'notes' => $adj->notes,
+                'difference' => $adj->difference,
+                'difference_percent' => round($adj->difference_percent, 1),
+                'has_change' => $adj->hasChange(),
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'adjustments' => $adjustments,
+            'has_adjustments' => $adjustments->isNotEmpty(),
         ]);
     }
 }

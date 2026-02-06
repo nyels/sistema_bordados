@@ -137,8 +137,8 @@
 
                 {{-- Limpiar --}}
                 <div class="col-md-auto col-sm-6 mb-2 mb-md-0">
-                    <button type="button" id="filter-clear" class="btn btn-sm btn-outline-secondary">
-                        <i class="fas fa-times"></i> Limpiar
+                    <button type="button" id="filter-clear" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-eraser mr-1"></i> Limpiar
                     </button>
                 </div>
             </div>

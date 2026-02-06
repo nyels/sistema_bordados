@@ -87,11 +87,20 @@ class AttributeValueController extends Controller
             DB::commit();
 
             Log::info('Valor de atributo creado exitosamente: ' . $attributeValue->id);
-            return redirect()->route('admin.attributes.index')->with('success', 'Valor de atributo creado exitosamente');
+            $attributeValue->load('attribute');
+            $msg = 'Valor de atributo creado exitosamente';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => true, 'message' => $msg, 'data' => $attributeValue]);
+            }
+            return redirect()->route('admin.attributes.index')->with('success', $msg);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error al crear valor de atributo: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString());
-            return redirect()->route('admin.attributes.index')->with('error', 'Error al crear el valor de atributo. Por favor intente nuevamente.');
+            $msg = 'Error al crear el valor de atributo. Por favor intente nuevamente.';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 500);
+            }
+            return redirect()->route('admin.attributes.index')->with('error', $msg);
         }
     }
 
@@ -180,6 +189,9 @@ class AttributeValueController extends Controller
             // 5. Verificación de cambios (isDirty) antes de persistir
             if (!$attributeValue->isDirty()) {
                 DB::rollBack(); // Cerramos transacción sin cambios
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json(['success' => true, 'message' => 'No se detectaron cambios en el valor.', 'type' => 'info']);
+                }
                 return redirect()->route('admin.attributes.index')->with('info', 'No se detectaron cambios en el valor.');
             }
 
@@ -192,11 +204,23 @@ class AttributeValueController extends Controller
                 'new_data' => $attributeValue->getChanges()
             ]);
 
+            if ($request->ajax() || $request->wantsJson()) {
+                $attributeValue->load('attribute');
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Valor de atributo actualizado exitosamente.',
+                    'type' => 'success',
+                    'data' => $attributeValue
+                ]);
+            }
             return redirect()->route('admin.attributes.index')->with('success', 'Valor de atributo actualizado exitosamente.');
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error("Fallo crítico en actualización de AttributeValue ID {$id}: " . $e->getMessage());
 
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Hubo un problema técnico. La operación fue abortada.'], 500);
+            }
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Hubo un problema técnico. La operación fue abortada para proteger los datos.');
@@ -220,7 +244,7 @@ class AttributeValueController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         DB::beginTransaction();
         try {
@@ -232,10 +256,16 @@ class AttributeValueController extends Controller
             DB::commit();
 
             Log::info('Valor de atributo eliminado exitosamente: ' . $valueName . ' (ID: ' . $id . ')');
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => true, 'message' => 'Valor de atributo eliminado exitosamente', 'type' => 'success']);
+            }
             return redirect()->route('admin.attributes.index')->with('success', 'Valor de atributo eliminado exitosamente');
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error al eliminar valor de atributo: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString());
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Error al eliminar el valor de atributo'], 500);
+            }
             return redirect()->route('admin.attributes.index')->with('error', 'Error al eliminar el valor de atributo. Por favor intente nuevamente.');
         }
     }

@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cliente;
+use App\Models\ClientMeasurementHistory;
 use App\Models\Recomendacion;
 use App\Models\Estado;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class ClienteController extends Controller
@@ -74,24 +77,31 @@ class ClienteController extends Controller
         ]);
 
         try {
-            $cliente = new Cliente();
-            $cliente->nombre = mb_strtoupper(trim($request->nombre), 'UTF-8');
-            $cliente->apellidos = mb_strtoupper(trim($request->apellidos), 'UTF-8');
-            $cliente->telefono = $request->telefono;
-            $cliente->email = $request->email;
-            $cliente->direccion = mb_strtoupper(trim($request->direccion), 'UTF-8');
-            $cliente->ciudad = mb_strtoupper(trim($request->ciudad), 'UTF-8');
-            $cliente->codigo_postal = $request->codigo_postal;
-            $cliente->observaciones = mb_strtoupper(trim($request->observaciones), 'UTF-8');
-            $cliente->estado_id = $request->estado_id;
-            $cliente->recomendacion_id = $request->recomendacion_id;
-            $cliente->busto = $request->busto;
-            $cliente->alto_cintura = $request->alto_cintura;
-            $cliente->cintura = $request->cintura;
-            $cliente->cadera = $request->cadera;
-            $cliente->largo = $request->largo;
-            $cliente->largo_vestido = $request->largo_vestido;
-            $cliente->save();
+            DB::transaction(function () use ($request) {
+                $cliente = new Cliente();
+                $cliente->nombre = mb_strtoupper(trim($request->nombre), 'UTF-8');
+                $cliente->apellidos = mb_strtoupper(trim($request->apellidos), 'UTF-8');
+                $cliente->telefono = $request->telefono;
+                $cliente->email = $request->email;
+                $cliente->direccion = mb_strtoupper(trim($request->direccion ?? ''), 'UTF-8');
+                $cliente->ciudad = mb_strtoupper(trim($request->ciudad), 'UTF-8');
+                $cliente->codigo_postal = $request->codigo_postal;
+                $cliente->observaciones = mb_strtoupper(trim($request->observaciones ?? ''), 'UTF-8');
+                $cliente->estado_id = $request->estado_id;
+                $cliente->recomendacion_id = $request->recomendacion_id;
+                // Campos legacy (se mantienen por compatibilidad)
+                $cliente->busto = $request->busto;
+                $cliente->alto_cintura = $request->alto_cintura;
+                $cliente->cintura = $request->cintura;
+                $cliente->cadera = $request->cadera;
+                $cliente->largo = $request->largo;
+                $cliente->largo_vestido = $request->largo_vestido;
+                $cliente->save();
+
+                // Guardar medidas en historial si hay al menos una medida
+                $this->saveMeasurementsToHistory($cliente, $request, 'Registro inicial del cliente');
+            });
+
             return redirect()->route('admin.clientes.index')->with('success', 'Cliente creado correctamente');
         } catch (\Exception $e) {
             Log::error('Error al crear el cliente: ' . $e->getMessage());
@@ -171,29 +181,57 @@ class ClienteController extends Controller
         ]);
 
         try {
-            $cliente = Cliente::where('activo', true)->with('estado', 'recomendacion')->findOrFail($id);
-            $cliente->nombre = mb_strtoupper(trim($request->nombre), 'UTF-8');
-            $cliente->apellidos = mb_strtoupper(trim($request->apellidos), 'UTF-8');
-            $cliente->telefono = $request->telefono;
-            $cliente->email = $request->email;
-            $cliente->direccion = mb_strtoupper(trim($request->direccion), 'UTF-8');
-            $cliente->ciudad = mb_strtoupper(trim($request->ciudad), 'UTF-8');
-            $cliente->codigo_postal = $request->codigo_postal;
-            $cliente->observaciones = mb_strtoupper(trim($request->observaciones ?? ''), 'UTF-8');
-            $cliente->estado_id = $request->estado_id;
-            $cliente->recomendacion_id = $request->recomendacion_id;
-            $cliente->busto = $request->busto;
-            $cliente->alto_cintura = $request->alto_cintura;
-            $cliente->cintura = $request->cintura;
-            $cliente->cadera = $request->cadera;
-            $cliente->largo = $request->largo;
-            $cliente->largo_vestido = $request->largo_vestido;
+            DB::transaction(function () use ($request, $id) {
+                $cliente = Cliente::where('activo', true)->findOrFail($id);
 
-            if (!$cliente->isDirty()) {
-                return redirect()->route('admin.clientes.index')->with('warning', 'No se realizaron cambios');
-            }
+                // Guardar medidas anteriores para comparar
+                $oldMeasurements = [
+                    'busto' => $cliente->busto,
+                    'cintura' => $cliente->cintura,
+                    'cadera' => $cliente->cadera,
+                    'alto_cintura' => $cliente->alto_cintura,
+                    'largo' => $cliente->largo,
+                    'largo_vestido' => $cliente->largo_vestido,
+                ];
 
-            $cliente->save();
+                $cliente->nombre = mb_strtoupper(trim($request->nombre), 'UTF-8');
+                $cliente->apellidos = mb_strtoupper(trim($request->apellidos), 'UTF-8');
+                $cliente->telefono = $request->telefono;
+                $cliente->email = $request->email;
+                $cliente->direccion = mb_strtoupper(trim($request->direccion ?? ''), 'UTF-8');
+                $cliente->ciudad = mb_strtoupper(trim($request->ciudad), 'UTF-8');
+                $cliente->codigo_postal = $request->codigo_postal;
+                $cliente->observaciones = mb_strtoupper(trim($request->observaciones ?? ''), 'UTF-8');
+                $cliente->estado_id = $request->estado_id;
+                $cliente->recomendacion_id = $request->recomendacion_id;
+                // Campos legacy (se mantienen por compatibilidad)
+                $cliente->busto = $request->busto;
+                $cliente->alto_cintura = $request->alto_cintura;
+                $cliente->cintura = $request->cintura;
+                $cliente->cadera = $request->cadera;
+                $cliente->largo = $request->largo;
+                $cliente->largo_vestido = $request->largo_vestido;
+
+                // Verificar si las medidas cambiaron
+                $newMeasurements = [
+                    'busto' => $request->busto,
+                    'cintura' => $request->cintura,
+                    'cadera' => $request->cadera,
+                    'alto_cintura' => $request->alto_cintura,
+                    'largo' => $request->largo,
+                    'largo_vestido' => $request->largo_vestido,
+                ];
+
+                $measurementsChanged = $oldMeasurements != $newMeasurements;
+
+                $cliente->save();
+
+                // Guardar en historial solo si las medidas cambiaron y hay al menos una
+                if ($measurementsChanged) {
+                    $this->saveMeasurementsToHistory($cliente, $request, 'Actualización manual desde ficha de cliente');
+                }
+            });
+
             return redirect()->route('admin.clientes.index')->with('success', 'Cliente actualizado correctamente');
         } catch (\Exception $e) {
             Log::error('Error al actualizar el cliente: ' . $e->getMessage());
@@ -232,23 +270,36 @@ class ClienteController extends Controller
     {
         $request->validate([
             'nombre' => ['required', 'string', 'max:255', 'regex:/^[A-Za-záéíóúÁÉÍÓÚñÑ\s]+$/u'],
-            'apellidos' => ['nullable', 'string', 'max:255', 'regex:/^[A-Za-záéíóúÁÉÍÓÚñÑ\s]*$/u'],
+            'apellidos' => ['required', 'string', 'max:255', 'regex:/^[A-Za-záéíóúÁÉÍÓÚñÑ\s]+$/u'],
             'telefono' => ['required', 'regex:/^[0-9]{10}$/', 'unique:clientes,telefono'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'estado_id' => ['required', 'exists:estados,id'],
+            'recomendacion_id' => ['required', 'exists:recomendacion,id'],
+        ], [
+            'nombre.required' => 'El nombre es obligatorio',
+            'nombre.regex' => 'El nombre solo puede contener letras y espacios',
+            'apellidos.required' => 'Los apellidos son obligatorios',
+            'apellidos.regex' => 'Los apellidos solo pueden contener letras y espacios',
+            'telefono.required' => 'El teléfono es obligatorio',
+            'telefono.regex' => 'El teléfono debe tener 10 dígitos',
+            'telefono.unique' => 'Este teléfono ya está registrado',
+            'email.email' => 'El email no tiene un formato válido',
+            'estado_id.required' => 'Selecciona un estado',
+            'estado_id.exists' => 'El estado seleccionado no es válido',
+            'recomendacion_id.required' => 'Selecciona una recomendación',
+            'recomendacion_id.exists' => 'La recomendación seleccionada no es válida',
         ]);
 
         try {
             $cliente = new Cliente();
             $cliente->nombre = mb_strtoupper(trim($request->nombre), 'UTF-8');
-            $cliente->apellidos = mb_strtoupper(trim($request->apellidos ?? ''), 'UTF-8');
+            $cliente->apellidos = mb_strtoupper(trim($request->apellidos), 'UTF-8');
             $cliente->telefono = $request->telefono;
-            $cliente->activo = true;
-
-            // Valores por defecto para campos requeridos
-            $defaultEstado = Estado::first();
-            $defaultRecomendacion = Recomendacion::first();
-            $cliente->estado_id = $defaultEstado?->id;
-            $cliente->recomendacion_id = $defaultRecomendacion?->id;
+            $cliente->email = $request->email ? trim($request->email) : null;
+            $cliente->estado_id = $request->estado_id;
+            $cliente->recomendacion_id = $request->recomendacion_id;
             $cliente->ciudad = 'POR DEFINIR';
+            $cliente->activo = true;
 
             $cliente->save();
 
@@ -265,5 +316,43 @@ class ClienteController extends Controller
                 'message' => 'Error al crear cliente: ' . $e->getMessage(),
             ], 422);
         }
+    }
+
+    /**
+     * Guardar medidas en el historial del cliente
+     * Source: 'manual' para ediciones desde sección clientes
+     */
+    protected function saveMeasurementsToHistory(Cliente $cliente, Request $request, string $notes = ''): ?ClientMeasurementHistory
+    {
+        $measurements = [
+            'busto' => $request->busto,
+            'cintura' => $request->cintura,
+            'cadera' => $request->cadera,
+            'alto_cintura' => $request->alto_cintura,
+            'largo' => $request->largo,
+            'largo_vestido' => $request->largo_vestido,
+        ];
+
+        // Filtrar valores vacíos
+        $filteredMeasurements = collect($measurements)
+            ->filter(fn($v) => !empty($v) && $v !== '0')
+            ->toArray();
+
+        // Solo guardar si hay al menos una medida
+        if (empty($filteredMeasurements)) {
+            return null;
+        }
+
+        return ClientMeasurementHistory::create([
+            'cliente_id' => $cliente->id,
+            'order_id' => null, // No viene de un pedido
+            'order_item_id' => null,
+            'product_id' => null,
+            'measurements' => $filteredMeasurements,
+            'source' => 'manual', // Indica que fue capturado manualmente en sección clientes
+            'notes' => $notes,
+            'created_by' => Auth::id(),
+            'captured_at' => now(),
+        ]);
     }
 }

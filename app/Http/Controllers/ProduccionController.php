@@ -110,7 +110,8 @@ class ProduccionController extends Controller
                 'variant',
                 'creator',
                 'image',
-                'statusHistory.changedByUser'
+                'statusHistory.changedByUser',
+                'applicationType'
             ])->findOrFail($id);
 
             // Si la petición viene de un modal (AJAX), devolvemos solo la vista parcial

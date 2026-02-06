@@ -1,28 +1,19 @@
 {{-- TABLA DE COLA --}}
 <div class="card">
     <div class="card-body table-responsive p-0">
-        <table id="queueTable" class="table table-hover table-striped mb-0" style="font-size: 16px;">
+        <table id="queueTable" class="table table-hover table-striped mb-0" style="font-size: 15px;">
             <thead class="bg-dark text-white">
                 <tr>
-                    <th class="text-center" data-toggle="tooltip" data-placement="top"
-                        title="Fecha en que se creó el pedido">
-                        Fecha Creado</th>
-                    <th class="text-center" data-toggle="tooltip" data-placement="top" title="Normal, Urgente, Express">
-                        Prioridad</th>
-                    <th>Cliente</th>
-                    <th>Pedido</th>
-                    <th data-toggle="tooltip" data-placement="top" title="Producto/Diseño del pedido">Diseño / Linaje</th>
-                    <th class="text-center">Estado</th>
-                    <th class="text-center" data-toggle="tooltip" data-placement="top"
-                        title="Fecha prometida al cliente.">Fecha
-                        Compromiso
-                    </th>
-                    <th class="text-center" data-toggle="tooltip" data-placement="top"
-                        title="Disponibilidad de materiales">Materiales
-                    </th>
-                    <th class="text-center" data-toggle="tooltip" data-placement="top"
-                        title="Motivos que impiden iniciar produccion">Bloqueos</th>
-                    <th class="text-center">Acciones</th>
+                    <th class="text-center" style="width: 90px;">Fecha</th>
+                    <th class="text-center" style="width: 80px;">Prioridad</th>
+                    <th style="min-width: 120px;">Cliente</th>
+                    <th style="width: 120px;">Pedido</th>
+                    <th style="min-width: 130px;">Productos</th>
+                    <th class="text-center" style="width: 110px;">Estado</th>
+                    <th class="text-center" style="width: 100px;">Compromiso</th>
+                    <th class="text-center" style="width: 100px;">Materiales</th>
+                    <th class="text-center" style="width: 80px;">Bloqueos</th>
+                    <th class="text-center" style="width: 100px;">Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -80,17 +71,20 @@
                         </td>
                         <td>
                             @php
-                                $firstItem = $order->items->first();
+                                $itemsCount = $order->items->count();
+                                $totalPiezas = $order->items->sum('quantity');
+                                $hasExtras = $order->items->contains(fn($i) => $i->extras && $i->extras->count() > 0);
                             @endphp
-                            @if($firstItem)
-                                <div class="font-weight-bold" style="color: #111827;">
-                                    {{ $firstItem->product_name }}
-                                </div>
-                                @if($order->items->count() > 1)
-                                    <small style="color: #6b7280;">
-                                        +{{ $order->items->count() - 1 }} más
-                                    </small>
-                                @endif
+                            @if($itemsCount > 0)
+                                <a href="#" data-toggle="modal" data-target="#modalProductosDetalle{{ $order->id }}"
+                                   style="color: #1565c0; text-decoration: none; font-weight: 600;">
+                                    <i class="fas fa-box mr-1"></i>
+                                    {{ $itemsCount }} {{ $itemsCount === 1 ? 'producto' : 'productos' }}
+                                    <span style="color: #6b7280; font-weight: 500;">· {{ $totalPiezas }} pz</span>
+                                    @if($hasExtras)
+                                        <i class="fas fa-plus-circle ml-1" style="color: #0277bd; font-size: 12px;" title="Con extras"></i>
+                                    @endif
+                                </a>
                             @else
                                 <span style="color: #6b7280;">-</span>
                             @endif
@@ -226,8 +220,8 @@
                                     data-confirm-text="Se reservarán los materiales necesarios para este pedido."
                                     data-confirm-impact="Los materiales quedarán bloqueados hasta completar o cancelar el pedido.">
                                     @csrf
-                                    <button type="submit" class="btn btn-sm btn-success">
-                                        <i class="fas fa-play"></i> Iniciar
+                                    <button type="submit" class="btn btn-sm btn-success" title="Iniciar producción">
+                                        <i class="fas fa-play"></i>
                                     </button>
                                 </form>
                             @elseif($order->status === \App\Models\Order::STATUS_IN_PRODUCTION)
@@ -256,6 +250,8 @@
             </tbody>
         </table>
     </div>
+
+    {{-- Paginación --}}
     @if ($orders->hasPages())
         <div class="card-footer">
             {{ $orders->withQueryString()->links() }}
@@ -306,7 +302,14 @@
                             <tbody>
                                 @foreach ($order->material_requirements as $mat)
                                     <tr class="{{ !$mat['sufficient'] ? 'table-danger' : '' }}">
-                                        <td><strong>{{ $mat['material_name'] }}</strong></td>
+                                        <td>
+                                            <strong>{{ $mat['material_name'] }}</strong>
+                                            @if(!empty($mat['has_bom_adjustment']))
+                                                <span class="badge badge-info ml-1" title="Cantidad ajustada según medidas del cliente">
+                                                    <i class="fas fa-ruler"></i> Ajustado
+                                                </span>
+                                            @endif
+                                        </td>
                                         <td>
                                             @if ($mat['variant_color'])
                                                 <span class="badge badge-secondary">{{ $mat['variant_color'] }}</span>
@@ -445,6 +448,88 @@
         </div>
     @endif
 
+    {{-- MODAL DETALLE DE PRODUCTOS --}}
+    <div class="modal fade" id="modalProductosDetalle{{ $order->id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-clipboard-list mr-2"></i>{{ $order->order_number }}
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body p-0">
+                    <table class="table table-bordered mb-0 text-center align-middle">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th class="align-middle">Producto</th>
+                                <th class="align-middle" style="width: 80px;">Cantidad</th>
+                                <th class="align-middle">Medidas</th>
+                                <th class="align-middle">Extras</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($order->items as $item)
+                                @php
+                                    $measurements = is_array($item->measurements) ? $item->measurements : [];
+                                    $hasMeasurements = !empty($measurements) && count(array_filter($measurements, fn($v) => !empty($v) && $v !== '0' && $v !== 'save_to_client')) > 0;
+                                    $extrasCount = $item->extras ? $item->extras->count() : 0;
+                                    $measurementLabels = [
+                                        'busto' => 'Busto',
+                                        'cintura' => 'Cintura',
+                                        'cadera' => 'Cadera',
+                                        'largo' => 'Largo',
+                                        'largo_vestido' => 'L. Vestido',
+                                        'alto_cintura' => 'A. Cintura',
+                                    ];
+                                @endphp
+                                <tr>
+                                    <td class="align-middle font-weight-bold">{{ $item->product_name }}</td>
+                                    <td class="align-middle font-weight-bold" style="font-size: 18px;">{{ $item->quantity }}</td>
+                                    <td class="align-middle">
+                                        @if($hasMeasurements)
+                                            @php
+                                                $filteredMeasurements = array_filter($measurements, fn($v, $k) => !empty($v) && $v !== '0' && $k !== 'save_to_client', ARRAY_FILTER_USE_BOTH);
+                                            @endphp
+                                            @foreach($filteredMeasurements as $key => $value)
+                                                <div>{{ $measurementLabels[$key] ?? ucfirst($key) }}: {{ $value }} cm</div>
+                                            @endforeach
+                                        @else
+                                            <span class="text-muted">—</span>
+                                        @endif
+                                    </td>
+                                    <td class="align-middle">
+                                        @if($extrasCount > 0)
+                                            @foreach($item->extras as $extra)
+                                                <div>{{ $extra->productExtra->name ?? 'Extra' }} × {{ $extra->quantity }}</div>
+                                            @endforeach
+                                        @else
+                                            <span class="text-muted">—</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot class="thead-dark">
+                            <tr>
+                                <th class="align-middle">{{ $order->items->count() }} producto(s)</th>
+                                <th class="align-middle">{{ $order->items->sum('quantity') }} pz</th>
+                                <th class="align-middle"></th>
+                                <th class="align-middle"></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <div class="modal-footer py-2">
+                    <a href="{{ route('admin.orders.show', $order) }}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-eye mr-1"></i>Ver Pedido
+                    </a>
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{-- MODAL DE PRODUCTOS PARA MARCAR LISTO --}}
     @if ($order->status === \App\Models\Order::STATUS_IN_PRODUCTION)
         <div class="modal fade" id="modalProductosQueue{{ $order->id }}" tabindex="-1" aria-hidden="true">
@@ -502,6 +587,16 @@
                                                 &bull; {{ $item->product->category->name }}
                                             @endif
                                         </span>
+                                        {{-- Extras del producto --}}
+                                        @if($item->extras && $item->extras->count() > 0)
+                                            <div class="mt-1">
+                                                @foreach($item->extras as $extra)
+                                                    <span class="badge mr-1" style="background: #0277bd; color: white; font-size: 12px;">
+                                                        <i class="fas fa-plus-circle mr-1"></i>{{ $extra->productExtra->name ?? 'Extra' }} (x{{ $extra->quantity }})
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                        @endif
                                     </div>
                                     <div>
                                         @if($isCompleted)

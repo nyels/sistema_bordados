@@ -6,8 +6,16 @@
     {{-- Base Meta Tags --}}
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    {{-- PWA / Web App Meta Tags --}}
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="{{ config('app.name', 'Sistema Bordados') }}">
+    <meta name="theme-color" content="#343a40">
+    <meta name="format-detection" content="telephone=no">
 
     {{-- ID usuario actual para WebSocket (DEBE estar en HEAD antes de cualquier script) --}}
     @auth

@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Throwable;
 
 class MaterialCategoryController extends Controller
 {
@@ -17,7 +20,7 @@ class MaterialCategoryController extends Controller
     {
         try {
             $categories = MaterialCategory::where('activo', true)
-                ->with(['allowedUnits'])
+                ->with(['allowedUnits', 'defaultInventoryUnit'])
                 ->withCount(['materials' => fn($q) => $q->where('activo', true)])
                 ->ordered()
                 ->get();
@@ -26,8 +29,10 @@ class MaterialCategoryController extends Controller
                 return view('admin.material-categories.partials.table', compact('categories'));
             }
 
-            return view('admin.material-categories.index', compact('categories'));
-        } catch (\Exception $e) {
+            $inventoryUnits = Unit::active()->canonical()->ordered()->get();
+
+            return view('admin.material-categories.index', compact('categories', 'inventoryUnits'));
+        } catch (Throwable $e) {
             Log::error('Error al listar categorías de materiales: ' . $e->getMessage(), [
                 'user_id' => Auth::id(),
                 'ip' => request()->ip(),
@@ -45,20 +50,52 @@ class MaterialCategoryController extends Controller
             $inventoryUnits = Unit::active()->canonical()->ordered()->get();
 
             return view('admin.material-categories.create', compact('inventoryUnits'));
-        } catch (\Exception $e) {
+        } catch (Throwable $e) {
             Log::error('Error al cargar formulario de categoría: ' . $e->getMessage());
             return redirect()->route('material-categories.index')
                 ->with('error', 'Error al cargar el formulario');
         }
     }
 
-    public function store(MaterialCategoryRequest $request)
+    public function store(MaterialCategoryRequest $request): JsonResponse|RedirectResponse
     {
         try {
             DB::beginTransaction();
 
+            $name = mb_strtoupper(trim($request->name));
+
+            // Verificar si ya existe (activa o inactiva)
+            $existing = MaterialCategory::where('name', $name)->first();
+
+            if ($existing) {
+                if ($existing->activo) {
+                    $msg = 'Ya existe una categoría con este nombre.';
+                    if ($request->ajax() || $request->wantsJson()) {
+                        return response()->json(['success' => false, 'error' => $msg], 422);
+                    }
+                    return back()->withErrors(['name' => $msg])->withInput();
+                }
+
+                // Reactivar si existía pero estaba eliminada
+                $existing->activo = true;
+                $existing->description = $request->filled('description') ? trim($request->description) : null;
+                $existing->default_inventory_unit_id = $request->filled('default_inventory_unit_id')
+                    ? (int) $request->default_inventory_unit_id
+                    : null;
+                $existing->allow_unit_override = $request->boolean('allow_unit_override', true);
+                $existing->save();
+
+                DB::commit();
+
+                $msg = 'Categoría reactivada exitosamente';
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json(['success' => true, 'message' => $msg, 'data' => $existing]);
+                }
+                return redirect()->route('admin.material-categories.index')->with('success', $msg);
+            }
+
             $category = new MaterialCategory();
-            $category->name = mb_strtoupper(trim($request->name));
+            $category->name = $name;
             $category->slug = Str::slug($request->name);
             $category->description = $request->filled('description')
                 ? trim($request->description)
@@ -82,9 +119,12 @@ class MaterialCategoryController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('admin.material-categories.index')
-                ->with('success', 'Categoría creada exitosamente');
-        } catch (\Exception $e) {
+            $msg = 'Categoría creada exitosamente';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => true, 'message' => $msg, 'data' => $category]);
+            }
+            return redirect()->route('admin.material-categories.index')->with('success', $msg);
+        } catch (Throwable $e) {
             DB::rollBack();
 
             Log::error('Error al crear categoría de material: ' . $e->getMessage(), [
@@ -92,8 +132,11 @@ class MaterialCategoryController extends Controller
                 'request' => $request->validated(),
             ]);
 
-            return redirect()->route('admin.material-categories.index')
-                ->with('error', 'Error al crear la categoría');
+            $msg = 'Error al crear la categoría';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 500);
+            }
+            return redirect()->route('admin.material-categories.index')->with('error', $msg);
         }
     }
 
@@ -113,19 +156,22 @@ class MaterialCategoryController extends Controller
             $inventoryUnits = Unit::active()->canonical()->ordered()->get();
 
             return view('admin.material-categories.edit', compact('category', 'inventoryUnits'));
-        } catch (\Exception $e) {
+        } catch (Throwable $e) {
             Log::error('Error al cargar categoría para editar: ' . $e->getMessage());
             return redirect()->route('admin.material-categories.index')
                 ->with('error', 'Categoría no encontrada');
         }
     }
 
-    public function update(MaterialCategoryRequest $request, $id)
+    public function update(MaterialCategoryRequest $request, $id): JsonResponse|RedirectResponse
     {
         try {
             if (!is_numeric($id) || $id < 1) {
-                return redirect()->route('admin.material-categories.index')
-                    ->with('error', 'Categoría no válida');
+                $msg = 'Categoría no válida';
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json(['success' => false, 'message' => $msg], 400);
+                }
+                return redirect()->route('admin.material-categories.index')->with('error', $msg);
             }
 
             DB::beginTransaction();
@@ -145,8 +191,11 @@ class MaterialCategoryController extends Controller
             $category->allow_unit_override = $request->boolean('allow_unit_override', true);
 
             if (!$category->isDirty()) {
-                return redirect()->route('admin.material-categories.index')
-                    ->with('info', 'No se realizaron cambios');
+                $msg = 'No se realizaron cambios';
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json(['success' => true, 'message' => $msg, 'type' => 'info']);
+                }
+                return redirect()->route('admin.material-categories.index')->with('info', $msg);
             }
 
             $category->save();
@@ -160,9 +209,12 @@ class MaterialCategoryController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('admin.material-categories.index')
-                ->with('success', 'Categoría actualizada exitosamente');
-        } catch (\Exception $e) {
+            $msg = 'Categoría actualizada exitosamente';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => true, 'message' => $msg, 'type' => 'success', 'data' => $category]);
+            }
+            return redirect()->route('admin.material-categories.index')->with('success', $msg);
+        } catch (Throwable $e) {
             DB::rollBack();
 
             Log::error('Error al actualizar categoría: ' . $e->getMessage(), [
@@ -170,8 +222,11 @@ class MaterialCategoryController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('admin.material-categories.index')
-                ->with('error', 'Error al actualizar la categoría');
+            $msg = 'Error al actualizar la categoría';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 500);
+            }
+            return redirect()->route('admin.material-categories.index')->with('error', $msg);
         }
     }
 
@@ -187,19 +242,22 @@ class MaterialCategoryController extends Controller
                 ->findOrFail((int) $id);
 
             return view('admin.material-categories.delete', compact('category'));
-        } catch (\Exception $e) {
+        } catch (Throwable $e) {
             Log::error('Error al cargar categoría para eliminar: ' . $e->getMessage());
             return redirect()->route('admin.material-categories.index')
                 ->with('error', 'Categoría no encontrada');
         }
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id): JsonResponse|RedirectResponse
     {
         try {
             if (!is_numeric($id) || $id < 1) {
-                return redirect()->route('admin.material-categories.index')
-                    ->with('error', 'Categoría no válida');
+                $msg = 'Categoría no válida';
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json(['success' => false, 'message' => $msg], 400);
+                }
+                return redirect()->route('admin.material-categories.index')->with('error', $msg);
             }
 
             DB::beginTransaction();
@@ -208,8 +266,10 @@ class MaterialCategoryController extends Controller
 
             $validation = $category->canDelete();
             if (!$validation['can_delete']) {
-                return redirect()->route('admin.material-categories.index')
-                    ->with('error', $validation['message']);
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json(['success' => false, 'message' => $validation['message']], 422);
+                }
+                return redirect()->route('admin.material-categories.index')->with('error', $validation['message']);
             }
 
             $category->activo = false;
@@ -223,9 +283,12 @@ class MaterialCategoryController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('admin.material-categories.index')
-                ->with('success', 'Categoría eliminada exitosamente');
-        } catch (\Exception $e) {
+            $msg = 'Categoría eliminada exitosamente';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => true, 'message' => $msg, 'type' => 'success']);
+            }
+            return redirect()->route('admin.material-categories.index')->with('success', $msg);
+        } catch (Throwable $e) {
             DB::rollBack();
 
             Log::error('Error al eliminar categoría: ' . $e->getMessage(), [
@@ -233,10 +296,57 @@ class MaterialCategoryController extends Controller
                 'user_id' => Auth::id(),
             ]);
 
-            return redirect()->route('admin.material-categories.index')
-                ->with('error', 'Error al eliminar la categoría');
+            $msg = 'Error al eliminar la categoría';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 500);
+            }
+            return redirect()->route('admin.material-categories.index')->with('error', $msg);
         }
     }
+    /**
+     * Cargar contenido del formulario de edición para modal AJAX
+     */
+    public function editContent($id)
+    {
+        try {
+            if (!is_numeric($id) || $id < 1) {
+                return response('<div class="alert alert-danger m-3">Categoría no válida</div>', 400);
+            }
+
+            $category = MaterialCategory::where('activo', true)
+                ->with(['allowedUnits', 'defaultInventoryUnit'])
+                ->findOrFail((int) $id);
+
+            $inventoryUnits = Unit::active()->canonical()->ordered()->get();
+
+            return view('admin.material-categories.partials.edit-content', compact('category', 'inventoryUnits'));
+        } catch (Throwable $e) {
+            Log::error('Error al cargar formulario de edición: ' . $e->getMessage());
+            return response('<div class="alert alert-danger m-3">Error al cargar el formulario</div>', 500);
+        }
+    }
+
+    /**
+     * Cargar contenido de confirmación de eliminación para modal AJAX
+     */
+    public function deleteContent($id)
+    {
+        try {
+            if (!is_numeric($id) || $id < 1) {
+                return response('<div class="alert alert-danger m-3">Categoría no válida</div>', 400);
+            }
+
+            $category = MaterialCategory::where('activo', true)
+                ->withCount(['materials' => fn($q) => $q->where('activo', true)])
+                ->findOrFail((int) $id);
+
+            return view('admin.material-categories.partials.delete-content', compact('category'));
+        } catch (Throwable $e) {
+            Log::error('Error al cargar confirmación de eliminación: ' . $e->getMessage());
+            return response('<div class="alert alert-danger m-3">Error al cargar</div>', 500);
+        }
+    }
+
     public function getMaterials($id)
     {
         try {
@@ -253,7 +363,7 @@ class MaterialCategoryController extends Controller
                 ->get();
 
             return response()->json($materials);
-        } catch (\Exception $e) {
+        } catch (Throwable $e) {
             Log::error('Error al obtener materiales de la categoría: ' . $e->getMessage(), [
                 'category_id' => $id,
                 'user_id' => Auth::id(),
@@ -279,7 +389,7 @@ class MaterialCategoryController extends Controller
             // El frontend mostrará "Sin unidades".
 
             return response()->json($category->allowedUnits);
-        } catch (\Exception $e) {
+        } catch (Throwable $e) {
             Log::error('Error al obtener unidades de la categoría: ' . $e->getMessage(), [
                 'category_id' => $id,
                 'user_id' => Auth::id(),

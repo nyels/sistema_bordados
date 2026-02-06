@@ -5,7 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 class ProductExtra extends Model
@@ -17,6 +19,7 @@ class ProductExtra extends Model
     protected $fillable = [
         'uuid',
         'name',
+        'extra_category_id',
         'cost_addition',
         'price_addition',
         'minutes_addition',
@@ -53,6 +56,14 @@ class ProductExtra extends Model
     |--------------------------------------------------------------------------
     */
 
+    /**
+     * Categoría del extra.
+     */
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(ExtraCategory::class, 'extra_category_id');
+    }
+
     public function products()
     {
         return $this->belongsToMany(
@@ -77,6 +88,31 @@ class ProductExtra extends Model
         )->withPivot('quantity_required')->withTimestamps();
     }
 
+    /**
+     * Historial de uso de este extra en pedidos.
+     * Útil para reportes y estadísticas de consumo.
+     */
+    public function orderItemExtras(): HasMany
+    {
+        return $this->hasMany(OrderItemExtra::class, 'product_extra_id');
+    }
+
+    /**
+     * Obtiene el total de veces que se ha usado este extra.
+     */
+    public function getTotalUsageCountAttribute(): int
+    {
+        return $this->orderItemExtras()->sum('quantity');
+    }
+
+    /**
+     * Obtiene el ingreso total generado por este extra.
+     */
+    public function getTotalRevenueAttribute(): float
+    {
+        return (float) $this->orderItemExtras()->sum('total_price');
+    }
+
     /*
     |--------------------------------------------------------------------------
     | SCOPES
@@ -93,6 +129,15 @@ class ProductExtra extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+
+    /**
+     * Convierte el nombre a mayúsculas correctamente (con soporte UTF-8).
+     * Esto corrige casos donde caracteres especiales como ñ no se convirtieron bien.
+     */
+    public function getNameAttribute($value): string
+    {
+        return mb_strtoupper($value, 'UTF-8');
+    }
 
     public function getFormattedCostAttribute(): string
     {
@@ -123,6 +168,44 @@ class ProductExtra extends Model
     public function getProductsCountAttribute(): int
     {
         return $this->products()->count();
+    }
+
+    /**
+     * Obtiene un resumen de los materiales con sus cantidades y unidades.
+     * Formato: "1 m - Encaje (Blanco)" o "-" si no consume
+     */
+    public function getMaterialsSummaryAttribute(): string
+    {
+        if (!$this->consumes_inventory) {
+            return '-';
+        }
+
+        $materials = $this->materials;
+
+        if ($materials->isEmpty()) {
+            return '<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> Sin materiales</span>';
+        }
+
+        $items = [];
+        foreach ($materials as $variant) {
+            $qty = $variant->pivot->quantity_required;
+            $unit = '';
+
+            // Obtener la unidad de consumo del material
+            if ($variant->material && $variant->material->consumptionUnit) {
+                $unit = $variant->material->consumptionUnit->symbol;
+            } elseif ($variant->material && $variant->material->baseUnit) {
+                $unit = $variant->material->baseUnit->symbol;
+            }
+
+            $materialName = $variant->material ? $variant->material->name : 'Material';
+            $colorName = $variant->color ? " ({$variant->color})" : '';
+
+            $qtyFormatted = number_format((float) $qty, 2);
+            $items[] = "{$qtyFormatted} {$unit} - {$materialName}{$colorName}";
+        }
+
+        return implode('<br>', $items);
     }
 
     /*

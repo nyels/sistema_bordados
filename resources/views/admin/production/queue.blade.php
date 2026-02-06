@@ -117,8 +117,8 @@
                 </div>
 
                 <div class="col-auto">
-                    <a href="#" id="filter-clear" class="btn btn-sm btn-secondary">
-                        <i class="fas fa-times"></i> Limpiar
+                    <a href="#" id="filter-clear" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-eraser mr-1"></i> Limpiar
                     </a>
                 </div>
             </div>
@@ -133,15 +133,32 @@
 
 @section('css')
     <style>
+        /* === KPI BOXES === */
         .small-box .inner h3 {
             font-size: 2.2rem;
             font-weight: bold;
         }
-
         .small-box .inner p {
             font-size: 15px;
         }
 
+        /* === RESPONSIVE KPI === */
+        @media (max-width: 768px) {
+            .small-box {
+                margin-bottom: 10px !important;
+            }
+            .small-box .inner h3 {
+                font-size: 1.8rem;
+            }
+            .small-box .inner p {
+                font-size: 13px;
+            }
+            .small-box .icon {
+                font-size: 50px;
+            }
+        }
+
+        /* === TABLA BASE === */
         .table-warning {
             background-color: #fff3cd !important;
         }
@@ -177,7 +194,7 @@
             box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.5);
         }
 
-        /* DataTables - Botones de exportación (igual que proveedores) */
+        /* === DATATABLES EXPORT BUTTONS === */
         #queueTable_wrapper .dt-buttons {
             background-color: transparent;
             box-shadow: none;
@@ -202,9 +219,40 @@
             border: none;
         }
 
-        /* Ocultar paginación de DataTables (usamos la del servidor) */
         #queueTable_wrapper .dataTables_paginate {
             display: none;
+        }
+
+        /* === TABLA RESPONSIVE === */
+        @media (max-width: 991px) {
+            /* Hacer la tabla más compacta en móvil */
+            #queueTable {
+                font-size: 13px !important;
+            }
+            #queueTable th,
+            #queueTable td {
+                padding: 6px 8px !important;
+                white-space: nowrap;
+            }
+            /* Ocultar botones de exportación en móvil */
+            #queueTable_wrapper .dt-buttons {
+                display: none !important;
+            }
+        }
+
+        /* === FILTROS RESPONSIVE === */
+        @media (max-width: 768px) {
+            .card-body .row.align-items-center {
+                flex-direction: column;
+                gap: 8px;
+            }
+            .card-body .row.align-items-center .col-auto {
+                width: 100%;
+            }
+            .card-body .row.align-items-center .col-auto select,
+            .card-body .row.align-items-center .col-auto .btn {
+                width: 100%;
+            }
         }
     </style>
 @stop

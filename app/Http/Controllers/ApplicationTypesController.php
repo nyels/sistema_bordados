@@ -4,73 +4,89 @@ namespace App\Http\Controllers;
 
 use App\Models\Application_types;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Throwable;
 
 class ApplicationTypesController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        $aplication_types = Application_types::all()->where('activo', true);
+        $aplication_types = Application_types::where('activo', true)->orderBy('nombre_aplicacion')->get();
         return view('admin.tipos_aplicacion.index', compact('aplication_types'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
         return view('admin.tipos_aplicacion.create');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse|RedirectResponse
     {
         $request->validate([
             'nombre_aplicacion' => ['required', 'string', 'max:255', 'regex:/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/'],
         ]);
+
         try {
-            $aplication_types = new Application_types();
-            $aplication_types->nombre_aplicacion = strtoupper(trim($request->nombre_aplicacion));
-            $aplication_types->slug = Str::slug($request->nombre_aplicacion);
-            $aplication_types->save();
-            return redirect()->route('admin.tipos_aplicacion.index')->with('success', 'Tipo de aplicación guardado exitosamente');
-        } catch (\Exception $e) {
-            return redirect()->route('admin.tipos_aplicacion.index')->with('error', 'Error al guardar el tipo de aplicación: ' . $e->getMessage());
+            $nombre = mb_strtoupper(trim($request->nombre_aplicacion), 'UTF-8');
+            $existing = Application_types::where('nombre_aplicacion', $nombre)->first();
+
+            if ($existing) {
+                if ($existing->activo) {
+                    $msg = 'El tipo de aplicación ya ha sido registrado.';
+                    if ($request->ajax() || $request->wantsJson()) {
+                        return response()->json(['success' => false, 'message' => $msg], 422);
+                    }
+                    return back()->withErrors(['nombre_aplicacion' => $msg])->withInput();
+                }
+
+                // Reactivar
+                $existing->activo = true;
+                $existing->save();
+
+                Log::info('[ApplicationTypes@store] Tipo reactivado', ['id' => $existing->id, 'user_id' => Auth::id()]);
+
+                $msg = 'Tipo de aplicación reactivado exitosamente';
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json(['success' => true, 'message' => $msg, 'data' => $existing]);
+                }
+                return redirect()->route('admin.tipos_aplicacion.index')->with('success', $msg);
+            }
+
+            $aplication_types = Application_types::create([
+                'nombre_aplicacion' => $nombre,
+                'slug' => Str::slug($request->nombre_aplicacion),
+            ]);
+
+            Log::info('[ApplicationTypes@store] Tipo creado', ['id' => $aplication_types->id, 'user_id' => Auth::id()]);
+
+            $msg = 'Tipo de aplicación guardado exitosamente';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => true, 'message' => $msg, 'data' => $aplication_types]);
+            }
+            return redirect()->route('admin.tipos_aplicacion.index')->with('success', $msg);
+
+        } catch (Throwable $e) {
+            Log::error('[ApplicationTypes@store] Error', ['error' => $e->getMessage(), 'user_id' => Auth::id()]);
+
+            $msg = 'Error al guardar el tipo de aplicación';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 500);
+            }
+            return redirect()->route('admin.tipos_aplicacion.index')->with('error', $msg);
         }
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Application_types $application_types)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit($id)
     {
-        $aplication_types = Application_types::where('id', $id)
-            ->where('activo', true)
-            ->firstOrFail();
-        if (!$aplication_types) {
-            return redirect()->route('admin.tipos_aplicacion.index')->with('error', 'Tipo de aplicación no encontrado');
-        }
+        $aplication_types = Application_types::where('activo', true)->findOrFail($id);
         return view('admin.tipos_aplicacion.edit', compact('aplication_types'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, $id)
+    public function update(Request $request, $id): JsonResponse|RedirectResponse
     {
         $request->validate([
             'nombre_aplicacion' => [
@@ -81,56 +97,69 @@ class ApplicationTypesController extends Controller
                 'unique:application_types,nombre_aplicacion,' . $id,
             ],
         ]);
-        try {
-            $aplication_types = Application_types::where('id', $id)
-                ->where('activo', true)
-                ->firstOrFail();
-            $aplication_types->nombre_aplicacion = strtoupper(trim($request->nombre_aplicacion));
 
-            //validamos si hubo algun cambio o modificacion en el valor del campo nombre_estado, si no hubo cambios, no se actualiza
-            if (! $aplication_types->isDirty()) {
-                // return back()->with('info', 'No se realizaron cambios');
-                return redirect()->route('admin.tipos_aplicacion.index')->with('info', 'No se realizaron cambios');
+        try {
+            $aplication_types = Application_types::where('activo', true)->findOrFail($id);
+            $aplication_types->nombre_aplicacion = mb_strtoupper(trim($request->nombre_aplicacion), 'UTF-8');
+
+            if (!$aplication_types->isDirty()) {
+                $msg = 'No se realizaron cambios';
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json(['success' => true, 'message' => $msg, 'type' => 'info']);
+                }
+                return redirect()->route('admin.tipos_aplicacion.index')->with('info', $msg);
             }
 
             $aplication_types->save();
-            return redirect()->route('admin.tipos_aplicacion.index')->with('success', 'Tipo de aplicación actualizado exitosamente');
-        } catch (\Exception $e) {
-            Log::error('Error al actualizar el tipo de aplicación: ' . $e->getMessage());
-            return redirect()->route('admin.tipos_aplicacion.index')->with('error', 'Error al actualizar el tipo de aplicación');
+
+            Log::info('[ApplicationTypes@update] Tipo actualizado', ['id' => $aplication_types->id, 'user_id' => Auth::id()]);
+
+            $msg = 'Tipo de aplicación actualizado exitosamente';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => true, 'message' => $msg, 'type' => 'success', 'data' => $aplication_types]);
+            }
+            return redirect()->route('admin.tipos_aplicacion.index')->with('success', $msg);
+
+        } catch (Throwable $e) {
+            Log::error('[ApplicationTypes@update] Error', ['id' => $id, 'error' => $e->getMessage(), 'user_id' => Auth::id()]);
+
+            $msg = 'Error al actualizar el tipo de aplicación';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 500);
+            }
+            return redirect()->route('admin.tipos_aplicacion.index')->with('error', $msg);
         }
     }
 
     public function confirm_delete($id)
     {
-        //validando que existe el giro
-        $aplication_types = Application_types::where('id', $id)
-            ->where('activo', true)
-            ->firstOrFail();
-        if (!$aplication_types) {
-            return redirect()->route('admin.tipos_aplicacion.index')->with('error', 'Tipo de aplicación no encontrado');
-        }
+        $aplication_types = Application_types::where('activo', true)->findOrFail($id);
         return view('admin.tipos_aplicacion.delete', compact('aplication_types'));
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy($id)
+    public function destroy(Request $request, $id): JsonResponse|RedirectResponse
     {
-        $aplication_types = Application_types::where('id', $id)
-            ->where('activo', true)
-            ->firstOrFail();
-        if (!$aplication_types) {
-            return redirect()->route('admin.tipos_aplicacion.confirm_delete', $id)->with('error', 'Tipo de aplicación no encontrado');
-        }
         try {
+            $aplication_types = Application_types::where('activo', true)->findOrFail($id);
             $aplication_types->activo = false;
             $aplication_types->save();
-            return redirect()->route('admin.tipos_aplicacion.index')->with('success', 'Tipo de aplicación eliminado exitosamente');
-        } catch (\Exception $e) {
-            Log::error('Error al eliminar el tipo de aplicación: ' . $e->getMessage());
-            return redirect()->route('admin.tipos_aplicacion.index')->with('error', 'Error al eliminar el tipo de aplicación');
+
+            Log::info('[ApplicationTypes@destroy] Tipo eliminado', ['id' => $id, 'user_id' => Auth::id()]);
+
+            $msg = 'Tipo de aplicación eliminado exitosamente';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => true, 'message' => $msg, 'type' => 'success']);
+            }
+            return redirect()->route('admin.tipos_aplicacion.index')->with('success', $msg);
+
+        } catch (Throwable $e) {
+            Log::error('[ApplicationTypes@destroy] Error', ['id' => $id, 'error' => $e->getMessage(), 'user_id' => Auth::id()]);
+
+            $msg = 'Error al eliminar el tipo de aplicación';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 500);
+            }
+            return redirect()->route('admin.tipos_aplicacion.index')->with('error', $msg);
         }
     }
 }

@@ -362,6 +362,29 @@ Route::delete('/giros/delete/{id}', [App\Http\Controllers\GiroController::class,
     ->name('admin.giros.destroy')
     ->middleware('auth');
 
+// Categorías de Extras
+Route::get('/extra_categories', [App\Http\Controllers\ExtraCategoryController::class, 'index'])
+    ->name('admin.extra_categories.index')
+    ->middleware('auth');
+Route::get('/extra_categories/nuevo', [App\Http\Controllers\ExtraCategoryController::class, 'create'])
+    ->name('admin.extra_categories.create')
+    ->middleware('auth');
+Route::post('/extra_categories/create', [App\Http\Controllers\ExtraCategoryController::class, 'store'])
+    ->name('admin.extra_categories.store')
+    ->middleware('auth');
+Route::get('/extra_categories/edit/{id}', [App\Http\Controllers\ExtraCategoryController::class, 'edit'])
+    ->name('admin.extra_categories.edit')
+    ->middleware('auth');
+Route::put('/extra_categories/edit/{id}', [App\Http\Controllers\ExtraCategoryController::class, 'update'])
+    ->name('admin.extra_categories.update')
+    ->middleware('auth');
+Route::get('/extra_categories/confirm_delete/{id}', [App\Http\Controllers\ExtraCategoryController::class, 'confirmDelete'])
+    ->name('admin.extra_categories.confirm_delete')
+    ->middleware('auth');
+Route::delete('/extra_categories/delete/{id}', [App\Http\Controllers\ExtraCategoryController::class, 'destroy'])
+    ->name('admin.extra_categories.destroy')
+    ->middleware('auth');
+
 // Estados
 Route::get('/estados', [App\Http\Controllers\EstadoController::class, 'index'])
     ->name('admin.estados.index')
@@ -411,25 +434,25 @@ Route::delete('/proveedores/delete/{id}', [App\Http\Controllers\ProveedorControl
     ->middleware('auth');
 
 // Niveles de Urgencia
-Route::get('/niveles-urgencia', [App\Http\Controllers\UrgencyLevelController::class, 'index'])
+Route::get('/admin/niveles-urgencia', [App\Http\Controllers\UrgencyLevelController::class, 'index'])
     ->name('admin.urgency-levels.index')
     ->middleware('auth');
-Route::get('/niveles-urgencia/nuevo', [App\Http\Controllers\UrgencyLevelController::class, 'create'])
+Route::get('/admin/niveles-urgencia/nuevo', [App\Http\Controllers\UrgencyLevelController::class, 'create'])
     ->name('admin.urgency-levels.create')
     ->middleware('auth');
-Route::post('/niveles-urgencia/create', [App\Http\Controllers\UrgencyLevelController::class, 'store'])
+Route::post('/admin/niveles-urgencia/create', [App\Http\Controllers\UrgencyLevelController::class, 'store'])
     ->name('admin.urgency-levels.store')
     ->middleware('auth');
-Route::get('/niveles-urgencia/edit/{id}', [App\Http\Controllers\UrgencyLevelController::class, 'edit'])
+Route::get('/admin/niveles-urgencia/edit/{id}', [App\Http\Controllers\UrgencyLevelController::class, 'edit'])
     ->name('admin.urgency-levels.edit')
     ->middleware('auth');
-Route::put('/niveles-urgencia/edit/{id}', [App\Http\Controllers\UrgencyLevelController::class, 'update'])
+Route::put('/admin/niveles-urgencia/edit/{id}', [App\Http\Controllers\UrgencyLevelController::class, 'update'])
     ->name('admin.urgency-levels.update')
     ->middleware('auth');
-Route::get('/niveles-urgencia/confirm_delete/{id}', [App\Http\Controllers\UrgencyLevelController::class, 'confirmDelete'])
+Route::get('/admin/niveles-urgencia/confirm_delete/{id}', [App\Http\Controllers\UrgencyLevelController::class, 'confirmDelete'])
     ->name('admin.urgency-levels.confirm_delete')
     ->middleware('auth');
-Route::delete('/niveles-urgencia/delete/{id}', [App\Http\Controllers\UrgencyLevelController::class, 'destroy'])
+Route::delete('/admin/niveles-urgencia/delete/{id}', [App\Http\Controllers\UrgencyLevelController::class, 'destroy'])
     ->name('admin.urgency-levels.destroy')
     ->middleware('auth');
 
@@ -686,6 +709,14 @@ Route::get('admin/material-categories/{id}/get-materials', [App\Http\Controllers
 
 Route::get('admin/material-categories/{id}/get-units', [App\Http\Controllers\MaterialCategoryController::class, 'getUnits'])
     ->name('admin.material-categories.get-units')
+    ->middleware('auth');
+
+Route::get('admin/material-categories/{id}/edit-content', [App\Http\Controllers\MaterialCategoryController::class, 'editContent'])
+    ->name('admin.material-categories.edit-content')
+    ->middleware('auth');
+
+Route::get('admin/material-categories/{id}/delete-content', [App\Http\Controllers\MaterialCategoryController::class, 'deleteContent'])
+    ->name('admin.material-categories.delete-content')
     ->middleware('auth');
 
 /*
@@ -1199,6 +1230,11 @@ Route::delete('/product_extras/delete/{id}', [App\Http\Controllers\ProductExtraC
     ->name('admin.product_extras.destroy')
     ->middleware('auth');
 
+// Ruta AJAX para obtener datos de un extra para edición
+Route::get('/product_extras/ajax/get/{id}', [App\Http\Controllers\ProductExtraController::class, 'getExtra'])
+    ->name('admin.product_extras.get')
+    ->middleware('auth');
+
 // D5: Ruta AJAX para obtener todos los extras activos (para modo solo-extras en post-venta)
 Route::get('/product_extras/ajax/all-active', [App\Http\Controllers\ProductExtraController::class, 'allActive'])
     ->name('admin.product-extras.all-active')
@@ -1251,6 +1287,7 @@ Route::prefix('admin/orders')->name('admin.orders.')->middleware('auth')->group(
     Route::patch('{order}/status', [App\Http\Controllers\OrderController::class, 'updateStatus'])->name('update-status');
     Route::post('{order}/mark-item-completed', [App\Http\Controllers\OrderController::class, 'markItemCompleted'])->name('mark-item-completed');
     Route::patch('{order}/cancel', [App\Http\Controllers\OrderController::class, 'cancel'])->name('cancel');
+    Route::delete('{order}', [App\Http\Controllers\OrderController::class, 'destroy'])->name('destroy');
     Route::post('{order}/payments', [App\Http\Controllers\OrderController::class, 'storePayment'])->name('payments.store');
     Route::put('payments/{payment}', [App\Http\Controllers\OrderController::class, 'updatePayment'])->name('payments.update');
     Route::delete('payments/{payment}', [App\Http\Controllers\OrderController::class, 'destroyPayment'])->name('payments.destroy');
@@ -1285,9 +1322,35 @@ Route::prefix('admin/orders')->name('admin.orders.')->middleware('auth')->group(
     Route::post('{order}/items/{item}/link-design', [App\Http\Controllers\OrderController::class, 'linkDesignToItem'])->name('items.link-design');
     Route::delete('{order}/items/{item}/unlink-design/{designExportId}', [App\Http\Controllers\OrderController::class, 'unlinkDesignFromItem'])->name('items.unlink-design');
 
+    // Resumen de diseños del pedido (para AJAX refresh del sidebar)
+    Route::get('{order}/designs-summary', [App\Http\Controllers\OrderController::class, 'getDesignsSummary'])->name('designs-summary');
+
+    // Resumen técnico del pedido (para AJAX refresh del card de resumen)
+    Route::get('{order}/technical-summary', [App\Http\Controllers\OrderController::class, 'getTechnicalSummary'])->name('technical-summary');
+
     // FASE Y: Medidas por item (captura/selección de historial)
     Route::get('{order}/items/{item}/measurements', [App\Http\Controllers\OrderController::class, 'getItemMeasurements'])->name('items.measurements');
     Route::post('{order}/items/{item}/measurements', [App\Http\Controllers\OrderController::class, 'updateItemMeasurements'])->name('items.measurements.update');
+
+    // BOM Adjustments - Ajustes de materiales por item
+    Route::get('{order}/items/{item}/bom-adjustments', [App\Http\Controllers\OrderController::class, 'getBomAdjustments'])->name('items.bom-adjustments');
+    Route::post('{order}/items/{item}/bom-adjustments', [App\Http\Controllers\OrderController::class, 'saveBomAdjustments'])->name('items.bom-adjustments.save');
+    Route::delete('{order}/items/{item}/bom-adjustments', [App\Http\Controllers\OrderController::class, 'restoreBomOriginal'])->name('items.bom-adjustments.restore');
+
+    // Embroidery Rate Adjustments - Ajustes de precio por millar de bordado
+    Route::post('{order}/items/{item}/embroidery-rate-adjustments', [App\Http\Controllers\OrderController::class, 'saveEmbroideryRateAdjustments'])->name('items.embroidery-rate.save');
+
+    // Item Price Update - Ajuste de precio de venta (SOLO DRAFT/CONFIRMED)
+    Route::patch('{order}/items/{item}/price', [App\Http\Controllers\OrderController::class, 'updateItemPrice'])->name('items.price.update');
+
+    // Item Extras - Agregar/eliminar extras de un item (actualiza BOM automáticamente)
+    Route::get('{order}/items/{item}/extras', [App\Http\Controllers\OrderController::class, 'getItemExtras'])->name('items.extras');
+    Route::post('{order}/items/{item}/extras', [App\Http\Controllers\OrderController::class, 'addExtraToItem'])->name('items.extras.add');
+    Route::delete('{order}/items/{item}/extras/{orderItemExtra}', [App\Http\Controllers\OrderController::class, 'removeExtraFromItem'])->name('items.extras.remove');
+    Route::get('{order}/items/{item}/available-extras', [App\Http\Controllers\OrderController::class, 'getAvailableExtrasForItem'])->name('items.available-extras');
+
+    // BOM HTML refresh (AJAX)
+    Route::get('{order}/bom-html', [App\Http\Controllers\OrderController::class, 'getBomHtml'])->name('bom-html');
 
     // FASE Y: Historial de medidas del cliente (para selector)
     Route::get('ajax/cliente/{cliente}/measurement-history', [App\Http\Controllers\OrderController::class, 'getClientMeasurementHistory'])->name('ajax.client-measurement-history');

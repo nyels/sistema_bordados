@@ -51,8 +51,8 @@
                         </select>
                     </div>
                     <div class="col-md-2 d-flex align-items-end">
-                        <button class="btn btn-primary" id="limpiarFiltros">
-                            <i class="fas fa-times-circle mr-1"></i>Limpiar
+                        <button class="btn btn-secondary btn-sm" id="limpiarFiltros">
+                            <i class="fas fa-eraser mr-1"></i> Limpiar
                         </button>
                     </div>
                 </div>
@@ -875,7 +875,9 @@
                 $('#viewProductionModalContent').html(
                     '<div class="modal-body text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>'
                 );
-                $.get(url, data => $('#viewProductionModalContent').html(data));
+                // Agregar timestamp para evitar caché del navegador
+                const urlWithTimestamp = url + (url.includes('?') ? '&' : '?') + '_=' + Date.now();
+                $.get(urlWithTimestamp, data => $('#viewProductionModalContent').html(data));
             });
 
             $('#filtroJerarquia').on('change', function() {

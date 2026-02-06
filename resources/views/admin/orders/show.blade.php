@@ -201,7 +201,9 @@
             {{-- Solo visible en CONFIRMED - Sin persistencia (validación UX) --}}
             {{-- ================================================================ --}}
             @if($status === Order::STATUS_CONFIRMED)
-                @include('admin.orders._bom-adjustment')
+                <div id="bomAdjustmentSection">
+                    @include('admin.orders._bom-adjustment')
+                </div>
             @endif
 
             {{-- 3. DISEÑO: Visible en DRAFT, CONFIRMED e IN_PRODUCTION --}}
@@ -553,10 +555,11 @@
                 </div>
             @endif
 
-            {{-- 6. PAGOS: Solo para ventas (NO stock_production) y estados post-draft --}}
-            {{-- REGLA CANÓNICA: Bloque financiero solo si es venta Y status >= confirmed --}}
+            {{-- 6. PAGOS: Solo para ventas (NO stock_production) --}}
+            {{-- REGLA: Mostrar en DRAFT también para poder gestionar anticipos y desbloquear edición --}}
             @php
                 $canShowFinancials = !$order->isStockProduction() && in_array($status, [
+                    Order::STATUS_DRAFT, // Permite ver/eliminar pagos para desbloquear edición
                     Order::STATUS_CONFIRMED,
                     Order::STATUS_IN_PRODUCTION,
                     Order::STATUS_READY,
@@ -662,19 +665,32 @@
                                 <th style="color: white;">Método</th>
                                 <th class="text-right" style="color: white;">Monto</th>
                                 <th style="color: white;">Referencia</th>
+                                @if($order->status === Order::STATUS_DRAFT)
+                                    <th class="text-center" style="color: white; width: 60px;"></th>
+                                @endif
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($order->payments as $payment)
-                                <tr>
+                                <tr data-payment-id="{{ $payment->id }}">
                                     <td style="color: #212529;">{{ $payment->payment_date->format('d/m/Y H:i') }}</td>
                                     <td style="color: #212529;">{{ $payment->method_label }}</td>
                                     <td class="text-right font-weight-bold" style="color: #28a745; font-size: 16px;">${{ number_format($payment->amount, 2) }}</td>
                                     <td style="color: #212529;">{{ $payment->reference ?? '—' }}</td>
+                                    @if($order->status === Order::STATUS_DRAFT)
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-pago"
+                                                    data-payment-id="{{ $payment->id }}"
+                                                    data-payment-amount="{{ number_format($payment->amount, 2) }}"
+                                                    title="Eliminar anticipo">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
+                                    @endif
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" class="text-center py-3" style="color: #212529; font-size: 15px;">
+                                    <td colspan="{{ $order->status === Order::STATUS_DRAFT ? '5' : '4' }}" class="text-center py-3" style="color: #212529; font-size: 15px;">
                                         @if(in_array($status, [Order::STATUS_DRAFT, Order::STATUS_CONFIRMED]))
                                             Sin anticipos registrados
                                         @else
@@ -697,15 +713,15 @@
                                         @endif
                                     </strong>
                                 </td>
-                                <td class="text-right" style="color: #28a745; font-size: 16px;"><strong>${{ number_format($order->amount_paid, 2) }}</strong></td>
-                                <td></td>
+                                <td class="text-right" style="color: #28a745; font-size: 16px;"><strong id="total-anticipos">${{ number_format($order->amount_paid, 2) }}</strong></td>
+                                <td{{ $order->status === Order::STATUS_DRAFT ? ' colspan="2"' : '' }}></td>
                             </tr>
                             <tr>
                                 <td colspan="2" style="color: #212529; font-size: 15px;"><strong>Saldo:</strong></td>
                                 <td class="text-right" style="color: {{ $order->balance > 0 ? '#c62828' : '#28a745' }};">
-                                    <strong style="font-size: 20px;">${{ number_format($order->balance, 2) }}</strong>
+                                    <strong style="font-size: 20px;" id="saldo-pendiente">${{ number_format($order->balance, 2) }}</strong>
                                 </td>
-                                <td></td>
+                                <td{{ $order->status === Order::STATUS_DRAFT ? ' colspan="2"' : '' }}></td>
                             </tr>
                         </tfoot>
                     </table>
@@ -825,131 +841,22 @@
             </div>
 
             {{-- DISEÑOS DEL PEDIDO: Visible en borrador, confirmado y producción --}}
+            {{-- Usa el parcial _designs-sidebar para evitar código duplicado --}}
             @if(in_array($status, [Order::STATUS_DRAFT, Order::STATUS_CONFIRMED, Order::STATUS_IN_PRODUCTION]))
                 @php
-                    // Recolectar todos los DesignExports de los items del pedido
+                    // Recolectar todos los DesignExports únicos de los items del pedido
+                    // ARQUITECTURA: Solo leer de order_item_design_exports (snapshot del pedido)
                     $allDesigns = collect();
                     foreach ($order->items as $item) {
-                        // Primero intentar diseños directos del item (pivot order_item_design_exports)
                         $itemDesigns = $item->designExports ?? collect();
-
-                        // Si no hay diseños en el item y es producto estándar, obtener del producto
-                        if ($itemDesigns->isEmpty() && $item->product) {
-                            // Cargar diseños del producto con sus exports
-                            $product = $item->product->load('designs.exports');
-                            foreach ($product->designs as $design) {
-                                // Si el pivot tiene design_export_id específico, usar ese
-                                if ($design->pivot->design_export_id) {
-                                    $export = \App\Models\DesignExport::find($design->pivot->design_export_id);
-                                    if ($export && !$allDesigns->contains('id', $export->id)) {
-                                        $allDesigns->push($export);
-                                    }
-                                } else {
-                                    // Si no, usar todos los exports del diseño
-                                    foreach ($design->exports as $export) {
-                                        if (!$allDesigns->contains('id', $export->id)) {
-                                            $allDesigns->push($export);
-                                        }
-                                    }
-                                }
-                            }
-                            continue; // Ya procesamos este item
-                        }
-
-                        // Agregar diseños del item (evitando duplicados)
-                        foreach ($itemDesigns as $design) {
-                            if (!$allDesigns->contains('id', $design->id)) {
-                                $allDesigns->push($design);
+                        foreach ($itemDesigns as $designExport) {
+                            if (!$allDesigns->contains('id', $designExport->id)) {
+                                $allDesigns->push($designExport);
                             }
                         }
                     }
                 @endphp
-
-                @if($allDesigns->isNotEmpty())
-                    <div class="card card-section-disenos">
-                        <div class="card-header bg-purple" style="background: #6f42c1 !important; color: white;">
-                            <h5 class="mb-0"><i class="fas fa-palette mr-2"></i> Diseños del Pedido</h5>
-                        </div>
-                        <div class="card-body p-3">
-                            @foreach($allDesigns as $designExport)
-                                @php
-                                    // Cargar diseño y variante para obtener la ruta
-                                    $design = $designExport->design;
-                                    $variant = $designExport->variant;
-                                @endphp
-                                <div class="design-item border rounded p-3 mb-3 bg-light {{ !$loop->last ? '' : 'mb-0' }}">
-                                    {{-- Nombre del diseño --}}
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <strong class="text-dark" style="font-size: 16px;">
-                                            <i class="fas fa-tshirt mr-2" style="color: #6f42c1;"></i>
-                                            {{ $designExport->application_label ?? $design->name ?? 'Diseño' }}
-                                        </strong>
-                                        @if($designExport->file_path)
-                                            <a href="{{ route('admin.design-exports.download', $designExport) }}"
-                                               class="btn btn-sm btn-primary"
-                                               title="Descargar archivo">
-                                                <i class="fas fa-download mr-1"></i> Descargar
-                                            </a>
-                                        @endif
-                                    </div>
-                                    {{-- Ruta de origen: diseño → variante --}}
-                                    @if($design)
-                                        <div class="mb-2" style="font-size: 14px;">
-                                            <i class="fas fa-sitemap mr-1" style="color: #1976d2;"></i>
-                                            <span style="color: #1976d2; font-weight: 500;">{{ $design->name }}</span>
-                                            @if($variant)
-                                                <span style="color: #1976d2; margin: 0 6px;">→</span>
-                                                <span style="color: #1976d2; font-weight: 500;">{{ $variant->name }}</span>
-                                            @endif
-                                        </div>
-                                    @endif
-
-                                    {{-- Preview SVG si existe --}}
-                                    @if($designExport->svg_content)
-                                        <div class="text-center mb-3 p-3 bg-white border rounded"
-                                             style="display: flex; align-items: center; justify-content: center; min-height: 120px;">
-                                            <div style="max-width: 200px; max-height: 150px;">
-                                                {!! preg_replace('/(<svg[^>]*)(>)/', '$1 style="width:100%;height:auto;max-height:150px;"$2', $designExport->svg_content) !!}
-                                            </div>
-                                        </div>
-                                    @endif
-
-                                    {{-- Especificaciones técnicas --}}
-                                    <div class="row" style="font-size: 15px;">
-                                        @if($designExport->stitches_count)
-                                            <div class="col-6 mb-2">
-                                                <i class="fas fa-dot-circle mr-1" style="color: #e91e63;"></i>
-                                                <span class="text-muted">Puntadas:</span>
-                                                <strong class="text-dark">{{ number_format($designExport->stitches_count, 0, ',', '.') }}</strong>
-                                            </div>
-                                        @endif
-                                        @if($designExport->width_mm && $designExport->height_mm)
-                                            <div class="col-6 mb-2">
-                                                <i class="fas fa-ruler-combined mr-1" style="color: #2196f3;"></i>
-                                                <span class="text-muted">Tamaño:</span>
-                                                <strong class="text-dark">{{ $designExport->width_mm }}×{{ $designExport->height_mm }}mm</strong>
-                                            </div>
-                                        @endif
-                                        @if($designExport->colors_count)
-                                            <div class="col-6 mb-2">
-                                                <i class="fas fa-palette mr-1" style="color: #7b1fa2;"></i>
-                                                <span class="text-muted">Colores:</span>
-                                                <strong class="text-dark">{{ $designExport->colors_count }}</strong>
-                                            </div>
-                                        @endif
-                                        @if($designExport->file_format)
-                                            <div class="col-6 mb-2">
-                                                <i class="fas fa-file-archive mr-1" style="color: #4caf50;"></i>
-                                                <span class="text-muted">Formato:</span>
-                                                <span class="badge badge-dark" style="font-size: 13px;">{{ strtoupper($designExport->file_format) }}</span>
-                                            </div>
-                                        @endif
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-                @endif
+                @include('admin.orders._designs-sidebar', ['allDesigns' => $allDesigns, 'order' => $order])
             @endif
 
             @if ($order->notes)
@@ -1167,6 +1074,121 @@
             notesEl.value = '';
         }
     }
+
+    // Eliminar anticipo/pago (AJAX)
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.btn-eliminar-pago');
+        if (!btn) return;
+
+        var paymentId = btn.dataset.paymentId;
+        var paymentAmount = btn.dataset.paymentAmount;
+        var paymentAmountNum = parseFloat(paymentAmount.replace(/,/g, ''));
+
+        Swal.fire({
+            title: '¿Eliminar anticipo?',
+            html: '<p>Se eliminará el anticipo de <strong>$' + paymentAmount + '</strong>.</p>' +
+                  '<p class="text-muted mb-0" style="font-size: 14px;">El monto volverá al saldo pendiente.</p>',
+            icon: 'warning',
+            showCancelButton: true,
+            reverseButtons: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-trash-alt mr-1"></i> Eliminar',
+            cancelButtonText: 'Cancelar'
+        }).then(function(result) {
+            if (result.isConfirmed) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                fetch('/admin/orders/payments/' + paymentId, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
+                    if (data.success) {
+                        // Eliminar fila de la tabla
+                        var row = document.querySelector('tr[data-payment-id="' + paymentId + '"]');
+                        if (row) {
+                            row.remove();
+                        }
+
+                        // Verificar si quedan pagos
+                        var tbody = document.querySelector('.card-section-pagos tbody');
+                        var remainingRows = tbody.querySelectorAll('tr[data-payment-id]');
+                        if (remainingRows.length === 0) {
+                            var colSpan = document.querySelector('.card-section-pagos thead th:last-child') ? '5' : '4';
+                            tbody.innerHTML = '<tr><td colspan="' + colSpan + '" class="text-center py-3" style="color: #212529; font-size: 15px;">Sin anticipos registrados</td></tr>';
+                        }
+
+                        // Actualizar totales dinámicamente
+                        var totalAnticiposEl = document.getElementById('total-anticipos');
+                        var saldoPendienteEl = document.getElementById('saldo-pendiente');
+
+                        if (totalAnticiposEl && saldoPendienteEl) {
+                            var currentAnticipo = parseFloat(totalAnticiposEl.textContent.replace(/[$,]/g, ''));
+                            var currentSaldo = parseFloat(saldoPendienteEl.textContent.replace(/[$,]/g, ''));
+
+                            var newAnticipo = currentAnticipo - paymentAmountNum;
+                            var newSaldo = currentSaldo + paymentAmountNum;
+
+                            totalAnticiposEl.textContent = '$' + newAnticipo.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                            saldoPendienteEl.textContent = '$' + newSaldo.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+                            // Actualizar color del saldo
+                            saldoPendienteEl.style.color = newSaldo > 0 ? '#c62828' : '#28a745';
+                        }
+
+                        // Actualizar estado del botón eliminar pedido
+                        var btnEliminarPedido = document.querySelector('.btn-eliminar-pedido');
+                        if (btnEliminarPedido && remainingRows.length === 0) {
+                            btnEliminarPedido.disabled = false;
+                            var msgAnticipo = btnEliminarPedido.parentElement.querySelector('span.text-center');
+                            if (msgAnticipo) {
+                                msgAnticipo.innerHTML = '<i class="fas fa-info-circle mr-1"></i> Esta acción no se puede deshacer';
+                                msgAnticipo.style.color = '#6c757d';
+                            }
+                        }
+
+                        // Actualizar orderData.balance para el modal de pagos
+                        if (typeof orderData !== 'undefined' && saldoPendienteEl) {
+                            orderData.balance = parseFloat(saldoPendienteEl.textContent.replace(/[$,]/g, ''));
+                        }
+
+                        var Toast = Swal.mixin({
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 2000
+                        });
+                        Toast.fire({ icon: 'success', title: data.message });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: data.message || 'No se pudo eliminar el anticipo.'
+                        });
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Error:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Error de conexión. Intente nuevamente.'
+                    });
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                });
+            }
+        });
+    });
 })();
 
 </script>

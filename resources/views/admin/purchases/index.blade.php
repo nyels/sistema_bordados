@@ -79,9 +79,9 @@
                     </div>
                     <div class="col-md-1 d-flex align-items-end">
                         @if (request()->hasAny(['status', 'proveedor_id', 'date_from', 'date_to']))
-                            <a href="{{ route('admin.purchases.index') }}" class="btn btn-sm btn-outline-secondary"
+                            <a href="{{ route('admin.purchases.index') }}" class="btn btn-secondary btn-sm"
                                 title="Limpiar filtros">
-                                <i class="fas fa-times"></i>
+                                <i class="fas fa-eraser"></i>
                             </a>
                         @endif
                     </div>

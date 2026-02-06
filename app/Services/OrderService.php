@@ -5,9 +5,11 @@ namespace App\Services;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderItemAdjustment;
+use App\Models\OrderItemExtra;
 use App\Models\OrderPayment;
 use App\Models\OrderEvent;
 use App\Models\Product;
+use App\Models\ProductExtra;
 use App\Models\InventoryMovement;
 use App\Models\InventoryReservation;
 use App\Models\ProductVariant;
@@ -17,16 +19,29 @@ use App\Models\PersonalizationTimeMultiplier;
 use App\Enums\MovementType;
 use App\Events\OrderStatusChanged;
 use App\Exceptions\InsufficientInventoryException;
+use App\Services\ProductionCapacityService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class OrderService
 {
+    protected ProductionCapacityService $capacityService;
+
+    public function __construct(ProductionCapacityService $capacityService)
+    {
+        $this->capacityService = $capacityService;
+    }
+
     // === CREAR PEDIDO CON ITEMS Y PAGO INICIAL ===
     public function createOrder(array $data): Order
     {
         return DB::transaction(function () use ($data) {
+            // ================================================================
+            // MOTOR DE CAPACIDAD: Calcular/validar promised_date
+            // ================================================================
+            $promisedDate = $this->resolvePromisedDate($data);
+
             // Crear pedido base
             // NOTA: cliente_id puede ser NULL para producción para stock (for_stock=true)
             $order = Order::create([
@@ -35,7 +50,8 @@ class OrderService
                 'cliente_id' => $data['cliente_id'] ?? null, // NULL = Producción para stock
                 'client_measurement_id' => $data['client_measurement_id'] ?? null,
                 'urgency_level' => $data['urgency_level'] ?? Order::URGENCY_NORMAL,
-                'promised_date' => $data['promised_date'] ?? null,
+                'promised_date' => $promisedDate,
+                'payment_method' => $data['payment_method'] ?? null,
                 'notes' => $data['notes'] ?? null,
                 'discount' => $data['discount'] ?? 0,
                 'requires_invoice' => $data['requires_invoice'] ?? false,
@@ -59,6 +75,90 @@ class OrderService
 
             return $order->fresh();
         });
+    }
+
+    // =========================================================================
+    // === MOTOR DE CAPACIDAD: RESOLUCIÓN DE FECHA PROMETIDA ===
+    // =========================================================================
+
+    /**
+     * Resuelve la fecha prometida para un nuevo pedido.
+     *
+     * REGLAS ERP:
+     * 1. Si es producción para stock (for_stock=true) → NULL (sin fecha)
+     * 2. Si se proporciona promised_date → validar capacidad
+     * 3. Si NO se proporciona → calcular automáticamente según lead time + capacidad
+     *
+     * @param array $data Datos del pedido
+     * @return string|null Fecha prometida validada o calculada
+     * @throws \Exception Si no hay capacidad disponible
+     */
+    protected function resolvePromisedDate(array $data): ?string
+    {
+        // PRODUCCIÓN PARA STOCK: No requiere fecha prometida
+        $forStock = !empty($data['for_stock']) || empty($data['cliente_id']);
+        if ($forStock) {
+            return null;
+        }
+
+        // Si se proporciona fecha, validar capacidad
+        if (!empty($data['promised_date'])) {
+            $validation = $this->capacityService->validatePromisedDate($data['promised_date']);
+
+            if (!$validation['valid']) {
+                throw new \Exception($validation['error']);
+            }
+
+            return $data['promised_date'];
+        }
+
+        // CALCULAR AUTOMÁTICAMENTE: Si no hay fecha, sugerir según lead time + capacidad
+        $maxLeadTime = $this->calculateMaxLeadTime($data['items'] ?? []);
+
+        // Aplicar multiplicador de urgencia si aplica
+        $urgency = $data['urgency_level'] ?? Order::URGENCY_NORMAL;
+        $multiplier = Order::URGENCY_MULTIPLIERS[$urgency] ?? 1.0;
+        $adjustedLeadTime = (int) ceil($maxLeadTime * $multiplier);
+
+        // Sugerir fecha según capacidad
+        $suggestion = $this->capacityService->suggestPromisedDate($adjustedLeadTime);
+
+        if (!$suggestion['suggested_date']) {
+            throw new \Exception(
+                $suggestion['error'] ?? 'No hay capacidad de producción disponible.'
+            );
+        }
+
+        return $suggestion['suggested_date'];
+    }
+
+    /**
+     * Calcula el lead time MÁXIMO de los productos del pedido.
+     *
+     * REGLA ERP: El pedido completo debe esperar al producto más lento.
+     *
+     * @param array $items Items del pedido
+     * @return int Días de producción (máximo de todos los productos)
+     */
+    public function calculateMaxLeadTime(array $items): int
+    {
+        if (empty($items)) {
+            return 0;
+        }
+
+        // Obtener IDs de productos
+        $productIds = array_filter(array_column($items, 'product_id'));
+
+        if (empty($productIds)) {
+            return 0;
+        }
+
+        // Consultar el máximo lead time de los productos activos
+        $maxLeadTime = Product::whereIn('id', $productIds)
+            ->where('status', 'active')
+            ->max('production_lead_time');
+
+        return (int) ($maxLeadTime ?? 0);
     }
 
     // === CREAR PEDIDO ANEXO (SUB-PEDIDO VINCULADO) ===
@@ -780,6 +880,7 @@ class OrderService
 
     /**
      * Calcula los requerimientos de materiales de extras para un item.
+     * Usa la tabla pivot order_item_extras para obtener los extras REALES del item.
      * Solo considera extras con consumes_inventory = true.
      *
      * @param OrderItem $item
@@ -788,21 +889,27 @@ class OrderService
     protected function calculateExtraMaterialRequirements(OrderItem $item): array
     {
         $requirements = [];
-        $product = $item->product;
 
-        // Cargar extras con sus materiales
-        if (!$product->relationLoaded('extras')) {
-            $product->load(['extras.materials']);
-        }
+        // Cargar extras del item desde tabla pivot con sus relaciones
+        $itemExtras = $item->extras()->with(['productExtra.materials'])->get();
 
-        foreach ($product->extras as $extra) {
+        foreach ($itemExtras as $orderItemExtra) {
+            $extra = $orderItemExtra->productExtra;
+
+            if (!$extra) {
+                continue;
+            }
+
             // Solo procesar extras que consumen inventario
             if (!$extra->consumesInventory()) {
                 continue;
             }
 
-            // Obtener requerimientos del extra multiplicados por cantidad del item
-            $extraReqs = $extra->getMaterialRequirements($item->quantity);
+            // Cantidad total: cantidad del extra × cantidad del item
+            $totalExtraQuantity = $orderItemExtra->quantity * $item->quantity;
+
+            // Obtener requerimientos del extra multiplicados por cantidad total
+            $extraReqs = $extra->getMaterialRequirements($totalExtraQuantity);
 
             foreach ($extraReqs as $variantId => $requiredQty) {
                 if (!isset($requirements[$variantId])) {
@@ -931,18 +1038,26 @@ class OrderService
         }
 
         // === RESERVAS DE MATERIALES DE EXTRAS CON INVENTARIO ===
-        if (!$product->relationLoaded('extras')) {
-            $product->load(['extras.materials']);
-        }
+        // Usar extras REALES del item desde tabla pivot
+        $itemExtras = $item->extras()->with(['productExtra.materials'])->get();
 
-        foreach ($product->extras as $extra) {
+        foreach ($itemExtras as $orderItemExtra) {
+            $extra = $orderItemExtra->productExtra;
+
+            if (!$extra) {
+                continue;
+            }
+
             // Solo procesar extras que consumen inventario
             if (!$extra->consumesInventory()) {
                 continue;
             }
 
-            // Obtener requerimientos del extra multiplicados por cantidad del item
-            $extraRequirements = $extra->getMaterialRequirements($item->quantity);
+            // Cantidad total: cantidad del extra × cantidad del item
+            $totalExtraQuantity = $orderItemExtra->quantity * $item->quantity;
+
+            // Obtener requerimientos del extra multiplicados por cantidad total
+            $extraRequirements = $extra->getMaterialRequirements($totalExtraQuantity);
 
             foreach ($extraRequirements as $variantId => $requiredQty) {
                 if ($requiredQty <= 0) {
@@ -1124,12 +1239,18 @@ class OrderService
                 'estimated_lead_time' => $estimatedLeadTime,
             ]);
 
+            // === GUARDAR EXTRAS EN TABLA PIVOT ===
+            $this->syncOrderItemExtras($orderItem, $itemData['extras'] ?? []);
+
+            // === SNAPSHOT DE DISEÑOS DEL PRODUCTO ===
+            // Copiar design_exports del producto a order_item_design_exports
+            $this->snapshotProductDesigns($orderItem, $product);
+
             // === HISTORIAL DE MEDIDAS ===
-            // Si tiene medidas inline y el usuario solicitó guardar en perfil del cliente
-            // CANÓNICO: Solo si hay cliente (producción para stock NO guarda historial de cliente)
-            $saveToClient = $inlineMeasurements['save_to_client'] ?? false;
+            // SIEMPRE guardar en historial cuando hay cliente y medidas
+            // (producción para stock NO guarda historial porque no hay cliente)
             $hasCliente = $order->cliente_id !== null;
-            if ($requiresMeasurements && !empty($inlineMeasurements) && $saveToClient && $hasCliente) {
+            if ($requiresMeasurements && !empty($inlineMeasurements) && $hasCliente) {
                 $measurementHistory = $this->saveMeasurementHistory(
                     $order,
                     $orderItem,
@@ -1139,6 +1260,101 @@ class OrderService
                 // Vincular el historial al item
                 $orderItem->update(['measurement_history_id' => $measurementHistory->id]);
             }
+        }
+    }
+
+    // === GUARDAR EXTRAS DEL ITEM EN TABLA PIVOT ===
+    /**
+     * Sincroniza los extras de un OrderItem en la tabla pivot order_item_extras.
+     * Guarda un snapshot del precio unitario al momento del pedido.
+     *
+     * @param OrderItem $orderItem
+     * @param array $extras Array de extras [{id, name, price, quantity}, ...]
+     */
+    protected function syncOrderItemExtras(OrderItem $orderItem, array $extras): void
+    {
+        if (empty($extras)) {
+            return;
+        }
+
+        // Obtener IDs de extras para validar existencia
+        $extraIds = array_filter(array_column($extras, 'id'));
+        if (empty($extraIds)) {
+            return;
+        }
+
+        // Cargar extras válidos de la base de datos
+        $validExtras = ProductExtra::whereIn('id', $extraIds)->get()->keyBy('id');
+
+        foreach ($extras as $extraData) {
+            $extraId = $extraData['id'] ?? null;
+            if (!$extraId || !$validExtras->has($extraId)) {
+                continue;
+            }
+
+            $productExtra = $validExtras->get($extraId);
+            $quantity = (int) ($extraData['quantity'] ?? 1);
+
+            // Precio unitario: usar el del ProductExtra (fuente de verdad)
+            $unitPrice = (float) $productExtra->price_addition;
+            $totalPrice = $unitPrice * $quantity;
+
+            // Crear registro en tabla pivot con snapshot de precios
+            OrderItemExtra::create([
+                'order_item_id' => $orderItem->id,
+                'product_extra_id' => $productExtra->id,
+                'quantity' => $quantity,
+                'unit_price' => $unitPrice,
+                'total_price' => $totalPrice,
+            ]);
+        }
+    }
+
+    // === SNAPSHOT DE DISEÑOS DEL PRODUCTO ===
+    /**
+     * Copia los diseños técnicos (DesignExport) del producto a la tabla order_item_design_exports.
+     * Esto crea un snapshot inmutable de los diseños que se usarán para este item específico.
+     *
+     * @param OrderItem $orderItem
+     * @param Product $product
+     */
+    protected function snapshotProductDesigns(OrderItem $orderItem, Product $product): void
+    {
+        // Cargar diseños del producto con pivot (design_export_id específico)
+        if (!$product->relationLoaded('designs')) {
+            $product->load('designs');
+        }
+
+        $designsToAttach = [];
+
+        foreach ($product->designs as $design) {
+            // Solo copiar si hay un design_export_id específico asignado
+            if ($design->pivot->design_export_id) {
+                $exportId = $design->pivot->design_export_id;
+
+                // Evitar duplicados
+                if (!isset($designsToAttach[$exportId])) {
+                    $designsToAttach[$exportId] = [
+                        'application_type' => $design->pivot->application_type_id,
+                        'position' => null,
+                        'notes' => 'Diseño del producto (snapshot automático)',
+                        'sort_order' => count($designsToAttach),
+                        'created_by' => Auth::id(),
+                    ];
+                }
+            }
+        }
+
+        // Adjuntar diseños a la tabla order_item_design_exports
+        if (!empty($designsToAttach)) {
+            $orderItem->designExports()->attach($designsToAttach);
+
+            Log::info('PRODUCT_DESIGNS_SNAPSHOT', [
+                'order_item_id' => $orderItem->id,
+                'product_id' => $product->id,
+                'designs_count' => count($designsToAttach),
+                'design_export_ids' => array_keys($designsToAttach),
+            ]);
         }
     }
 

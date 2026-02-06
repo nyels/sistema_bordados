@@ -22,6 +22,9 @@
      data-name="{{ $fullName }}"
      data-price="{{ $price }}"
      data-stock="{{ $stock }}"
+     @else
+     onclick="showNoStockAlert('{{ str_replace(["'", '"'], ["\\'", '&quot;'], $fullName) }}')"
+     style="cursor: pointer;"
      @endif>
 
     {{-- Image --}}
@@ -91,8 +94,25 @@
     }
 
     .pos-product-card.no-stock {
-        opacity: 0.6;
-        border-color: var(--pos-slate-300);
+        opacity: 0.75;
+        border-color: var(--pos-danger);
+        border-width: 2px;
+        cursor: pointer;
+    }
+
+    .pos-product-card.no-stock:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+    }
+
+    .pos-product-card.no-stock .pos-product-info {
+        background: linear-gradient(180deg, #fff 0%, #fff5f5 100%);
+    }
+
+    .pos-product-card.no-stock .pos-product-price {
+        color: var(--pos-danger);
+        text-decoration: line-through;
+        opacity: 0.7;
     }
 
     .pos-product-image {

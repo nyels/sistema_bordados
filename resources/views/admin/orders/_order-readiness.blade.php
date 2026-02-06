@@ -9,29 +9,41 @@
     // El indicador se actualiza dinámicamente vía JS
     $isCreateMode = !isset($order) || !$order->exists;
 
-    // === MODO SHOW (con $order existente) ===
-    // FASE 2: Usa método canónico OrderItem::isReady()
+    // === MODO EDIT/SHOW (con $order existente) ===
+    // IMPORTANTE: En fase DRAFT (captura/edición) NO se validan diseños técnicos.
+    // Los diseños técnicos se vinculan DESPUÉS de confirmar, en la fase de producción.
+    // Solo validamos: medidas pendientes y aprobación de diseño (si aplica).
     if (!$isCreateMode) {
         $items = $order->items;
+        $isDraft = $order->status === \App\Models\Order::STATUS_DRAFT;
 
-        // Filtrar items pendientes usando método canónico
-        $pendingItems = $items->filter(fn($i) => !$i->isReady());
-
-        // Agrupar por tipo de pendiente para mostrar en UI
-        $itemsNeedingMeasurements = $pendingItems->filter(fn($i) =>
+        // Items con medidas pendientes (aplica siempre)
+        $itemsNeedingMeasurements = $items->filter(fn($i) =>
             $i->requires_measurements && empty($i->measurements)
         );
 
-        $itemsNeedingDesign = $pendingItems->filter(fn($i) =>
+        // Items con diseño por aprobar (solo tipo 'design', NO texto simple)
+        $itemsNeedingDesign = $items->filter(fn($i) =>
             $i->blocksProductionForDesign()
         );
 
-        $itemsNeedingTechnicalDesign = $pendingItems->filter(fn($i) =>
-            $i->blocksProductionForTechnicalDesigns()
-        );
+        // Items sin diseño técnico vinculado (solo se valida POST-confirmación)
+        // En DRAFT no se muestra este pendiente
+        $itemsNeedingTechnicalDesign = $isDraft
+            ? collect([])
+            : $items->filter(fn($i) => $i->blocksProductionForTechnicalDesigns());
 
-        // Decisión CANÓNICA: todos los items deben estar READY
-        $isReady = $items->count() > 0 && $pendingItems->count() === 0;
+        // En DRAFT: listo si tiene items, medidas completas y diseños aprobados
+        // NO se validan diseños técnicos en esta fase
+        if ($isDraft) {
+            $isReady = $items->count() > 0
+                && $itemsNeedingMeasurements->count() === 0
+                && $itemsNeedingDesign->count() === 0;
+        } else {
+            // Post-confirmación: validación completa incluyendo diseños técnicos
+            $pendingItems = $items->filter(fn($i) => !$i->isReady());
+            $isReady = $items->count() > 0 && $pendingItems->count() === 0;
+        }
     }
 @endphp
 
@@ -121,6 +133,12 @@
                                 <li>
                                     <strong>Diseño por aprobar:</strong>
                                     {{ $itemsNeedingDesign->pluck('product_name')->implode(', ') }}
+                                </li>
+                            @endif
+                            @if($itemsNeedingTechnicalDesign->count() > 0)
+                                <li>
+                                    <strong>Diseño técnico sin vincular:</strong>
+                                    {{ $itemsNeedingTechnicalDesign->pluck('product_name')->implode(', ') }}
                                 </li>
                             @endif
                         </ul>
