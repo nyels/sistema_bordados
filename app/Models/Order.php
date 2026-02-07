@@ -195,6 +195,20 @@ class Order extends Model
             }
 
             // ================================================================
+            // PASO 10: CONGELACIÓN DE promised_date POST-PRODUCCIÓN
+            // REGLA ERP: promised_date es INMUTABLE desde IN_PRODUCTION.
+            // En CONFIRMED se permite SOLO via OrderService::reschedulePromisedDate()
+            // que valida capacidad y registra auditoría.
+            // Este guard protege contra bypass directo vía Eloquent.
+            // ================================================================
+            if ($model->isDirty('promised_date') && $model->isInProduction()) {
+                throw new \Exception(
+                    "CONGELACIÓN DE AGENDA: No se puede modificar promised_date en estado '{$model->getOriginal('status')}'. " .
+                    "La fecha queda congelada desde IN_PRODUCTION."
+                );
+            }
+
+            // ================================================================
             // v2.5: CIERRE CONTABLE ABSOLUTO
             // Un pedido financieramente cerrado es 100% inmutable
             // ================================================================
@@ -399,6 +413,17 @@ class Order extends Model
     public function scopePending($query)
     {
         return $query->whereIn('status', [self::STATUS_DRAFT, self::STATUS_CONFIRMED]);
+    }
+
+    /**
+     * PASO 12: Scope canónico para pedidos retrasados.
+     * Fuente única del predicado "overdue" (promised_date < hoy, no terminal).
+     */
+    public function scopeOverdue($query)
+    {
+        return $query->whereNotIn('status', [self::STATUS_DELIVERED, self::STATUS_CANCELLED])
+            ->whereNotNull('promised_date')
+            ->whereDate('promised_date', '<', today());
     }
 
     // === MÉTODOS DE NEGOCIO ===
@@ -1938,6 +1963,48 @@ class Order extends Model
         ];
 
         return in_array($this->status, $cancellableStates);
+    }
+
+    // =========================================================================
+    // === PASO 10: GATE DE REPROGRAMACIÓN DE FECHA PROMETIDA ===
+    // =========================================================================
+
+    /**
+     * GATE ERP: Verifica si promised_date puede modificarse.
+     * REGLA CANÓNICA:
+     * - DRAFT: SÍ (edición libre)
+     * - CONFIRMED: SÍ (reprogramación controlada)
+     * - IN_PRODUCTION+: NO (congelado)
+     * - TERMINAL: NO (inmutable)
+     *
+     * @return bool TRUE si promised_date puede cambiarse
+     */
+    public function canReschedulePromisedDate(): bool
+    {
+        return in_array($this->status, [
+            self::STATUS_DRAFT,
+            self::STATUS_CONFIRMED,
+        ]);
+    }
+
+    /**
+     * Obtiene el motivo por el cual NO se puede reprogramar.
+     *
+     * @return string|null NULL si se puede reprogramar, mensaje si no
+     */
+    public function getRescheduleBlockReason(): ?string
+    {
+        if ($this->canReschedulePromisedDate()) {
+            return null;
+        }
+
+        return match($this->status) {
+            self::STATUS_IN_PRODUCTION => 'No se puede reprogramar: el pedido está en producción. Los materiales ya fueron reservados.',
+            self::STATUS_READY => 'No se puede reprogramar: la producción ha finalizado.',
+            self::STATUS_DELIVERED => 'No se puede reprogramar: el pedido ya fue entregado.',
+            self::STATUS_CANCELLED => 'No se puede reprogramar: el pedido está cancelado.',
+            default => 'No se puede reprogramar en el estado actual.',
+        };
     }
 
     /**

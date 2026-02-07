@@ -128,9 +128,7 @@ class OrderController extends Controller
             'bloqueados' => $bloqueados,
             'en_produccion' => Order::where('status', Order::STATUS_IN_PRODUCTION)->count(),
             'para_entregar' => Order::where('status', Order::STATUS_READY)->count(),
-            'retrasados' => Order::whereNotIn('status', [Order::STATUS_DELIVERED, Order::STATUS_CANCELLED])
-                ->whereDate('promised_date', '<', now())
-                ->count(),
+            'retrasados' => app(\App\Services\OrderCalendarReadService::class)->countOverdueOrders(),
         ];
 
         return view('admin.orders.index', compact('orders', 'kpis'));
@@ -3251,5 +3249,134 @@ class OrderController extends Controller
             'adjustments' => $adjustments,
             'has_adjustments' => $adjustments->isNotEmpty(),
         ]);
+    }
+
+    // =========================================================================
+    // === PASO 11: CALENDARIO DE PRODUCCIÓN ===
+    // =========================================================================
+
+    /**
+     * Vista del calendario de producción.
+     * Muestra pedidos activos por mes con capacidad semanal.
+     */
+    public function calendar(Request $request)
+    {
+        $capacityService = app(ProductionCapacityService::class);
+        $weeklyCapacity = $capacityService->getWeeklyCapacity();
+
+        return view('admin.production.calendar', compact('weeklyCapacity'));
+    }
+
+    /**
+     * API: Pedidos para el calendario en un rango de fechas.
+     * PASO 12: Delega a OrderCalendarReadService (fuente transversal única).
+     */
+    public function calendarEvents(Request $request)
+    {
+        $request->validate([
+            'start' => ['required', 'date'],
+            'end' => ['required', 'date', 'after:start'],
+        ]);
+
+        $start = \Carbon\Carbon::parse($request->input('start'));
+        $end = \Carbon\Carbon::parse($request->input('end'));
+
+        $calendarService = app(\App\Services\OrderCalendarReadService::class);
+        $data = $calendarService->getCalendarData($start, $end);
+
+        // Transformar contrato canónico → formato FullCalendar
+        $fcEvents = collect($data['events'])->map(function (array $event) {
+            return [
+                'id' => $event['order_id'],
+                'title' => $event['order_number'],
+                'start' => $event['promised_date'],
+                'allDay' => true,
+                'extendedProps' => $event,
+                'backgroundColor' => $this->calendarStatusColor($event['status']),
+                'borderColor' => $this->calendarStatusBorder($event['status'], $event['urgency']),
+                'editable' => $event['can_reschedule'],
+                'className' => $event['can_reschedule'] ? 'calendar-draggable' : 'calendar-locked',
+            ];
+        });
+
+        return response()->json([
+            'events' => $fcEvents,
+            'week_capacities' => $data['week_utilization'],
+        ]);
+    }
+
+    /**
+     * API: Reprogramar fecha prometida de un pedido (drag & drop).
+     * Delegación pura a OrderService::reschedulePromisedDate().
+     */
+    public function reschedule(Request $request, Order $order)
+    {
+        $request->validate([
+            'new_promised_date' => ['required', 'date', 'after_or_equal:today'],
+        ]);
+
+        try {
+            $previousDate = $order->promised_date?->format('Y-m-d');
+            $updatedOrder = $this->orderService->reschedulePromisedDate(
+                $order,
+                $request->input('new_promised_date')
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => "Fecha reprogramada: {$previousDate} → {$updatedOrder->promised_date->format('Y-m-d')}",
+                'order' => [
+                    'id' => $updatedOrder->id,
+                    'order_number' => $updatedOrder->order_number,
+                    'promised_date' => $updatedOrder->promised_date->format('Y-m-d'),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            // Intentar sugerir siguiente fecha disponible
+            $suggestion = null;
+            try {
+                $capacityService = app(ProductionCapacityService::class);
+                $next = $capacityService->findNextAvailableWeek();
+                if ($next) {
+                    $suggestion = $next['week_start'];
+                }
+            } catch (\Throwable $ignored) {
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'suggestion' => $suggestion,
+            ], 422);
+        }
+    }
+
+    /**
+     * Color de fondo del evento según estado.
+     */
+    private function calendarStatusColor(string $status): string
+    {
+        return match ($status) {
+            Order::STATUS_DRAFT => '#6c757d',
+            Order::STATUS_CONFIRMED => '#007bff',
+            Order::STATUS_IN_PRODUCTION => '#6610f2',
+            Order::STATUS_READY => '#28a745',
+            Order::STATUS_DELIVERED => '#17a2b8',
+            default => '#adb5bd',
+        };
+    }
+
+    /**
+     * Borde del evento según urgencia.
+     */
+    private function calendarStatusBorder(string $status, string $urgency): string
+    {
+        if ($urgency === Order::URGENCY_EXPRESS) {
+            return '#dc3545';
+        }
+        if ($urgency === Order::URGENCY_URGENTE) {
+            return '#fd7e14';
+        }
+        return $this->calendarStatusColor($status);
     }
 }

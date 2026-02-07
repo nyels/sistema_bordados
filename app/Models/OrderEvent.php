@@ -39,6 +39,9 @@ class OrderEvent extends Model
     public const TYPE_ITEM_ADDED = 'item_added';
     public const TYPE_ANNEX_CREATED = 'annex_created';
 
+    // === PASO 10: EVENTO DE REPROGRAMACIÓN ===
+    public const TYPE_RESCHEDULED = 'rescheduled';                      // Fecha prometida reprogramada
+
     // === v2.5: TIPOS DE EVENTO CONTABLE ===
     public const TYPE_PAYMENT_REGISTERED = 'payment_registered';        // Pago registrado con auditoría completa
     public const TYPE_ORDER_FINANCIALLY_CLOSED = 'financially_closed';  // Cierre contable definitivo
@@ -74,6 +77,8 @@ class OrderEvent extends Model
             self::TYPE_STATUS_CHANGED => 'fas fa-exchange-alt text-secondary',
             self::TYPE_ITEM_ADDED => 'fas fa-cart-plus text-info',
             self::TYPE_ANNEX_CREATED => 'fas fa-project-diagram text-info',
+            // Paso 10: Reprogramación
+            self::TYPE_RESCHEDULED => 'fas fa-calendar-alt text-warning',
             // v2.5: Eventos contables
             self::TYPE_PAYMENT_REGISTERED => 'fas fa-file-invoice-dollar text-success',
             self::TYPE_ORDER_FINANCIALLY_CLOSED => 'fas fa-lock text-primary',
@@ -100,6 +105,8 @@ class OrderEvent extends Model
             self::TYPE_STATUS_CHANGED => 'secondary',
             self::TYPE_ITEM_ADDED => 'info',
             self::TYPE_ANNEX_CREATED => 'info',
+            // Paso 10: Reprogramación
+            self::TYPE_RESCHEDULED => 'warning',
             // v2.5: Eventos contables
             self::TYPE_PAYMENT_REGISTERED => 'success',
             self::TYPE_ORDER_FINANCIALLY_CLOSED => 'primary',
@@ -126,6 +133,8 @@ class OrderEvent extends Model
             self::TYPE_STATUS_CHANGED => 'Cambio de Estado',
             self::TYPE_ITEM_ADDED => 'Item Agregado',
             self::TYPE_ANNEX_CREATED => 'Anexo Creado',
+            // Paso 10: Reprogramación
+            self::TYPE_RESCHEDULED => 'Fecha Reprogramada',
             // v2.5: Eventos contables
             self::TYPE_PAYMENT_REGISTERED => 'Pago Registrado',
             self::TYPE_ORDER_FINANCIALLY_CLOSED => 'Cierre Contable',
@@ -339,6 +348,39 @@ class OrderEvent extends Model
                 'amount' => $amount,
                 'method' => $method,
                 'new_balance' => $order->balance,
+            ]
+        );
+    }
+
+    // =========================================================================
+    // === PASO 10: HELPER REPROGRAMACIÓN ===
+    // =========================================================================
+
+    /**
+     * Registra reprogramación de fecha prometida con auditoría completa.
+     * Incluye semana ISO anterior/nueva y snapshot de capacidad.
+     */
+    public static function logRescheduled(
+        Order $order,
+        ?string $previousDate,
+        string $newDate,
+        array $capacitySnapshot = []
+    ): self {
+        $prevLabel = $previousDate ?? 'sin fecha';
+        return self::log(
+            $order,
+            self::TYPE_RESCHEDULED,
+            "Fecha reprogramada: {$prevLabel} → {$newDate}",
+            [
+                'previous_promised_date' => $previousDate,
+                'new_promised_date' => $newDate,
+                'previous_week' => $previousDate
+                    ? 'W' . \Carbon\Carbon::parse($previousDate)->isoFormat('WW-GGGG')
+                    : null,
+                'new_week' => 'W' . \Carbon\Carbon::parse($newDate)->isoFormat('WW-GGGG'),
+                'capacity_snapshot' => $capacitySnapshot,
+                'status_at_reschedule' => $order->status,
+                'timestamp' => now()->toIso8601String(),
             ]
         );
     }

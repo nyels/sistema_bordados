@@ -6,9 +6,9 @@
                 <tr>
                     <th class="text-center" style="width: 90px;">Fecha</th>
                     <th class="text-center" style="width: 80px;">Prioridad</th>
-                    <th style="min-width: 120px;">Cliente</th>
-                    <th style="width: 120px;">Pedido</th>
-                    <th style="min-width: 130px;">Productos</th>
+                    <th class="text-center" style="min-width: 120px;">Cliente</th>
+                    <th class="text-center" style="width: 120px;">Pedido</th>
+                    <th class="text-center" style="min-width: 130px;">Productos</th>
                     <th class="text-center" style="width: 110px;">Estado</th>
                     <th class="text-center" style="width: 100px;">Compromiso</th>
                     <th class="text-center" style="width: 100px;">Materiales</th>
@@ -53,14 +53,14 @@
                                 {{ $order->urgency_label }}
                             </span>
                         </td>
-                        <td>
+                        <td class="text-center align-middle">
                             @if($order->cliente)
                                 {{ $order->cliente->nombre }} {{ $order->cliente->apellidos }}
                             @else
                                 <span style="color: #212529;"><i class="fas fa-warehouse mr-1"></i> Stock</span>
                             @endif
                         </td>
-                        <td>
+                        <td class="text-center align-middle">
                             <a href="{{ route('admin.orders.show', $order) }}?from=queue" class="font-weight-bold">
                                 {{ $order->order_number }}
                             </a>
@@ -69,11 +69,13 @@
                                         class="fas fa-link"></i></span>
                             @endif
                         </td>
-                        <td>
+                        <td class="text-center align-middle">
                             @php
                                 $itemsCount = $order->items->count();
                                 $totalPiezas = $order->items->sum('quantity');
                                 $hasExtras = $order->items->contains(fn($i) => $i->extras && $i->extras->count() > 0);
+                                $completedItemsTable = $order->items->where('production_completed', true)->count();
+                                $progressPercentTable = $itemsCount > 0 ? round(($completedItemsTable / $itemsCount) * 100) : 0;
                             @endphp
                             @if($itemsCount > 0)
                                 <a href="#" data-toggle="modal" data-target="#modalProductosDetalle{{ $order->id }}"
@@ -85,11 +87,28 @@
                                         <i class="fas fa-plus-circle ml-1" style="color: #0277bd; font-size: 12px;" title="Con extras"></i>
                                     @endif
                                 </a>
+                                {{-- Barra de progreso de producción --}}
+                                @if($order->status === \App\Models\Order::STATUS_IN_PRODUCTION)
+                                    <div class="mt-2">
+                                        <div class="d-flex align-items-center justify-content-between mb-1" style="font-size: 12px; color: #495057; font-weight: 600;">
+                                            <span class="progress-label-table-{{ $order->id }}">{{ $completedItemsTable }} / {{ $itemsCount }}</span>
+                                            <span class="progress-percent-table-{{ $order->id }}">{{ $progressPercentTable }}%</span>
+                                        </div>
+                                        <div class="progress" style="height: 12px; border-radius: 6px; background: #e9ecef;">
+                                            <div class="progress-bar progress-bar-table-{{ $order->id }} {{ $completedItemsTable === $itemsCount ? 'bg-success' : 'bg-primary' }}"
+                                                 role="progressbar"
+                                                 style="width: {{ $progressPercentTable }}%; border-radius: 6px;"
+                                                 aria-valuenow="{{ $progressPercentTable }}"
+                                                 aria-valuemin="0"
+                                                 aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+                                @endif
                             @else
                                 <span style="color: #6b7280;">-</span>
                             @endif
                         </td>
-                        <td class="text-center">
+                        <td class="text-center align-middle">
                             @if ($isBlocked)
                                 {{-- CONFIRMADO BLOQUEADO --}}
                                 <span class="badge badge-danger" style="font-size: 16px; cursor: help;"
@@ -147,7 +166,7 @@
                             @endif
                         </td>
 
-                        <td class="text-center">
+                        <td class="text-center align-middle">
                             @if ($order->promised_date)
                                 <span class="{{ $isOverdue ? 'text-danger font-weight-bold' : '' }}">
                                     {{ $order->promised_date->format('d/m/Y') }}
@@ -159,7 +178,7 @@
                                 <span style="color: #212529;">-</span>
                             @endif
                         </td>
-                        <td class="text-center">
+                        <td class="text-center align-middle">
                             @if (count($order->material_requirements) > 0)
                                 @php
                                     $insufficient = collect($order->material_requirements)->filter(
@@ -189,7 +208,7 @@
                                 <span style="color: #212529;">Sin materiales</span>
                             @endif
                         </td>
-                        <td class="text-center">
+                        <td class="text-center align-middle">
                             @if ($hasBlockers)
                                 <button type="button" class="btn btn-xs btn-danger" data-toggle="modal"
                                     data-target="#blockersModal{{ $order->id }}" title="Ver motivos de bloqueo">
@@ -208,7 +227,7 @@
                                 <span style="color: #212529;">-</span>
                             @endif
                         </td>
-                        <td class="text-left d-flex justify-content-start align-items-center gap-1">
+                        <td class="text-center align-middle">
                             <a href="{{ route('admin.orders.show', $order) }}?from=queue"
                                 class="btn btn-sm btn-info mr-1" title="Ver pedido">
                                 <i class="fas fa-eye"></i>
@@ -228,7 +247,7 @@
                                 <button type="button" class="btn btn-sm btn-primary" data-toggle="modal"
                                     data-target="#modalProductosQueue{{ $order->id }}"
                                     title="Marcar productos como terminados">
-                                    <i class="fas fa-check"></i> Listo
+                                    <i class="fas fa-check"></i>
                                 </button>
                             @elseif($hasBlockers)
                                 <a href="{{ route('admin.orders.show', $order) }}?from=queue#blockers-section"
@@ -265,9 +284,14 @@
 {{-- MODALES DE MATERIALES --}}
 @foreach ($orders as $order)
     @if (count($order->material_requirements) > 0)
+        @php
+            // Separar materiales del BOM y de extras
+            $bomMaterials = collect($order->material_requirements)->filter(fn($m) => ($m['source_type'] ?? 'bom') === 'bom');
+            $extraMaterials = collect($order->material_requirements)->filter(fn($m) => ($m['source_type'] ?? 'bom') === 'extra');
+        @endphp
         <div class="modal fade" id="materialsModal{{ $order->id }}" tabindex="-1">
-            <div class="modal-dialog modal-lg modal-dialog-scrollable">
-                <div class="modal-content" style="max-height: 90vh;">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content" style="max-height: 90vh; display: flex; flex-direction: column;">
                     <div class="modal-header" style="background: #343a40; color: white;">
                         <h5 class="modal-title">
                             <i class="fas fa-boxes mr-2"></i>
@@ -275,9 +299,11 @@
                         </h5>
                         <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
                     </div>
-                    <div class="modal-body p-3" style="overflow-y: auto;">
+
+                    {{-- BARRA FIJA: Toggle + Encabezados de tabla --}}
+                    <div style="background: #fff; border-bottom: 2px solid #dee2e6; flex-shrink: 0;">
                         {{-- Toggle de unidades --}}
-                        <div class="d-flex justify-content-end mb-2">
+                        <div class="d-flex justify-content-end p-2" style="background: #f8f9fa;">
                             <div class="btn-group btn-group-sm unit-toggle" role="group">
                                 <button type="button" class="btn btn-primary active" data-unit-mode="consumption">
                                     Consumo
@@ -287,20 +313,46 @@
                                 </button>
                             </div>
                         </div>
-                        <table class="table table-sm table-striped mb-0 materials-table">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th>Material</th>
-                                    <th>Color</th>
-                                    <th class="text-center">Requerido</th>
-                                    <th class="text-center">Stock</th>
-                                    <th class="text-center">Reservado</th>
-                                    <th class="text-center">Stock Disponible</th>
-                                    <th class="text-center">Estado</th>
+                        {{-- Encabezados de tabla fijos --}}
+                        <table class="table table-sm mb-0 materials-table" style="table-layout: fixed;">
+                            <thead>
+                                <tr style="background: #e9ecef;">
+                                    <th style="width: 22%;">Material</th>
+                                    <th style="width: 12%;">Color</th>
+                                    <th class="text-center" style="width: 13%;">Requerido</th>
+                                    <th class="text-center" style="width: 13%;">Stock</th>
+                                    <th class="text-center" style="width: 13%;">Reservado</th>
+                                    <th class="text-center" style="width: 13%;">Stock Disp.</th>
+                                    <th class="text-center" style="width: 14%;">Estado</th>
                                 </tr>
                             </thead>
+                        </table>
+                    </div>
+
+                    {{-- CUERPO CON SCROLL --}}
+                    <div class="modal-body p-0" style="overflow-y: auto; flex: 1;">
+                        {{-- TABLA UNIFICADA DE MATERIALES (sin thead) --}}
+                        <table class="table table-sm table-striped mb-0 materials-table" style="table-layout: fixed;">
+                            <colgroup>
+                                <col style="width: 22%;">
+                                <col style="width: 12%;">
+                                <col style="width: 13%;">
+                                <col style="width: 13%;">
+                                <col style="width: 13%;">
+                                <col style="width: 13%;">
+                                <col style="width: 14%;">
+                            </colgroup>
                             <tbody>
-                                @foreach ($order->material_requirements as $mat)
+                                {{-- ======================== MATERIALES DEL BOM ======================== --}}
+                                @if($bomMaterials->count() > 0)
+                                <tr style="background: #e3f2fd;">
+                                    <td colspan="7" class="py-2">
+                                        <strong style="color: #1565c0;">
+                                            <i class="fas fa-layer-group mr-1"></i> Materiales del Producto (BOM)
+                                        </strong>
+                                    </td>
+                                </tr>
+                                @foreach ($bomMaterials as $mat)
                                     <tr class="{{ !$mat['sufficient'] ? 'table-danger' : '' }}">
                                         <td>
                                             <strong>{{ $mat['material_name'] }}</strong>
@@ -394,10 +446,116 @@
                                         </td>
                                     </tr>
                                 @endforeach
+                                @endif
+
+                                {{-- ======================== MATERIALES DE EXTRAS ======================== --}}
+                                @if($extraMaterials->count() > 0)
+                                <tr style="background: #e1f5fe;">
+                                    <td colspan="7" class="py-2">
+                                        <strong style="color: #0277bd;">
+                                            <i class="fas fa-plus-circle mr-1"></i> Materiales de Extras
+                                        </strong>
+                                    </td>
+                                </tr>
+                                @foreach ($extraMaterials as $mat)
+                                    <tr class="{{ !$mat['sufficient'] ? 'table-danger' : '' }}">
+                                        <td>
+                                            <strong>{{ $mat['material_name'] }}</strong>
+                                            @if(!empty($mat['extra_name']))
+                                                <br><small style="color: #0277bd;">
+                                                    <i class="fas fa-tag mr-1"></i>{{ $mat['extra_name'] }}
+                                                </small>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if ($mat['variant_color'])
+                                                <span class="badge badge-secondary">{{ $mat['variant_color'] }}</span>
+                                                <small class="text-muted d-block"
+                                                    style="line-height: 1.2;">{{ $mat['variant_sku'] ?? '' }}</small>
+                                            @else
+                                                <small style="color: #212529;">{{ $mat['variant_sku'] ?? '-' }}</small>
+                                            @endif
+                                        </td>
+                                        <td class="text-center font-weight-bold unit-convertible"
+                                            data-material-id="{{ $mat['material_id'] ?? 0 }}"
+                                            data-material-name="{{ $mat['material_name'] ?? 'N/A' }}"
+                                            data-qty="{{ $mat['required'] }}"
+                                            data-factor="{{ $mat['conversion_factor'] ?? 1 }}"
+                                            data-unit-consumption="{{ $mat['unit'] }}"
+                                            data-unit-base="{{ $mat['unit_base'] ?? $mat['unit'] }}">
+                                            <span
+                                                class="qty-value font-weight-bold">{{ number_format($mat['required'], 2) }}</span>
+                                            <span class="unit-symbol font-weight-bold ml-1">{{ $mat['unit'] }}</span>
+                                        </td>
+                                        <td class="text-center unit-convertible"
+                                            data-material-id="{{ $mat['material_id'] ?? 0 }}"
+                                            data-material-name="{{ $mat['material_name'] ?? 'N/A' }}"
+                                            data-qty="{{ $mat['current_stock'] }}"
+                                            data-factor="{{ $mat['conversion_factor'] ?? 1 }}"
+                                            data-unit-consumption="{{ $mat['unit'] }}"
+                                            data-unit-base="{{ $mat['unit_base'] ?? $mat['unit'] }}">
+                                            <span
+                                                class="qty-value font-weight-bold">{{ number_format($mat['current_stock'], 2) }}</span>
+                                            <span class="unit-symbol font-weight-bold ml-1">{{ $mat['unit'] }}</span>
+                                        </td>
+                                        <td class="text-center unit-convertible"
+                                            data-material-id="{{ $mat['material_id'] ?? 0 }}"
+                                            data-material-name="{{ $mat['material_name'] ?? 'N/A' }}"
+                                            data-qty="{{ $mat['total_reserved'] }}"
+                                            data-factor="{{ $mat['conversion_factor'] ?? 1 }}"
+                                            data-unit-consumption="{{ $mat['unit'] }}"
+                                            data-unit-base="{{ $mat['unit_base'] ?? $mat['unit'] }}"
+                                            data-reserved-this="{{ $mat['reserved_for_this'] }}">
+                                            <span
+                                                class="qty-value font-weight-bold">{{ number_format($mat['total_reserved'], 2) }}</span>
+                                            <span class="unit-symbol font-weight-bold ml-1">{{ $mat['unit'] }}</span>
+                                            @if ($mat['reserved_for_this'] > 0)
+                                                <br><small class="text-success reserved-this-text">
+                                                    (<span
+                                                        class="reserved-this-qty font-weight-bold">{{ number_format($mat['reserved_for_this'], 2) }}</span>
+                                                    <span
+                                                        class="unit-symbol font-weight-bold">{{ $mat['unit'] }}</span>
+                                                    este pedido)
+                                                </small>
+                                            @endif
+                                        </td>
+                                        <td class="text-center unit-convertible {{ $mat['available'] < $mat['needed'] ? 'text-danger font-weight-bold' : 'text-success' }}"
+                                            data-material-id="{{ $mat['material_id'] ?? 0 }}"
+                                            data-material-name="{{ $mat['material_name'] ?? 'N/A' }}"
+                                            data-qty="{{ $mat['available'] }}"
+                                            data-factor="{{ $mat['conversion_factor'] ?? 1 }}"
+                                            data-unit-consumption="{{ $mat['unit'] }}"
+                                            data-unit-base="{{ $mat['unit_base'] ?? $mat['unit'] }}">
+                                            <span
+                                                class="qty-value font-weight-bold">{{ number_format($mat['available'], 2) }}</span>
+                                            <span class="unit-symbol font-weight-bold ml-1">{{ $mat['unit'] }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            @if ($mat['reserved_for_this'] >= $mat['required'])
+                                                <span class="badge badge-success">Reservado</span>
+                                            @elseif($mat['sufficient'])
+                                                <span class="badge badge-info">Disponible</span>
+                                            @else
+                                                <span class="badge badge-danger unit-convertible-badge"
+                                                    data-material-id="{{ $mat['material_id'] ?? 0 }}"
+                                                    data-material-name="{{ $mat['material_name'] ?? 'N/A' }}"
+                                                    data-qty="{{ $mat['needed'] - $mat['available'] }}"
+                                                    data-factor="{{ $mat['conversion_factor'] ?? 1 }}"
+                                                    data-unit-consumption="{{ $mat['unit'] }}"
+                                                    data-unit-base="{{ $mat['unit_base'] ?? $mat['unit'] }}">
+                                                    Faltan <span
+                                                        class="qty-value font-weight-bold">{{ number_format($mat['needed'] - $mat['available'], 2) }}</span>
+                                                    <span class="unit-symbol">{{ $mat['unit'] }}</span>
+                                                </span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                                @endif
                             </tbody>
                         </table>
                     </div>
-                    <div class="modal-footer">
+                    <div class="modal-footer" style="flex-shrink: 0;">
                         <div class="mr-auto">
                             <small style="color: #212529;">
                                 <strong>Stock:</strong> Cantidad en almacen |
@@ -450,81 +608,164 @@
 
     {{-- MODAL DETALLE DE PRODUCTOS --}}
     <div class="modal fade" id="modalProductosDetalle{{ $order->id }}" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
-            <div class="modal-content">
-                <div class="modal-header bg-dark text-white">
-                    <h5 class="modal-title">
-                        <i class="fas fa-clipboard-list mr-2"></i>{{ $order->order_number }}
-                    </h5>
-                    <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+            <div class="modal-content" style="border-radius: 12px; overflow: hidden;">
+                {{-- Header con info del pedido --}}
+                <div class="modal-header py-3" style="background: linear-gradient(135deg, #1a237e 0%, #3949ab 100%); border: none;">
+                    <div class="d-flex align-items-center w-100">
+                        <div class="mr-3">
+                            <div style="width: 50px; height: 50px; background: rgba(255,255,255,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-clipboard-list text-white" style="font-size: 22px;"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h5 class="modal-title text-white mb-0 font-weight-bold">{{ $order->order_number }}</h5>
+                            <small class="text-white-50">
+                                @if($order->cliente)
+                                    <i class="fas fa-user mr-1"></i>{{ $order->cliente->nombre }} {{ $order->cliente->apellidos }}
+                                @else
+                                    <i class="fas fa-warehouse mr-1"></i>Produccion para Stock
+                                @endif
+                            </small>
+                        </div>
+                        <div class="text-right">
+                            <span class="badge badge-{{ $order->urgency_color }}" style="font-size: 13px; padding: 6px 12px;">
+                                {{ $order->urgency_label }}
+                            </span>
+                        </div>
+                    </div>
+                    <button type="button" class="close text-white ml-2" data-dismiss="modal" style="opacity: 0.8;">&times;</button>
                 </div>
+
+                {{-- Body con tabla de productos --}}
                 <div class="modal-body p-0">
-                    <table class="table table-bordered mb-0 text-center align-middle">
-                        <thead class="thead-dark">
-                            <tr>
-                                <th class="align-middle">Producto</th>
-                                <th class="align-middle" style="width: 80px;">Cantidad</th>
-                                <th class="align-middle">Medidas</th>
-                                <th class="align-middle">Extras</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($order->items as $item)
-                                @php
-                                    $measurements = is_array($item->measurements) ? $item->measurements : [];
-                                    $hasMeasurements = !empty($measurements) && count(array_filter($measurements, fn($v) => !empty($v) && $v !== '0' && $v !== 'save_to_client')) > 0;
-                                    $extrasCount = $item->extras ? $item->extras->count() : 0;
-                                    $measurementLabels = [
-                                        'busto' => 'Busto',
-                                        'cintura' => 'Cintura',
-                                        'cadera' => 'Cadera',
-                                        'largo' => 'Largo',
-                                        'largo_vestido' => 'L. Vestido',
-                                        'alto_cintura' => 'A. Cintura',
-                                    ];
-                                @endphp
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 text-center" style="font-size: 15px;">
+                            <thead style="background: #37474f; color: white;">
                                 <tr>
-                                    <td class="align-middle font-weight-bold">{{ $item->product_name }}</td>
-                                    <td class="align-middle font-weight-bold" style="font-size: 18px;">{{ $item->quantity }}</td>
-                                    <td class="align-middle">
-                                        @if($hasMeasurements)
-                                            @php
-                                                $filteredMeasurements = array_filter($measurements, fn($v, $k) => !empty($v) && $v !== '0' && $k !== 'save_to_client', ARRAY_FILTER_USE_BOTH);
-                                            @endphp
-                                            @foreach($filteredMeasurements as $key => $value)
-                                                <div>{{ $measurementLabels[$key] ?? ucfirst($key) }}: {{ $value }} cm</div>
-                                            @endforeach
-                                        @else
-                                            <span class="text-muted">—</span>
-                                        @endif
-                                    </td>
-                                    <td class="align-middle">
-                                        @if($extrasCount > 0)
-                                            @foreach($item->extras as $extra)
-                                                <div>{{ $extra->productExtra->name ?? 'Extra' }} × {{ $extra->quantity }}</div>
-                                            @endforeach
-                                        @else
-                                            <span class="text-muted">—</span>
-                                        @endif
-                                    </td>
+                                    <th class="align-middle text-center" style="width: 60px;"></th>
+                                    <th class="align-middle text-center">Producto</th>
+                                    <th class="align-middle text-center" style="width: 90px;">Cantidad</th>
+                                    <th class="align-middle text-center">Medidas</th>
+                                    <th class="align-middle text-center">Extras</th>
                                 </tr>
-                            @endforeach
-                        </tbody>
-                        <tfoot class="thead-dark">
-                            <tr>
-                                <th class="align-middle">{{ $order->items->count() }} producto(s)</th>
-                                <th class="align-middle">{{ $order->items->sum('quantity') }} pz</th>
-                                <th class="align-middle"></th>
-                                <th class="align-middle"></th>
-                            </tr>
-                        </tfoot>
-                    </table>
+                            </thead>
+                            <tbody>
+                                @foreach($order->items as $item)
+                                    @php
+                                        $product = $item->product;
+                                        $productVariant = $item->productVariant;
+                                        $productImage = $product?->primary_image_url;
+                                        $measurements = is_array($item->measurements) ? $item->measurements : [];
+                                        $hasMeasurements = !empty($measurements) && count(array_filter($measurements, fn($v) => !empty($v) && $v !== '0' && $v !== 'save_to_client')) > 0;
+                                        $extrasCount = $item->extras ? $item->extras->count() : 0;
+                                        $measurementLabels = [
+                                            'busto' => 'Busto', 'cintura' => 'Cintura', 'cadera' => 'Cadera',
+                                            'largo' => 'Largo', 'largo_vestido' => 'L. Vestido', 'alto_cintura' => 'A. Cintura',
+                                        ];
+                                        // Atributos de variante
+                                        $variantAttributes = [];
+                                        if ($productVariant && $productVariant->attributeValues) {
+                                            foreach ($productVariant->attributeValues as $attrValue) {
+                                                $variantAttributes[] = [
+                                                    'value' => $attrValue->value,
+                                                    'color' => $attrValue->color_hex ?? null,
+                                                ];
+                                            }
+                                        }
+                                    @endphp
+                                    <tr>
+                                        {{-- Imagen --}}
+                                        <td class="align-middle text-center">
+                                            @if($productImage)
+                                                <img src="{{ $productImage }}" alt="{{ $item->product_name }}"
+                                                     style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px; border: 1px solid #e0e0e0;">
+                                            @else
+                                                <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                                                    <i class="fas fa-box" style="font-size: 20px; color: #1976d2;"></i>
+                                                </div>
+                                            @endif
+                                        </td>
+                                        {{-- Producto --}}
+                                        <td class="align-middle text-center">
+                                            <strong style="font-size: 15px;">{{ $item->product_name }}</strong>
+                                            @if(count($variantAttributes) > 0)
+                                                <div class="mt-1">
+                                                    @foreach($variantAttributes as $attr)
+                                                        @if($attr['color'])
+                                                            <span class="badge mr-1" style="background: {{ $attr['color'] }}; color: {{ \App\Helpers\ColorHelper::getContrastColor($attr['color']) }}; font-size: 11px;">
+                                                                {{ $attr['value'] }}
+                                                            </span>
+                                                        @else
+                                                            <span class="badge badge-secondary mr-1" style="font-size: 11px;">{{ $attr['value'] }}</span>
+                                                        @endif
+                                                    @endforeach
+                                                </div>
+                                            @endif
+                                        </td>
+                                        {{-- Cantidad --}}
+                                        <td class="align-middle text-center">
+                                            <span class="badge badge-primary" style="font-size: 16px; padding: 8px 14px;">
+                                                {{ $item->quantity }}
+                                            </span>
+                                        </td>
+                                        {{-- Medidas --}}
+                                        <td class="align-middle text-center">
+                                            @if($hasMeasurements)
+                                                @php
+                                                    $filteredMeasurements = array_filter($measurements, fn($v, $k) => !empty($v) && $v !== '0' && $k !== 'save_to_client', ARRAY_FILTER_USE_BOTH);
+                                                @endphp
+                                                <div class="d-flex flex-wrap justify-content-center" style="gap: 4px;">
+                                                    @foreach($filteredMeasurements as $key => $value)
+                                                        <span class="badge" style="background: #fff3e0; color: #e65100; font-size: 11px; padding: 3px 6px;">
+                                                            {{ $measurementLabels[$key] ?? ucfirst($key) }}: {{ $value }}
+                                                        </span>
+                                                    @endforeach
+                                                </div>
+                                            @else
+                                                <span class="text-muted">—</span>
+                                            @endif
+                                        </td>
+                                        {{-- Extras --}}
+                                        <td class="align-middle text-center">
+                                            @if($extrasCount > 0)
+                                                <div class="d-flex flex-wrap justify-content-center" style="gap: 4px;">
+                                                    @foreach($item->extras as $extra)
+                                                        <span class="badge" style="background: #e3f2fd; color: #1565c0; font-size: 11px; padding: 3px 6px;">
+                                                            {{ $extra->productExtra->name ?? 'Extra' }} x{{ $extra->quantity }}
+                                                        </span>
+                                                    @endforeach
+                                                </div>
+                                            @else
+                                                <span class="text-muted">—</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-                <div class="modal-footer py-2">
-                    <a href="{{ route('admin.orders.show', $order) }}" class="btn btn-outline-primary btn-sm">
-                        <i class="fas fa-eye mr-1"></i>Ver Pedido
-                    </a>
-                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cerrar</button>
+
+                {{-- Footer con resumen --}}
+                <div class="modal-footer py-2" style="background: #f8f9fa; border-top: 1px solid #dee2e6;">
+                    <div class="d-flex justify-content-between align-items-center w-100">
+                        <div>
+                            <span style="font-size: 14px; color: #495057;">
+                                <i class="fas fa-box mr-1"></i>
+                                <strong>{{ $order->items->count() }}</strong> producto(s)
+                                <span class="mx-2">|</span>
+                                <i class="fas fa-cubes mr-1"></i>
+                                <strong>{{ $order->items->sum('quantity') }}</strong> piezas
+                            </span>
+                        </div>
+                        <div>
+                            <a href="{{ route('admin.orders.show', $order) }}" class="btn btn-outline-primary btn-sm mr-2">
+                                <i class="fas fa-eye mr-1"></i>Ver Pedido
+                            </a>
+                            <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cerrar</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -533,9 +774,9 @@
     {{-- MODAL DE PRODUCTOS PARA MARCAR LISTO --}}
     @if ($order->status === \App\Models\Order::STATUS_IN_PRODUCTION)
         <div class="modal fade" id="modalProductosQueue{{ $order->id }}" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-scrollable">
-                <div class="modal-content">
-                    <div class="modal-header bg-success text-white">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content" style="max-height: 60vh;">
+                    <div class="modal-header bg-success text-white py-2">
                         <h5 class="modal-title">
                             <i class="fas fa-tasks mr-2"></i>Productos: {{ $order->order_number }}
                         </h5>
@@ -543,73 +784,175 @@
                             <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
-                    <div class="modal-body">
-                        <div class="alert alert-info py-2 mb-3" style="font-size: 14px;">
-                            <i class="fas fa-info-circle mr-1"></i>
-                            Marque cada producto como <strong>Terminado</strong> conforme se complete su producción.
-                        </div>
-
-                        {{-- Barra de progreso --}}
+                    <div class="modal-body p-3" style="overflow-y: auto; max-height: calc(60vh - 120px);">
+                        {{-- Barra de progreso compacta --}}
                         <div class="mb-3">
                             <div class="d-flex justify-content-between mb-1">
-                                <span style="font-size: 14px; font-weight: 600;">Progreso de Producción</span>
-                                <span class="progress-label-{{ $order->id }}" style="font-size: 14px; font-weight: 600;">
-                                    {{ $order->items->where('production_completed', true)->count() }} / {{ $order->items->count() }}
+                                <span style="font-size: 13px; font-weight: 600;">Progreso de Producción</span>
+                                <span class="progress-label-{{ $order->id }}" style="font-size: 13px; font-weight: 600;">
+                                    @php
+                                        $completedCount = $order->items->where('production_completed', true)->count();
+                                        $totalCount = $order->items->count();
+                                        $percentage = $totalCount > 0 ? round(($completedCount / $totalCount) * 100) : 0;
+                                    @endphp
+                                    {{ $completedCount }} / {{ $totalCount }}
                                 </span>
                             </div>
-                            <div class="progress" style="height: 20px;">
-                                @php
-                                    $completedCount = $order->items->where('production_completed', true)->count();
-                                    $totalCount = $order->items->count();
-                                    $percentage = $totalCount > 0 ? round(($completedCount / $totalCount) * 100) : 0;
-                                @endphp
-                                <div class="progress-bar-{{ $order->id }} progress-bar bg-success" role="progressbar"
+                            <div class="progress" style="height: 14px;">
+                                <div class="progress-bar progress-bar-{{ $order->id }} bg-success" role="progressbar"
                                     style="width: {{ $percentage }}%;" aria-valuenow="{{ $percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
                             </div>
                         </div>
 
-                        {{-- Lista de productos --}}
+                        {{-- Lista de productos con formato mejorado --}}
                         <div class="list-group lista-productos-{{ $order->id }}">
                             @foreach($order->items as $item)
                                 @php
                                     $isCompleted = $item->production_completed ?? false;
+                                    $product = $item->product;
+                                    $productVariant = $item->productVariant;
+
+                                    // Imagen del producto
+                                    $productImage = $product?->primary_image_url;
+
+                                    // Atributos de la variante
+                                    $variantAttributes = [];
+                                    if ($productVariant && $productVariant->attributeValues) {
+                                        foreach ($productVariant->attributeValues as $attrValue) {
+                                            $variantAttributes[] = [
+                                                'name' => $attrValue->attribute->name ?? '',
+                                                'value' => $attrValue->value,
+                                                'color' => $attrValue->color_hex ?? null,
+                                            ];
+                                        }
+                                    }
+
+                                    // Diseños asignados
+                                    $itemDesigns = $item->designExports ?? collect();
+                                    $totalStitches = $itemDesigns->sum('stitches_count');
+                                    $embroideryCost = 0;
+                                    foreach ($itemDesigns as $design) {
+                                        $rate = $design->pivot->rate_per_thousand_adjusted ?? ($product->embroidery_rate_per_thousand ?? 1);
+                                        $embroideryCost += (($design->stitches_count ?? 0) / 1000) * $rate * $item->quantity;
+                                    }
                                 @endphp
-                                <div class="list-group-item d-flex justify-content-between align-items-center producto-item-queue {{ $isCompleted ? 'bg-light' : '' }}"
+                                <div class="list-group-item producto-item-queue py-3 px-3 {{ $isCompleted ? 'bg-light' : '' }}"
                                      data-item-id="{{ $item->id }}"
                                      data-order-id="{{ $order->id }}"
-                                     data-completed="{{ $isCompleted ? '1' : '0' }}">
-                                    <div>
-                                        <strong style="font-size: 15px;">{{ $item->product->name ?? $item->product_name ?? 'Producto' }}</strong>
-                                        <br>
-                                        <span style="font-size: 13px; color: #6c757d;">
-                                            Cantidad: <strong>{{ $item->quantity }}</strong>
-                                            @if($item->product && $item->product->category)
-                                                &bull; {{ $item->product->category->name }}
+                                     data-completed="{{ $isCompleted ? '1' : '0' }}"
+                                     style="border-left: 4px solid {{ $isCompleted ? '#28a745' : '#dee2e6' }};">
+                                    <div class="d-flex align-items-center">
+                                        {{-- Foto del producto --}}
+                                        <div class="mr-3" style="flex-shrink: 0;">
+                                            @if($productImage)
+                                                <img src="{{ $productImage }}" alt="{{ $item->product_name }}"
+                                                     style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px; border: 1px solid #e0e0e0;">
+                                            @else
+                                                <div style="width: 60px; height: 60px; background: #f5f5f5; border-radius: 6px; display: flex; align-items: center; justify-content: center; border: 1px solid #e0e0e0;">
+                                                    <i class="fas fa-box" style="font-size: 22px; color: #bdbdbd;"></i>
+                                                </div>
                                             @endif
-                                        </span>
-                                        {{-- Extras del producto --}}
-                                        @if($item->extras && $item->extras->count() > 0)
-                                            <div class="mt-1">
-                                                @foreach($item->extras as $extra)
-                                                    <span class="badge mr-1" style="background: #0277bd; color: white; font-size: 12px;">
-                                                        <i class="fas fa-plus-circle mr-1"></i>{{ $extra->productExtra->name ?? 'Extra' }} (x{{ $extra->quantity }})
-                                                    </span>
-                                                @endforeach
+                                        </div>
+
+                                        {{-- Información del producto --}}
+                                        <div class="flex-grow-1">
+                                            {{-- Nombre, cantidad y botón en una línea --}}
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <strong style="font-size: 16px; color: #212529;">
+                                                        {{ $item->product_name }}
+                                                    </strong>
+                                                    @if($productVariant && $productVariant->sku_suffix)
+                                                        <span class="ml-1" style="color: #f57c00; font-weight: 600; font-size: 14px;">
+                                                            {{ $productVariant->sku_suffix }}
+                                                        </span>
+                                                    @endif
+                                                    <span class="ml-2 badge badge-secondary" style="font-size: 13px; padding: 5px 10px;">x{{ $item->quantity }}</span>
+                                                    @if($product && $product->category)
+                                                        <span class="ml-1" style="font-size: 13px; color: #6c757d;">{{ $product->category->name }}</span>
+                                                    @endif
+                                                </div>
+                                                {{-- Botón Terminado --}}
+                                                <div>
+                                                    @if($isCompleted)
+                                                        <span class="badge badge-success px-3 py-2" style="font-size: 14px;">
+                                                            <i class="fas fa-check mr-1"></i> Terminado
+                                                        </span>
+                                                    @else
+                                                        <button type="button" class="btn btn-outline-success btn-marcar-terminado-queue"
+                                                                data-item-id="{{ $item->id }}"
+                                                                data-order-id="{{ $order->id }}"
+                                                                style="font-size: 14px; padding: 8px 16px;">
+                                                            <i class="fas fa-check mr-1"></i> Terminado
+                                                        </button>
+                                                    @endif
+                                                </div>
                                             </div>
-                                        @endif
-                                    </div>
-                                    <div>
-                                        @if($isCompleted)
-                                            <span class="badge badge-success px-3 py-2" style="font-size: 14px;">
-                                                <i class="fas fa-check mr-1"></i> Terminado
-                                            </span>
-                                        @else
-                                            <button type="button" class="btn btn-outline-success btn-sm btn-marcar-terminado-queue"
-                                                    data-item-id="{{ $item->id }}"
-                                                    data-order-id="{{ $order->id }}">
-                                                <i class="fas fa-check mr-1"></i> Terminado
-                                            </button>
-                                        @endif
+
+                                            {{-- Atributos de variante --}}
+                                            @if(count($variantAttributes) > 0)
+                                                <div class="mt-2">
+                                                    @foreach($variantAttributes as $attr)
+                                                        @if($attr['color'])
+                                                            <span class="badge mr-1" style="background: {{ $attr['color'] }}; color: {{ \App\Helpers\ColorHelper::getContrastColor($attr['color']) }}; font-size: 12px; padding: 4px 8px;">
+                                                                <i class="fas fa-palette mr-1" style="font-size: 10px;"></i>{{ $attr['value'] }}
+                                                            </span>
+                                                        @else
+                                                            <span class="badge badge-secondary mr-1" style="font-size: 12px; padding: 4px 8px;">
+                                                                <i class="fas fa-tag mr-1" style="font-size: 10px;"></i>{{ $attr['value'] }}
+                                                            </span>
+                                                        @endif
+                                                    @endforeach
+                                                </div>
+                                            @endif
+
+                                            {{-- Diseños asignados --}}
+                                            @if($itemDesigns->count() > 0)
+                                                <div class="mt-2">
+                                                    <a href="#" class="text-decoration-none" style="color: #2e7d32; font-size: 13px; font-weight: 600;"
+                                                       data-toggle="collapse" data-target="#designs-{{ $order->id }}-{{ $item->id }}"
+                                                       onclick="event.preventDefault(); $(this).find('.collapse-icon').toggleClass('fa-chevron-down fa-chevron-up');">
+                                                        <i class="fas fa-check-circle mr-1"></i>
+                                                        {{ $itemDesigns->count() }} diseño(s)
+                                                        <span style="color: #6c757d; font-weight: 500;">
+                                                            &bull; {{ number_format($totalStitches) }} pts &bull; Est. ${{ number_format($embroideryCost, 2) }}
+                                                        </span>
+                                                        <i class="fas fa-chevron-down collapse-icon ml-1" style="font-size: 10px;"></i>
+                                                    </a>
+                                                    <div class="collapse mt-1" id="designs-{{ $order->id }}-{{ $item->id }}">
+                                                        @foreach($itemDesigns as $design)
+                                                            <div class="d-flex align-items-center py-1 pl-3" style="font-size: 13px;">
+                                                                <i class="fas fa-file-code mr-2" style="color: #7b1fa2;"></i>
+                                                                <span style="color: #212529;">{{ $design->file_name ?? 'Diseño' }}</span>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            @endif
+
+                                            {{-- Extras del producto (colapsable) --}}
+                                            @if($item->extras && $item->extras->count() > 0)
+                                                @php $extrasCount = $item->extras->count(); @endphp
+                                                <div class="mt-2">
+                                                    <a href="#" class="text-decoration-none" style="color: #0277bd; font-size: 13px; font-weight: 600;"
+                                                       data-toggle="collapse" data-target="#extras-{{ $order->id }}-{{ $item->id }}"
+                                                       onclick="event.preventDefault(); $(this).find('.collapse-icon').toggleClass('fa-chevron-down fa-chevron-up');">
+                                                        <i class="fas fa-plus-circle mr-1"></i>
+                                                        {{ $extrasCount }} extra(s)
+                                                        <i class="fas fa-chevron-down collapse-icon ml-1" style="font-size: 10px;"></i>
+                                                    </a>
+                                                    <div class="collapse mt-1" id="extras-{{ $order->id }}-{{ $item->id }}">
+                                                        @foreach($item->extras as $extra)
+                                                            <div class="d-flex align-items-center py-1 pl-3" style="font-size: 13px;">
+                                                                <i class="fas fa-concierge-bell mr-2" style="color: #0277bd;"></i>
+                                                                <span style="color: #212529;">{{ $extra->productExtra->name ?? 'Extra' }}</span>
+                                                                <span class="ml-1" style="color: #6c757d;">(x{{ $extra->quantity }})</span>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            @endif
+                                        </div>
                                     </div>
                                 </div>
                             @endforeach
@@ -711,7 +1054,7 @@
         const total = items.length;
         const porcentaje = total > 0 ? Math.round((completados / total) * 100) : 0;
 
-        // Actualizar barra
+        // Actualizar barra del modal
         const progressBar = document.querySelector('.progress-bar-' + orderId);
         if (progressBar) {
             progressBar.style.width = porcentaje + '%';
@@ -723,10 +1066,38 @@
             }
         }
 
-        // Actualizar label
+        // Actualizar label del modal
         const progressLabel = document.querySelector('.progress-label-' + orderId);
         if (progressLabel) {
             progressLabel.textContent = completados + ' / ' + total;
+        }
+
+        // === ACTUALIZAR BARRA DE PROGRESO EN LA TABLA ===
+        const progressBarTable = document.querySelector('.progress-bar-table-' + orderId);
+        if (progressBarTable) {
+            progressBarTable.style.width = porcentaje + '%';
+            progressBarTable.setAttribute('aria-valuenow', porcentaje);
+
+            // Cambiar color según completado
+            if (completados === total) {
+                progressBarTable.classList.remove('bg-primary');
+                progressBarTable.classList.add('bg-success');
+            } else {
+                progressBarTable.classList.remove('bg-success');
+                progressBarTable.classList.add('bg-primary');
+            }
+        }
+
+        // Actualizar label de la tabla
+        const progressLabelTable = document.querySelector('.progress-label-table-' + orderId);
+        if (progressLabelTable) {
+            progressLabelTable.textContent = completados + ' / ' + total;
+        }
+
+        // Actualizar porcentaje de la tabla
+        const progressPercentTable = document.querySelector('.progress-percent-table-' + orderId);
+        if (progressPercentTable) {
+            progressPercentTable.textContent = porcentaje + '%';
         }
 
         // Habilitar/deshabilitar botón finalizar

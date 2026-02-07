@@ -377,14 +377,29 @@
                     success: function(response) {
                         $('#modalCreate').modal('hide');
                         if (response.success) {
+                            var d = response.data;
+                            var staffHtml = d.staff ? '<span class="badge badge-info">' + d.staff.name + (d.staff.position ? ' <small>(' + d.staff.position + ')</small>' : '') + '</span>' : '<span class="text-muted">-</span>';
+                            var estadoHtml = d.is_active ? '<span class="badge badge-success">Activo</span>' : '<span class="badge badge-secondary">Inactivo</span>';
+                            var newRow = table.row.add([
+                                table.rows().count() + 1,
+                                '<span class="font-weight-bold">' + d.name + '</span>',
+                                d.email,
+                                staffHtml,
+                                estadoHtml,
+                                '<button type="button" class="btn btn-warning btn-edit" data-id="' + d.id + '" data-nombre="' + d.name + '" data-email="' + d.email + '" data-staff-id="' + (d.staff_id || '') + '" data-activo="' + (d.is_active ? '1' : '0') + '"><i class="fas fa-edit"></i></button> ' +
+                                '<button type="button" class="btn btn-danger btn-delete" data-id="' + d.id + '" data-nombre="' + d.name + '" data-email="' + d.email + '"><i class="fas fa-trash"></i></button>'
+                            ]).draw(false).node();
+                            $(newRow).attr('data-id', d.id).css('text-align', 'center');
+                            $(newRow).find('td:eq(1)').addClass('user-nombre');
+                            $(newRow).find('td:eq(2)').addClass('user-email');
+                            $(newRow).find('td:eq(3)').addClass('user-staff');
+                            $(newRow).find('td:eq(4)').addClass('user-estado');
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Creado',
                                 text: response.message,
                                 timer: 2000,
                                 showConfirmButton: false
-                            }).then(function() {
-                                location.reload();
                             });
                         }
                     },

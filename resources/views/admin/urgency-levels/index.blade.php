@@ -514,14 +514,26 @@
                     success: function(response) {
                         $('#modalCreate').modal('hide');
                         if (response.success) {
+                            var d = response.data;
+                            var iconHtml = d.icon ? '<i class="fas ' + d.icon + ' mr-1" style="color: ' + d.color + ';"></i>' : '';
+                            var descHtml = d.description ? '<small class="text-muted d-block">' + d.description + '</small>' : '';
+                            var newRow = table.row.add([
+                                table.rows().count() + 1,
+                                '<td class="level-name text-left">' + iconHtml + '<span class="nombre-level">' + d.name + '</span>' + descHtml + '</td>',
+                                '<span class="badge badge-secondary">' + d.time_percentage + '%</span>',
+                                '<span class="badge badge-info">x' + parseFloat(d.price_multiplier).toFixed(2) + '</span>',
+                                '<span class="badge" style="background-color: ' + d.color + '; color: white; padding: 5px 15px;">' + d.color + '</span>',
+                                d.sort_order,
+                                '<button type="button" class="btn btn-warning btn-edit" data-id="' + d.id + '" data-name="' + d.name + '" data-time="' + d.time_percentage + '" data-multiplier="' + d.price_multiplier + '" data-color="' + d.color + '" data-icon="' + (d.icon || '') + '" data-order="' + d.sort_order + '" data-description="' + (d.description || '') + '"><i class="fas fa-edit"></i></button> ' +
+                                '<button type="button" class="btn btn-danger btn-delete" data-id="' + d.id + '" data-name="' + d.name + '"><i class="fas fa-trash"></i></button>'
+                            ]).draw(false).node();
+                            $(newRow).attr('data-id', d.id).css('text-align', 'center');
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Creado',
                                 text: response.message,
                                 timer: 2000,
                                 showConfirmButton: false
-                            }).then(function() {
-                                location.reload();
                             });
                         }
                     },
@@ -591,14 +603,24 @@
                     success: function(response) {
                         $('#modalEdit').modal('hide');
                         if (response.success) {
+                            var d = response.data;
+                            var row = $('tr[data-id="' + id + '"]');
+                            var iconHtml = d.icon ? '<i class="fas ' + d.icon + ' mr-1" style="color: ' + d.color + ';"></i>' : '';
+                            var descHtml = d.description ? '<small class="text-muted d-block">' + d.description + '</small>' : '';
+                            row.find('.level-name').html(iconHtml + '<span class="nombre-level">' + d.name + '</span>' + descHtml);
+                            row.find('td:eq(2)').html('<span class="badge badge-secondary">' + d.time_percentage + '%</span>');
+                            row.find('td:eq(3)').html('<span class="badge badge-info">x' + parseFloat(d.price_multiplier).toFixed(2) + '</span>');
+                            row.find('td:eq(4)').html('<span class="badge" style="background-color: ' + d.color + '; color: white; padding: 5px 15px;">' + d.color + '</span>');
+                            row.find('td:eq(5)').text(d.sort_order);
+                            // Actualizar data attributes en botones
+                            row.find('.btn-edit').data({id: d.id, name: d.name, time: d.time_percentage, multiplier: d.price_multiplier, color: d.color, icon: d.icon || '', order: d.sort_order, description: d.description || ''});
+                            row.find('.btn-delete').data({id: d.id, name: d.name});
                             Swal.fire({
                                 icon: response.type || 'success',
                                 title: response.type === 'info' ? 'Aviso' : 'Actualizado',
                                 text: response.message,
                                 timer: 2000,
                                 showConfirmButton: false
-                            }).then(function() {
-                                location.reload();
                             });
                         }
                     },

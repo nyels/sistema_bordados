@@ -78,9 +78,7 @@ class HomeController extends Controller
 
         $enProduccion = Order::where('status', Order::STATUS_IN_PRODUCTION)->count();
         $paraEntregar = Order::where('status', Order::STATUS_READY)->count();
-        $retrasados = Order::whereNotIn('status', [Order::STATUS_DELIVERED, Order::STATUS_CANCELLED])
-            ->whereDate('promised_date', '<', now())
-            ->count();
+        $retrasados = app(\App\Services\OrderCalendarReadService::class)->countOverdueOrders();
 
         // KPIs operativos para la vista
         $kpis = [

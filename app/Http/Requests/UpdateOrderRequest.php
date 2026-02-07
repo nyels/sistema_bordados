@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Order;
+use App\Services\ProductionCapacityService;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateOrderRequest extends FormRequest
@@ -27,6 +29,7 @@ class UpdateOrderRequest extends FormRequest
             'promised_date' => [
                 'nullable',
                 'date',
+                'after_or_equal:today',
             ],
             'notes' => [
                 'nullable',
@@ -92,10 +95,67 @@ class UpdateOrderRequest extends FormRequest
         ];
     }
 
+    /**
+     * PASO 10: Validación post-reglas para promised_date.
+     * GATE ERP: Rechaza reprogramación si el estado no lo permite.
+     * CAPACIDAD: Valida contra ProductionCapacityService si cambia de semana.
+     */
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            $this->validatePromisedDateReschedule($validator);
+        });
+    }
+
+    /**
+     * Valida que promised_date solo se modifique en estados permitidos
+     * y que la semana destino tenga capacidad disponible.
+     */
+    private function validatePromisedDateReschedule($validator): void
+    {
+        if (!$this->has('promised_date') || $this->input('promised_date') === null) {
+            return;
+        }
+
+        /** @var Order|null $order */
+        $order = $this->route('order');
+        if (!$order) {
+            return;
+        }
+
+        // === GATE DE ESTADO ===
+        if (!$order->canReschedulePromisedDate()) {
+            $validator->errors()->add(
+                'promised_date',
+                $order->getRescheduleBlockReason() ?? 'No se puede modificar la fecha en este estado.'
+            );
+            return;
+        }
+
+        // === VALIDACIÓN DE CAPACIDAD (solo si el pedido ya ocupa capacidad) ===
+        if ($order->status === Order::STATUS_CONFIRMED) {
+            $capacityService = app(ProductionCapacityService::class);
+            $newDate = \Carbon\Carbon::parse($this->input('promised_date'));
+
+            $validation = $capacityService->validateDateChange($order, $newDate);
+
+            if (!$validation['valid']) {
+                $suggestion = $capacityService->suggestPromisedDate(1);
+                $suggestedLabel = $suggestion['suggested_date'] ?? 'N/D';
+
+                $validator->errors()->add(
+                    'promised_date',
+                    $validation['error'] . " Siguiente semana disponible: {$suggestedLabel}."
+                );
+            }
+        }
+    }
+
     public function messages(): array
     {
         return [
             'status.in' => 'Estado de pedido no válido.',
+            'promised_date.after_or_equal' => 'La fecha prometida no puede ser una fecha pasada.',
             'items.min' => 'El pedido debe tener al menos un producto.',
             'items.*.embroidery_text.regex' => 'El texto a bordar contiene caracteres no permitidos.',
         ];

@@ -15,19 +15,36 @@
     // Cargar reservas agrupadas por item (incluir variante del producto para mostrar Talla/Color)
     $itemsWithMaterials = $order->items()
         ->with([
-            'product.materials.material',
+            'product.materials.material.consumptionUnit',
+            'product.materials.material.baseUnit',
             'variant.attributeValues.attribute',
             'reservations.materialVariant.material',
+            'bomAdjustments', // Cargar ajustes de BOM
+            'extras.productExtra.materials.material.consumptionUnit', // Materiales de extras
+            'extras.productExtra.materials.material.baseUnit',
         ])
         ->get()
         ->map(function ($item) use ($order) {
             $materials = [];
+            $extraMaterials = [];
+            $services = [];
             $totalMaterialCost = 0;
+            $totalExtraMaterialCost = 0;
             $hasCostData = false;
+            $hasExtraCostData = false;
+
+            // Indexar ajustes de BOM por material_variant_id
+            $bomAdjustments = $item->bomAdjustments->keyBy('material_variant_id');
 
             if ($item->product && $item->product->materials) {
                 foreach ($item->product->materials as $variant) {
-                    $requiredQty = ($variant->pivot->quantity ?? 0) * $item->quantity;
+                    // Usar cantidad ajustada si existe, sino usar BOM base
+                    $baseQty = (float) ($variant->pivot->quantity ?? 0);
+                    $adjustment = $bomAdjustments->get($variant->id);
+                    $adjustedQty = $adjustment ? (float) $adjustment->adjusted_quantity : $baseQty;
+                    $hasAdjustment = $adjustment && $adjustment->hasChange();
+
+                    $requiredQty = $adjustedQty * $item->quantity;
 
                     $reservation = $item->reservations
                         ->where('material_variant_id', $variant->id)
@@ -115,11 +132,107 @@
                         'consumed_at' => $consumedAt,
                         'consumed_by' => $consumedBy,
                         'reservation_id' => $reservation?->id,
+                        'has_adjustment' => $hasAdjustment,
                     ];
                 }
             }
 
-            // Agrupar materiales por material_name (material base) y ordenar alfabéticamente
+            // === EXTRAS DEL ITEM ===
+            foreach ($item->extras as $orderItemExtra) {
+                $extra = $orderItemExtra->productExtra;
+                if (!$extra) continue;
+
+                $extraQuantity = $orderItemExtra->quantity * $item->quantity;
+
+                // Verificar si es servicio (no consume inventario) o material (consume inventario)
+                if (!$extra->consumesInventory()) {
+                    // Es un SERVICIO - no tiene materiales
+                    $services[] = [
+                        'extra_id' => $extra->id,
+                        'extra_name' => $extra->name,
+                        'quantity' => $orderItemExtra->quantity,
+                        'total_quantity' => $extraQuantity,
+                        'unit_price' => $orderItemExtra->unit_price,
+                        'total_price' => $orderItemExtra->total_price,
+                    ];
+                } else {
+                    // Es un EXTRA CON INVENTARIO - procesar sus materiales
+                    foreach ($extra->materials as $variant) {
+                        $requiredQty = (float) ($variant->pivot->quantity_required ?? $variant->pivot->quantity ?? 0) * $extraQuantity;
+
+                        $reservation = InventoryReservation::where('order_id', $order->id)
+                            ->where('material_variant_id', $variant->id)
+                            ->first();
+
+                        // Estado semantico
+                        $status = 'pending';
+                        $statusLabel = 'Pendiente';
+                        $statusColor = 'secondary';
+                        $consumedAt = null;
+                        $consumedBy = null;
+
+                        if ($reservation) {
+                            switch ($reservation->status) {
+                                case InventoryReservation::STATUS_RESERVED:
+                                    $status = 'reserved';
+                                    $statusLabel = 'Reservado';
+                                    $statusColor = 'info';
+                                    break;
+                                case InventoryReservation::STATUS_CONSUMED:
+                                    $status = 'consumed';
+                                    $statusLabel = 'Consumido';
+                                    $statusColor = 'success';
+                                    $consumedAt = $reservation->consumed_at;
+                                    $consumedBy = $reservation->consumer;
+                                    break;
+                                case InventoryReservation::STATUS_RELEASED:
+                                    $status = 'released';
+                                    $statusLabel = 'Liberado';
+                                    $statusColor = 'warning';
+                                    break;
+                            }
+                        }
+
+                        $materialId = $variant->material?->id ?? 0;
+                        $unitCost = $variant->pivot->unit_cost ?? $variant->average_cost ?? null;
+                        $lineCost = null;
+                        if ($unitCost !== null && $unitCost > 0) {
+                            $lineCost = $unitCost * $requiredQty;
+                            $totalExtraMaterialCost += $lineCost;
+                            $hasExtraCostData = true;
+                        }
+
+                        $materialColor = $variant->color ?: null;
+                        $materialModel = $variant->material;
+                        $unitConsumption = $materialModel?->consumptionUnit?->symbol ?? $materialModel?->baseUnit?->symbol ?? '';
+                        $unitBase = $materialModel?->baseUnit?->symbol ?? $unitConsumption;
+                        $conversionFactor = $materialModel?->conversion_factor ?? 1;
+
+                        $extraMaterials[] = [
+                            'variant_id' => $variant->id,
+                            'material_id' => $materialId,
+                            'material_name' => $variant->material?->name ?? 'N/A',
+                            'variant_color' => $materialColor,
+                            'variant_sku' => $variant->sku,
+                            'required_qty' => $requiredQty,
+                            'unit' => $unitConsumption,
+                            'unit_base' => $unitBase,
+                            'conversion_factor' => $conversionFactor,
+                            'unit_cost' => $unitCost,
+                            'line_cost' => $lineCost,
+                            'status' => $status,
+                            'status_label' => $statusLabel,
+                            'status_color' => $statusColor,
+                            'consumed_at' => $consumedAt,
+                            'consumed_by' => $consumedBy,
+                            'reservation_id' => $reservation?->id,
+                            'extra_name' => $extra->name,
+                        ];
+                    }
+                }
+            }
+
+            // Agrupar materiales del BOM por material_name y ordenar alfabéticamente
             $groupedMaterials = collect($materials)->groupBy('material_name')->map(function($variants, $materialName) {
                 $groupCost = $variants->sum('line_cost');
                 $hasGroupCost = $variants->contains(fn($v) => $v['line_cost'] !== null);
@@ -136,8 +249,33 @@
                     'conversion_factor' => $first['conversion_factor'] ?? 1,
                     'all_consumed' => $variants->every(fn($v) => $v['status'] === 'consumed'),
                     'all_reserved' => $variants->every(fn($v) => in_array($v['status'], ['reserved', 'consumed'])),
+                    'has_any_adjustment' => $variants->contains(fn($v) => !empty($v['has_adjustment'])),
                 ];
             })->sortBy('material_name', SORT_NATURAL | SORT_FLAG_CASE)->values()->all();
+
+            // Agrupar materiales de extras por extra_name > material_name
+            $groupedExtraMaterials = collect($extraMaterials)->groupBy('extra_name')->map(function($extraItems, $extraName) {
+                return [
+                    'extra_name' => $extraName,
+                    'materials' => $extraItems->groupBy('material_name')->map(function($variants, $materialName) {
+                        $groupCost = $variants->sum('line_cost');
+                        $hasGroupCost = $variants->contains(fn($v) => $v['line_cost'] !== null);
+                        $first = $variants->first();
+
+                        return [
+                            'material_name' => $materialName,
+                            'variants' => $variants->values()->all(),
+                            'variant_count' => $variants->count(),
+                            'total_qty' => $variants->sum('required_qty'),
+                            'total_cost' => $hasGroupCost ? $groupCost : null,
+                            'unit' => $first['unit'] ?? '',
+                            'all_consumed' => $variants->every(fn($v) => $v['status'] === 'consumed'),
+                            'all_reserved' => $variants->every(fn($v) => in_array($v['status'], ['reserved', 'consumed'])),
+                        ];
+                    })->sortBy('material_name', SORT_NATURAL | SORT_FLAG_CASE)->values()->all(),
+                    'total_cost' => $extraItems->sum('line_cost'),
+                ];
+            })->values()->all();
 
             // Obtener variante del producto (Talla/Color) si existe
             $productVariantDisplay = null;
@@ -150,16 +288,25 @@
                 'product_variant_display' => $productVariantDisplay,
                 'materials' => $materials,
                 'grouped_materials' => $groupedMaterials,
+                'extra_materials' => $extraMaterials,
+                'grouped_extra_materials' => $groupedExtraMaterials,
+                'services' => $services,
                 'has_materials' => count($materials) > 0,
+                'has_extra_materials' => count($extraMaterials) > 0,
+                'has_services' => count($services) > 0,
                 'has_multiple_variants' => collect($groupedMaterials)->contains(fn($g) => $g['variant_count'] > 1),
                 'total_material_cost' => $hasCostData ? $totalMaterialCost : null,
+                'total_extra_material_cost' => $hasExtraCostData ? $totalExtraMaterialCost : null,
                 'has_cost_data' => $hasCostData,
+                'has_extra_cost_data' => $hasExtraCostData,
             ];
         })
-        ->filter(fn($data) => $data['has_materials']);
+        ->filter(fn($data) => $data['has_materials'] || $data['has_extra_materials'] || $data['has_services']);
 
     $hasMaterials = $itemsWithMaterials->isNotEmpty();
     $hasAnyMultipleVariants = $itemsWithMaterials->contains(fn($d) => $d['has_multiple_variants']);
+    $hasAnyExtras = $itemsWithMaterials->contains(fn($d) => $d['has_extra_materials']);
+    $hasAnyServices = $itemsWithMaterials->contains(fn($d) => $d['has_services']);
 
     // Mensaje contextual segun estado (coherencia ERP)
     $inventoryContextMessage = match($order->status) {
@@ -319,6 +466,43 @@
     font-size: 14px;
     color: #5d4037;
 }
+/* Estilos para extras y servicios */
+.extra-materials-section {
+    background: #e1f5fe;
+    border-left: 3px solid #0288d1;
+}
+.extra-materials-header {
+    background: #e1f5fe;
+    color: #01579b;
+    font-weight: 600;
+}
+.extra-material-group {
+    background: #f5f5f5;
+}
+.services-section {
+    background: #fce4ec;
+    border-left: 3px solid #c2185b;
+}
+.services-header {
+    background: #fce4ec;
+    color: #880e4f;
+    font-weight: 600;
+}
+.service-row {
+    background: #fff;
+}
+.service-name {
+    font-weight: 600;
+    color: #212529;
+}
+.service-price {
+    color: #155724;
+    font-weight: 600;
+}
+.adjustment-badge {
+    font-size: 11px;
+    padding: 2px 6px;
+}
 </style>
 
 {{-- 4. INVENTARIO --}}
@@ -378,14 +562,25 @@
                     $item = $data['item'];
                     $productVariantDisplay = $data['product_variant_display'];
                     $groupedMaterials = $data['grouped_materials'];
+                    $groupedExtraMaterials = $data['grouped_extra_materials'];
+                    $services = $data['services'];
                     $allMaterials = $data['materials'];
-                    $allConsumed = collect($allMaterials)->every(fn($m) => $m['status'] === 'consumed');
-                    $allReserved = collect($allMaterials)->every(fn($m) => in_array($m['status'], ['reserved', 'consumed']));
+                    $allExtraMaterials = $data['extra_materials'];
+                    $allConsumed = collect($allMaterials)->every(fn($m) => $m['status'] === 'consumed')
+                        && collect($allExtraMaterials)->every(fn($m) => $m['status'] === 'consumed');
+                    $allReserved = collect($allMaterials)->every(fn($m) => in_array($m['status'], ['reserved', 'consumed']))
+                        && collect($allExtraMaterials)->every(fn($m) => in_array($m['status'], ['reserved', 'consumed']));
                     $itemStatusClass = $allConsumed ? 'item-all-consumed' : ($allReserved ? 'item-all-reserved' : '');
                     $itemStatusColor = $allConsumed ? 'success' : ($allReserved ? 'info' : 'secondary');
                     $hasVariants = $data['has_multiple_variants'];
                     $totalMaterialCost = $data['total_material_cost'];
+                    $totalExtraMaterialCost = $data['total_extra_material_cost'];
                     $hasCostData = $data['has_cost_data'];
+                    $hasExtraCostData = $data['has_extra_cost_data'];
+                    $hasExtras = $data['has_extra_materials'];
+                    $hasServices = $data['has_services'];
+                    $totalCost = ($totalMaterialCost ?? 0) + ($totalExtraMaterialCost ?? 0);
+                    $hasAnyCost = $hasCostData || $hasExtraCostData;
                 @endphp
                 <div class="border-bottom">
                     <div class="inventory-product-header {{ $itemStatusClass }} py-3 px-3" id="heading{{ $index }}">
@@ -405,9 +600,9 @@
                             </button>
                             <div class="d-flex align-items-center">
                                 {{-- COSTO TOTAL DE MATERIALES --}}
-                                @if($hasCostData)
+                                @if($hasAnyCost)
                                     <span class="inventory-product-cost mr-2">
-                                        <i class="fas fa-coins mr-1"></i> ${{ number_format($totalMaterialCost, 2) }}
+                                        <i class="fas fa-coins mr-1"></i> ${{ number_format($totalCost, 2) }}
                                     </span>
                                 @else
                                     <span class="inventory-product-cost no-cost mr-2">
@@ -419,8 +614,18 @@
                                         <i class="fas fa-code-branch"></i> variantes
                                     </span>
                                 @endif
+                                @if($hasExtras)
+                                    <span class="badge badge-light mr-1" style="color: #0288d1; font-size: 11px;">
+                                        <i class="fas fa-plus-circle"></i> extras
+                                    </span>
+                                @endif
+                                @if($hasServices)
+                                    <span class="badge badge-light mr-1" style="color: #c2185b; font-size: 11px;">
+                                        <i class="fas fa-concierge-bell"></i> servicios
+                                    </span>
+                                @endif
                                 <span class="badge badge-{{ $itemStatusColor }}" style="font-size: 13px;">
-                                    {{ count($allMaterials) }} material{{ count($allMaterials) > 1 ? 'es' : '' }}
+                                    {{ count($allMaterials) + count($allExtraMaterials) }} material{{ (count($allMaterials) + count($allExtraMaterials)) > 1 ? 'es' : '' }}
                                 </span>
                             </div>
                         </div>
@@ -458,6 +663,11 @@
                                                 <td colspan="4">
                                                     <i class="fas fa-cube mr-2" style="color: #495057;"></i>
                                                     {{ $group['material_name'] }}
+                                                    @if(!empty($group['has_any_adjustment']))
+                                                        <span class="badge badge-info adjustment-badge ml-1" title="Cantidad ajustada segun medidas">
+                                                            <i class="fas fa-ruler"></i>
+                                                        </span>
+                                                    @endif
                                                     <span style="font-weight: normal; color: #495057; margin-left: 8px;">
                                                         ({{ $group['variant_count'] }} variantes · Total: {{ number_format($group['total_qty'], 2) }} {{ $group['unit'] }})
                                                     </span>
@@ -516,6 +726,11 @@
                                                     @if($material['variant_identifier'])
                                                         <span class="inventory-material-variant"> — {{ $material['variant_identifier'] }}</span>
                                                     @endif
+                                                    @if(!empty($material['has_adjustment']))
+                                                        <span class="badge badge-info adjustment-badge ml-1" title="Cantidad ajustada segun medidas">
+                                                            <i class="fas fa-ruler"></i>
+                                                        </span>
+                                                    @endif
                                                 </td>
                                                 <td class="text-right unit-convertible"
                                                     data-material-id="{{ $material['material_id'] }}"
@@ -551,6 +766,95 @@
                                     @endforeach
                                 </tbody>
                             </table>
+
+                            {{-- === SECCION DE MATERIALES DE EXTRAS === --}}
+                            @if($hasExtras && count($groupedExtraMaterials) > 0)
+                                <div class="mt-3 extra-materials-section rounded">
+                                    <div class="extra-materials-header px-3 py-2">
+                                        <i class="fas fa-plus-circle mr-2"></i>
+                                        <strong>Materiales de Extras</strong>
+                                    </div>
+                                    @foreach($groupedExtraMaterials as $extraGroup)
+                                        <div class="px-3 py-2 border-bottom extra-material-group">
+                                            <strong style="color: #0288d1;">
+                                                <i class="fas fa-tag mr-1"></i> {{ $extraGroup['extra_name'] }}
+                                            </strong>
+                                        </div>
+                                        <table class="table table-sm mb-0 inventory-table">
+                                            <tbody>
+                                                @foreach($extraGroup['materials'] as $matGroup)
+                                                    @foreach($matGroup['variants'] as $mat)
+                                                        <tr>
+                                                            <td style="width: 40%;">
+                                                                <span class="inventory-material-name">{{ $mat['material_name'] }}</span>
+                                                                @if($mat['variant_color'])
+                                                                    <span class="inventory-material-variant"> — {{ $mat['variant_color'] }}</span>
+                                                                @endif
+                                                            </td>
+                                                            <td style="width: 20%;" class="text-right">
+                                                                <span class="inventory-qty">{{ number_format($mat['required_qty'], 2) }}</span>
+                                                                <span class="inventory-unit ml-1">{{ $mat['unit'] }}</span>
+                                                            </td>
+                                                            <td style="width: 15%;" class="text-center">
+                                                                <span class="badge badge-{{ $mat['status_color'] }}" style="font-size: 13px;">
+                                                                    {{ $mat['status_label'] }}
+                                                                </span>
+                                                            </td>
+                                                            <td style="width: 25%;" class="inventory-info">
+                                                                @if($mat['consumed_at'])
+                                                                    {{ $mat['consumed_at']->format('d/m/Y H:i') }}
+                                                                @elseif($mat['status'] === 'pending')
+                                                                    Espera produccion
+                                                                @else
+                                                                    -
+                                                                @endif
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    @endforeach
+                                </div>
+                            @endif
+
+                            {{-- === SECCION DE SERVICIOS === --}}
+                            @if($hasServices && count($services) > 0)
+                                <div class="mt-3 services-section rounded">
+                                    <div class="services-header px-3 py-2">
+                                        <i class="fas fa-concierge-bell mr-2"></i>
+                                        <strong>Servicios (sin inventario)</strong>
+                                    </div>
+                                    <table class="table table-sm mb-0 inventory-table">
+                                        <thead style="background: #fce4ec;">
+                                            <tr>
+                                                <th style="width: 50%;">Servicio</th>
+                                                <th style="width: 20%;" class="text-center">Cantidad</th>
+                                                <th style="width: 30%;" class="text-right">Precio</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($services as $service)
+                                                <tr class="service-row">
+                                                    <td>
+                                                        <span class="service-name">{{ $service['extra_name'] }}</span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <strong>{{ $service['total_quantity'] }}</strong>
+                                                    </td>
+                                                    <td class="text-right">
+                                                        @if($service['unit_price'])
+                                                            <span class="service-price">${{ number_format($service['total_price'], 2) }}</span>
+                                                        @else
+                                                            <span class="text-muted">-</span>
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -559,17 +863,26 @@
 
         {{-- Resumen totales --}}
         @php
-            $totalMaterials = $itemsWithMaterials->sum(fn($d) => count($d['materials']));
-            $totalReserved = $itemsWithMaterials->sum(fn($d) => collect($d['materials'])->where('status', 'reserved')->count());
-            $totalConsumed = $itemsWithMaterials->sum(fn($d) => collect($d['materials'])->where('status', 'consumed')->count());
-            $totalPending = $itemsWithMaterials->sum(fn($d) => collect($d['materials'])->where('status', 'pending')->count());
-            $grandTotalCost = $itemsWithMaterials->sum(fn($d) => $d['total_material_cost'] ?? 0);
-            $hasAnyCost = $itemsWithMaterials->contains(fn($d) => $d['has_cost_data']);
+            $totalBomMaterials = $itemsWithMaterials->sum(fn($d) => count($d['materials']));
+            $totalExtraMaterials = $itemsWithMaterials->sum(fn($d) => count($d['extra_materials']));
+            $totalMaterials = $totalBomMaterials + $totalExtraMaterials;
+            $totalServices = $itemsWithMaterials->sum(fn($d) => count($d['services']));
+
+            $allMats = $itemsWithMaterials->flatMap(fn($d) => array_merge($d['materials'], $d['extra_materials']));
+            $totalReserved = $allMats->where('status', 'reserved')->count();
+            $totalConsumed = $allMats->where('status', 'consumed')->count();
+            $totalPending = $allMats->where('status', 'pending')->count();
+
+            $grandTotalCost = $itemsWithMaterials->sum(fn($d) => ($d['total_material_cost'] ?? 0) + ($d['total_extra_material_cost'] ?? 0));
+            $hasAnyCostSummary = $itemsWithMaterials->contains(fn($d) => $d['has_cost_data'] || $d['has_extra_cost_data']);
         @endphp
         <div class="px-3 py-2 bg-light border-top inventory-summary">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <strong>Total:</strong> {{ $totalMaterials }} registros operativos
+                    @if($totalExtraMaterials > 0 || $totalServices > 0)
+                        <span class="text-muted">({{ $totalBomMaterials }} BOM + {{ $totalExtraMaterials }} extras + {{ $totalServices }} servicios)</span>
+                    @endif
                     @if($totalPending > 0)
                         <span class="badge badge-secondary ml-2">{{ $totalPending }} pendientes</span>
                     @endif
@@ -580,7 +893,7 @@
                         <span class="badge badge-success ml-2">{{ $totalConsumed }} consumidos</span>
                     @endif
                 </div>
-                @if($hasAnyCost)
+                @if($hasAnyCostSummary)
                     <div>
                         <strong style="color: #155724;">Costo Total Materiales: ${{ number_format($grandTotalCost, 2) }}</strong>
                     </div>

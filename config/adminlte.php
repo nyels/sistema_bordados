@@ -366,6 +366,13 @@ return [
             'active' => ['admin/production/queue*'],
             'label_color' => 'warning',
         ],
+        [
+            'text' => 'Calendario',
+            'url' => 'admin/production/calendar',
+            'icon' => 'fas fa-fw fa-calendar-alt',
+            'icon_color' => 'info',
+            'active' => ['admin/production/calendar*'],
+        ],
 
         /*
         |--------------------------------------------------------------------------

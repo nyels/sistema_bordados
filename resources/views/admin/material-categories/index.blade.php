@@ -527,14 +527,15 @@
                     success: function(response) {
                         $('#modalCreate').modal('hide');
                         if (response.success) {
+                            refreshMainTable();
+                            // Agregar nueva opcion al select del modal de unidades
+                            $('#modal_category_select').append('<option value="' + response.data.id + '">' + response.data.name + '</option>');
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Guardado',
                                 text: response.message,
                                 timer: 2000,
                                 showConfirmButton: false
-                            }).then(function() {
-                                location.reload();
                             });
                         }
                     },
@@ -621,14 +622,15 @@
                             row.find('.btn-delete').data('name', response.data.name);
                             row.find('.btn-delete').data('description', response.data.description || '');
 
+                            // Actualizar opcion en el select del modal de unidades
+                            $('#modal_category_select option[value="' + id + '"]').text(response.data.name);
+                            refreshMainTable();
                             Swal.fire({
                                 icon: response.type || 'success',
                                 title: response.type === 'info' ? 'Aviso' : 'Actualizado',
                                 text: response.message,
                                 timer: 2000,
                                 showConfirmButton: false
-                            }).then(function() {
-                                location.reload();
                             });
                         }
                     },

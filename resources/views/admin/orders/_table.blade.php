@@ -92,7 +92,7 @@
                     </td>
                     <td class="text-center align-middle">
                         @if($order->isStockProduction())
-                            <span style="font-size: 14px; color: #212529;">N/A</span>
+                            <span style="font-size: 14px; color: #212529;">—</span>
                         @else
                             <span class="badge badge-{{ $order->payment_status_color }}" style="font-size: 16px;">
                                 {{ $order->payment_status_label }}

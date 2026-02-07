@@ -559,14 +559,27 @@
                     success: function(response) {
                         $('#modalCreateAttr').modal('hide');
                         if (response.success) {
+                            var d = response.data;
+                            var tipoBadge = '<span class="badge badge-primary">Selector</span>';
+                            if (d.type === 'color') tipoBadge = '<span class="badge badge-warning">Color</span>';
+                            else if (d.type === 'text') tipoBadge = '<span class="badge badge-secondary">Texto</span>';
+                            var newRow = tableAttr.row.add([
+                                tableAttr.rows().count() + 1,
+                                '<span class="attr-nombre">' + d.name + '</span>',
+                                '<code class="attr-slug">' + d.slug + '</code>',
+                                tipoBadge,
+                                '<button type="button" class="btn btn-warning btn-sm btn-edit-attr" data-id="' + d.id + '" data-nombre="' + d.name + '"><i class="fas fa-edit"></i></button> ' +
+                                '<button type="button" class="btn btn-danger btn-sm btn-delete-attr" data-id="' + d.id + '" data-nombre="' + d.name + '"><i class="fas fa-trash"></i></button>'
+                            ]).draw(false).node();
+                            $(newRow).attr('data-id', d.id);
+                            // Agregar opcion al select de valores
+                            $('#create_val_attribute, #edit_val_attribute').append('<option value="' + d.id + '" data-slug="' + d.slug + '">' + d.name + '</option>');
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Guardado',
                                 text: response.message,
                                 timer: 2000,
                                 showConfirmButton: false
-                            }).then(function() {
-                                location.reload();
                             });
                         }
                     },
@@ -770,14 +783,28 @@
                     success: function(response) {
                         $('#modalCreateVal').modal('hide');
                         if (response.success) {
+                            var d = response.data;
+                            var colorHtml = d.hex_color
+                                ? '<div class="d-flex align-items-center justify-content-center"><span class="color-preview" style="width: 22px; height: 22px; background-color: ' + d.hex_color + '; border: 2px solid #333; border-radius: 4px; margin-right: 6px;"></span><code>' + d.hex_color + '</code></div>'
+                                : '<span class="text-muted">N/A</span>';
+                            var attrName = d.attribute ? d.attribute.name : $('#create_val_attribute option:selected').text();
+                            var newRow = tableVal.row.add([
+                                tableVal.rows().count() + 1,
+                                '<span class="badge badge-info">' + attrName + '</span>',
+                                '<span class="val-valor">' + d.value + '</span>',
+                                colorHtml,
+                                '<button type="button" class="btn btn-warning btn-sm btn-edit-val" data-id="' + d.id + '" data-attribute-id="' + d.attribute_id + '" data-valor="' + d.value + '" data-color="' + (d.hex_color || '') + '"><i class="fas fa-edit"></i></button> ' +
+                                '<button type="button" class="btn btn-danger btn-sm btn-delete-val" data-id="' + d.id + '" data-valor="' + d.value + '"><i class="fas fa-trash"></i></button>'
+                            ]).draw(false).node();
+                            $(newRow).attr('data-id', d.id);
+                            $(newRow).find('td:eq(1)').addClass('val-atributo');
+                            $(newRow).find('td:eq(3)').addClass('val-color');
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Guardado',
                                 text: response.message,
                                 timer: 2000,
                                 showConfirmButton: false
-                            }).then(function() {
-                                location.reload();
                             });
                         }
                     },

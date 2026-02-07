@@ -459,6 +459,37 @@ class ProductExtraController extends Controller
     }
 
     /**
+     * Obtener la tabla de extras para recargar via AJAX.
+     */
+    public function getTableData(): JsonResponse
+    {
+        try {
+            $extras = ProductExtra::with(['materials.material.consumptionUnit', 'materials.material.baseUnit', 'category'])
+                ->orderBy('name')
+                ->get();
+
+            $html = view('admin.product_extras.partials.table-body', compact('extras'))->render();
+
+            return response()->json([
+                'success' => true,
+                'html' => $html,
+                'count' => $extras->count()
+            ]);
+
+        } catch (Throwable $e) {
+            Log::error('[ProductExtra@getTableData] Error', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al cargar datos'
+            ], 500);
+        }
+    }
+
+    /**
      * D5: Obtener todos los extras activos para el modo "solo extras" en post-venta.
      * Esta ruta permite agregar extras sin necesidad de seleccionar un producto.
      */

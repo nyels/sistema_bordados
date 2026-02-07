@@ -905,23 +905,23 @@
                 <div class="row align-items-center">
                     {{-- BOM Productos --}}
                     <div class="col-6 col-md-2 mb-2 mb-md-0">
-                        <div style="font-size: 11px; color: #90caf9; text-transform: uppercase; letter-spacing: 0.5px;">
+                        <div style="font-size: 13px; color: #90caf9; text-transform: uppercase; letter-spacing: 0.5px;">
                             <i class="fas fa-box mr-1"></i> BOM Productos
                         </div>
-                        <div id="bomCostoAjustado" style="font-size: 16px; font-weight: 700; color: #90caf9;">
+                        <div id="bomCostoAjustado" style="font-size: 18px; font-weight: 700; color: #90caf9;">
                             ${{ number_format($totalCostoBase, 2) }}
                         </div>
                     </div>
                     @if($hasEmbroidery)
                     {{-- Costo de Bordado --}}
                     <div class="col-6 col-md-2 mb-2 mb-md-0">
-                        <div style="font-size: 11px; color: #ce93d8; text-transform: uppercase; letter-spacing: 0.5px;">
+                        <div style="font-size: 13px; color: #ce93d8; text-transform: uppercase; letter-spacing: 0.5px;">
                             <i class="fas fa-pencil-ruler mr-1"></i> Bordado
                         </div>
-                        <div id="bomBordadoTotal" style="font-size: 16px; font-weight: 700; color: #ce93d8;">
+                        <div id="bomBordadoTotal" style="font-size: 18px; font-weight: 700; color: #ce93d8;">
                             ${{ number_format($totalEmbroideryCost, 2) }}
                         </div>
-                        <div style="font-size: 10px; color: #b39ddb;">
+                        <div style="font-size: 12px; color: #b39ddb;">
                             {{ number_format($totalStitches) }} pts
                         </div>
                     </div>
@@ -929,10 +929,10 @@
                     @if($hasExtrasMaterials)
                     {{-- Materiales Extras --}}
                     <div class="col-6 col-md-2 mb-2 mb-md-0">
-                        <div style="font-size: 11px; color: #ffb74d; text-transform: uppercase; letter-spacing: 0.5px;">
+                        <div style="font-size: 13px; color: #ffb74d; text-transform: uppercase; letter-spacing: 0.5px;">
                             <i class="fas fa-boxes mr-1"></i> Mat. Extras
                         </div>
-                        <div id="bomExtrasAjustado" style="font-size: 16px; font-weight: 700; color: #ffb74d;">
+                        <div id="bomExtrasAjustado" style="font-size: 18px; font-weight: 700; color: #ffb74d;">
                             ${{ number_format($totalExtrasMaterialsCost, 2) }}
                         </div>
                     </div>
@@ -940,36 +940,36 @@
                     @if($hasExtras)
                     {{-- Servicios Extras --}}
                     <div class="col-6 col-md-2 mb-2 mb-md-0">
-                        <div style="font-size: 11px; color: #4fc3f7; text-transform: uppercase; letter-spacing: 0.5px;">
+                        <div style="font-size: 13px; color: #4fc3f7; text-transform: uppercase; letter-spacing: 0.5px;">
                             <i class="fas fa-concierge-bell mr-1"></i> Servicios
                         </div>
-                        <div style="font-size: 16px; font-weight: 700; color: #4fc3f7;">
+                        <div style="font-size: 18px; font-weight: 700; color: #4fc3f7;">
                             ${{ number_format($totalExtrasServiceCost, 2) }}
                         </div>
                     </div>
                     @endif
-                    {{-- TOTAL PRODUCCIÓN --}}
+                    {{-- Diferencia BOM (ANTES de Total Producción) --}}
+                    @php
+                        $diferencia = $totalCostoBase - $totalCostoOriginal;
+                        $signo = $diferencia >= 0 ? '+' : '';
+                        $pct = $totalCostoOriginal > 0 ? (($diferencia / $totalCostoOriginal) * 100) : 0;
+                    @endphp
                     <div class="col-6 col-md-2 mb-2 mb-md-0">
-                        <div style="font-size: 11px; color: #69f0ae; text-transform: uppercase; letter-spacing: 0.5px;">
-                            <i class="fas fa-industry mr-1"></i> Total Producción
+                        <div style="font-size: 13px; color: #eceff1; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <i class="fas fa-balance-scale mr-1"></i> Diferencia BOM
                         </div>
-                        <div id="bomTotalProduccion" style="font-size: 20px; font-weight: 700; color: #69f0ae;">
-                            ${{ number_format($totalProduccion, 2) }}
+                        <div id="bomDiferencia" style="font-size: 18px; font-weight: 700; color: {{ $diferencia > 0.01 ? '#ff9800' : ($diferencia < -0.01 ? '#4caf50' : '#eceff1') }};">
+                            {{ $signo }}${{ number_format(abs($diferencia), 2) }}
+                            <span id="bomDiferenciaPct" style="font-size: 13px; color: #eceff1;">({{ $signo }}{{ number_format($pct, 1) }}%)</span>
                         </div>
                     </div>
-                    {{-- Diferencia BOM --}}
-                    <div class="col-12 col-md-2 mb-2 mb-md-0 text-md-right">
-                        <div style="font-size: 11px; color: #eceff1; text-transform: uppercase; letter-spacing: 0.5px;">
-                            Diferencia BOM
+                    {{-- TOTAL PRODUCCIÓN (al final) --}}
+                    <div class="col-6 col-md-2 mb-2 mb-md-0">
+                        <div style="font-size: 13px; color: #69f0ae; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <i class="fas fa-industry mr-1"></i> Total Producción
                         </div>
-                        @php
-                            $diferencia = $totalCostoBase - $totalCostoOriginal;
-                            $signo = $diferencia >= 0 ? '+' : '';
-                            $pct = $totalCostoOriginal > 0 ? (($diferencia / $totalCostoOriginal) * 100) : 0;
-                        @endphp
-                        <div id="bomDiferencia" style="font-size: 16px; font-weight: 700; color: {{ $diferencia > 0.01 ? '#ff9800' : ($diferencia < -0.01 ? '#4caf50' : '#eceff1') }};">
-                            {{ $signo }}${{ number_format(abs($diferencia), 2) }}
-                            <span id="bomDiferenciaPct" style="font-size: 11px; color: #eceff1;">({{ $signo }}{{ number_format($pct, 1) }}%)</span>
+                        <div id="bomTotalProduccion" style="font-size: 22px; font-weight: 700; color: #69f0ae;">
+                            ${{ number_format($totalProduccion, 2) }}
                         </div>
                     </div>
                 </div>
@@ -1072,12 +1072,17 @@
     var costoOriginalTotal = costoOriginalBom + costoOriginalExtras;
     var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
-    document.addEventListener('DOMContentLoaded', function() {
+    // Función global para inicializar listeners de BOM (se puede llamar después de refresh)
+    window.initBomListeners = function() {
         var inputs = document.querySelectorAll('.bom-adjust-input');
 
         // Escuchar cambios en inputs de BOM
         inputs.forEach(function(input) {
-            var baseQty = parseFloat(input.closest('tr').dataset.baseQty);
+            // Evitar duplicar listeners
+            if (input.dataset.listenersAttached) return;
+            input.dataset.listenersAttached = 'true';
+
+            var baseQty = parseFloat(input.closest('tr')?.dataset.baseQty) || 0;
             var itemId = input.dataset.itemId;
 
             input.addEventListener('input', function() {
@@ -1108,6 +1113,10 @@
         // Escuchar cambios en inputs de precio por millar de bordado
         var embroideryInputs = document.querySelectorAll('.embroidery-rate-input');
         embroideryInputs.forEach(function(input) {
+            // Evitar duplicar listeners
+            if (input.dataset.listenersAttached) return;
+            input.dataset.listenersAttached = 'true';
+
             var itemId = input.dataset.itemId;
             var designId = input.dataset.designId;
 
@@ -1141,6 +1150,10 @@
 
         // Botones guardar tarifa de bordado (independiente)
         document.querySelectorAll('.btn-save-embroidery-rate').forEach(function(btn) {
+            // Evitar duplicar listeners
+            if (btn.dataset.listenersAttached) return;
+            btn.dataset.listenersAttached = 'true';
+
             btn.addEventListener('click', function() {
                 var itemId = this.dataset.itemId;
                 var itemName = this.dataset.itemName;
@@ -1150,6 +1163,10 @@
 
         // Botones guardar por producto
         document.querySelectorAll('.btn-save-item').forEach(function(btn) {
+            // Evitar duplicar listeners
+            if (btn.dataset.listenersAttached) return;
+            btn.dataset.listenersAttached = 'true';
+
             btn.addEventListener('click', function() {
                 var itemId = this.dataset.itemId;
                 var itemName = this.dataset.itemName;
@@ -1159,6 +1176,10 @@
 
         // Botones restaurar por producto
         document.querySelectorAll('.btn-restore-item').forEach(function(btn) {
+            // Evitar duplicar listeners
+            if (btn.dataset.listenersAttached) return;
+            btn.dataset.listenersAttached = 'true';
+
             btn.addEventListener('click', function() {
                 var itemId = this.dataset.itemId;
                 var itemName = this.dataset.itemName;
@@ -1187,6 +1208,11 @@
                 }
             });
         });
+    };
+
+    // Inicializar listeners cuando el DOM esté listo
+    document.addEventListener('DOMContentLoaded', function() {
+        window.initBomListeners();
     });
 
     // Verificar cambios solo en un item específico

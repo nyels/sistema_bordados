@@ -845,6 +845,73 @@ class OrderService
         });
     }
 
+    // =========================================================================
+    // === PASO 10: REPROGRAMACIÓN DE FECHA PROMETIDA ===
+    // =========================================================================
+
+    /**
+     * Reprograma la fecha prometida de un pedido (DRAFT o CONFIRMED).
+     *
+     * REGLAS ERP:
+     * - Gate: Solo DRAFT y CONFIRMED (canReschedulePromisedDate)
+     * - Valida capacidad de semana destino via ProductionCapacityService
+     * - NO modifica: items, precios, descuentos, snapshots, BOM, diseños, medidas
+     * - Registra OrderEvent::TYPE_RESCHEDULED con auditoría completa
+     *
+     * @param Order $order Pedido a reprogramar
+     * @param string $newDate Nueva fecha en formato Y-m-d
+     * @return Order Pedido actualizado
+     * @throws \Exception Si el estado no permite reprogramación o la semana destino está llena
+     */
+    public function reschedulePromisedDate(Order $order, string $newDate): Order
+    {
+        // === GATE: Verificar que el estado permite reprogramación ===
+        if (!$order->canReschedulePromisedDate()) {
+            throw new \Exception(
+                $order->getRescheduleBlockReason() ?? 'El pedido no puede reprogramarse.'
+            );
+        }
+
+        $previousDate = $order->promised_date?->format('Y-m-d');
+        $parsedNewDate = \Carbon\Carbon::parse($newDate);
+
+        // === VALIDACIÓN: Fecha no puede ser pasada ===
+        if ($parsedNewDate->lt(today())) {
+            throw new \Exception(
+                'La fecha prometida no puede ser una fecha pasada.'
+            );
+        }
+
+        // === VALIDACIÓN: Capacidad de semana destino ===
+        $validation = $this->capacityService->validateDateChange($order, $parsedNewDate);
+
+        if (!$validation['valid']) {
+            throw new \Exception($validation['error']);
+        }
+
+        // === PERSISTENCIA: Solo promised_date, nada más ===
+        $order->promised_date = $parsedNewDate;
+        $order->updated_by = Auth::id();
+        $order->save();
+
+        // === AUDITORÍA: Registrar evento de reprogramación ===
+        OrderEvent::logRescheduled(
+            $order,
+            $previousDate,
+            $parsedNewDate->format('Y-m-d'),
+            $validation['new_week'] ?? []
+        );
+
+        Log::info("[OrderService] Fecha reprogramada: Pedido {$order->order_number}", [
+            'previous_date' => $previousDate,
+            'new_date' => $parsedNewDate->format('Y-m-d'),
+            'status' => $order->status,
+            'user_id' => Auth::id(),
+        ]);
+
+        return $order->fresh();
+    }
+
     /**
      * Calcula los requerimientos totales de materiales para un pedido.
      * INCLUYE: Materiales del producto base + Materiales de extras con inventario.

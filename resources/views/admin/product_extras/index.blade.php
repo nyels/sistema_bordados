@@ -45,9 +45,27 @@
                                     <td>${{ number_format($extra->price_addition, 2) }}</td>
                                     <td>{{ $extra->formatted_minutes }}</td>
                                     <td class="text-center">
+                                        @php
+                                            $materialsData = $extra->materials->map(function($m) {
+                                                return [
+                                                    'id' => $m->pivot->material_variant_id,
+                                                    'quantity' => $m->pivot->quantity_required,
+                                                    'name' => ($m->material->name ?? 'Material') . ($m->color ? ' - ' . $m->color : ''),
+                                                    'unit' => $m->material->consumptionUnit->symbol ?? ''
+                                                ];
+                                            });
+                                        @endphp
                                         <div class="d-flex justify-content-center align-items-center gap-1">
                                             <button type="button" class="btn btn-warning btn-sm btn-edit"
-                                                data-id="{{ $extra->id }}" title="Editar">
+                                                data-id="{{ $extra->id }}"
+                                                data-name="{{ $extra->name }}"
+                                                data-category="{{ $extra->extra_category_id }}"
+                                                data-cost="{{ $extra->cost_addition }}"
+                                                data-price="{{ $extra->price_addition }}"
+                                                data-minutes="{{ $extra->minutes_addition }}"
+                                                data-consumes="{{ $extra->consumes_inventory ? 1 : 0 }}"
+                                                data-materials="{{ $materialsData->toJson() }}"
+                                                title="Editar">
                                                 <i class="fas fa-edit"></i>
                                             </button>
                                             <button type="button" class="btn btn-danger btn-sm btn-delete"
@@ -79,104 +97,101 @@
                     </button>
                 </div>
                 <form id="formCreate">
-                    <div class="modal-body">
-                        <div style="border-bottom: 3px solid #007bff; padding-bottom: 8px; margin-bottom: 20px;">
-                            <h5 style="color: #007bff; font-weight: 600;">
+                    <div class="modal-body py-3">
+                        <div style="border-bottom: 3px solid #007bff; padding-bottom: 6px; margin-bottom: 12px;">
+                            <h6 style="color: #007bff; font-weight: 600; margin: 0;">
                                 <i class="fas fa-plus-circle"></i> Datos del Extra
-                            </h5>
+                            </h6>
                         </div>
 
-                        {{-- Nombre --}}
-                        <div class="form-group">
-                            <label>Nombre del Extra <span style="color: red;">*</span></label>
-                            <input type="text" name="name" id="create_name"
-                                class="form-control form-control-sm"
-                                required placeholder="Ej: Empaque especial, Urgencia, etc." maxlength="100">
-                            <div class="invalid-feedback" id="create_error_name"></div>
-                        </div>
-
-                        {{-- Categoría --}}
-                        <div class="form-group">
-                            <label>Categoría</label>
-                            <select name="extra_category_id" id="create_extra_category_id" class="form-control form-control-sm">
-                                <option value="">-- Sin categoría --</option>
-                                @foreach ($categories ?? [] as $cat)
-                                    <option value="{{ $cat->id }}">{{ $cat->nombre }}</option>
-                                @endforeach
-                            </select>
-                            <div class="invalid-feedback" id="create_error_extra_category_id"></div>
-                        </div>
-
-                        {{-- Costo y Precio --}}
+                        {{-- Nombre y Categoría --}}
                         <div class="row">
                             <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Costo Adicional <span style="color: red;">*</span></label>
+                                <div class="form-group mb-2">
+                                    <label>Nombre del Extra <span style="color: red;">*</span></label>
+                                    <input type="text" name="name" id="create_name"
+                                        class="form-control form-control-sm"
+                                        required placeholder="Ej: Empaque especial" maxlength="100">
+                                    <div class="invalid-feedback" id="create_error_name"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-2">
+                                    <label>Categoría</label>
+                                    <select name="extra_category_id" id="create_extra_category_id" class="form-control form-control-sm">
+                                        <option value="">-- Sin categoría --</option>
+                                        @foreach ($categories ?? [] as $cat)
+                                            <option value="{{ $cat->id }}">{{ $cat->nombre }}</option>
+                                        @endforeach
+                                    </select>
+                                    <div class="invalid-feedback" id="create_error_extra_category_id"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Costo, Precio y Tiempo --}}
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group mb-2">
+                                    <label>Costo <span style="color: red;">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <div class="input-group-prepend">
                                             <span class="input-group-text">$</span>
                                         </div>
                                         <input type="number" name="cost_addition" id="create_cost_addition"
                                             class="form-control form-control-sm"
-                                            required step="0.01" min="0" placeholder="Ej: 25.00">
+                                            required step="0.01" min="0" placeholder="25.00">
                                     </div>
-                                    <small class="text-muted">Costo real del servicio/extra</small>
                                     <div class="invalid-feedback" id="create_error_cost_addition"></div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Precio al Cliente <span style="color: red;">*</span></label>
+                            <div class="col-md-4">
+                                <div class="form-group mb-2">
+                                    <label>Precio <span style="color: red;">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <div class="input-group-prepend">
                                             <span class="input-group-text">$</span>
                                         </div>
                                         <input type="number" name="price_addition" id="create_price_addition"
                                             class="form-control form-control-sm"
-                                            required step="0.01" min="0" placeholder="Ej: 50.00">
+                                            required step="0.01" min="0" placeholder="50.00">
                                     </div>
-                                    <small class="text-muted">Precio que se cobra al cliente</small>
                                     <div class="invalid-feedback" id="create_error_price_addition"></div>
                                 </div>
                             </div>
-                        </div>
-
-                        {{-- Tiempo adicional --}}
-                        <div class="form-group">
-                            <label>Tiempo Adicional (minutos)</label>
-                            <div class="input-group input-group-sm">
-                                <input type="number" name="minutes_addition" id="create_minutes_addition"
-                                    class="form-control form-control-sm"
-                                    min="0" max="9999" step="1" value="0"
-                                    onkeypress="return event.charCode >= 48 && event.charCode <= 57"
-                                    oninput="this.value = this.value.replace(/[^0-9]/g, '')" placeholder="0">
-                                <div class="input-group-append">
-                                    <span class="input-group-text">minutos</span>
+                            <div class="col-md-4">
+                                <div class="form-group mb-2">
+                                    <label>Tiempo (min)</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" name="minutes_addition" id="create_minutes_addition"
+                                            class="form-control form-control-sm"
+                                            min="0" max="9999" step="1" value="0" placeholder="0">
+                                        <div class="input-group-append">
+                                            <span class="input-group-text">min</span>
+                                        </div>
+                                    </div>
+                                    <div class="invalid-feedback" id="create_error_minutes_addition"></div>
                                 </div>
                             </div>
-                            <small class="text-muted">Tiempo extra que agrega este servicio al proceso</small>
-                            <div class="invalid-feedback" id="create_error_minutes_addition"></div>
                         </div>
 
                         {{-- SECCIÓN DE INVENTARIO --}}
-                        <div style="border-bottom: 3px solid #6c757d; padding-bottom: 8px; margin-bottom: 20px; margin-top: 30px;">
-                            <h5 style="color: #6c757d; font-weight: 600;">
+                        <div style="border-bottom: 3px solid #6c757d; padding-bottom: 6px; margin-bottom: 12px; margin-top: 15px;">
+                            <h6 style="color: #6c757d; font-weight: 600; margin: 0;">
                                 <i class="fas fa-boxes"></i> Control de Inventario
-                            </h5>
+                            </h6>
                         </div>
 
                         {{-- Checkbox: Consume inventario --}}
-                        <div class="form-group">
+                        <div class="form-group mb-2">
                             <div class="custom-control custom-switch">
                                 <input type="checkbox" class="custom-control-input" id="create_consumes_inventory"
                                     name="consumes_inventory" value="1">
                                 <label class="custom-control-label" for="create_consumes_inventory">
                                     <strong>Este extra consume materiales</strong>
+                                    <small class="text-muted ml-2">(encaje, listón, moños, etc.)</small>
                                 </label>
                             </div>
-                            <small class="text-muted d-block mt-1">
-                                Active si este servicio requiere materiales físicos (encaje, listón, moños, etc.)
-                            </small>
                         </div>
 
                         {{-- Sección de materiales (oculta por defecto) --}}
@@ -189,24 +204,19 @@
                                     </small>
                                 </div>
 
-                                {{-- Select de material --}}
-                                <div class="form-group mb-2">
-                                    <select id="create_material_select" class="form-control form-control-sm">
+                                {{-- Select + Cantidad + Botón en una fila --}}
+                                <div class="d-flex align-items-center mb-3 flex-wrap gap-2">
+                                    <select id="create_material_select" class="form-control form-control-sm" style="flex: 1; min-width: 200px;">
                                         <option value="" data-unit="-" data-family="">-- Seleccione material --</option>
                                     </select>
-                                </div>
-
-                                {{-- Cantidad + Unidad + Botón Agregar --}}
-                                <div class="d-flex align-items-center mb-3">
-                                    <label class="mr-2 mb-0" style="font-weight: 500;">Cantidad:</label>
-                                    <div class="input-group input-group-sm" style="max-width: 140px;">
+                                    <div class="input-group input-group-sm" style="width: 130px;">
                                         <input type="number" id="create_material_quantity" class="form-control"
-                                            step="1" min="1" placeholder="0" value="">
+                                            step="1" min="1" placeholder="Cant." value="">
                                         <div class="input-group-append">
-                                            <span class="input-group-text" id="create_material_unit" style="min-width: 45px;">-</span>
+                                            <span class="input-group-text" id="create_material_unit" style="min-width: 40px;">-</span>
                                         </div>
                                     </div>
-                                    <button type="button" class="btn btn-sm btn-primary ml-2" id="create_btn_add_material">
+                                    <button type="button" class="btn btn-sm btn-primary" id="create_btn_add_material">
                                         <i class="fas fa-plus"></i> Agregar
                                     </button>
                                 </div>
@@ -255,104 +265,101 @@
                 </div>
                 <form id="formEdit">
                     <input type="hidden" id="edit_id">
-                    <div class="modal-body">
-                        <div style="border-bottom: 3px solid #ffc107; padding-bottom: 8px; margin-bottom: 20px;">
-                            <h5 style="color: #856404; font-weight: 600;">
+                    <div class="modal-body py-3">
+                        <div style="border-bottom: 3px solid #ffc107; padding-bottom: 6px; margin-bottom: 12px;">
+                            <h6 style="color: #856404; font-weight: 600; margin: 0;">
                                 <i class="fas fa-edit"></i> Datos del Extra
-                            </h5>
+                            </h6>
                         </div>
 
-                        {{-- Nombre --}}
-                        <div class="form-group">
-                            <label>Nombre del Extra <span style="color: red;">*</span></label>
-                            <input type="text" name="name" id="edit_name"
-                                class="form-control form-control-sm"
-                                required placeholder="Ej: Empaque especial, Urgencia, etc." maxlength="100">
-                            <div class="invalid-feedback" id="edit_error_name"></div>
-                        </div>
-
-                        {{-- Categoría --}}
-                        <div class="form-group">
-                            <label>Categoría</label>
-                            <select name="extra_category_id" id="edit_extra_category_id" class="form-control form-control-sm">
-                                <option value="">-- Sin categoría --</option>
-                                @foreach ($categories ?? [] as $cat)
-                                    <option value="{{ $cat->id }}">{{ $cat->nombre }}</option>
-                                @endforeach
-                            </select>
-                            <div class="invalid-feedback" id="edit_error_extra_category_id"></div>
-                        </div>
-
-                        {{-- Costo y Precio --}}
+                        {{-- Nombre y Categoría --}}
                         <div class="row">
                             <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Costo Adicional <span style="color: red;">*</span></label>
+                                <div class="form-group mb-2">
+                                    <label>Nombre del Extra <span style="color: red;">*</span></label>
+                                    <input type="text" name="name" id="edit_name"
+                                        class="form-control form-control-sm"
+                                        required placeholder="Ej: Empaque especial" maxlength="100">
+                                    <div class="invalid-feedback" id="edit_error_name"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-2">
+                                    <label>Categoría</label>
+                                    <select name="extra_category_id" id="edit_extra_category_id" class="form-control form-control-sm">
+                                        <option value="">-- Sin categoría --</option>
+                                        @foreach ($categories ?? [] as $cat)
+                                            <option value="{{ $cat->id }}">{{ $cat->nombre }}</option>
+                                        @endforeach
+                                    </select>
+                                    <div class="invalid-feedback" id="edit_error_extra_category_id"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Costo, Precio y Tiempo --}}
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group mb-2">
+                                    <label>Costo <span style="color: red;">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <div class="input-group-prepend">
                                             <span class="input-group-text">$</span>
                                         </div>
                                         <input type="number" name="cost_addition" id="edit_cost_addition"
                                             class="form-control form-control-sm"
-                                            required step="0.01" min="0" placeholder="0.00">
+                                            required step="0.01" min="0" placeholder="25.00">
                                     </div>
-                                    <small class="text-muted">Costo real del servicio/extra</small>
                                     <div class="invalid-feedback" id="edit_error_cost_addition"></div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Precio al Cliente <span style="color: red;">*</span></label>
+                            <div class="col-md-4">
+                                <div class="form-group mb-2">
+                                    <label>Precio <span style="color: red;">*</span></label>
                                     <div class="input-group input-group-sm">
                                         <div class="input-group-prepend">
                                             <span class="input-group-text">$</span>
                                         </div>
                                         <input type="number" name="price_addition" id="edit_price_addition"
                                             class="form-control form-control-sm"
-                                            required step="0.01" min="0" placeholder="0.00">
+                                            required step="0.01" min="0" placeholder="50.00">
                                     </div>
-                                    <small class="text-muted">Precio que se cobra al cliente</small>
                                     <div class="invalid-feedback" id="edit_error_price_addition"></div>
                                 </div>
                             </div>
-                        </div>
-
-                        {{-- Tiempo adicional --}}
-                        <div class="form-group">
-                            <label>Tiempo Adicional (minutos)</label>
-                            <div class="input-group input-group-sm">
-                                <input type="number" name="minutes_addition" id="edit_minutes_addition"
-                                    class="form-control form-control-sm"
-                                    min="0" max="9999" step="1" value="0"
-                                    onkeypress="return event.charCode >= 48 && event.charCode <= 57"
-                                    oninput="this.value = this.value.replace(/[^0-9]/g, '')" placeholder="0">
-                                <div class="input-group-append">
-                                    <span class="input-group-text">minutos</span>
+                            <div class="col-md-4">
+                                <div class="form-group mb-2">
+                                    <label>Tiempo (min)</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" name="minutes_addition" id="edit_minutes_addition"
+                                            class="form-control form-control-sm"
+                                            min="0" max="9999" step="1" value="0" placeholder="0">
+                                        <div class="input-group-append">
+                                            <span class="input-group-text">min</span>
+                                        </div>
+                                    </div>
+                                    <div class="invalid-feedback" id="edit_error_minutes_addition"></div>
                                 </div>
                             </div>
-                            <small class="text-muted">Tiempo extra que agrega este servicio al proceso</small>
-                            <div class="invalid-feedback" id="edit_error_minutes_addition"></div>
                         </div>
 
                         {{-- SECCIÓN DE INVENTARIO --}}
-                        <div style="border-bottom: 3px solid #6c757d; padding-bottom: 8px; margin-bottom: 20px; margin-top: 30px;">
-                            <h5 style="color: #6c757d; font-weight: 600;">
+                        <div style="border-bottom: 3px solid #6c757d; padding-bottom: 6px; margin-bottom: 12px; margin-top: 15px;">
+                            <h6 style="color: #6c757d; font-weight: 600; margin: 0;">
                                 <i class="fas fa-boxes"></i> Control de Inventario
-                            </h5>
+                            </h6>
                         </div>
 
                         {{-- Checkbox: Consume inventario --}}
-                        <div class="form-group">
+                        <div class="form-group mb-2">
                             <div class="custom-control custom-switch">
                                 <input type="checkbox" class="custom-control-input" id="edit_consumes_inventory"
                                     name="consumes_inventory" value="1">
                                 <label class="custom-control-label" for="edit_consumes_inventory">
                                     <strong>Este extra consume materiales</strong>
+                                    <small class="text-muted ml-2">(encaje, listón, moños, etc.)</small>
                                 </label>
                             </div>
-                            <small class="text-muted d-block mt-1">
-                                Active si este servicio requiere materiales físicos (encaje, listón, moños, etc.)
-                            </small>
                         </div>
 
                         {{-- Sección de materiales --}}
@@ -365,24 +372,19 @@
                                     </small>
                                 </div>
 
-                                {{-- Select de material --}}
-                                <div class="form-group mb-2">
-                                    <select id="edit_material_select" class="form-control form-control-sm">
+                                {{-- Select + Cantidad + Botón en una fila --}}
+                                <div class="d-flex align-items-center mb-3 flex-wrap gap-2">
+                                    <select id="edit_material_select" class="form-control form-control-sm" style="flex: 1; min-width: 200px;">
                                         <option value="" data-unit="-" data-family="">-- Seleccione material --</option>
                                     </select>
-                                </div>
-
-                                {{-- Cantidad + Unidad + Botón Agregar --}}
-                                <div class="d-flex align-items-center mb-3">
-                                    <label class="mr-2 mb-0" style="font-weight: 500;">Cantidad:</label>
-                                    <div class="input-group input-group-sm" style="max-width: 140px;">
+                                    <div class="input-group input-group-sm" style="width: 130px;">
                                         <input type="number" id="edit_material_quantity" class="form-control"
-                                            step="1" min="1" placeholder="0" value="">
+                                            step="1" min="1" placeholder="Cant." value="">
                                         <div class="input-group-append">
-                                            <span class="input-group-text" id="edit_material_unit" style="min-width: 45px;">-</span>
+                                            <span class="input-group-text" id="edit_material_unit" style="min-width: 40px;">-</span>
                                         </div>
                                     </div>
-                                    <button type="button" class="btn btn-sm btn-warning ml-2" id="edit_btn_add_material">
+                                    <button type="button" class="btn btn-sm btn-warning" id="edit_btn_add_material">
                                         <i class="fas fa-plus"></i> Agregar
                                     </button>
                                 </div>
@@ -502,6 +504,53 @@
             // Variables para modal editar
             var editMaterialIndex = 0;
             var editAddedMaterials = [];
+
+            // ============================================================
+            // FUNCION PARA RECARGAR TABLA SIN RECARGAR PAGINA
+            // ============================================================
+            function reloadTable() {
+                $.ajax({
+                    url: '/product_extras/ajax/table',
+                    type: 'GET',
+                    success: function(response) {
+                        if (response.success) {
+                            // Destruir DataTable existente
+                            if ($.fn.DataTable.isDataTable('#example1')) {
+                                $('#example1').DataTable().destroy();
+                            }
+                            // Reemplazar tbody
+                            $('#example1 tbody').html(response.html);
+                            // Reinicializar DataTable
+                            var table = $("#example1").DataTable({
+                                "pageLength": 10,
+                                "language": {
+                                    "emptyTable": "No hay información",
+                                    "info": "Mostrando _START_ a _END_ de _TOTAL_ Extras",
+                                    "infoEmpty": "Mostrando 0 a 0 de 0 Extras",
+                                    "infoFiltered": "(Filtrado de _MAX_ total Extras)",
+                                    "lengthMenu": "Mostrar _MENU_ Extras",
+                                    "loadingRecords": "Cargando...",
+                                    "processing": "Procesando...",
+                                    "search": "Buscador:",
+                                    "zeroRecords": "Sin resultados encontrados",
+                                    "paginate": { "first": "Primero", "last": "Ultimo", "next": "Siguiente", "previous": "Anterior" }
+                                },
+                                "responsive": true,
+                                "lengthChange": true,
+                                "autoWidth": false,
+                                buttons: [
+                                    { text: '<i class="fas fa-copy"></i> COPIAR', extend: 'copy', className: 'btn btn-default' },
+                                    { text: '<i class="fas fa-file-pdf"></i> PDF', extend: 'pdf', className: 'btn btn-danger' },
+                                    { text: '<i class="fas fa-file-csv"></i> CSV', extend: 'csv', className: 'btn btn-info' },
+                                    { text: '<i class="fas fa-file-excel"></i> EXCEL', extend: 'excel', className: 'btn btn-success' },
+                                    { text: '<i class="fas fa-print"></i> IMPRIMIR', extend: 'print', className: 'btn btn-default' }
+                                ]
+                            });
+                            table.buttons().container().appendTo('#example1_wrapper .row:eq(0)');
+                        }
+                    }
+                });
+            }
 
             // ============================================================
             // DATATABLE
@@ -804,11 +853,10 @@
                                 icon: 'success',
                                 title: 'Creado',
                                 text: response.message,
-                                timer: 2000,
+                                timer: 1500,
                                 showConfirmButton: false
-                            }).then(function() {
-                                location.reload();
                             });
+                            reloadTable();
                         }
                     },
                     error: function(xhr) {
@@ -835,10 +883,10 @@
             });
 
             // ============================================================
-            // ABRIR MODAL EDITAR
+            // ABRIR MODAL EDITAR (sin AJAX - datos desde data-*)
             // ============================================================
             $(document).on('click', '.btn-edit', function() {
-                var id = $(this).data('id');
+                var $btn = $(this);
 
                 // Resetear
                 $('#formEdit')[0].reset();
@@ -850,45 +898,30 @@
                 $('.invalid-feedback').text('');
                 $('#formEdit .form-control').removeClass('is-invalid');
 
-                // Cargar datos via AJAX
-                Swal.fire({ title: 'Cargando...', allowOutsideClick: false, showConfirmButton: false, didOpen: () => Swal.showLoading() });
+                // Cargar datos desde data-* attributes
+                $('#edit_id').val($btn.data('id'));
+                $('#edit_name').val($btn.data('name'));
+                $('#edit_extra_category_id').val($btn.data('category') || '');
+                $('#edit_cost_addition').val($btn.data('cost'));
+                $('#edit_price_addition').val($btn.data('price'));
+                $('#edit_minutes_addition').val($btn.data('minutes') || 0);
 
-                $.ajax({
-                    url: '/product_extras/ajax/get/' + id,
-                    type: 'GET',
-                    success: function(response) {
-                        Swal.close();
-                        if (response.success) {
-                            var extra = response.extra;
-                            $('#edit_id').val(extra.id);
-                            $('#edit_name').val(extra.name);
-                            $('#edit_extra_category_id').val(extra.extra_category_id || '');
-                            $('#edit_cost_addition').val(extra.cost_addition);
-                            $('#edit_price_addition').val(extra.price_addition);
-                            $('#edit_minutes_addition').val(extra.minutes_addition || 0);
-                            $('#edit_consumes_inventory').prop('checked', extra.consumes_inventory);
+                var consumesInventory = $btn.data('consumes') == 1;
+                $('#edit_consumes_inventory').prop('checked', consumesInventory);
 
-                            if (extra.consumes_inventory) {
-                                $('#edit_materials_section').show();
-                                // Cargar materiales existentes
-                                if (extra.materials && extra.materials.length > 0) {
-                                    extra.materials.forEach(function(m) {
-                                        addEditMaterialToTable(m.id, m.quantity, m.name, m.unit);
-                                    });
-                                }
-                                initEditMaterialSelect();
-                            }
-
-                            $('#modalEdit').modal('show');
-                        } else {
-                            Swal.fire({ icon: 'error', title: 'Error', text: response.message });
-                        }
-                    },
-                    error: function(xhr) {
-                        Swal.close();
-                        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo cargar los datos del extra' });
+                if (consumesInventory) {
+                    $('#edit_materials_section').show();
+                    // Cargar materiales desde data-materials
+                    var materials = $btn.data('materials') || [];
+                    if (materials.length > 0) {
+                        materials.forEach(function(m) {
+                            addEditMaterialToTable(m.id, m.quantity, m.name, m.unit);
+                        });
                     }
-                });
+                    initEditMaterialSelect();
+                }
+
+                $('#modalEdit').modal('show');
             });
 
             // ============================================================
@@ -953,26 +986,31 @@
                     type: 'POST',
                     data: formData,
                     success: function(response) {
-                        $('#modalEdit').modal('hide');
                         if (response.success) {
+                            $('#modalEdit').modal('hide');
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Actualizado',
                                 text: response.message,
-                                timer: 2000,
+                                timer: 1500,
                                 showConfirmButton: false
-                            }).then(function() {
-                                location.reload();
                             });
+                            reloadTable();
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Error', text: response.message || 'Error al actualizar' });
                         }
                     },
                     error: function(xhr) {
                         if (xhr.status === 422) {
                             var errors = xhr.responseJSON.errors || {};
-                            $.each(errors, function(field, messages) {
-                                $('#edit_' + field).addClass('is-invalid');
-                                $('#edit_error_' + field).text(messages[0]);
-                            });
+                            if (Object.keys(errors).length > 0) {
+                                $.each(errors, function(field, messages) {
+                                    $('#edit_' + field).addClass('is-invalid');
+                                    $('#edit_error_' + field).text(messages[0]);
+                                });
+                            } else {
+                                Swal.fire({ icon: 'error', title: 'Validación', text: xhr.responseJSON?.message || 'Error de validación' });
+                            }
                         } else {
                             $('#modalEdit').modal('hide');
                             Swal.fire({ icon: 'error', title: 'Error', text: xhr.responseJSON?.message || 'Error al actualizar' });
@@ -1017,9 +1055,8 @@
                             data: { _token: '{{ csrf_token() }}' },
                             success: function(response) {
                                 if (response.success) {
-                                    var row = $('tr[data-id="' + id + '"]');
-                                    table.row(row).remove().draw(false);
-                                    Swal.fire({ icon: 'success', title: 'Eliminado', text: response.message, timer: 2000, showConfirmButton: false });
+                                    Swal.fire({ icon: 'success', title: 'Eliminado', text: response.message, timer: 1500, showConfirmButton: false });
+                                    reloadTable();
                                 }
                             },
                             error: function(xhr) {

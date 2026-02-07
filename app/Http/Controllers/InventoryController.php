@@ -56,6 +56,37 @@ class InventoryController extends Controller
 
         $variants = $query->orderBy('material_id')->paginate(25)->withQueryString();
 
+        // Calcular totales de entradas y salidas para cada variante (para tooltip)
+        // Tipos que suman stock: entrada, ajuste_positivo, devolucion_produccion
+        // Tipos que restan stock: salida, ajuste_negativo, devolucion_proveedor
+        $variantIds = $variants->pluck('id')->toArray();
+
+        $entryTypes = ['entrada', 'ajuste_positivo', 'devolucion_produccion'];
+        $exitTypes = ['salida', 'ajuste_negativo', 'devolucion_proveedor'];
+
+        $entriesByVariant = InventoryMovement::selectRaw('material_variant_id, SUM(ABS(quantity)) as total')
+            ->whereIn('material_variant_id', $variantIds)
+            ->whereIn('type', $entryTypes)
+            ->groupBy('material_variant_id')
+            ->pluck('total', 'material_variant_id')
+            ->toArray();
+
+        $exitsByVariant = InventoryMovement::selectRaw('material_variant_id, SUM(ABS(quantity)) as total')
+            ->whereIn('material_variant_id', $variantIds)
+            ->whereIn('type', $exitTypes)
+            ->groupBy('material_variant_id')
+            ->pluck('total', 'material_variant_id')
+            ->toArray();
+
+        // Combinar en un solo array para pasar a la vista
+        $inventoryTotals = [];
+        foreach ($variantIds as $id) {
+            $inventoryTotals[$id] = [
+                'entries' => $entriesByVariant[$id] ?? 0,
+                'exits' => $exitsByVariant[$id] ?? 0,
+            ];
+        }
+
         // Totales para resumen
         $totals = [
             'total_value' => MaterialVariant::where('activo', true)->sum('current_value'),
@@ -66,7 +97,7 @@ class InventoryController extends Controller
 
         $categories = \App\Models\MaterialCategory::orderBy('name')->get();
 
-        return view('admin.inventory.index', compact('variants', 'totals', 'categories'));
+        return view('admin.inventory.index', compact('variants', 'totals', 'categories', 'inventoryTotals'));
     }
 
     // === VISTA 2: KARDEX POR MATERIAL ===

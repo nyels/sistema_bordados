@@ -1457,6 +1457,104 @@
                     });
                 }
 
+                // Actualizar cantidad de un extra en tiempo real
+                window.updateExtraQuantity = function(orderId, itemId, orderItemExtraId, newQuantity) {
+                    // No permitir cantidad menor a 1 (para eliminar usar el botón X)
+                    if (newQuantity < 1) {
+                        return;
+                    }
+
+                    // Actualizar visualmente inmediatamente (optimistic UI)
+                    var qtyEl = document.querySelector('[data-extra-qty="' + orderItemExtraId + '"]');
+                    var oldQty = qtyEl ? parseInt(qtyEl.textContent) : 1;
+                    if (qtyEl) qtyEl.textContent = newQuantity;
+
+                    fetch('/admin/orders/' + orderId + '/items/' + itemId + '/extras/' + orderItemExtraId, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({ quantity: newQuantity })
+                    })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (data.success) {
+                            // Actualizar los botones +/- con las nuevas cantidades
+                            var extraRow = document.querySelector('[data-extra-row="' + orderItemExtraId + '"]');
+                            if (extraRow) {
+                                var minusBtn = extraRow.querySelector('button[title="Disminuir cantidad"]');
+                                var plusBtn = extraRow.querySelector('button[title="Aumentar cantidad"]');
+                                if (minusBtn) {
+                                    minusBtn.setAttribute('onclick', 'updateExtraQuantity(' + orderId + ', ' + itemId + ', ' + orderItemExtraId + ', ' + (newQuantity - 1) + ')');
+                                    // Deshabilitar botón - si cantidad es 1
+                                    if (newQuantity <= 1) {
+                                        minusBtn.disabled = true;
+                                        minusBtn.style.background = '#e0e0e0';
+                                        minusBtn.style.color = '#bdbdbd';
+                                    } else {
+                                        minusBtn.disabled = false;
+                                        minusBtn.style.background = '#f5f5f5';
+                                        minusBtn.style.color = '#0277bd';
+                                    }
+                                }
+                                if (plusBtn) {
+                                    plusBtn.setAttribute('onclick', 'updateExtraQuantity(' + orderId + ', ' + itemId + ', ' + orderItemExtraId + ', ' + (newQuantity + 1) + ')');
+                                }
+                            }
+
+                            // Actualizar totales de extras del item
+                            var row = document.querySelector('[data-item-row="' + itemId + '"]');
+                            if (row && data.item_extras_total !== undefined) {
+                                // Actualizar badge en el collapse
+                                var extrasTotalEl = row.querySelector('[data-extras-total="' + itemId + '"]');
+                                if (extrasTotalEl) {
+                                    extrasTotalEl.textContent = '· +$' + numberFormat2(data.item_extras_total);
+                                }
+                                // Actualizar subtotal de extras en la última columna
+                                var extrasSubtotalEl = row.querySelector('[data-item-extras-subtotal="' + itemId + '"]');
+                                if (extrasSubtotalEl) {
+                                    extrasSubtotalEl.textContent = '+$' + numberFormat2(data.item_extras_total);
+                                    extrasSubtotalEl.style.display = data.item_extras_total > 0 ? '' : 'none';
+                                }
+                            }
+
+                            // Actualizar totales del pedido
+                            updateOrderTotals(data.order_totals);
+                            refreshBomSection();
+
+                            // Toast SweetAlert2 arriba derecha (CSS global previene scroll)
+                            var scrollPos = window.pageYOffset || document.documentElement.scrollTop;
+                            Swal.fire({
+                                toast: true,
+                                position: 'top-end',
+                                icon: 'success',
+                                title: 'Cantidad actualizada',
+                                showConfirmButton: false,
+                                timer: 1000,
+                                timerProgressBar: false,
+                                didOpen: function() {
+                                    // Forzar restauración de scroll
+                                    setTimeout(function() { window.scrollTo(0, scrollPos); }, 0);
+                                    setTimeout(function() { window.scrollTo(0, scrollPos); }, 10);
+                                    setTimeout(function() { window.scrollTo(0, scrollPos); }, 50);
+                                }
+                            });
+                        } else {
+                            // Revertir si hay error
+                            if (qtyEl) qtyEl.textContent = oldQty;
+                            Swal.fire('Error', data.message, 'error');
+                        }
+                    })
+                    .catch(function() {
+                        // Revertir si hay error
+                        if (qtyEl) qtyEl.textContent = oldQty;
+                        Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
+                    });
+                };
+
                 window.removeExtraFromItem = function(orderId, itemId, orderItemExtraId, extraName) {
                     Swal.fire({
                         title: '¿Quitar extra?',
@@ -1541,6 +1639,10 @@
                         var html = decoder.decode(buffer);
                         if (html) {
                             bomContainer.innerHTML = html;
+                            // Re-inicializar listeners después de actualizar el HTML
+                            if (typeof window.initBomListeners === 'function') {
+                                window.initBomListeners();
+                            }
                         }
                     })
                     .catch(function(err) { console.log('No se pudo actualizar BOM', err); });
@@ -1585,12 +1687,19 @@
                                     '<i class="fas fa-box" style="color:white;font-size:10px;"></i></div>' +
                                     '<span style="font-size:14px;color:#212529;font-weight:500;">' +
                                     escapeHtml(extra.name) +
-                                    '<span style="color:#6c757d;">×' + extra.quantity + '</span>' +
                                     '<span style="color:#0277bd;font-weight:600;"> · $' + numberFormat2(extra.unit_price) + ' c/u</span>' +
                                     '</span></div>' +
-                                    '<button type="button" class="btn btn-sm btn-link p-1" style="color:#c62828;font-size:14px;" title="Quitar extra" ' +
+                                    '<div class="d-flex align-items-center" style="gap:4px;">' +
+                                    '<button type="button" class="btn btn-sm p-0" style="width:24px;height:24px;background:' + (extra.quantity <= 1 ? '#e0e0e0' : '#f5f5f5') + ';border:1px solid #e0e0e0;border-radius:4px;color:' + (extra.quantity <= 1 ? '#bdbdbd' : '#0277bd') + ';font-size:12px;" ' +
+                                    'onclick="updateExtraQuantity(' + orderId + ', ' + itemId + ', ' + extra.id + ', ' + (extra.quantity - 1) + ')" title="Disminuir cantidad"' + (extra.quantity <= 1 ? ' disabled' : '') + '>' +
+                                    '<i class="fas fa-minus"></i></button>' +
+                                    '<span style="min-width:24px;text-align:center;font-size:14px;font-weight:600;color:#212529;" data-extra-qty="' + extra.id + '">' + extra.quantity + '</span>' +
+                                    '<button type="button" class="btn btn-sm p-0" style="width:24px;height:24px;background:#e3f2fd;border:1px solid #90caf9;border-radius:4px;color:#0277bd;font-size:12px;" ' +
+                                    'onclick="updateExtraQuantity(' + orderId + ', ' + itemId + ', ' + extra.id + ', ' + (extra.quantity + 1) + ')" title="Aumentar cantidad">' +
+                                    '<i class="fas fa-plus"></i></button>' +
+                                    '<button type="button" class="btn btn-sm btn-link p-1 ml-1" style="color:#c62828;font-size:14px;" title="Quitar extra" ' +
                                     'onclick="removeExtraFromItem(' + orderId + ', ' + itemId + ', ' + extra.id + ', \'' + escapeHtml(extra.name).replace(/'/g, "\\'") + '\')">' +
-                                    '<i class="fas fa-times"></i></button></div>';
+                                    '<i class="fas fa-times"></i></button></div></div>';
                             });
                             extrasList.innerHTML = html;
                         }
@@ -1623,11 +1732,11 @@
                         }
                     }
 
-                    // Actualizar subtotal del item en la tabla
-                    var subtotalCell = row.querySelector('td:last-child strong');
-                    if (subtotalCell) {
-                        // Recalcular subtotal: (unit_price * quantity)
-                        // El subtotal viene del servidor así que refrescar la página o hacer otro fetch
+                    // Actualizar subtotal de extras en la última columna
+                    var extrasSubtotalEl = row.querySelector('[data-item-extras-subtotal="' + itemId + '"]');
+                    if (extrasSubtotalEl) {
+                        extrasSubtotalEl.textContent = '+$' + numberFormat2(total);
+                        extrasSubtotalEl.style.display = total > 0 ? '' : 'none';
                     }
                 }
 

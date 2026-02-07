@@ -189,25 +189,25 @@
                             <i class="fas fa-hashtag"></i>
                             <span class="tech-card-label">Puntadas</span>
                             <input type="number" class="tech-card-input" id="inputStitches" name="stitches_count"
-                                placeholder="0">
+                                placeholder="0" min="0">
                         </div>
                         <div class="tech-card" id="techCardColors">
                             <i class="fas fa-palette"></i>
                             <span class="tech-card-label">Colores</span>
                             <input type="number" class="tech-card-input" id="inputColors" name="colors_count"
-                                placeholder="0">
+                                placeholder="0" min="1">
                         </div>
                         <div class="tech-card" id="techCardWidth">
                             <i class="fas fa-arrows-alt-h"></i>
                             <span class="tech-card-label">Ancho (mm)</span>
                             <input type="number" class="tech-card-input" id="inputWidth" name="width_mm"
-                                placeholder="0" step="0.1">
+                                placeholder="0" step="0.1" min="0">
                         </div>
                         <div class="tech-card" id="techCardHeight">
                             <i class="fas fa-arrows-alt-v"></i>
                             <span class="tech-card-label">Alto (mm)</span>
                             <input type="number" class="tech-card-input" id="inputHeight" name="height_mm"
-                                placeholder="0" step="0.1">
+                                placeholder="0" step="0.1" min="0">
                         </div>
                     </div>
                 </div>

@@ -315,16 +315,35 @@
                                 </div>
                                 <span style="font-size: 14px; color: #212529; font-weight: 500;">
                                     {{ $extra->productExtra->name ?? 'Extra' }}
-                                    <span style="color: #6c757d;">×{{ $extra->quantity }}</span>
                                     <span style="color: #0277bd; font-weight: 600;"> · ${{ number_format($extra->unit_price, 2) }} c/u</span>
                                 </span>
                             </div>
                             @if (in_array($order->status, [\App\Models\Order::STATUS_DRAFT, \App\Models\Order::STATUS_CONFIRMED]))
-                                <button type="button" class="btn btn-sm btn-link p-1"
-                                    style="color: #c62828; font-size: 14px;" title="Quitar extra"
-                                    onclick="removeExtraFromItem({{ $order->id }}, {{ $item->id }}, {{ $extra->id }}, '{{ addslashes($extra->productExtra->name ?? 'Extra') }}')">
-                                    <i class="fas fa-times"></i>
-                                </button>
+                                <div class="d-flex align-items-center" style="gap: 4px;">
+                                    {{-- Controles de cantidad --}}
+                                    <button type="button" class="btn btn-sm p-0 btn-extra-minus"
+                                        style="width: 24px; height: 24px; background: {{ $extra->quantity <= 1 ? '#e0e0e0' : '#f5f5f5' }}; border: 1px solid #e0e0e0; border-radius: 4px; color: {{ $extra->quantity <= 1 ? '#bdbdbd' : '#0277bd' }}; font-size: 12px;"
+                                        onclick="updateExtraQuantity({{ $order->id }}, {{ $item->id }}, {{ $extra->id }}, {{ $extra->quantity - 1 }})"
+                                        title="Disminuir cantidad"
+                                        {{ $extra->quantity <= 1 ? 'disabled' : '' }}>
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                    <span style="min-width: 24px; text-align: center; font-size: 14px; font-weight: 600; color: #212529;" data-extra-qty="{{ $extra->id }}">{{ $extra->quantity }}</span>
+                                    <button type="button" class="btn btn-sm p-0 btn-extra-plus"
+                                        style="width: 24px; height: 24px; background: #e3f2fd; border: 1px solid #90caf9; border-radius: 4px; color: #0277bd; font-size: 12px;"
+                                        onclick="updateExtraQuantity({{ $order->id }}, {{ $item->id }}, {{ $extra->id }}, {{ $extra->quantity + 1 }})"
+                                        title="Aumentar cantidad">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                    {{-- Botón eliminar --}}
+                                    <button type="button" class="btn btn-sm btn-link p-1 ml-1"
+                                        style="color: #c62828; font-size: 14px;" title="Quitar extra"
+                                        onclick="removeExtraFromItem({{ $order->id }}, {{ $item->id }}, {{ $extra->id }}, '{{ addslashes($extra->productExtra->name ?? 'Extra') }}')">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            @else
+                                <span style="font-size: 14px; color: #6c757d; font-weight: 500;">×{{ $extra->quantity }}</span>
                             @endif
                         </div>
                     @endforeach
@@ -374,9 +393,7 @@
         @endif
     </td>
     <td class="text-right align-middle">
-        <strong style="font-size: 15px; color: #212529;">${{ number_format($itemTotal, 2) }}</strong>
-        @if ($extrasSubtotal > 0)
-            <br><span style="color: #0277bd; font-size: 14px; font-weight: 500;">+${{ number_format($extrasSubtotal, 2) }}</span>
-        @endif
+        <strong style="font-size: 15px; color: #212529;" data-item-subtotal="{{ $item->id }}">${{ number_format($itemTotal, 2) }}</strong>
+        <br><span style="color: #0277bd; font-size: 14px; font-weight: 500;{{ $extrasSubtotal <= 0 ? ' display: none;' : '' }}" data-item-extras-subtotal="{{ $item->id }}">+${{ number_format($extrasSubtotal, 2) }}</span>
     </td>
 </tr>

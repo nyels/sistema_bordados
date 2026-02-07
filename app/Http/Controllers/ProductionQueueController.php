@@ -91,10 +91,8 @@ class ProductionQueueController extends Controller
             'urgent_count' => Order::whereIn('status', [Order::STATUS_CONFIRMED, Order::STATUS_IN_PRODUCTION])
                 ->whereIn('urgency_level', [Order::URGENCY_URGENTE, Order::URGENCY_EXPRESS])
                 ->count(),
-            'overdue_count' => Order::whereIn('status', [Order::STATUS_CONFIRMED, Order::STATUS_IN_PRODUCTION])
-                ->whereNotNull('promised_date')
-                ->where('promised_date', '<', Carbon::today())
-                ->count(),
+            'overdue_count' => app(\App\Services\OrderCalendarReadService::class)
+                ->countOverdueOrdersByStatuses([Order::STATUS_CONFIRMED, Order::STATUS_IN_PRODUCTION]),
             'blocked_count' => $this->countBlockedOrders(),
         ];
 
@@ -199,10 +197,12 @@ class ProductionQueueController extends Controller
 
     /**
      * Calcular materiales requeridos para un pedido
+     * Incluye materiales del BOM (producto base) y materiales de extras
      */
     protected function getMaterialRequirements(Order $order): array
     {
         $requirements = [];
+        $extraRequirements = [];
 
         foreach ($order->items as $item) {
             $product = $item->product;
@@ -216,11 +216,17 @@ class ProductionQueueController extends Controller
                 $item->load('bomAdjustments');
             }
 
+            // Cargar extras del item si no están cargados
+            if (!$item->relationLoaded('extras')) {
+                $item->load('extras.productExtra.materials.material.consumptionUnit', 'extras.productExtra.materials.material.baseUnit');
+            }
+
             // Indexar ajustes por material_variant_id para búsqueda rápida
             $bomAdjustments = $item->bomAdjustments->keyBy('material_variant_id');
 
             if (!$product) continue;
 
+            // === MATERIALES DEL PRODUCTO BASE (BOM) ===
             foreach ($product->materials as $materialVariant) {
                 $variantId = $materialVariant->id;
 
@@ -232,43 +238,7 @@ class ProductionQueueController extends Controller
                 $requiredQty = $adjustedQty * $item->quantity;
 
                 if (!isset($requirements[$variantId])) {
-                    // Obtener stock actual y reservas
-                    $currentStock = $materialVariant->current_stock;
-                    $totalReserved = InventoryReservation::where('material_variant_id', $variantId)
-                        ->where('status', InventoryReservation::STATUS_RESERVED)
-                        ->sum('quantity');
-
-                    // Reservas de ESTE pedido especifico
-                    $reservedForThis = InventoryReservation::where('order_id', $order->id)
-                        ->where('material_variant_id', $variantId)
-                        ->where('status', InventoryReservation::STATUS_RESERVED)
-                        ->sum('quantity');
-
-                    $available = $currentStock - $totalReserved;
-
-                    // Datos para conversión de unidades en frontend
-                    $material = $materialVariant->material;
-                    $conversionFactor = $material->conversion_factor ?? 1;
-                    $consumptionUnit = $material->consumptionUnit->symbol ?? $material->baseUnit->symbol ?? 'u';
-                    $baseUnit = $material->baseUnit->symbol ?? $consumptionUnit;
-
-                    $requirements[$variantId] = [
-                        'material_variant_id' => $variantId,
-                        'material_id' => $material->id ?? 0,
-                        'material_name' => $material->name ?? 'N/A',
-                        'variant_color' => $materialVariant->color,
-                        'variant_sku' => $materialVariant->sku,
-                        'unit' => $consumptionUnit,
-                        'unit_base' => $baseUnit,
-                        'conversion_factor' => $conversionFactor,
-                        'required' => 0,
-                        'current_stock' => $currentStock,
-                        'total_reserved' => $totalReserved,
-                        'reserved_for_this' => $reservedForThis,
-                        'available' => $available,
-                        'sufficient' => true,
-                        'has_bom_adjustment' => false, // Se marca si algún item tiene ajuste
-                    ];
+                    $requirements[$variantId] = $this->buildMaterialRequirement($materialVariant, $order->id);
                 }
 
                 $requirements[$variantId]['required'] += $requiredQty;
@@ -278,17 +248,106 @@ class ProductionQueueController extends Controller
                     $requirements[$variantId]['has_bom_adjustment'] = true;
                 }
             }
+
+            // === MATERIALES DE EXTRAS CON INVENTARIO ===
+            foreach ($item->extras as $orderItemExtra) {
+                $extra = $orderItemExtra->productExtra;
+
+                if (!$extra || !$extra->consumesInventory()) {
+                    continue;
+                }
+
+                // Cargar materiales del extra si no están cargados
+                if (!$extra->relationLoaded('materials')) {
+                    $extra->load('materials.material.consumptionUnit', 'materials.material.baseUnit');
+                }
+
+                $totalExtraQuantity = $orderItemExtra->quantity * $item->quantity;
+
+                foreach ($extra->materials as $materialVariant) {
+                    $variantId = $materialVariant->id;
+                    $requiredQty = (float) $materialVariant->pivot->quantity * $totalExtraQuantity;
+
+                    if (!isset($extraRequirements[$variantId])) {
+                        $extraRequirements[$variantId] = $this->buildMaterialRequirement($materialVariant, $order->id);
+                        $extraRequirements[$variantId]['extra_name'] = $extra->name;
+                        $extraRequirements[$variantId]['is_extra'] = true;
+                    }
+
+                    $extraRequirements[$variantId]['required'] += $requiredQty;
+                }
+            }
         }
 
-        // Calcular si hay suficiente
+        // Calcular si hay suficiente para materiales del BOM
         foreach ($requirements as $variantId => &$req) {
-            // Si ya esta reservado para este pedido, no necesita mas
             $needed = $req['required'] - $req['reserved_for_this'];
             $req['needed'] = max(0, $needed);
             $req['sufficient'] = $req['needed'] <= $req['available'];
         }
 
-        return array_values($requirements);
+        // Calcular si hay suficiente para materiales de extras
+        foreach ($extraRequirements as $variantId => &$req) {
+            $needed = $req['required'] - $req['reserved_for_this'];
+            $req['needed'] = max(0, $needed);
+            $req['sufficient'] = $req['needed'] <= $req['available'];
+        }
+
+        // Combinar ambos arrays con marcador de tipo
+        $bomMaterials = array_values($requirements);
+        $extraMaterials = array_values($extraRequirements);
+
+        // Agregar marcador para diferenciar en la vista
+        foreach ($bomMaterials as &$mat) {
+            $mat['source_type'] = 'bom';
+        }
+        foreach ($extraMaterials as &$mat) {
+            $mat['source_type'] = 'extra';
+        }
+
+        return array_merge($bomMaterials, $extraMaterials);
+    }
+
+    /**
+     * Construir estructura de requerimiento de material
+     */
+    protected function buildMaterialRequirement($materialVariant, int $orderId): array
+    {
+        $currentStock = $materialVariant->current_stock;
+        $totalReserved = InventoryReservation::where('material_variant_id', $materialVariant->id)
+            ->where('status', InventoryReservation::STATUS_RESERVED)
+            ->sum('quantity');
+
+        $reservedForThis = InventoryReservation::where('order_id', $orderId)
+            ->where('material_variant_id', $materialVariant->id)
+            ->where('status', InventoryReservation::STATUS_RESERVED)
+            ->sum('quantity');
+
+        $available = $currentStock - $totalReserved;
+
+        $material = $materialVariant->material;
+        $conversionFactor = $material->conversion_factor ?? 1;
+        $consumptionUnit = $material->consumptionUnit->symbol ?? $material->baseUnit->symbol ?? 'u';
+        $baseUnit = $material->baseUnit->symbol ?? $consumptionUnit;
+
+        return [
+            'material_variant_id' => $materialVariant->id,
+            'material_id' => $material->id ?? 0,
+            'material_name' => $material->name ?? 'N/A',
+            'variant_color' => $materialVariant->color,
+            'variant_sku' => $materialVariant->sku,
+            'unit' => $consumptionUnit,
+            'unit_base' => $baseUnit,
+            'conversion_factor' => $conversionFactor,
+            'required' => 0,
+            'current_stock' => $currentStock,
+            'total_reserved' => $totalReserved,
+            'reserved_for_this' => $reservedForThis,
+            'available' => $available,
+            'sufficient' => true,
+            'has_bom_adjustment' => false,
+            'is_extra' => false,
+        ];
     }
 
     /**

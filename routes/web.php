@@ -120,6 +120,11 @@ Route::group(['prefix' => 'admin/production', 'as' => 'admin.production.', 'midd
     Route::patch('/queue/{order}/priority', [App\Http\Controllers\ProductionQueueController::class, 'updatePriority'])->name('queue.priority');
     Route::post('/queue/{order}/start', [App\Http\Controllers\ProductionQueueController::class, 'startProduction'])->name('queue.start');
 
+    // Calendario de produccion (PASO 11)
+    Route::get('/calendar', [App\Http\Controllers\OrderController::class, 'calendar'])->name('calendar');
+    Route::get('/calendar/events', [App\Http\Controllers\OrderController::class, 'calendarEvents'])->name('calendar.events');
+    Route::patch('/calendar/{order}/reschedule', [App\Http\Controllers\OrderController::class, 'reschedule'])->name('calendar.reschedule');
+
     Route::get('/', [App\Http\Controllers\ProduccionController::class, 'index'])->name('index');
     Route::get('/create', [App\Http\Controllers\ProduccionController::class, 'create'])->name('create');
     Route::post('/', [App\Http\Controllers\ProduccionController::class, 'store'])->name('store');
@@ -1235,6 +1240,11 @@ Route::get('/product_extras/ajax/get/{id}', [App\Http\Controllers\ProductExtraCo
     ->name('admin.product_extras.get')
     ->middleware('auth');
 
+// Ruta AJAX para recargar tabla de extras
+Route::get('/product_extras/ajax/table', [App\Http\Controllers\ProductExtraController::class, 'getTableData'])
+    ->name('admin.product_extras.table')
+    ->middleware('auth');
+
 // D5: Ruta AJAX para obtener todos los extras activos (para modo solo-extras en post-venta)
 Route::get('/product_extras/ajax/all-active', [App\Http\Controllers\ProductExtraController::class, 'allActive'])
     ->name('admin.product-extras.all-active')
@@ -1289,6 +1299,7 @@ Route::prefix('admin/orders')->name('admin.orders.')->middleware('auth')->group(
     Route::patch('{order}/cancel', [App\Http\Controllers\OrderController::class, 'cancel'])->name('cancel');
     Route::delete('{order}', [App\Http\Controllers\OrderController::class, 'destroy'])->name('destroy');
     Route::post('{order}/payments', [App\Http\Controllers\OrderController::class, 'storePayment'])->name('payments.store');
+    Route::get('{order}/payments', [App\Http\Controllers\OrderController::class, 'getPayments'])->name('payments.index');
     Route::put('payments/{payment}', [App\Http\Controllers\OrderController::class, 'updatePayment'])->name('payments.update');
     Route::delete('payments/{payment}', [App\Http\Controllers\OrderController::class, 'destroyPayment'])->name('payments.destroy');
 
@@ -1343,9 +1354,10 @@ Route::prefix('admin/orders')->name('admin.orders.')->middleware('auth')->group(
     // Item Price Update - Ajuste de precio de venta (SOLO DRAFT/CONFIRMED)
     Route::patch('{order}/items/{item}/price', [App\Http\Controllers\OrderController::class, 'updateItemPrice'])->name('items.price.update');
 
-    // Item Extras - Agregar/eliminar extras de un item (actualiza BOM automáticamente)
+    // Item Extras - Agregar/eliminar/actualizar extras de un item (actualiza BOM automáticamente)
     Route::get('{order}/items/{item}/extras', [App\Http\Controllers\OrderController::class, 'getItemExtras'])->name('items.extras');
     Route::post('{order}/items/{item}/extras', [App\Http\Controllers\OrderController::class, 'addExtraToItem'])->name('items.extras.add');
+    Route::patch('{order}/items/{item}/extras/{orderItemExtra}', [App\Http\Controllers\OrderController::class, 'updateExtraQuantity'])->name('items.extras.update');
     Route::delete('{order}/items/{item}/extras/{orderItemExtra}', [App\Http\Controllers\OrderController::class, 'removeExtraFromItem'])->name('items.extras.remove');
     Route::get('{order}/items/{item}/available-extras', [App\Http\Controllers\OrderController::class, 'getAvailableExtrasForItem'])->name('items.available-extras');
 

@@ -420,9 +420,10 @@
                 order: 7;
             }
 
-            /* Las columnas deben ser hijos directos para que order funcione */
+            /* Las columnas y row intermedio deben ser transparentes para que order funcione */
             .main-column,
-            .sidebar-column {
+            .sidebar-column,
+            .pago-entrega-row {
                 display: contents;
             }
 
@@ -1096,12 +1097,7 @@
                                         </small>
                                     </label>
                                 </div>
-                                <div id="quickClientBtnContainer">
-                                    <button type="button" class="btn btn-sm btn-outline-success" data-toggle="modal"
-                                        data-target="#quickClientModal" id="btnQuickClient">
-                                        <i class="fas fa-user-plus mr-1"></i> Cliente Rápido
-                                    </button>
-                                </div>
+                                <div id="quickClientBtnContainer" style="display: none;"></div>
                             </div>
 
                             {{-- Modo normal: selector de cliente --}}
@@ -1137,10 +1133,10 @@
                 </div>
 
                 {{-- 3. PAGO Y 4. FECHA DE ENTREGA - EN LA MISMA LÍNEA --}}
-                <div class="row">
+                <div class="row pago-entrega-row">
                     {{-- 3. PAGO --}}
-                    <div class="col-md-6">
-                        <div class="card card-erp order-mobile-3">
+                    <div class="col-md-6 order-mobile-3">
+                        <div class="card card-erp">
                             <div class="card-header py-2" style="background: #343a40; color: white;">
                                 <h5 class="mb-0"><i class="fas fa-dollar-sign mr-2"></i> 3. Pago</h5>
                             </div>
@@ -1205,8 +1201,8 @@
                     </div>
 
                     {{-- 4. PRIORIDAD DEL PEDIDO --}}
-                    <div class="col-md-6">
-                        <div class="card card-erp order-mobile-4">
+                    <div class="col-md-6 order-mobile-4">
+                        <div class="card card-erp">
                             <div class="card-header py-2" style="background: #343a40; color: white;">
                                 <h5 class="mb-0"><i class="fas fa-clock mr-2"></i> 4. Prioridad del Pedido</h5>
                             </div>
@@ -1254,32 +1250,15 @@
                                     </small>
                                 </div>
 
-                                {{-- FEEDBACK VISUAL DE CAPACIDAD SEMANAL --}}
-                                @if (isset($capacityInfo) && $capacityInfo)
-                                    <div id="capacityFeedback" class="mt-2">
-                                        @if ($capacityInfo['is_full'])
-                                            <div class="text-danger" style="font-size: 14px;">
-                                                <i class="fas fa-exclamation-circle mr-1"></i>
-                                                <strong>{{ $capacityInfo['week_label'] }}</strong> a capacidad máxima.
-                                                El sistema asignará la siguiente semana disponible.
-                                            </div>
-                                        @elseif($capacityInfo['is_high_load'])
-                                            <div class="text-warning" style="font-size: 14px;">
-                                                <i class="fas fa-exclamation-triangle mr-1"></i>
-                                                <strong>{{ $capacityInfo['week_label'] }}</strong>
-                                                &middot; {{ $capacityInfo['used'] }}/{{ $capacityInfo['max'] }} pedidos
-                                                <span class="text-muted">(alta carga)</span>
-                                            </div>
-                                        @else
-                                            <div class="text-dark" style="font-size: 14px;">
-                                                <i class="fas fa-calendar-check mr-1 text-info"></i>
-                                                <strong>{{ $capacityInfo['week_label'] }}</strong>
-                                                &middot; {{ $capacityInfo['used'] }}/{{ $capacityInfo['max'] }} pedidos
-                                                asignados
-                                            </div>
-                                        @endif
-                                    </div>
-                                @endif
+                                {{-- PASO 13: PUENTE UX → CALENDARIO DE PRODUCCIÓN --}}
+                                {{-- Indicador dinámico de capacidad semanal (solo lectura) --}}
+                                <div id="capacityFeedback" class="mt-2" style="display: none;">
+                                    <div id="capacityIndicator" style="font-size: 15px;"></div>
+                                    <a id="calendarLink" href="#" target="_blank" rel="noopener"
+                                        class="d-inline-block mt-1" style="font-size: 15px; text-decoration: none;">
+                                        <i class="fas fa-external-link-alt mr-1"></i>Abrir agenda completa
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1300,9 +1279,15 @@
                             <span id="itemsCounter" class="badge badge-light items-counter ml-2"
                                 style="display:none;">0</span>
                         </h5>
-                        <button type="button" class="btn btn-light btn-sm" id="btnAddProduct">
-                            <i class="fas fa-plus"></i> Agregar
-                        </button>
+                        <div class="d-flex align-items-center" style="gap: 8px;">
+                            <button type="button" class="btn btn-light btn-sm" id="btnAddProduct">
+                                <i class="fas fa-plus"></i> Agregar
+                            </button>
+                            <button type="button" class="btn btn-outline-light btn-sm"
+                                data-toggle="modal" data-target="#agendaMonthModal">
+                                <i class="fas fa-calendar-alt"></i> Ver agenda
+                            </button>
+                        </div>
                     </div>
                     {{-- POST-VENTA: Microcopy indicando que productos son nuevos --}}
                     @if (isset($relatedOrder))
@@ -1434,7 +1419,7 @@
     {{-- MODAL: CLIENTE RÁPIDO --}}
     {{-- ============================================== --}}
     <div class="modal fade" id="quickClientModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header" style="background: #343a40; color: white;">
                     <h5 class="modal-title"><i class="fas fa-user-plus mr-2"></i> Nuevo Cliente</h5>
@@ -2102,6 +2087,9 @@
             </div>
         </div>
     </div>
+
+    {{-- PASO 13-B: MODAL AGENDA MENSUAL (READ-ONLY) --}}
+    @include('admin.orders._agenda-modal')
 @stop
 
 @section('js')
@@ -4882,6 +4870,100 @@
             $('#promisedDate').on('change', validatePromisedDate);
 
             // ==========================================
+            // PASO 13: INDICADOR DE CAPACIDAD SEMANAL (SOLO LECTURA)
+            // Consume el endpoint existente de calendar.events
+            // NO valida, NO bloquea, NO escribe datos
+            // ==========================================
+            const CALENDAR_EVENTS_URL = @json(route('admin.production.calendar.events'));
+            const CALENDAR_URL = @json(url('admin/production/calendar'));
+            let capacityFetchTimer = null;
+
+            function fetchWeekCapacity() {
+                const dateVal = $('#promisedDate').val();
+                if (!dateVal) {
+                    $('#capacityFeedback').hide();
+                    return;
+                }
+
+                // Calcular rango de la semana ISO de la fecha seleccionada
+                const selected = new Date(dateVal + 'T12:00:00');
+                const day = selected.getDay() || 7; // Lunes = 1
+                const monday = new Date(selected);
+                monday.setDate(selected.getDate() - day + 1);
+                const sunday = new Date(monday);
+                sunday.setDate(monday.getDate() + 6);
+
+                const startStr = monday.toISOString().split('T')[0];
+                const endStr = sunday.toISOString().split('T')[0];
+
+                // Debounce para no saturar en cambios rápidos
+                clearTimeout(capacityFetchTimer);
+                capacityFetchTimer = setTimeout(() => {
+                    fetch(CALENDAR_EVENTS_URL + '?' + new URLSearchParams({
+                        start: startStr,
+                        end: endStr,
+                    }), {
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        }
+                    })
+                    .then(r => r.ok ? r.json() : Promise.reject())
+                    .then(data => {
+                        const weeks = data.week_capacities || {};
+                        const weekKey = Object.keys(weeks)[0];
+                        if (!weekKey || !weeks[weekKey]) {
+                            $('#capacityFeedback').hide();
+                            return;
+                        }
+
+                        const w = weeks[weekKey];
+                        const used = w.used;
+                        const max = w.max;
+                        const pct = w.utilization_percent;
+                        const weekLabel = 'Semana ' + w.week;
+                        let icon, colorClass, extraText;
+
+                        if (w.is_full) {
+                            icon = 'fas fa-exclamation-circle';
+                            colorClass = 'text-danger';
+                            extraText = 'Sin capacidad disponible';
+                        } else if (pct >= 80) {
+                            icon = 'fas fa-exclamation-triangle';
+                            colorClass = 'text-warning';
+                            extraText = 'Alta carga';
+                        } else {
+                            icon = 'fas fa-calendar-check';
+                            colorClass = 'text-success';
+                            extraText = '';
+                        }
+
+                        let html = '<span class="' + colorClass + '">' +
+                            '<i class="' + icon + ' mr-1"></i>' +
+                            '<strong>' + weekLabel + '</strong> &middot; ' +
+                            used + '/' + max + ' pedidos' +
+                            (extraText ? ' <span class="text-muted">(' + extraText + ')</span>' : ' asignados') +
+                            '</span>';
+
+                        $('#capacityIndicator').html(html);
+                        $('#calendarLink').attr('href', CALENDAR_URL + '?focus=' + dateVal);
+                        $('#capacityFeedback').show();
+                    })
+                    .catch(() => {
+                        $('#capacityFeedback').hide();
+                    });
+                }, 300);
+            }
+
+            // Disparar al cambiar fecha
+            $('#promisedDate').on('change', fetchWeekCapacity);
+
+            // Disparar si ya hay fecha pre-cargada
+            if ($('#promisedDate').val()) {
+                fetchWeekCapacity();
+            }
+
+            // ==========================================
             // VALIDACIÓN: CLIENTE REQUERIDO PARA AGREGAR PRODUCTOS
             // (Excepto si está en modo "Producción para stock")
             // ==========================================
@@ -5653,6 +5735,315 @@
                         focusInput(e);
                     });
                 });
+            });
+        })();
+
+        // ==========================================
+        // PASO 13-B: AGENDA MENSUAL MODAL (READ-ONLY)
+        // ==========================================
+        (function() {
+            var cfg = window.__agendaModalConfig;
+            if (!cfg) return;
+
+            var EVENTS_URL = cfg.eventsUrl;
+            var CALENDAR_BASE_URL = cfg.calendarBaseUrl;
+            var DAY_NAMES = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
+            var MONTH_NAMES = [
+                'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+            ];
+
+            var currentYear, currentMonth;
+            var cachedData = {};
+            var selectedDayEl = null;
+            var listenersAttached = false;
+
+            function initAgenda() {
+                var now = new Date();
+                var dateVal = $('#promisedDate').val();
+                if (dateVal) {
+                    var parts = dateVal.split('-');
+                    currentYear = parseInt(parts[0]);
+                    currentMonth = parseInt(parts[1]) - 1;
+                } else {
+                    currentYear = now.getFullYear();
+                    currentMonth = now.getMonth();
+                }
+
+                if (!listenersAttached) {
+                    $('#agendaPrev').on('click', function() {
+                        currentMonth--;
+                        if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+                        renderMonth();
+                    });
+                    $('#agendaNext').on('click', function() {
+                        currentMonth++;
+                        if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+                        renderMonth();
+                    });
+                    listenersAttached = true;
+                }
+            }
+
+            function renderMonth() {
+                var grid = document.getElementById('agendaGrid');
+                var titleEl = document.getElementById('agendaMonthTitle');
+                if (!grid || !titleEl) return;
+
+                titleEl.textContent = MONTH_NAMES[currentMonth] + ' ' + currentYear;
+
+                grid.innerHTML = '';
+                $('#agendaDayDetail').hide();
+                selectedDayEl = null;
+
+                DAY_NAMES.forEach(function(name) {
+                    var h = document.createElement('div');
+                    h.className = 'agenda-grid-header';
+                    h.textContent = name;
+                    grid.appendChild(h);
+                });
+
+                var firstDay = new Date(currentYear, currentMonth, 1);
+                var lastDay = new Date(currentYear, currentMonth + 1, 0);
+                var startDow = firstDay.getDay();
+                startDow = startDow === 0 ? 6 : startDow - 1;
+
+                var prevMonthLast = new Date(currentYear, currentMonth, 0).getDate();
+                for (var i = startDow - 1; i >= 0; i--) {
+                    grid.appendChild(createDayCell(prevMonthLast - i, true));
+                }
+
+                var today = new Date();
+                var todayStr = today.getFullYear() + '-' +
+                    String(today.getMonth() + 1).padStart(2, '0') + '-' +
+                    String(today.getDate()).padStart(2, '0');
+
+                for (var d = 1; d <= lastDay.getDate(); d++) {
+                    var dateStr = currentYear + '-' +
+                        String(currentMonth + 1).padStart(2, '0') + '-' +
+                        String(d).padStart(2, '0');
+                    grid.appendChild(createDayCell(d, false, dateStr, dateStr === todayStr));
+                }
+
+                var totalCells = startDow + lastDay.getDate();
+                var remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+                for (var j = 1; j <= remaining; j++) {
+                    grid.appendChild(createDayCell(j, true));
+                }
+
+                fetchMonthData();
+            }
+
+            function createDayCell(dayNum, isOtherMonth, dateStr, isToday) {
+                var cell = document.createElement('div');
+                cell.className = 'agenda-day';
+                if (isOtherMonth) cell.classList.add('other-month');
+                if (isToday) cell.classList.add('today');
+                if (dateStr) cell.dataset.date = dateStr;
+
+                var numEl = document.createElement('div');
+                numEl.className = 'agenda-day-number';
+                numEl.textContent = dayNum;
+                cell.appendChild(numEl);
+
+                if (!isOtherMonth && dateStr) {
+                    var countEl = document.createElement('div');
+                    countEl.className = 'agenda-day-count';
+                    countEl.dataset.countFor = dateStr;
+                    cell.appendChild(countEl);
+
+                    var bar = document.createElement('div');
+                    bar.className = 'agenda-day-bar';
+                    bar.dataset.barFor = dateStr;
+                    cell.appendChild(bar);
+
+                    cell.addEventListener('click', function() {
+                        if (selectedDayEl) selectedDayEl.classList.remove('selected');
+                        cell.classList.add('selected');
+                        selectedDayEl = cell;
+                        showDayDetail(cell.dataset.date);
+                        $('#agendaMonthModal .modal-footer a').attr(
+                            'href', CALENDAR_BASE_URL + '?focus=' + cell.dataset.date
+                        );
+                    });
+                }
+
+                return cell;
+            }
+
+            function fetchMonthData() {
+                var cacheKey = currentYear + '-' + String(currentMonth + 1).padStart(2, '0');
+
+                if (cachedData[cacheKey]) {
+                    applyData(cachedData[cacheKey]);
+                    return;
+                }
+
+                var start = cacheKey + '-01';
+                var lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
+                var end = cacheKey + '-' + String(lastDay).padStart(2, '0');
+
+                $.ajax({
+                    url: EVENTS_URL,
+                    data: { start: start, end: end },
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    dataType: 'json',
+                    success: function(data) {
+                        cachedData[cacheKey] = data;
+                        applyData(data);
+                    }
+                });
+            }
+
+            function applyData(data) {
+                var events = data.events || [];
+                var weekCaps = data.week_capacities || {};
+
+                // Filtrar: solo confirmados y en producción (excluir delivered, ready, draft, cancelled)
+                var VISIBLE_STATUSES = ['confirmed', 'in_production'];
+                var filtered = events.filter(function(ev) {
+                    var st = (ev.extendedProps && ev.extendedProps.status) || ev.status || '';
+                    return VISIBLE_STATUSES.indexOf(st) !== -1;
+                });
+
+                var countByDate = {};
+                var ordersByDate = {};
+                filtered.forEach(function(ev) {
+                    var d = ev.start || (ev.extendedProps && ev.extendedProps.promised_date);
+                    if (d) {
+                        countByDate[d] = (countByDate[d] || 0) + 1;
+                        if (!ordersByDate[d]) ordersByDate[d] = [];
+                        ordersByDate[d].push(ev.title || ev.extendedProps.order_number);
+                    }
+                });
+
+                var weekByDate = {};
+                Object.keys(weekCaps).forEach(function(wk) {
+                    var cap = weekCaps[wk];
+                    if (cap.week_start && cap.week_end) {
+                        var cursor = new Date(cap.week_start + 'T12:00:00');
+                        var endD = new Date(cap.week_end + 'T12:00:00');
+                        while (cursor <= endD) {
+                            var ds = cursor.getFullYear() + '-' +
+                                String(cursor.getMonth() + 1).padStart(2, '0') + '-' +
+                                String(cursor.getDate()).padStart(2, '0');
+                            weekByDate[ds] = cap;
+                            cursor.setDate(cursor.getDate() + 1);
+                        }
+                    }
+                });
+
+                $('#agendaGrid .agenda-day[data-date]').each(function() {
+                    var cell = this;
+                    var dateStr = cell.dataset.date;
+                    var count = countByDate[dateStr] || 0;
+                    var cap = weekByDate[dateStr];
+
+                    var countEl = cell.querySelector('[data-count-for]');
+                    if (countEl) {
+                        var orders = ordersByDate[dateStr] || [];
+                        if (orders.length > 0) {
+                            countEl.innerHTML = orders.map(function(n) {
+                                return '<div>' + n + '</div>';
+                            }).join('');
+                        } else {
+                            countEl.textContent = '';
+                        }
+                    }
+
+                    var bar = cell.querySelector('[data-bar-for]');
+                    if (bar && cap && count > 0) {
+                        var pct = cap.utilization_percent;
+                        if (cap.is_full || pct >= 100) {
+                            bar.className = 'agenda-day-bar load-red';
+                        } else if (pct >= 70) {
+                            bar.className = 'agenda-day-bar load-orange';
+                        } else {
+                            bar.className = 'agenda-day-bar load-green';
+                        }
+                    }
+
+                    cell._agendaData = { count: count, cap: cap, dateStr: dateStr, orders: ordersByDate[dateStr] || [] };
+                });
+
+                // Seleccionar día de hoy y mostrar su detalle
+                var today = new Date();
+                var todayStr = today.getFullYear() + '-' +
+                    String(today.getMonth() + 1).padStart(2, '0') + '-' +
+                    String(today.getDate()).padStart(2, '0');
+                var todayCell = document.querySelector('#agendaGrid .agenda-day[data-date="' + todayStr + '"]');
+
+                if (todayCell && todayCell._agendaData) {
+                    if (selectedDayEl) selectedDayEl.classList.remove('selected');
+                    todayCell.classList.add('selected');
+                    selectedDayEl = todayCell;
+                    showDayDetail(todayStr);
+                } else {
+                    // Hoy no está en este mes — mostrar resumen genérico
+                    showMonthSummary(weekByDate);
+                }
+            }
+
+            function showMonthSummary(weekByDate) {
+                var firstDate = Object.keys(weekByDate)[0];
+                var cap = firstDate ? weekByDate[firstDate] : null;
+                var html = '<strong>Sin pedidos este mes</strong>';
+                if (cap) {
+                    html += '<div class="mt-1"><i class="fas fa-chart-bar mr-1"></i> Capacidad semanal: <strong>' +
+                        cap.used + ' / ' + cap.max + '</strong></div>';
+                }
+                $('#agendaDayDetailContent').html(html);
+                $('#agendaDayDetail').show();
+            }
+
+            function showDayDetail(dateStr) {
+                var cell = document.querySelector('#agendaGrid .agenda-day[data-date="' + dateStr + '"]');
+                if (!cell || !cell._agendaData) {
+                    $('#agendaDayDetail').hide();
+                    return;
+                }
+
+                var d = cell._agendaData;
+                var dateParts = dateStr.split('-');
+                var dateObj = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+                var dateLabel = dateObj.toLocaleDateString('es-MX', {
+                    weekday: 'long', day: 'numeric', month: 'long'
+                });
+
+                var html = '<strong>' + dateLabel + '</strong> &mdash; ';
+                html += '<i class="fas fa-box mr-1"></i> Pedidos: <strong>' + d.count + '</strong>';
+                if (d.orders && d.orders.length > 0) {
+                    html += ' (' + d.orders.join(', ') + ')';
+                }
+
+                if (d.cap) {
+                    var pct = d.cap.utilization_percent;
+                    var loadClass, loadText;
+                    if (d.cap.is_full || pct >= 100) {
+                        loadClass = 'text-load-red';
+                        loadText = 'Saturado';
+                    } else if (pct >= 70) {
+                        loadClass = 'text-load-orange';
+                        loadText = 'Alta carga';
+                    } else {
+                        loadClass = 'text-load-green';
+                        loadText = 'Disponible';
+                    }
+
+                    html += ' &middot; <i class="fas fa-chart-bar mr-1"></i> Capacidad: <strong>' +
+                        d.cap.used + '/' + d.cap.max + '</strong>';
+                    html += ' &middot; <i class="fas fa-circle mr-1 ' + loadClass + '" style="font-size:10px;"></i>' +
+                        '<span class="' + loadClass + ' font-weight-bold">' + loadText + '</span>' +
+                        ' <span class="text-muted">(' + Math.round(pct) + '%)</span>';
+                }
+                $('#agendaDayDetailContent').html(html);
+                $('#agendaDayDetail').show();
+            }
+
+            // Wire: abrir modal → init + render
+            $(document).on('show.bs.modal', '#agendaMonthModal', function() {
+                initAgenda();
+                renderMonth();
             });
         })();
     </script>

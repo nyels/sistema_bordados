@@ -230,14 +230,20 @@
                     success: function(response) {
                         $('#modalCreate').modal('hide');
                         if (response.success) {
+                            // Agregar nueva fila a la tabla
+                            var newRow = table.row.add([
+                                table.rows().count() + 1,
+                                '<span class="nombre-motivo">' + response.data.nombre + '</span>',
+                                '<button type="button" class="btn btn-warning btn-edit" data-id="' + response.data.id + '" data-nombre="' + response.data.nombre + '"><i class="fas fa-edit"></i></button> ' +
+                                '<button type="button" class="btn btn-danger btn-delete" data-id="' + response.data.id + '" data-nombre="' + response.data.nombre + '"><i class="fas fa-trash"></i></button>'
+                            ]).draw(false).node();
+                            $(newRow).attr('data-id', response.data.id).css('text-align', 'center');
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Guardado',
                                 text: response.message,
                                 timer: 2000,
                                 showConfirmButton: false
-                            }).then(function() {
-                                location.reload();
                             });
                         }
                     },

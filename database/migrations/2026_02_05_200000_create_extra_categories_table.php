@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -16,9 +17,30 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // Agregar FK a product_extras
+        // Insertar categoría por defecto
+        $now = now();
+        $defaultCategoryId = DB::table('extra_categories')->insertGetId([
+            'nombre' => 'GENERAL',
+            'activo' => true,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        // Agregar columna primero (sin FK)
         Schema::table('product_extras', function (Blueprint $table) {
-            $table->foreignId('extra_category_id')->nullable()->after('id')->constrained('extra_categories')->nullOnDelete();
+            $table->unsignedBigInteger('extra_category_id')->after('id');
+        });
+
+        // Actualizar registros existentes con la categoría por defecto
+        DB::table('product_extras')
+            ->update(['extra_category_id' => $defaultCategoryId]);
+
+        // Ahora agregar la FK
+        Schema::table('product_extras', function (Blueprint $table) {
+            $table->foreign('extra_category_id')
+                ->references('id')
+                ->on('extra_categories')
+                ->cascadeOnDelete();
         });
     }
 

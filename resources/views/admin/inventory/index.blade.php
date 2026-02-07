@@ -145,13 +145,22 @@
                                     <span class="text-muted">-</span>
                                 @endif
                             </td>
+                            @php
+                                $variantEntries = $inventoryTotals[$variant->id]['entries'] ?? 0;
+                                $variantExits = $inventoryTotals[$variant->id]['exits'] ?? 0;
+                            @endphp
                             <td class="text-right unit-convertible"
                                 data-qty="{{ $variant->current_stock }}"
                                 data-factor="{{ $conversionFactor }}"
                                 data-unit-consumption="{{ $unitConsumption }}"
-                                data-unit-base="{{ $unitBase }}">
+                                data-unit-base="{{ $unitBase }}"
+                                data-toggle="tooltip"
+                                data-placement="top"
+                                data-html="true"
+                                title="<div class='text-left'><strong>Historial:</strong><br>+ Entradas: {{ number_format($variantEntries, 2) }} {{ $unitConsumption }}<br>- Salidas: {{ number_format($variantExits, 2) }} {{ $unitConsumption }}<br><hr class='my-1'>= En Almacen: {{ number_format($variant->current_stock, 2) }} {{ $unitConsumption }}</div>">
                                 <span class="qty-value">{{ number_format($variant->current_stock, 2) }}</span>
                                 <span class="unit-symbol">{{ $unitConsumption }}</span>
+                                <i class="fas fa-info-circle text-muted ml-1" style="font-size: 12px; cursor: help;"></i>
                             </td>
                             <td class="text-right">
                                 @if ($reserved > 0)
@@ -255,12 +264,27 @@
             color: #fff;
             border: none;
         }
+
+        /* Tooltip de inventario - historial entradas/salidas */
+        .tooltip-inner {
+            max-width: 250px;
+            text-align: left;
+        }
+        .tooltip-inner hr {
+            border-color: rgba(255,255,255,0.3);
+            margin: 4px 0;
+        }
     </style>
 @stop
 
 @section('js')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // =====================================================
+    // INICIALIZAR TOOLTIPS DE BOOTSTRAP
+    // =====================================================
+    $('[data-toggle="tooltip"]').tooltip();
+
     // =====================================================
     // INICIALIZAR DATATABLE (igual que proveedores)
     // =====================================================

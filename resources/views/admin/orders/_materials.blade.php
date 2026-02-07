@@ -16,7 +16,8 @@
     $isHistorical = $order->status === Order::STATUS_DELIVERED;
     $sectionTitle = $isHistorical ? 'Resumen Historico de Materiales' : 'Resumen de Materiales';
 
-    $materialsSummary = [];
+    $bomMaterialsSummary = [];
+    $extraMaterialsSummary = [];
     $hasReservations = false;
     $hasConsumptions = false;
 
@@ -24,15 +25,37 @@
         foreach ($order->items as $item) {
             $product = $item->product;
             if (!$product || !$product->relationLoaded('materials')) {
-                $product?->load('materials.material.consumptionUnit');
+                $product?->load('materials.material.consumptionUnit', 'materials.material.baseUnit');
             }
+
+            // Cargar ajustes de BOM si no están cargados
+            if (!$item->relationLoaded('bomAdjustments')) {
+                $item->load('bomAdjustments');
+            }
+
+            // Cargar extras del item si no están cargados
+            if (!$item->relationLoaded('extras')) {
+                $item->load('extras.productExtra.materials.material.consumptionUnit', 'extras.productExtra.materials.material.baseUnit');
+            }
+
             if (!$product) continue;
 
+            // Indexar ajustes por material_variant_id para búsqueda rápida
+            $bomAdjustments = $item->bomAdjustments->keyBy('material_variant_id');
+
+            // === MATERIALES DEL PRODUCTO BASE (BOM) ===
             foreach ($product->materials as $materialVariant) {
-                $requiredQty = $materialVariant->pivot->quantity * $item->quantity;
                 $variantId = $materialVariant->id;
 
-                if (!isset($materialsSummary[$variantId])) {
+                // Usar cantidad ajustada si existe, sino usar BOM base
+                $baseQty = (float) $materialVariant->pivot->quantity;
+                $adjustment = $bomAdjustments->get($variantId);
+                $adjustedQty = $adjustment ? (float) $adjustment->adjusted_quantity : $baseQty;
+                $hasAdjustment = $adjustment && $adjustment->hasChange();
+
+                $requiredQty = $adjustedQty * $item->quantity;
+
+                if (!isset($bomMaterialsSummary[$variantId])) {
                     // Asegurar que la relación material con sus unidades esté cargada
                     if (!$materialVariant->relationLoaded('material')) {
                         $materialVariant->load('material.consumptionUnit', 'material.baseUnit');
@@ -64,7 +87,7 @@
                         ?? $material?->baseUnit?->symbol
                         ?? 'u';
 
-                    $materialsSummary[$variantId] = [
+                    $bomMaterialsSummary[$variantId] = [
                         'material_name' => $materialVariant->material->name ?? 'N/A',
                         'variant_label' => $variantLabel,
                         'variant_color' => $materialVariant->color,
@@ -73,10 +96,72 @@
                         'required' => 0,
                         'reserved' => $reserved,
                         'consumed' => $consumed,
+                        'has_adjustment' => false,
                     ];
                 }
 
-                $materialsSummary[$variantId]['required'] += $requiredQty;
+                $bomMaterialsSummary[$variantId]['required'] += $requiredQty;
+                if ($hasAdjustment) {
+                    $bomMaterialsSummary[$variantId]['has_adjustment'] = true;
+                }
+            }
+
+            // === MATERIALES DE EXTRAS CON INVENTARIO ===
+            foreach ($item->extras as $orderItemExtra) {
+                $extra = $orderItemExtra->productExtra;
+
+                if (!$extra || !$extra->consumesInventory()) {
+                    continue;
+                }
+
+                // Cargar materiales del extra si no están cargados
+                if (!$extra->relationLoaded('materials')) {
+                    $extra->load('materials.material.consumptionUnit', 'materials.material.baseUnit');
+                }
+
+                $totalExtraQuantity = $orderItemExtra->quantity * $item->quantity;
+
+                foreach ($extra->materials as $materialVariant) {
+                    $variantId = $materialVariant->id;
+                    $requiredQty = (float) $materialVariant->pivot->quantity * $totalExtraQuantity;
+
+                    if (!isset($extraMaterialsSummary[$variantId])) {
+                        // Asegurar que la relación material con sus unidades esté cargada
+                        if (!$materialVariant->relationLoaded('material')) {
+                            $materialVariant->load('material.consumptionUnit', 'material.baseUnit');
+                        }
+
+                        $reservations = InventoryReservation::where('order_id', $order->id)
+                            ->where('material_variant_id', $variantId)
+                            ->get();
+
+                        $reserved = $reservations->where('status', InventoryReservation::STATUS_RESERVED)->sum('quantity');
+                        $consumed = $reservations->where('status', InventoryReservation::STATUS_CONSUMED)->sum('quantity');
+
+                        if ($reserved > 0) $hasReservations = true;
+                        if ($consumed > 0) $hasConsumptions = true;
+
+                        $variantLabel = $materialVariant->color ?: null;
+                        $material = $materialVariant->material;
+                        $consumptionUnitSymbol = $material?->consumptionUnit?->symbol
+                            ?? $material?->baseUnit?->symbol
+                            ?? 'u';
+
+                        $extraMaterialsSummary[$variantId] = [
+                            'material_name' => $materialVariant->material->name ?? 'N/A',
+                            'variant_label' => $variantLabel,
+                            'variant_color' => $materialVariant->color,
+                            'variant_sku' => $materialVariant->sku,
+                            'unit' => $consumptionUnitSymbol,
+                            'required' => 0,
+                            'reserved' => $reserved,
+                            'consumed' => $consumed,
+                            'extra_name' => $extra->name,
+                        ];
+                    }
+
+                    $extraMaterialsSummary[$variantId]['required'] += $requiredQty;
+                }
             }
         }
     }
@@ -95,10 +180,13 @@
     $headerBgClass = $isHistorical ? 'bg-dark' : 'bg-secondary';
 
     // Ordenar materiales alfabéticamente por nombre
-    uasort($materialsSummary, fn($a, $b) => strcasecmp($a['material_name'], $b['material_name']));
+    uasort($bomMaterialsSummary, fn($a, $b) => strcasecmp($a['material_name'], $b['material_name']));
+    uasort($extraMaterialsSummary, fn($a, $b) => strcasecmp($a['material_name'], $b['material_name']));
+
+    $totalMaterials = count($bomMaterialsSummary) + count($extraMaterialsSummary);
 @endphp
 
-@if($showMaterialsSummary && count($materialsSummary) > 0)
+@if($showMaterialsSummary && $totalMaterials > 0)
     {{-- 5. RESUMEN MATERIALES --}}
     <div class="card card-section-materiales">
         <div class="card-header py-2">
@@ -139,41 +227,107 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($materialsSummary as $mat)
-                        @php
-                            $isFullyConsumed = $mat['consumed'] >= $mat['required'];
-                            $isFullyReserved = $mat['reserved'] >= $mat['required'];
-                        @endphp
-                        <tr>
-                            <td>
-                                <strong style="color: #212529;">{{ $mat['material_name'] }}</strong>
-                                @if($mat['variant_label'])
-                                    <span style="color: #212529;"> — {{ $mat['variant_label'] }}</span>
-                                @endif
-                            </td>
-                            <td class="text-right">
-                                <span style="color: #212529; font-weight: 600;">{{ number_format($mat['required'], 2) }}</span>
-                                <small style="color: #212529;">{{ $mat['unit'] }}</small>
-                            </td>
-                            <td class="text-right {{ $mat['reserved'] > 0 ? 'text-info font-weight-bold' : '' }}" style="{{ $mat['reserved'] == 0 ? 'color: #212529;' : '' }}">
-                                {{ number_format($mat['reserved'], 2) }}
-                                <small style="color: #212529;">{{ $mat['unit'] }}</small>
-                            </td>
-                            <td class="text-right {{ $mat['consumed'] > 0 ? 'text-success font-weight-bold' : '' }}" style="{{ $mat['consumed'] == 0 ? 'color: #212529;' : '' }}">
-                                {{ number_format($mat['consumed'], 2) }}
-                                <small style="color: #212529;">{{ $mat['unit'] }}</small>
-                            </td>
-                            <td class="text-center">
-                                @if($isFullyConsumed)
-                                    <span class="badge badge-success"><i class="fas fa-check"></i></span>
-                                @elseif($isFullyReserved)
-                                    <span class="badge badge-info"><i class="fas fa-lock"></i></span>
-                                @else
-                                    <span class="badge badge-secondary"><i class="fas fa-clock"></i></span>
-                                @endif
+                    {{-- ======================== MATERIALES DEL BOM ======================== --}}
+                    @if(count($bomMaterialsSummary) > 0)
+                        <tr style="background: #e3f2fd;">
+                            <td colspan="5" class="py-2">
+                                <strong style="color: #1565c0;">
+                                    <i class="fas fa-layer-group mr-1"></i> Materiales del Producto (BOM)
+                                </strong>
                             </td>
                         </tr>
-                    @endforeach
+                        @foreach($bomMaterialsSummary as $mat)
+                            @php
+                                $isFullyConsumed = $mat['consumed'] >= $mat['required'];
+                                $isFullyReserved = $mat['reserved'] >= $mat['required'];
+                            @endphp
+                            <tr>
+                                <td>
+                                    <strong style="color: #212529;">{{ $mat['material_name'] }}</strong>
+                                    @if($mat['variant_label'])
+                                        <span style="color: #212529;"> — {{ $mat['variant_label'] }}</span>
+                                    @endif
+                                    @if(!empty($mat['has_adjustment']))
+                                        <span class="badge badge-info ml-1" title="Cantidad ajustada según medidas del cliente">
+                                            <i class="fas fa-ruler"></i>
+                                        </span>
+                                    @endif
+                                </td>
+                                <td class="text-right">
+                                    <span style="color: #212529; font-weight: 600;">{{ number_format($mat['required'], 2) }}</span>
+                                    <small style="color: #212529;">{{ $mat['unit'] }}</small>
+                                </td>
+                                <td class="text-right {{ $mat['reserved'] > 0 ? 'text-info font-weight-bold' : '' }}" style="{{ $mat['reserved'] == 0 ? 'color: #212529;' : '' }}">
+                                    {{ number_format($mat['reserved'], 2) }}
+                                    <small style="color: #212529;">{{ $mat['unit'] }}</small>
+                                </td>
+                                <td class="text-right {{ $mat['consumed'] > 0 ? 'text-success font-weight-bold' : '' }}" style="{{ $mat['consumed'] == 0 ? 'color: #212529;' : '' }}">
+                                    {{ number_format($mat['consumed'], 2) }}
+                                    <small style="color: #212529;">{{ $mat['unit'] }}</small>
+                                </td>
+                                <td class="text-center">
+                                    @if($isFullyConsumed)
+                                        <span class="badge badge-success"><i class="fas fa-check"></i></span>
+                                    @elseif($isFullyReserved)
+                                        <span class="badge badge-info"><i class="fas fa-lock"></i></span>
+                                    @else
+                                        <span class="badge badge-secondary"><i class="fas fa-clock"></i></span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    @endif
+
+                    {{-- ======================== MATERIALES DE EXTRAS ======================== --}}
+                    @if(count($extraMaterialsSummary) > 0)
+                        <tr style="background: #e1f5fe;">
+                            <td colspan="5" class="py-2">
+                                <strong style="color: #0277bd;">
+                                    <i class="fas fa-plus-circle mr-1"></i> Materiales de Extras
+                                </strong>
+                            </td>
+                        </tr>
+                        @foreach($extraMaterialsSummary as $mat)
+                            @php
+                                $isFullyConsumed = $mat['consumed'] >= $mat['required'];
+                                $isFullyReserved = $mat['reserved'] >= $mat['required'];
+                            @endphp
+                            <tr>
+                                <td>
+                                    <strong style="color: #212529;">{{ $mat['material_name'] }}</strong>
+                                    @if($mat['variant_label'])
+                                        <span style="color: #212529;"> — {{ $mat['variant_label'] }}</span>
+                                    @endif
+                                    @if(!empty($mat['extra_name']))
+                                        <br><small style="color: #0277bd;">
+                                            <i class="fas fa-tag mr-1"></i>{{ $mat['extra_name'] }}
+                                        </small>
+                                    @endif
+                                </td>
+                                <td class="text-right">
+                                    <span style="color: #212529; font-weight: 600;">{{ number_format($mat['required'], 2) }}</span>
+                                    <small style="color: #212529;">{{ $mat['unit'] }}</small>
+                                </td>
+                                <td class="text-right {{ $mat['reserved'] > 0 ? 'text-info font-weight-bold' : '' }}" style="{{ $mat['reserved'] == 0 ? 'color: #212529;' : '' }}">
+                                    {{ number_format($mat['reserved'], 2) }}
+                                    <small style="color: #212529;">{{ $mat['unit'] }}</small>
+                                </td>
+                                <td class="text-right {{ $mat['consumed'] > 0 ? 'text-success font-weight-bold' : '' }}" style="{{ $mat['consumed'] == 0 ? 'color: #212529;' : '' }}">
+                                    {{ number_format($mat['consumed'], 2) }}
+                                    <small style="color: #212529;">{{ $mat['unit'] }}</small>
+                                </td>
+                                <td class="text-center">
+                                    @if($isFullyConsumed)
+                                        <span class="badge badge-success"><i class="fas fa-check"></i></span>
+                                    @elseif($isFullyReserved)
+                                        <span class="badge badge-info"><i class="fas fa-lock"></i></span>
+                                    @else
+                                        <span class="badge badge-secondary"><i class="fas fa-clock"></i></span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    @endif
                 </tbody>
             </table>
         </div>
