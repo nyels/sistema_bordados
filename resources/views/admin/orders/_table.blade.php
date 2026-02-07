@@ -189,14 +189,24 @@
                             </a>
                         @endif
 
-                        {{-- Botón pago rápido: Solo ventas (NO stock_production), solo CONFIRMED o IN_PRODUCTION --}}
-                        @if ($order->balance > 0 && !$order->isStockProduction() && in_array($order->status, [\App\Models\Order::STATUS_CONFIRMED, \App\Models\Order::STATUS_IN_PRODUCTION]))
+                        {{-- Botón pago rápido: Solo ventas (NO stock_production), en CONFIRMED, IN_PRODUCTION o READY --}}
+                        @if ($order->balance > 0 && !$order->isStockProduction() && in_array($order->status, [\App\Models\Order::STATUS_CONFIRMED, \App\Models\Order::STATUS_IN_PRODUCTION, \App\Models\Order::STATUS_READY]))
                             <button type="button" class="btn btn-sm btn-success btn-quick-payment"
                                 data-order-id="{{ $order->id }}" data-order-number="{{ $order->order_number }}"
                                 data-balance="{{ $order->balance }}" title="Registrar Pago">
                                 <i class="fas fa-dollar-sign"></i>
                             </button>
                         @endif
+
+                        {{-- Botón entrega rápida: READY + Pagado --}}
+                        @if ($order->status === \App\Models\Order::STATUS_READY && $order->payment_status === \App\Models\Order::PAYMENT_PAID)
+                            <button type="button" class="btn btn-sm btn-primary btn-quick-delivery"
+                                data-order-id="{{ $order->id }}" data-order-number="{{ $order->order_number }}"
+                                title="Registrar Entrega">
+                                <i class="fas fa-truck"></i>
+                            </button>
+                        @endif
+
                         @if ($order->status === \App\Models\Order::STATUS_DRAFT)
                             <a href="{{ route('admin.orders.edit', $order) }}" class="btn btn-sm btn-warning" title="Editar">
                                 <i class="fas fa-edit"></i>

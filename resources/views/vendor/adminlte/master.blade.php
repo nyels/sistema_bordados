@@ -67,6 +67,31 @@
         .text-primary { color: #007bff !important; }
         .text-secondary { color: #6c757d !important; }
         .text-white { color: #ffffff !important; }
+
+        /* SweetAlert2: Prevenir scroll en móviles/tablets */
+        body.swal2-shown:not(.swal2-toast-shown) {
+            overflow: hidden !important;
+            position: fixed !important;
+            width: 100% !important;
+        }
+        .swal2-popup {
+            font-size: 14px !important;
+        }
+        /* Toast container: position fixed para que NO afecte scroll */
+        .swal2-container.swal2-top-end.swal2-backdrop-show,
+        .swal2-container.swal2-top-end.swal2-noanimation {
+            position: fixed !important;
+            top: 0 !important;
+            right: 0 !important;
+            overflow: visible !important;
+        }
+        body.swal2-toast-shown .swal2-container {
+            position: fixed !important;
+            pointer-events: none;
+        }
+        body.swal2-toast-shown .swal2-container .swal2-toast {
+            pointer-events: auto;
+        }
     </style>
     <script>
         // Fix for AdminLTE IFrame mode crash when running in an iframe (e.g. Responsive Viewer)
@@ -253,6 +278,140 @@
 
     {{-- Extra Configured Plugins Scripts --}}
     @include('adminlte::plugins', ['type' => 'js'])
+
+    {{-- SweetAlert2 Global Configuration: Prevent scroll issues on mobile --}}
+    <script>
+    if (typeof Swal !== 'undefined') {
+        const originalSwalFire = Swal.fire;
+        Swal.fire = function(options) {
+            // Agregar configuración por defecto para evitar scroll
+            if (typeof options === 'object' && options !== null) {
+                options.scrollbarPadding = options.scrollbarPadding !== undefined ? options.scrollbarPadding : false;
+                options.heightAuto = options.heightAuto !== undefined ? options.heightAuto : false;
+            }
+            return originalSwalFire.apply(this, arguments);
+        };
+        // Mantener los métodos estáticos
+        Object.keys(originalSwalFire).forEach(function(key) {
+            Swal.fire[key] = originalSwalFire[key];
+        });
+    }
+    </script>
+
+    {{-- ================================================================
+         GLOBAL: Bloquear entrada de valores negativos en inputs numéricos
+         Aplica a TODOS los input[type="number"] con min >= 0
+         ================================================================ --}}
+    <script>
+    (function() {
+        'use strict';
+
+        /**
+         * Bloquea teclas no permitidas en inputs numéricos positivos
+         * - Bloquea: - (menos), e, E (notación científica)
+         * - Permite: números, punto decimal, backspace, delete, tab, arrows, home, end
+         */
+        function blockNegativeInput(event) {
+            // Teclas bloqueadas para inputs positivos
+            if (event.key === '-' || event.key === 'e' || event.key === 'E') {
+                event.preventDefault();
+                return false;
+            }
+            return true;
+        }
+
+        /**
+         * Bloquea pegado de valores negativos
+         */
+        function blockNegativePaste(event) {
+            var clipboardData = event.clipboardData || window.clipboardData;
+            var pastedData = clipboardData.getData('text');
+            // Si el valor pegado contiene un signo negativo, bloquear
+            if (pastedData && pastedData.indexOf('-') !== -1) {
+                event.preventDefault();
+                return false;
+            }
+            return true;
+        }
+
+        /**
+         * Valida y corrige valor negativo al cambiar (blur/change)
+         */
+        function validatePositiveValue(event) {
+            var input = event.target;
+            var value = parseFloat(input.value);
+            if (!isNaN(value) && value < 0) {
+                input.value = Math.abs(value);
+            }
+        }
+
+        /**
+         * Aplica protección a un input numérico
+         */
+        function protectNumericInput(input) {
+            // Solo aplicar si tiene min >= 0 (no acepta negativos)
+            var minAttr = input.getAttribute('min');
+            var minValue = minAttr !== null ? parseFloat(minAttr) : null;
+
+            // Si no tiene min definido o min >= 0, aplicar protección
+            if (minValue === null || minValue >= 0) {
+                // Evitar doble aplicación
+                if (input.dataset.numericProtected) return;
+                input.dataset.numericProtected = 'true';
+
+                // Agregar event listeners
+                input.addEventListener('keydown', blockNegativeInput);
+                input.addEventListener('paste', blockNegativePaste);
+                input.addEventListener('blur', validatePositiveValue);
+                input.addEventListener('change', validatePositiveValue);
+            }
+        }
+
+        /**
+         * Inicializa protección en todos los inputs numéricos existentes
+         */
+        function initNumericProtection() {
+            var inputs = document.querySelectorAll('input[type="number"]');
+            inputs.forEach(protectNumericInput);
+        }
+
+        // Ejecutar al cargar DOM
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initNumericProtection);
+        } else {
+            initNumericProtection();
+        }
+
+        // Observer para inputs dinámicos (modales, AJAX, etc.)
+        var observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.nodeType === 1) { // Element node
+                        // Si es un input numérico
+                        if (node.tagName === 'INPUT' && node.type === 'number') {
+                            protectNumericInput(node);
+                        }
+                        // Si contiene inputs numéricos
+                        if (node.querySelectorAll) {
+                            var inputs = node.querySelectorAll('input[type="number"]');
+                            inputs.forEach(protectNumericInput);
+                        }
+                    }
+                });
+            });
+        });
+
+        // Observar cambios en el DOM
+        observer.observe(document.body || document.documentElement, {
+            childList: true,
+            subtree: true
+        });
+
+        // Exponer función para uso manual si es necesario
+        window.protectNumericInput = protectNumericInput;
+        window.initNumericProtection = initNumericProtection;
+    })();
+    </script>
 
     {{-- Livewire Script --}}
     @if (config('adminlte.livewire'))

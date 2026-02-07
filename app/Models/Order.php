@@ -40,6 +40,7 @@ class Order extends Model
         'total_stitches_snapshot',
         'embroidery_cost_snapshot',
         'cost_per_thousand_snapshot',
+        'services_cost_snapshot',
         'promised_date',
         'minimum_date',
         'delivered_date',
@@ -78,6 +79,7 @@ class Order extends Model
         'total_stitches_snapshot' => 'integer',
         'embroidery_cost_snapshot' => 'decimal:4',
         'cost_per_thousand_snapshot' => 'decimal:4',
+        'services_cost_snapshot' => 'decimal:4',
         'promised_date' => 'date',
         'minimum_date' => 'date',
         'delivered_date' => 'date',
@@ -594,6 +596,7 @@ class Order extends Model
         'total_stitches_snapshot',
         'embroidery_cost_snapshot',
         'cost_per_thousand_snapshot',
+        'services_cost_snapshot',
         'promised_date',
         'minimum_date',
     ];
@@ -1151,11 +1154,13 @@ class Order extends Model
     }
 
     /**
-     * FASE 3.5: Costo TOTAL de fabricación (materiales + bordado).
+     * FASE 3.5: Costo TOTAL de fabricación (materiales + bordado + servicios).
      * Esta es la fuente canónica para calcular margen real.
      *
      * FÓRMULA:
-     * total_manufacturing_cost = materials_cost_snapshot + embroidery_cost_snapshot
+     * total_manufacturing_cost = materials_cost_snapshot + embroidery_cost_snapshot + services_cost_snapshot
+     *
+     * NOTA: materials_cost_snapshot YA incluye ajustes BOM + extras con inventario
      *
      * @return float|null Costo total en MXN o null si no calculado
      */
@@ -1169,8 +1174,31 @@ class Order extends Model
         $materialsCost = (float) $this->materials_cost_snapshot;
         // Usar el accessor embroidery_cost que tiene fallback
         $embroideryCost = (float) ($this->embroidery_cost ?? 0);
+        // Agregar costo de servicios (extras sin inventario)
+        $servicesCost = (float) ($this->services_cost_snapshot ?? 0);
 
-        return $materialsCost + $embroideryCost;
+        return $materialsCost + $embroideryCost + $servicesCost;
+    }
+
+    /**
+     * Costo de servicios (extras sin inventario) formateado.
+     */
+    public function getFormattedServicesCostAttribute(): string
+    {
+        if ($this->services_cost_snapshot === null) {
+            return 'Sin calcular';
+        }
+        return '$' . number_format($this->services_cost_snapshot, 2);
+    }
+
+    /**
+     * Costo de servicios como float.
+     */
+    public function getServicesCostAttribute(): ?float
+    {
+        return $this->services_cost_snapshot !== null
+            ? (float) $this->services_cost_snapshot
+            : null;
     }
 
     /**

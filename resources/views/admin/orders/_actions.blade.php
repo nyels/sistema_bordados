@@ -6,6 +6,10 @@
     $hasMissingTechnicalDesigns = $order->hasItemsMissingTechnicalDesigns();
     $hasBlockers = $hasAdjustments || $hasDesignPending || $hasMeasurementsChanged || $hasMissingTechnicalDesigns;
     $canStartProduction = $order->status === Order::STATUS_CONFIRMED && !$hasBlockers;
+
+    // Validar pago completo para entrega
+    $isPaymentComplete = $order->payment_status === Order::PAYMENT_PAID;
+    $canDeliver = $order->status === Order::STATUS_READY && $isPaymentComplete;
 @endphp
 
 @if(!in_array($order->status, [Order::STATUS_CANCELLED, Order::STATUS_DELIVERED]))
@@ -136,17 +140,99 @@
                         </ul>
                     </div>
 
-                    <form action="{{ route('admin.orders.update-status', $order) }}" method="POST" class="mb-2">
+                    {{-- Alerta de pago pendiente --}}
+                    @if(!$isPaymentComplete)
+                        <div class="alert alert-danger py-2 mb-3" style="font-size: 14px;">
+                            <i class="fas fa-exclamation-triangle mr-1"></i>
+                            <strong>Pago Pendiente:</strong>
+                            <ul class="mb-0 pl-3 mt-1">
+                                <li>Saldo: <strong>${{ number_format($order->balance, 2) }}</strong></li>
+                                <li>No se puede entregar hasta completar el pago</li>
+                            </ul>
+                        </div>
+                    @endif
+
+                    <form action="{{ route('admin.orders.update-status', $order) }}" method="POST" class="mb-2" id="formRegistrarEntrega">
                         @csrf
                         @method('PATCH')
                         <input type="hidden" name="status" value="delivered">
-                        <button type="submit" class="btn btn-primary btn-block">
+
+                        {{-- Campo fecha de entrega --}}
+                        <div class="form-group mb-3">
+                            <label for="deliveryDate" class="font-weight-bold" style="font-size: 14px;">
+                                <i class="fas fa-calendar-alt mr-1"></i> Fecha de Entrega *
+                            </label>
+                            <input type="date" name="delivered_at" id="deliveryDate"
+                                   class="form-control" required
+                                   value=""
+                                   {{ $canDeliver ? '' : 'disabled' }}>
+                            <div class="invalid-feedback" id="deliveryDateError">
+                                Debe seleccionar la fecha de entrega
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-block" id="btnRegistrarEntrega" disabled>
                             <i class="fas fa-truck mr-1"></i> Registrar Entrega
                         </button>
                     </form>
-                    <span style="font-size: 14px; color: #495057;" class="d-block text-center">
-                        <i class="fas fa-info-circle mr-1"></i> Cierra el ciclo del pedido
-                    </span>
+
+                    @if($canDeliver)
+                        <span style="font-size: 14px; color: #28a745;" class="d-block text-center mt-2">
+                            <i class="fas fa-check-circle mr-1"></i> Pago completado - listo para entregar
+                        </span>
+                    @else
+                        <span style="font-size: 14px; color: #c62828;" class="d-block text-center mt-2">
+                            <i class="fas fa-ban mr-1"></i> Complete el pago para habilitar entrega
+                        </span>
+                    @endif
+
+                    {{-- Script validación en tiempo real --}}
+                    <script>
+                    (function() {
+                        var form = document.getElementById('formRegistrarEntrega');
+                        var dateInput = document.getElementById('deliveryDate');
+                        var submitBtn = document.getElementById('btnRegistrarEntrega');
+                        var canDeliver = {{ $canDeliver ? 'true' : 'false' }};
+
+                        if (!form || !dateInput || !submitBtn) return;
+
+                        // Validar en tiempo real
+                        function validateDeliveryDate() {
+                            var value = dateInput.value.trim();
+                            var isValid = value !== '';
+
+                            if (isValid) {
+                                dateInput.classList.remove('is-invalid');
+                                dateInput.classList.add('is-valid');
+                                // Habilitar boton solo si puede entregar Y tiene fecha
+                                if (canDeliver) {
+                                    submitBtn.disabled = false;
+                                }
+                            } else {
+                                dateInput.classList.remove('is-valid');
+                                dateInput.classList.add('is-invalid');
+                                // Deshabilitar boton si no hay fecha
+                                submitBtn.disabled = true;
+                            }
+
+                            return isValid;
+                        }
+
+                        // Eventos de validación en tiempo real
+                        dateInput.addEventListener('input', validateDeliveryDate);
+                        dateInput.addEventListener('change', validateDeliveryDate);
+                        dateInput.addEventListener('blur', validateDeliveryDate);
+
+                        // Validar al enviar
+                        form.addEventListener('submit', function(e) {
+                            if (!validateDeliveryDate()) {
+                                e.preventDefault();
+                                dateInput.focus();
+                                return false;
+                            }
+                        });
+                    })();
+                    </script>
                 @endif
             @endif
 

@@ -342,47 +342,65 @@
                     </div>
                     <div class="card-body">
                         {{-- ================================================================ --}}
-                        {{-- FASE 3.5: CUATRO COLUMNAS - MATERIALES / BORDADO / PRECIO / MARGEN --}}
+                        {{-- FASE 3.6: CINCO COLUMNAS - MATERIALES / BORDADO / SERVICIOS / PRECIO / MARGEN --}}
                         {{-- ================================================================ --}}
+                        @php
+                            $hasServices = ($order->services_cost_snapshot ?? 0) > 0;
+                        @endphp
                         <div class="row text-center">
                             {{-- COLUMNA 1: COSTO DE MATERIALES --}}
-                            <div class="col-6 col-md-3 mb-3">
+                            <div class="col-6 {{ $hasServices ? 'col-md-2' : 'col-md-3' }} mb-3">
                                 <div class="p-3 rounded h-100" style="background: #e3f2fd; border: 1px solid #90caf9;">
-                                    <p class="mb-1" style="font-size: 14px; color: #1565c0; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    <p class="mb-1" style="font-size: 13px; color: #1565c0; text-transform: uppercase; letter-spacing: 0.5px;">
                                         <i class="fas fa-layer-group mr-1"></i> Materiales
                                     </p>
-                                    <h4 class="mb-1" style="color: #0d47a1; font-weight: 700; font-size: 20px;">
+                                    <h4 class="mb-1" style="color: #0d47a1; font-weight: 700; font-size: 18px;">
                                         {{ $order->formatted_manufacturing_cost }}
                                     </h4>
-                                    <span style="color: #1976d2; font-size: 14px;">BOM + Extras</span>
+                                    <span style="color: #1976d2; font-size: 12px;">BOM + Extras</span>
                                 </div>
                             </div>
 
                             {{-- COLUMNA 2: COSTO DE BORDADO --}}
-                            <div class="col-6 col-md-3 mb-3">
+                            <div class="col-6 {{ $hasServices ? 'col-md-2' : 'col-md-3' }} mb-3">
                                 <div class="p-3 rounded h-100" style="background: #f3e5f5; border: 1px solid #ce93d8;">
-                                    <p class="mb-1" style="font-size: 14px; color: #7b1fa2; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    <p class="mb-1" style="font-size: 13px; color: #7b1fa2; text-transform: uppercase; letter-spacing: 0.5px;">
                                         <i class="fas fa-pencil-ruler mr-1"></i> Bordado
                                     </p>
-                                    <h4 class="mb-1" style="color: #6a1b9a; font-weight: 700; font-size: 20px;">
+                                    <h4 class="mb-1" style="color: #6a1b9a; font-weight: 700; font-size: 18px;">
                                         {{ $order->formatted_embroidery_cost }}
                                     </h4>
-                                    <span style="color: #8e24aa; font-size: 14px;">
+                                    <span style="color: #8e24aa; font-size: 12px;">
                                         {{ $order->formatted_total_stitches }} pts
                                     </span>
                                 </div>
                             </div>
 
-                            {{-- COLUMNA 3: PRECIO DE VENTA --}}
-                            <div class="col-6 col-md-3 mb-3">
+                            {{-- COLUMNA 3: COSTO DE SERVICIOS (solo si existe) --}}
+                            @if($hasServices)
+                            <div class="col-6 col-md-2 mb-3">
+                                <div class="p-3 rounded h-100" style="background: #e1f5fe; border: 1px solid #4fc3f7;">
+                                    <p class="mb-1" style="font-size: 13px; color: #0277bd; text-transform: uppercase; letter-spacing: 0.5px;">
+                                        <i class="fas fa-concierge-bell mr-1"></i> Servicios
+                                    </p>
+                                    <h4 class="mb-1" style="color: #01579b; font-weight: 700; font-size: 18px;">
+                                        {{ $order->formatted_services_cost }}
+                                    </h4>
+                                    <span style="color: #0288d1; font-size: 12px;">Mano de obra</span>
+                                </div>
+                            </div>
+                            @endif
+
+                            {{-- COLUMNA 4: PRECIO DE VENTA --}}
+                            <div class="col-6 {{ $hasServices ? 'col-md-3' : 'col-md-3' }} mb-3">
                                 <div class="p-3 rounded h-100" style="background: #f5f5f5; border: 1px solid #e0e0e0;">
-                                    <p class="mb-1" style="font-size: 14px; color: #212529; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    <p class="mb-1" style="font-size: 13px; color: #212529; text-transform: uppercase; letter-spacing: 0.5px;">
                                         <i class="fas fa-tag mr-1"></i> Precio Venta
                                     </p>
-                                    <h4 class="mb-1" style="color: #212529; font-weight: 700; font-size: 20px;">
+                                    <h4 class="mb-1" style="color: #212529; font-weight: 700; font-size: 18px;">
                                         ${{ number_format($order->total, 2) }}
                                     </h4>
-                                    <span style="color: #212529; font-size: 14px;">
+                                    <span style="color: #212529; font-size: 12px;">
                                         @if($order->requires_invoice)
                                             Incluye IVA
                                         @else
@@ -392,7 +410,7 @@
                                 </div>
                             </div>
 
-                            {{-- COLUMNA 4: MARGEN REAL --}}
+                            {{-- COLUMNA 5: MARGEN REAL --}}
                             <div class="col-6 col-md-3 mb-3">
                                 @php
                                     $marginBg = $isAtRealLoss ? '#ffebee' : ($realMarginPct < 20 ? '#fff8e1' : '#e8f5e9');
@@ -400,13 +418,13 @@
                                     $marginColor = $isAtRealLoss ? '#c62828' : ($realMarginPct < 20 ? '#e65100' : '#2e7d32');
                                 @endphp
                                 <div class="p-3 rounded h-100" style="background: {{ $marginBg }}; border: 1px solid {{ $marginBorder }};">
-                                    <p class="mb-1" style="font-size: 14px; color: {{ $marginColor }}; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    <p class="mb-1" style="font-size: 13px; color: {{ $marginColor }}; text-transform: uppercase; letter-spacing: 0.5px;">
                                         <i class="fas fa-percentage mr-1"></i> Margen Real
                                     </p>
-                                    <h4 class="mb-1" style="color: {{ $marginColor }}; font-weight: 700; font-size: 20px;">
+                                    <h4 class="mb-1" style="color: {{ $marginColor }}; font-weight: 700; font-size: 18px;">
                                         {{ $order->formatted_real_margin }}
                                     </h4>
-                                    <span class="badge badge-{{ $order->real_margin_alert_level }}" style="font-size: 14px;">
+                                    <span class="badge badge-{{ $order->real_margin_alert_level }}" style="font-size: 12px;">
                                         {{ number_format($realMarginPct ?? 0, 1) }}%
                                     </span>
                                 </div>
@@ -417,9 +435,12 @@
                         <div class="mt-2 p-3 rounded" style="background: #263238; color: white;">
                             <div class="row align-items-center">
                                 <div class="col-md-6">
-                                    <span style="font-size: 14px; color: #eceff1;">
+                                    <span style="font-size: 13px; color: #eceff1;">
                                         = Materiales ({{ $order->formatted_manufacturing_cost }})
                                         + Bordado ({{ $order->formatted_embroidery_cost }})
+                                        @if($hasServices)
+                                        + Servicios ({{ $order->formatted_services_cost }})
+                                        @endif
                                     </span>
                                 </div>
                                 <div class="col-md-6 text-md-right mt-2 mt-md-0">
@@ -477,15 +498,71 @@
                                             <li>Materiales de extras con inventario</li>
                                             <li><strong style="color: #7b1fa2;">Costo de bordado ({{ $order->formatted_total_stitches }} pts)</strong></li>
                                         </ul>
+                                        {{-- DESGLOSE DE TARIFAS POR ITEM --}}
                                         @php
-                                            $totalStitches = $order->total_stitches;
-                                            $embroideryCost = $order->embroidery_cost;
-                                            $tarifaPorMillar = ($totalStitches > 0) ? ($embroideryCost / ($totalStitches / 1000)) : 0;
+                                            $embroideryBreakdown = [];
+                                            foreach ($order->items as $item) {
+                                                foreach ($item->designExports as $design) {
+                                                    $stitches = $design->stitches_count ?? 0;
+                                                    $rateAdjusted = $design->pivot->rate_per_thousand_adjusted;
+                                                    $rateBase = $item->product?->embroidery_rate_per_thousand ?? 1.00;
+                                                    $rate = $rateAdjusted ?? $rateBase;
+                                                    $cost = ($stitches / 1000) * $rate * $item->quantity;
+                                                    if ($stitches > 0) {
+                                                        $embroideryBreakdown[] = [
+                                                            'product' => $item->product_name,
+                                                            'design' => $design->file_name ?? 'Diseño',
+                                                            'stitches' => $stitches,
+                                                            'qty' => $item->quantity,
+                                                            'rate' => $rate,
+                                                            'cost' => $cost,
+                                                            'adjusted' => $rateAdjusted !== null,
+                                                        ];
+                                                    }
+                                                }
+                                            }
                                         @endphp
-                                        @if($tarifaPorMillar > 0)
-                                            <div class="mt-2 p-2 rounded" style="background: #f3e5f5; font-size: 14px; color: #6a1b9a;">
-                                                <i class="fas fa-calculator mr-1"></i>
-                                                Tarifa: ${{ number_format($tarifaPorMillar, 2) }}/millar
+                                        @if(count($embroideryBreakdown) > 0)
+                                            <div class="mt-3 p-3 rounded" style="background: #f3e5f5; color: #6a1b9a;">
+                                                <h6 class="mb-2" style="color: #4a148c; font-weight: 700;">
+                                                    <i class="fas fa-calculator mr-1"></i> Tarifas aplicadas:
+                                                </h6>
+                                                <table class="table table-sm mb-0" style="font-size: 14px; background: transparent;">
+                                                    <thead>
+                                                        <tr style="color: #6a1b9a; font-weight: 600;">
+                                                            <th class="border-0 py-2">Producto</th>
+                                                            <th class="border-0 py-2 text-right">Puntadas</th>
+                                                            <th class="border-0 py-2 text-right">$/Millar</th>
+                                                            <th class="border-0 py-2 text-right">Costo</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach($embroideryBreakdown as $row)
+                                                            <tr style="color: #4a148c;">
+                                                                <td class="border-0 py-2">
+                                                                    {{ Str::limit($row['product'], 25) }}
+                                                                    @if($row['qty'] > 1)
+                                                                        <span style="color: #7b1fa2;">(×{{ $row['qty'] }})</span>
+                                                                    @endif
+                                                                </td>
+                                                                <td class="border-0 py-2 text-right font-weight-bold">{{ number_format($row['stitches']) }}</td>
+                                                                <td class="border-0 py-2 text-right">
+                                                                    <strong>${{ number_format($row['rate'], 2) }}</strong>
+                                                                    @if($row['adjusted'])
+                                                                        <i class="fas fa-edit ml-1" style="font-size: 12px; color: #f57c00;" title="Tarifa ajustada manualmente"></i>
+                                                                    @endif
+                                                                </td>
+                                                                <td class="border-0 py-2 text-right font-weight-bold" style="font-size: 15px;">${{ number_format($row['cost'], 2) }}</td>
+                                                            </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                    <tfoot>
+                                                        <tr style="border-top: 2px solid #ce93d8;">
+                                                            <td colspan="3" class="border-0 py-2 text-right" style="color: #4a148c; font-weight: 700;">TOTAL BORDADO:</td>
+                                                            <td class="border-0 py-2 text-right" style="color: #4a148c; font-weight: 700; font-size: 16px;">${{ number_format(collect($embroideryBreakdown)->sum('cost'), 2) }}</td>
+                                                        </tr>
+                                                    </tfoot>
+                                                </table>
                                             </div>
                                         @endif
                                     </div>
@@ -602,8 +679,8 @@
                             <span class="badge badge-dark" style="font-size: 13px;">Liquidado</span>
                         @endif
 
-                        {{-- Boton registrar pago: Solo CONFIRMED o IN_PRODUCTION con saldo --}}
-                        @if ($order->balance > 0 && in_array($status, [Order::STATUS_CONFIRMED, Order::STATUS_IN_PRODUCTION]))
+                        {{-- Boton registrar pago: CONFIRMED, IN_PRODUCTION o READY con saldo --}}
+                        @if ($order->balance > 0 && in_array($status, [Order::STATUS_CONFIRMED, Order::STATUS_IN_PRODUCTION, Order::STATUS_READY]))
                             <button class="btn btn-sm btn-light ml-2" data-toggle="modal" data-target="#modalPayment" style="font-size: 14px;">
                                 <i class="fas fa-plus"></i> Registrar {{ $status === Order::STATUS_CONFIRMED ? 'Anticipo' : 'Pago' }}
                             </button>
@@ -646,10 +723,17 @@
                         <span style="color: #2e7d32;">El anticipo ha sido aplicado al pedido</span>
                     </div>
                 @elseif($status === Order::STATUS_READY)
-                    <div class="px-3 py-2 border-bottom" style="background: #e8f5e9; font-size: 14px;">
-                        <i class="fas fa-lock text-success mr-1"></i>
-                        <span style="color: #2e7d32;">Pedido cubierto. Sin movimientos pendientes</span>
-                    </div>
+                    @if($order->balance > 0)
+                        <div class="px-3 py-2 border-bottom" style="background: #ffebee; font-size: 14px;">
+                            <i class="fas fa-exclamation-circle text-danger mr-1"></i>
+                            <span style="color: #c62828;"><strong>Pago pendiente.</strong> Complete el pago para poder entregar el pedido.</span>
+                        </div>
+                    @else
+                        <div class="px-3 py-2 border-bottom" style="background: #e8f5e9; font-size: 14px;">
+                            <i class="fas fa-lock text-success mr-1"></i>
+                            <span style="color: #2e7d32;">Pedido cubierto. Sin movimientos pendientes</span>
+                        </div>
+                    @endif
                 @elseif($status === Order::STATUS_DELIVERED)
                     <div class="px-3 py-2 border-bottom" style="background: #f5f5f5; font-size: 14px;">
                         <i class="fas fa-check-double mr-1" style="color: #212529;"></i>
@@ -665,6 +749,7 @@
                                 <th style="color: white;">Método</th>
                                 <th class="text-right" style="color: white;">Monto</th>
                                 <th style="color: white;">Referencia</th>
+                                <th style="color: white;">Notas</th>
                                 @if($order->status === Order::STATUS_DRAFT)
                                     <th class="text-center" style="color: white; width: 60px;"></th>
                                 @endif
@@ -677,6 +762,7 @@
                                     <td style="color: #212529;">{{ $payment->method_label }}</td>
                                     <td class="text-right font-weight-bold" style="color: #28a745; font-size: 16px;">${{ number_format($payment->amount, 2) }}</td>
                                     <td style="color: #212529;">{{ $payment->reference ?? '—' }}</td>
+                                    <td style="color: #212529;">{{ $payment->notes ?? '—' }}</td>
                                     @if($order->status === Order::STATUS_DRAFT)
                                         <td class="text-center">
                                             <button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-pago"
@@ -690,7 +776,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="{{ $order->status === Order::STATUS_DRAFT ? '5' : '4' }}" class="text-center py-3" style="color: #212529; font-size: 15px;">
+                                    <td colspan="{{ $order->status === Order::STATUS_DRAFT ? '6' : '5' }}" class="text-center py-3" style="color: #212529; font-size: 15px;">
                                         @if(in_array($status, [Order::STATUS_DRAFT, Order::STATUS_CONFIRMED]))
                                             Sin anticipos registrados
                                         @else
@@ -932,8 +1018,8 @@
         </div>
     </div>
 
-    {{-- MODAL PAGOS: Solo para ventas (NO stock_production), solo CONFIRMED o IN_PRODUCTION --}}
-    @if(!$order->isStockProduction() && in_array($status, [Order::STATUS_CONFIRMED, Order::STATUS_IN_PRODUCTION]))
+    {{-- MODAL PAGOS: Solo para ventas (NO stock_production), en CONFIRMED, IN_PRODUCTION o READY --}}
+    @if(!$order->isStockProduction() && in_array($status, [Order::STATUS_CONFIRMED, Order::STATUS_IN_PRODUCTION, Order::STATUS_READY]))
         @include('admin.orders._payment-modal')
     @endif
 
@@ -1064,7 +1150,7 @@
             balanceEl.textContent = '$' + parseFloat(balance).toFixed(2);
         }
         if (amountEl) {
-            amountEl.value = parseFloat(balance).toFixed(2);
+            amountEl.value = '';
             amountEl.max = balance;
         }
         if (referenceEl) {
@@ -1072,6 +1158,11 @@
         }
         if (notesEl) {
             notesEl.value = '';
+        }
+
+        // Establecer saldo original, orderId para validación en tiempo real (sin AJAX, redirige normalmente)
+        if (typeof window.setPaymentOriginalBalance === 'function') {
+            window.setPaymentOriginalBalance(balance, orderId, false); // false = no usar AJAX
         }
     }
 

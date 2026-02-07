@@ -350,6 +350,10 @@ class OrderService
                 $costPerThousand = $order->getEmbroideryCostPerThousand();
                 $embroideryCost = $order->calculateEmbroideryCost($costPerThousand);
 
+                // === FASE 3.6: SNAPSHOT DE COSTO DE SERVICIOS ===
+                // Extras sin inventario (consumes_inventory = false) = servicios/mano de obra
+                $servicesCostSnapshot = $this->calculateServicesCost($order);
+
                 // CREAR RESERVAS DE MATERIALES (NO descuenta stock físico)
                 foreach ($order->items as $item) {
                     $this->createReservationsForItem($item);
@@ -367,6 +371,7 @@ class OrderService
                     'total_stitches_snapshot' => $totalStitches,
                     'embroidery_cost_snapshot' => $embroideryCost,
                     'cost_per_thousand_snapshot' => $costPerThousand,
+                    'services_cost_snapshot' => $servicesCostSnapshot,
                     'updated_by' => Auth::id(),
                 ]);
 
@@ -638,7 +643,7 @@ class OrderService
     // - Pedidos ya entregados NO pueden re-entregarse
     // - El timestamp delivered_date es ÚNICO e inmutable
     //
-    public function triggerDelivery(Order $order): void
+    public function triggerDelivery(Order $order, ?\Carbon\Carbon $deliveredAt = null): void
     {
         // === GATE v2.3: VALIDACIÓN ESTRICTA ===
 
@@ -659,7 +664,10 @@ class OrderService
             );
         }
 
-        DB::transaction(function () use ($order) {
+        // Usar fecha proporcionada o now() por defecto
+        $deliveryDate = $deliveredAt ?? now();
+
+        DB::transaction(function () use ($order, $deliveryDate) {
             // =================================================================
             // STOCK_PRODUCTION: Entrada a inventario de producto terminado
             // =================================================================
@@ -670,7 +678,7 @@ class OrderService
             // === CIERRE DEFINITIVO ===
             $order->update([
                 'status' => Order::STATUS_DELIVERED,
-                'delivered_date' => now(),
+                'delivered_date' => $deliveryDate,
                 'updated_by' => Auth::id(),
             ]);
 
@@ -850,14 +858,29 @@ class OrderService
         foreach ($order->items as $item) {
             $product = $item->product;
 
+            // === CARGAR AJUSTES BOM GUARDADOS ===
+            // Si existen ajustes en order_item_bom_adjustments, usar cantidad ajustada
+            if (!$item->relationLoaded('bomAdjustments')) {
+                $item->load('bomAdjustments');
+            }
+            $savedAdjustments = $item->bomAdjustments->keyBy('material_variant_id');
+
             // === MATERIALES DEL PRODUCTO BASE ===
             if (!$product->relationLoaded('materials')) {
                 $product->load('materials');
             }
 
             foreach ($product->materials as $materialVariant) {
-                $requiredQty = $materialVariant->pivot->quantity * $item->quantity;
                 $variantId = $materialVariant->id;
+                $baseQty = (float) $materialVariant->pivot->quantity;
+
+                // USAR CANTIDAD AJUSTADA si existe, de lo contrario usar base
+                $adjustment = $savedAdjustments->get($variantId);
+                $effectiveQty = $adjustment
+                    ? (float) $adjustment->adjusted_quantity
+                    : $baseQty;
+
+                $requiredQty = $effectiveQty * $item->quantity;
 
                 if (!isset($requirements[$variantId])) {
                     $requirements[$variantId] = 0;
@@ -1001,6 +1024,43 @@ class OrderService
         }
 
         return round($totalCost, 4);
+    }
+
+    /**
+     * Calcula el costo total de servicios (mano de obra de TODOS los extras).
+     * El campo cost_addition representa mano de obra/servicio para cualquier extra,
+     * independientemente de si consume inventario o no.
+     *
+     * NOTA: Los extras con consumes_inventory=true tienen ADEMÁS costo de materiales
+     * que se incluye en materials_cost_snapshot vía calculateMaterialRequirements().
+     *
+     * @param Order $order
+     * @return float Costo total de servicios (mano de obra)
+     */
+    protected function calculateServicesCost(Order $order): float
+    {
+        $totalServicesCost = 0.0;
+
+        foreach ($order->items as $item) {
+            // Cargar extras del item desde tabla pivot
+            $itemExtras = $item->extras()->with('productExtra')->get();
+
+            foreach ($itemExtras as $orderItemExtra) {
+                $extra = $orderItemExtra->productExtra;
+
+                if (!$extra) {
+                    continue;
+                }
+
+                // Sumar cost_addition de TODOS los extras (mano de obra)
+                // El costo de materiales se suma aparte en calculateMaterialRequirements()
+                $serviceCost = (float) $extra->cost_addition;
+                $totalQty = $orderItemExtra->quantity * $item->quantity;
+                $totalServicesCost += $serviceCost * $totalQty;
+            }
+        }
+
+        return round($totalServicesCost, 4);
     }
 
     /**

@@ -110,8 +110,8 @@
                         <th>Material</th>
                         <th>SKU</th>
                         <th>Color</th>
-                        <th class="text-right">Stock Fisico</th>
-                        <th class="text-right">Reservado</th>
+                        <th class="text-right">En Almacen</th>
+                        <th class="text-right">Comprometido</th>
                         <th class="text-right">Disponible</th>
                         <th class="text-right">Valor</th>
                         <th class="text-center">Estado</th>

@@ -152,6 +152,9 @@
 
     {{-- Modal de Pago (Reutilizado del show) --}}
     @include('admin.orders._payment-modal')
+
+    {{-- Modal de Entrega Rapida --}}
+    @include('admin.orders._delivery-modal')
 @stop
 
 @section('css')
@@ -521,6 +524,23 @@
                         $('#modalPayment').modal('show');
                     }
                 });
+
+                // ========================================
+                // BOTÓN DE ENTREGA RÁPIDA (Delegación)
+                // ========================================
+                container.addEventListener('click', function(e) {
+                    var btn = e.target.closest('.btn-quick-delivery');
+                    if (btn) {
+                        e.preventDefault();
+                        var orderId = btn.dataset.orderId;
+                        var orderNumber = btn.dataset.orderNumber;
+
+                        if (typeof window.initDeliveryModal === 'function') {
+                            window.initDeliveryModal(orderId, orderNumber);
+                        }
+                        $('#modalDelivery').modal('show');
+                    }
+                });
             });
 
             // ========================================
@@ -529,7 +549,6 @@
             function initPaymentModal(orderId, orderNumber, balance) {
                 var form = document.getElementById('paymentForm');
                 var numberEl = document.getElementById('paymentOrderNumber');
-                var balanceEl = document.getElementById('paymentBalance');
                 var amountEl = document.getElementById('paymentAmount');
                 var referenceEl = document.getElementById('paymentReference');
                 var notesEl = document.getElementById('paymentNotes');
@@ -541,17 +560,19 @@
                 if (numberEl) {
                     numberEl.textContent = orderNumber;
                 }
-                if (balanceEl) {
-                    balanceEl.textContent = '$' + balance.toFixed(2);
-                }
                 if (amountEl) {
-                    amountEl.value = balance.toFixed(2);
+                    amountEl.value = '';
                     amountEl.max = balance;
                 }
                 // Reset campos
                 if (referenceEl) referenceEl.value = '';
                 if (notesEl) notesEl.value = '';
                 if (methodEl) methodEl.value = 'cash';
+
+                // Establecer saldo original, orderId y modo AJAX para validación en tiempo real
+                if (typeof window.setPaymentOriginalBalance === 'function') {
+                    window.setPaymentOriginalBalance(balance, orderId, true); // true = usar AJAX
+                }
             }
         })();
     </script>

@@ -26,11 +26,11 @@
                     </p>
                 </div>
                 <div class="col-md-2 text-center border-left">
-                    <small class="text-muted d-block">Stock Fisico</small>
+                    <small class="text-muted d-block">En Almacen</small>
                     <h4 class="mb-0">{{ number_format($variant->current_stock, 2) }}</h4>
                 </div>
                 <div class="col-md-2 text-center border-left">
-                    <small class="text-muted d-block">Reservado</small>
+                    <small class="text-muted d-block">Comprometido</small>
                     <h4 class="mb-0 text-warning">{{ number_format($summary['reserved'], 2) }}</h4>
                 </div>
                 <div class="col-md-2 text-center border-left">
@@ -130,7 +130,7 @@
                             ]);
                         @endphp
                         <tr>
-                            <td>{{ $mov->created_at->format('d/m/Y H:i') }}</td>
+                            <td data-order="{{ $mov->created_at->timestamp }}">{{ $mov->created_at->format('d/m/Y H:i') }}</td>
                             <td>
                                 <span class="badge badge-{{ $mov->type_color }}">
                                     <i class="fas fa-{{ $mov->type_icon }} mr-1"></i>{{ $mov->type_label }}
@@ -253,6 +253,13 @@ $(function() {
     var table = $('#kardexTable').DataTable({
         "pageLength": 10,
         "order": [[0, 'desc']], // Ordenar por fecha descendente por defecto
+        "columnDefs": [
+            {
+                // Columna Fecha: usar data-order para ordenar por timestamp
+                "targets": 0,
+                "type": "num" // Ordenar como número (timestamp)
+            }
+        ],
         "language": {
             "emptyTable": "No hay movimientos registrados",
             "info": "Mostrando _START_ a _END_ de _TOTAL_ Movimientos",

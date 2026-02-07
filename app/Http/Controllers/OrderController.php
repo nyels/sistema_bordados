@@ -574,6 +574,36 @@ class OrderController extends Controller
         }
     }
 
+    // === OBTENER HISTORIAL DE PAGOS (AJAX) ===
+    public function getPayments(Order $order)
+    {
+        $payments = $order->payments()
+            ->with('receiver:id,name')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($payment) {
+                return [
+                    'id' => $payment->id,
+                    'amount' => (float) $payment->amount,
+                    'payment_method' => $payment->payment_method,
+                    'method_label' => $payment->method_label,
+                    'method_icon' => $payment->method_icon,
+                    'reference' => $payment->reference,
+                    'notes' => $payment->notes,
+                    'payment_date' => $payment->payment_date?->format('d/m/Y H:i'),
+                    'created_at' => $payment->created_at->format('d/m/Y H:i'),
+                    'received_by' => $payment->receiver?->name ?? 'Sistema',
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'payments' => $payments,
+            'total_paid' => (float) $order->amount_paid,
+            'balance' => (float) $order->balance,
+        ]);
+    }
+
     // === REGISTRAR PAGO ===
     public function storePayment(StoreOrderPaymentRequest $request, Order $order)
     {
@@ -665,6 +695,7 @@ class OrderController extends Controller
     {
         $request->validate([
             'status' => 'required|in:draft,confirmed,in_production,ready,delivered,cancelled',
+            'delivered_at' => 'nullable|date', // Fecha de entrega opcional
         ]);
 
         $newStatus = $request->status;
@@ -737,7 +768,16 @@ class OrderController extends Controller
         // TRIGGER: Entregar pedido (solo cambio de estado, inventario ya consumido en READY)
         if ($newStatus === Order::STATUS_DELIVERED && $currentStatus === Order::STATUS_READY) {
             try {
-                $this->orderService->triggerDelivery($order);
+                // Parsear fecha de entrega: combinar fecha del form con hora actual del servidor (México)
+                if ($request->filled('delivered_at')) {
+                    // Crear fecha con zona horaria de México y combinar con hora actual
+                    $deliveredAt = \Carbon\Carbon::parse($request->delivered_at, 'America/Mexico_City')
+                        ->setTimeFrom(now('America/Mexico_City'));
+                } else {
+                    $deliveredAt = now('America/Mexico_City');
+                }
+
+                $this->orderService->triggerDelivery($order, $deliveredAt);
                 return redirect()->route('admin.orders.show', $order)
                     ->with('success', 'Pedido entregado exitosamente.');
             } catch (\Exception $e) {
@@ -2103,7 +2143,7 @@ class OrderController extends Controller
 
     /**
      * Obtener extras disponibles para agregar a un item.
-     * Retorna TODOS los extras del sistema que no estén ya asignados al item.
+     * Retorna TODOS los extras del sistema con la cantidad actual asignada al item.
      */
     public function getAvailableExtrasForItem(Order $order, OrderItem $item)
     {
@@ -2114,24 +2154,27 @@ class OrderController extends Controller
             ], 404);
         }
 
-        // Obtener extras ya asignados al item
-        $assignedExtraIds = $item->extras()->pluck('product_extra_id')->toArray();
+        // Obtener extras ya asignados al item con sus cantidades
+        $assignedExtras = $item->extras()->get()->keyBy('product_extra_id');
 
-        // Obtener TODOS los extras activos que no estén ya asignados al item
-        $availableExtras = \App\Models\ProductExtra::whereNotIn('id', $assignedExtraIds)
-            ->orderBy('name')
-            ->get();
+        // Obtener TODOS los extras activos
+        $allExtras = \App\Models\ProductExtra::orderBy('name')->get();
 
         return response()->json([
             'success' => true,
-            'extras' => $availableExtras->map(fn($e) => [
-                'id' => $e->id,
-                'name' => $e->name,
-                'price_addition' => (float) $e->price_addition,
-                'cost_addition' => (float) $e->cost_addition,
-                'consumes_inventory' => $e->consumes_inventory,
-                'materials_summary' => $e->materials_summary,
-            ]),
+            'extras' => $allExtras->map(function($e) use ($assignedExtras) {
+                $assigned = $assignedExtras->get($e->id);
+                return [
+                    'id' => $e->id,
+                    'name' => $e->name,
+                    'price_addition' => (float) $e->price_addition,
+                    'cost_addition' => (float) $e->cost_addition,
+                    'consumes_inventory' => $e->consumes_inventory,
+                    'materials_summary' => $e->materials_summary,
+                    'current_quantity' => $assigned ? (int) $assigned->quantity : 0,
+                    'order_item_extra_id' => $assigned ? $assigned->id : null,
+                ];
+            }),
         ]);
     }
 
@@ -2330,6 +2373,116 @@ class OrderController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al eliminar el extra: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Actualizar la cantidad de un extra de un item del pedido.
+     * Si la cantidad llega a 0, elimina el extra.
+     */
+    public function updateExtraQuantity(Request $request, Order $order, OrderItem $item, \App\Models\OrderItemExtra $orderItemExtra)
+    {
+        if ($item->order_id !== $order->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El item no pertenece a este pedido.',
+            ], 404);
+        }
+
+        if ($orderItemExtra->order_item_id !== $item->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El extra no pertenece a este item.',
+            ], 404);
+        }
+
+        // Solo permitir en estados editables
+        if (!in_array($order->status, [Order::STATUS_DRAFT, Order::STATUS_CONFIRMED])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pueden modificar extras en este estado del pedido.',
+            ], 422);
+        }
+
+        $request->validate([
+            'quantity' => 'required|integer|min:0',
+        ]);
+
+        $newQuantity = (int) $request->quantity;
+
+        try {
+            DB::beginTransaction();
+
+            $extraName = $orderItemExtra->productExtra->name ?? 'Extra';
+
+            if ($newQuantity <= 0) {
+                // Si la cantidad es 0, eliminar el extra
+                $orderItemExtra->delete();
+                $message = "Extra \"{$extraName}\" eliminado.";
+            } else {
+                // Actualizar cantidad y total
+                $orderItemExtra->quantity = $newQuantity;
+                $orderItemExtra->total_price = $orderItemExtra->unit_price * $newQuantity;
+                $orderItemExtra->save();
+                $message = "Cantidad de \"{$extraName}\" actualizada a {$newQuantity}.";
+            }
+
+            // Recalcular unit_price del item
+            $this->recalculateItemUnitPrice($item);
+
+            // Recalcular totales del pedido
+            $order->recalculateTotals();
+            $order->save();
+
+            DB::commit();
+
+            Log::info('EXTRA_QUANTITY_UPDATED', [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'item_id' => $item->id,
+                'extra_name' => $extraName,
+                'new_quantity' => $newQuantity,
+                'user_id' => Auth::id(),
+            ]);
+
+            // Cargar datos frescos para la respuesta
+            $item->refresh();
+            $item->load('extras.productExtra');
+            $order->refresh();
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'new_quantity' => $newQuantity,
+                'item_extras_total' => $item->extras->sum('total_price'),
+                'extras' => $item->extras->map(fn($e) => [
+                    'id' => $e->id,
+                    'product_extra_id' => $e->product_extra_id,
+                    'name' => $e->productExtra->name ?? 'Extra',
+                    'quantity' => $e->quantity,
+                    'unit_price' => (float) $e->unit_price,
+                    'total_price' => (float) $e->total_price,
+                ]),
+                'order_totals' => [
+                    'subtotal' => $order->subtotal,
+                    'discount' => $order->discount ?? 0,
+                    'iva' => $order->iva_amount ?? 0,
+                    'total' => $order->total,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('ERROR_UPDATING_EXTRA_QUANTITY', [
+                'order_id' => $order->id,
+                'item_id' => $item->id,
+                'extra_id' => $orderItemExtra->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar la cantidad: ' . $e->getMessage(),
             ], 500);
         }
     }
