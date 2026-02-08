@@ -354,6 +354,13 @@ class Order extends Model
         return $this->hasMany(OrderEvent::class, 'order_id')->orderBy('created_at', 'desc');
     }
 
+    public function confirmedEvent(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(OrderEvent::class, 'order_id')
+            ->where('event_type', OrderEvent::TYPE_CONFIRMED)
+            ->oldest();
+    }
+
     public function messages(): HasMany
     {
         return $this->hasMany(OrderMessage::class, 'order_id')->orderBy('created_at', 'desc');

@@ -1239,15 +1239,24 @@
 
                                 <div class="form-group mb-0">
                                     <label class="font-weight-bold mb-1">Fecha Prometida</label>
-                                    <input type="date" name="promised_date" id="promisedDate"
-                                        class="form-control form-control-sm @error('promised_date') is-invalid @enderror"
-                                        value="{{ old('promised_date', isset($order) ? $order->promised_date?->format('Y-m-d') : '') }}" min="{{ date('Y-m-d') }}" required>
+                                    <input type="hidden" name="promised_date" id="promisedDate"
+                                        value="{{ old('promised_date', isset($order) ? $order->promised_date?->format('Y-m-d') : '') }}">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm btn-block text-left" id="btnOpenAgendaSelect"
+                                        data-toggle="modal" data-target="#agendaMonthModal"
+                                        style="font-size: 15px; padding: 6px 12px;">
+                                        <i class="fas fa-calendar-alt mr-2"></i>
+                                        <span id="promisedDateDisplay">
+                                            @if(old('promised_date', isset($order) ? $order->promised_date?->format('Y-m-d') : ''))
+                                                {{ \Carbon\Carbon::parse(old('promised_date', $order->promised_date ?? ''))->format('d/m/Y') }}
+                                            @else
+                                                Seleccionar fecha...
+                                            @endif
+                                        </span>
+                                    </button>
                                     @error('promised_date')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        <div class="text-danger mt-1" style="font-size: 13px;">{{ $message }}</div>
                                     @enderror
-                                    <small class="d-block mt-1" id="dateWarning" style="display: none;">
-                                        <!-- Contenido dinámico desde JS -->
-                                    </small>
+                                    <small class="d-block mt-1" id="dateWarning" style="display: none;"></small>
                                 </div>
 
                                 {{-- PASO 13: PUENTE UX → CALENDARIO DE PRODUCCIÓN --}}
@@ -1280,12 +1289,12 @@
                                 style="display:none;">0</span>
                         </h5>
                         <div class="d-flex align-items-center" style="gap: 8px;">
-                            <button type="button" class="btn btn-light btn-sm" id="btnAddProduct">
-                                <i class="fas fa-plus"></i> Agregar
-                            </button>
                             <button type="button" class="btn btn-outline-light btn-sm"
                                 data-toggle="modal" data-target="#agendaMonthModal">
                                 <i class="fas fa-calendar-alt"></i> Ver agenda
+                            </button>
+                            <button type="button" class="btn btn-light btn-sm" id="btnAddProduct">
+                                <i class="fas fa-plus"></i> Agregar
                             </button>
                         </div>
                     </div>
@@ -3710,6 +3719,11 @@
 
                 // === D4: RESET SECCIÓN EXTRAS-ONLY (delegado a función consolidada) ===
                 resetExtrasOnlySelection();
+
+                // === FOCUS EN SELECT2 PARA CONTINUAR AGREGANDO ===
+                setTimeout(function() {
+                    $('#modalProductSelect').select2('open');
+                }, 250);
                 // Reset tabla a estado inicial (carga diferida)
                 $('#extrasOnlyTableBody').html(`
                     <tr>
@@ -4034,8 +4048,21 @@
                 calculateMinimumDate();
                 updateReadinessIndicator();
 
-                $('#addProductModal').modal('hide');
+                // NO cerrar modal, solo reiniciar para agregar más
                 resetProductModal();
+
+                // Toast de confirmación
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 2000,
+                    timerProgressBar: true
+                });
+                Toast.fire({
+                    icon: 'success',
+                    title: 'Producto agregado'
+                });
             }
 
             // ==========================================
@@ -4795,6 +4822,7 @@
                     $('#dateWarning').hide();
                     $('#promisedDate').removeClass('is-invalid');
                     recommendedDateStr = null;
+                    window.__recommendedDateStr = null;
                     return;
                 }
 
@@ -4814,8 +4842,11 @@
                 const recommendedDate = new Date();
                 recommendedDate.setDate(recommendedDate.getDate() + adjustedDays);
 
-                // Guardar fecha recomendada para comparación (advertencia, no bloqueo)
-                recommendedDateStr = recommendedDate.toISOString().split('T')[0];
+                // Guardar fecha recomendada para comparación (sin timezone UTC)
+                recommendedDateStr = recommendedDate.getFullYear() + '-' +
+                    String(recommendedDate.getMonth() + 1).padStart(2, '0') + '-' +
+                    String(recommendedDate.getDate()).padStart(2, '0');
+                window.__recommendedDateStr = recommendedDateStr;
 
                 // El input permite desde HOY (no la recomendada) para fechas urgentes
                 $('#promisedDate').attr('min', todayStr);
@@ -4844,8 +4875,7 @@
                 }
 
                 if (promised < recommendedDateStr) {
-                    // Fecha URGENTE - mostrar ADVERTENCIA pero PERMITIR
-                    // El cliente puede necesitar fecha específica (viaje, evento, etc.)
+                    // Fecha anterior a la recomendada - mostrar ADVERTENCIA pero PERMITIR
                     const minDateFormatted = new Date(recommendedDateStr + 'T00:00:00').toLocaleDateString('es-MX', {
                         day: 'numeric',
                         month: 'long',
@@ -4855,8 +4885,7 @@
                     $('#dateWarning')
                         .attr('style', 'color: #e65100 !important; display: block;')
                         .html('<i class="fas fa-exclamation-triangle mr-1"></i> ' +
-                            '<strong>Pedido urgente:</strong> La fecha recomendada es a partir del ' + minDateFormatted + '. ' +
-                            'Este pedido requerirá producción prioritaria.');
+                            '<strong>Fecha anticipada:</strong> La fecha recomendada según el tiempo de producción es a partir del ' + minDateFormatted + '.');
                 } else {
                     // Fecha OK
                     $('#promisedDate').removeClass('is-invalid border-warning');
@@ -4867,7 +4896,7 @@
             }
 
             $('#urgencyLevel').on('change', calculateMinimumDate);
-            $('#promisedDate').on('change', validatePromisedDate);
+            $('#promisedDate').on('change input', validatePromisedDate);
 
             // ==========================================
             // PASO 13: INDICADOR DE CAPACIDAD SEMANAL (SOLO LECTURA)
@@ -5233,8 +5262,9 @@
                 // 4. Validar fecha prometida (SOLO si NO es modo stock)
                 if (!isStockMode && !$('#promisedDate').val()) {
                     errors.push(
-                        '<li><i class="fas fa-calendar mr-1"></i> Debe indicar la fecha de entrega prometida</li>'
+                        '<li><i class="fas fa-calendar mr-1"></i> Debe seleccionar la fecha de entrega en el calendario</li>'
                     );
+                    $('#btnOpenAgendaSelect').addClass('btn-outline-danger').removeClass('btn-outline-secondary btn-outline-primary');
                 }
 
                 // NOTA: La validación de fecha vs lead time es SOLO advertencia (no bloqueo)
@@ -5757,6 +5787,42 @@
             var cachedData = {};
             var selectedDayEl = null;
             var listenersAttached = false;
+            var agendaMode = 'view';
+            var selectedDateForConfirm = null;
+
+            function setAgendaMode(mode) {
+                agendaMode = mode;
+                selectedDateForConfirm = null;
+                if (mode === 'select') {
+                    $('#agendaModalTitle').text('Seleccionar Fecha de Entrega');
+                    $('#agendaConfirmDate').show().prop('disabled', true);
+                } else {
+                    $('#agendaModalTitle').text('Agenda de Produccion');
+                    $('#agendaConfirmDate').hide();
+                }
+                $('#agendaDateValidation').hide();
+            }
+
+            function showDateValidation(dateStr) {
+                var $el = $('#agendaDateValidation');
+                if (agendaMode !== 'select') { $el.hide(); return; }
+
+                var recommended = window.__recommendedDateStr;
+                if (!recommended) {
+                    $el.html('<span class="text-success"><i class="fas fa-check-circle mr-1"></i> Fecha disponible</span>').show();
+                    return;
+                }
+                if (dateStr < recommended) {
+                    var recDate = new Date(recommended + 'T12:00:00');
+                    var formatted = recDate.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+                    $el.html(
+                        '<span style="color: #e65100;"><i class="fas fa-exclamation-triangle mr-1"></i> ' +
+                        '<strong>Fecha anticipada:</strong> La recomendada es a partir del ' + formatted + '</span>'
+                    ).show();
+                } else {
+                    $el.html('<span class="text-success"><i class="fas fa-check-circle mr-1"></i> Fecha dentro del tiempo recomendado</span>').show();
+                }
+            }
 
             function initAgenda() {
                 var now = new Date();
@@ -5794,6 +5860,11 @@
 
                 grid.innerHTML = '';
                 $('#agendaDayDetail').hide();
+                if (agendaMode === 'select') {
+                    selectedDateForConfirm = null;
+                    $('#agendaConfirmDate').prop('disabled', true);
+                    $('#agendaDateValidation').hide();
+                }
                 selectedDayEl = null;
 
                 DAY_NAMES.forEach(function(name) {
@@ -5865,6 +5936,11 @@
                         $('#agendaMonthModal .modal-footer a').attr(
                             'href', CALENDAR_BASE_URL + '?focus=' + cell.dataset.date
                         );
+                        if (agendaMode === 'select') {
+                            selectedDateForConfirm = cell.dataset.date;
+                            $('#agendaConfirmDate').prop('disabled', false);
+                            showDateValidation(cell.dataset.date);
+                        }
                     });
                 }
 
@@ -6041,9 +6117,44 @@
             }
 
             // Wire: abrir modal → init + render
-            $(document).on('show.bs.modal', '#agendaMonthModal', function() {
+            $(document).on('show.bs.modal', '#agendaMonthModal', function(e) {
+                var trigger = e.relatedTarget;
+                var mode = (trigger && trigger.id === 'btnOpenAgendaSelect') ? 'select' : 'view';
+                setAgendaMode(mode);
                 initAgenda();
                 renderMonth();
+
+                // En modo select, pre-seleccionar la fecha existente o mostrar ayuda
+                if (mode === 'select') {
+                    var existingDate = $('#promisedDate').val();
+                    if (existingDate) {
+                        setTimeout(function() {
+                            var cell = document.querySelector('#agendaGrid .agenda-day[data-date="' + existingDate + '"]');
+                            if (cell) cell.click();
+                        }, 300);
+                    } else if (window.__recommendedDateStr) {
+                        // Mostrar fecha recomendada al abrir sin fecha previa
+                        var recDate = new Date(window.__recommendedDateStr + 'T12:00:00');
+                        var formatted = recDate.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+                        $('#agendaDayDetail').show();
+                        $('#agendaDayDetailContent').html('<i class="fas fa-calendar-check mr-2"></i> <strong>Selecciona una fecha</strong>');
+                        $('#agendaDateValidation').html(
+                            '<span style="color: #0066cc;"><i class="fas fa-info-circle mr-1"></i> ' +
+                            '<strong>Fecha recomendada:</strong> A partir del ' + formatted + '</span>'
+                        ).show();
+                    }
+                }
+            });
+
+            // Confirmar fecha seleccionada
+            $('#agendaConfirmDate').on('click', function() {
+                if (!selectedDateForConfirm) return;
+                $('#promisedDate').val(selectedDateForConfirm).trigger('change');
+                // Formatear para mostrar dd/mm/yyyy
+                var parts = selectedDateForConfirm.split('-');
+                $('#promisedDateDisplay').text(parts[2] + '/' + parts[1] + '/' + parts[0]);
+                $('#btnOpenAgendaSelect').removeClass('btn-outline-secondary').addClass('btn-outline-primary');
+                $('#agendaMonthModal').modal('hide');
             });
         })();
     </script>

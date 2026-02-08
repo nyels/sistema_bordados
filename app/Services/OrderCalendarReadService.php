@@ -16,7 +16,7 @@ use Carbon\Carbon;
  * - SOLO LECTURA. No modifica datos.
  * - No valida capacidad (eso es ProductionCapacityService).
  * - No reprograma fechas (eso es OrderService).
- * - Excluye CANCELLED y promised_date NULL por contrato.
+ * - Excluye CANCELLED, DELIVERED, READY y promised_date NULL por contrato.
  * - Contrato de datos canónico (no se fragmenta por módulo).
  *
  * FUENTE DE VERDAD: Order.promised_date + Order.status
@@ -41,16 +41,24 @@ class OrderCalendarReadService
      */
     public function getEventsByRange(Carbon $start, Carbon $end): array
     {
+        // Expandir inicio del rango para capturar barras cuyo production_start
+        // cae antes del rango visible (lead_time máximo ~30 días)
+        $expandedStart = $start->copy()->subDays(30)->startOfDay();
+
         $orders = Order::whereNotNull('promised_date')
             ->whereBetween('promised_date', [
-                $start->copy()->startOfDay(),
+                $expandedStart,
                 $end->copy()->endOfDay(),
             ])
-            ->whereNotIn('status', [Order::STATUS_CANCELLED])
-            ->with('cliente:id,nombre,apellidos')
+            ->whereNotIn('status', [
+                Order::STATUS_CANCELLED,
+                Order::STATUS_DELIVERED,
+                Order::STATUS_READY,
+            ])
+            ->with(['cliente:id,nombre,apellidos', 'confirmedEvent'])
             ->select([
                 'id', 'order_number', 'cliente_id', 'status', 'urgency_level',
-                'promised_date', 'total', 'priority',
+                'promised_date', 'total', 'priority', 'created_at',
             ])
             ->orderBy('promised_date')
             ->orderBy('priority')
@@ -171,10 +179,17 @@ class OrderCalendarReadService
             ? "{$order->cliente->nombre} {$order->cliente->apellidos}"
             : null;
 
+        // Inicio de barra = fecha de confirmación (si existe), sino created_at
+        $confirmedAt = $order->confirmedEvent?->created_at ?? $order->created_at;
+        $productionStart = $confirmedAt->copy()->startOfDay();
+        $leadTimeDays = max(1, (int) $productionStart->diffInDays($order->promised_date));
+
         return [
             'order_id' => $order->id,
             'order_number' => $order->order_number,
             'promised_date' => $order->promised_date->format('Y-m-d'),
+            'production_start_date' => $productionStart->format('Y-m-d'),
+            'lead_time_days' => $leadTimeDays,
             'status' => $order->status,
             'status_label' => $order->status_label,
             'urgency' => $order->urgency_level,

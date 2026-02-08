@@ -210,6 +210,26 @@
         $(function() {
             $("#example1").DataTable({
                 "pageLength": 10,
+                "order": [[0, 'desc']],
+                "columnDefs": [
+                    {
+                        targets: 0,
+                        type: 'date',
+                        render: function(data, type) {
+                            if (type === 'sort' || type === 'type') {
+                                var tmp = document.createElement('div');
+                                tmp.innerHTML = data || '';
+                                var text = (tmp.textContent || tmp.innerText || '').trim();
+                                if (!text) return '';
+                                var parts = text.match(/(\d{2})\/(\d{2})\/(\d{4})\s*(\d{2}:\d{2})?/);
+                                if (parts) return parts[3] + '-' + parts[2] + '-' + parts[1] + ' ' + (parts[4] || '00:00');
+                                return text;
+                            }
+                            return data;
+                        }
+                    },
+                    { targets: 5, orderable: false }
+                ],
                 "language": {
                     "emptyTable": "No hay informacion",
                     "info": "Mostrando _START_ a _END_ de _TOTAL_ Registros",

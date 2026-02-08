@@ -95,7 +95,7 @@
             <table id="kardexTable" class="table table-hover table-striped mb-0" style="font-size: 16px;">
                 <thead style="background: #343a40; color: white;">
                     <tr>
-                        <th class="align-middle" style="color: white; width: 150px;">Fecha / Hora</th>
+                        <th class="align-middle" style="color: white; width: 150px;">Fecha</th>
                         <th class="align-middle" style="color: white; width: 140px;">Tipo</th>
                         <th class="text-right align-middle" style="color: white; width: 100px;">Cantidad</th>
                         <th class="text-right align-middle" style="color: white; width: 110px;">Stock Antes</th>
@@ -178,6 +178,25 @@
 document.addEventListener('DOMContentLoaded', function() {
     var table = $('#kardexTable').DataTable({
         "pageLength": 25,
+        "order": [[0, 'desc']],
+        "columnDefs": [
+            {
+                targets: 0,
+                type: 'date',
+                render: function(data, type) {
+                    if (type === 'sort' || type === 'type') {
+                        var tmp = document.createElement('div');
+                        tmp.innerHTML = data || '';
+                        var text = (tmp.textContent || tmp.innerText || '').trim();
+                        if (!text) return '';
+                        var parts = text.match(/(\d{2})\/(\d{2})\/(\d{4})\s*(\d{2}:\d{2})?/);
+                        if (parts) return parts[3] + '-' + parts[2] + '-' + parts[1] + ' ' + (parts[4] || '00:00');
+                        return text;
+                    }
+                    return data;
+                }
+            }
+        ],
         "language": {
             "emptyTable": "No hay movimientos registrados",
             "info": "Mostrando _START_ a _END_ de _TOTAL_ movimientos",

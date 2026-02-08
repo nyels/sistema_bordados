@@ -115,7 +115,7 @@
                     <thead class="thead-dark">
                         <tr>
                             <th class="text-center">#</th>
-                            <th class="text-center">Fecha/Hora</th>
+                            <th class="text-center">Fecha</th>
                             <th class="text-center">Pedido</th>
                             <th class="text-center">Cliente</th>
                             <th class="text-center">Vendedor</th>
@@ -131,10 +131,8 @@
                                 data-vendedor="{{ $sale->creator?->name ?? '' }}"
                                 data-estado="{{ $sale->isCancelled() ? 'Cancelada' : 'Activa' }}">
                                 <td class="text-center align-middle">{{ $loop->iteration }}</td>
-                                <td class="text-center align-middle" data-order="{{ $sale->delivered_date?->format('Y-m-d H:i:s') }}">
-                                    {{ $sale->delivered_date?->format('d/m/Y') }}
-                                    <br>
-                                    <small class="text-muted">{{ $sale->created_at->format('H:i') }}</small>
+                                <td class="text-center align-middle">
+                                    {{ $sale->delivered_date?->format('d/m/Y H:i') ?? '--' }}
                                 </td>
                                 <td class="text-center align-middle">
                                     <button type="button"
@@ -796,11 +794,27 @@
                 "autoWidth": false,
                 "scrollX": true,
                 "columnDefs": [
-                    { "orderable": false, "targets": [7] }, // Deshabilitar orden en Acciones
-                    { "className": "text-center", "targets": "_all" }, // Centrar todas las columnas
-                    { "responsivePriority": 1, "targets": [2, 5, 7] }, // Prioridad: Pedido, Total, Acciones
-                    { "responsivePriority": 2, "targets": [1, 6] }, // Prioridad: Fecha, Estado
-                    { "responsivePriority": 3, "targets": [3, 4] } // Prioridad: Cliente, Vendedor
+                    {
+                        targets: 1,
+                        type: 'date',
+                        render: function(data, type) {
+                            if (type === 'sort' || type === 'type') {
+                                var tmp = document.createElement('div');
+                                tmp.innerHTML = data || '';
+                                var text = (tmp.textContent || tmp.innerText || '').trim();
+                                if (!text) return '';
+                                var parts = text.match(/(\d{2})\/(\d{2})\/(\d{4})\s*(\d{2}:\d{2})?/);
+                                if (parts) return parts[3] + '-' + parts[2] + '-' + parts[1] + ' ' + (parts[4] || '00:00');
+                                return text;
+                            }
+                            return data;
+                        }
+                    },
+                    { "orderable": false, "targets": [7] },
+                    { "className": "text-center", "targets": "_all" },
+                    { "responsivePriority": 1, "targets": [2, 5, 7] },
+                    { "responsivePriority": 2, "targets": [1, 6] },
+                    { "responsivePriority": 3, "targets": [3, 4] }
                 ],
                 buttons: [{
                         text: '<i class="fas fa-copy"></i> COPIAR',

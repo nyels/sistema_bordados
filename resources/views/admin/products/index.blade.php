@@ -68,7 +68,7 @@
                                 <th>Estado</th>
                                 <th>Costo Prod.</th>
                                 <th>Precio Base</th>
-                                <th>Creado</th>
+                                <th>Fecha</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
@@ -132,7 +132,7 @@
                                     <td class="text-center">
                                         <span class="font-weight-bold">{{ $product->formatted_base_price }}</span>
                                     </td>
-                                    <td class="text-center">{{ $product->created_at->format('d/m/Y') }}</td>
+                                    <td class="text-center">{{ $product->created_at->format('d/m/Y H:i') }}</td>
                                     <td class="text-center">
                                         <div class="btn-group btn-group-sm">
                                             <button type="button" class="btn btn-primary btn-view-bom"
@@ -295,6 +295,25 @@
                 // Inicializar DataTable
                 var table = $('#products-table').DataTable({
                     "pageLength": 10,
+                    "columnDefs": [
+                        {
+                            targets: 8,
+                            type: 'date',
+                            render: function(data, type) {
+                                if (type === 'sort' || type === 'type') {
+                                    var tmp = document.createElement('div');
+                                    tmp.innerHTML = data || '';
+                                    var text = (tmp.textContent || tmp.innerText || '').trim();
+                                    if (!text) return '';
+                                    var parts = text.match(/(\d{2})\/(\d{2})\/(\d{4})\s*(\d{2}:\d{2})?/);
+                                    if (parts) return parts[3] + '-' + parts[2] + '-' + parts[1] + ' ' + (parts[4] || '00:00');
+                                    return text;
+                                }
+                                return data;
+                            }
+                        },
+                        { targets: 9, orderable: false }
+                    ],
                     "language": {
                         "emptyTable": "No hay información de productos",
                         "info": "Mostrando _START_ a _END_ de _TOTAL_ productos",

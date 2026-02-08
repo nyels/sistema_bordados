@@ -344,6 +344,52 @@
                 // Nota: paging:false porque usamos paginación del servidor via AJAX
                 $(tableId).DataTable({
                     "paging": false,
+                    "order": [[0, 'desc']],
+                    "columnDefs": [
+                        {
+                            // Columna Fecha (dd/mm/yyyy HH:mm) - ordenar como fecha real
+                            targets: 0,
+                            type: 'date',
+                            render: function(data, type) {
+                                if (type === 'sort' || type === 'type') {
+                                    var tmp = document.createElement('div');
+                                    tmp.innerHTML = data || '';
+                                    var text = (tmp.textContent || tmp.innerText || '').trim();
+                                    if (!text) return '';
+                                    var parts = text.match(/(\d{2})\/(\d{2})\/(\d{4})\s*(\d{2}:\d{2})?/);
+                                    if (parts) {
+                                        return parts[3] + '-' + parts[2] + '-' + parts[1] + ' ' + (parts[4] || '00:00');
+                                    }
+                                    return text;
+                                }
+                                return data;
+                            }
+                        },
+                        {
+                            // Columna Entrega (dd/mm/yyyy) - ordenar como fecha real
+                            targets: 9,
+                            type: 'date',
+                            render: function(data, type) {
+                                if (type === 'sort' || type === 'type') {
+                                    var tmp = document.createElement('div');
+                                    tmp.innerHTML = data || '';
+                                    var text = (tmp.textContent || tmp.innerText || '').trim();
+                                    if (!text || text === '—') return '9999-99-99';
+                                    var parts = text.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+                                    if (parts) {
+                                        return parts[3] + '-' + parts[2] + '-' + parts[1];
+                                    }
+                                    return text;
+                                }
+                                return data;
+                            }
+                        },
+                        {
+                            // Columna Acciones - no ordenable
+                            targets: 10,
+                            orderable: false
+                        }
+                    ],
                     "language": {
                         "emptyTable": "No hay pedidos",
                         "info": "Mostrando _START_ a _END_ de _TOTAL_ Pedidos",
@@ -522,6 +568,43 @@
 
                         initPaymentModal(orderId, orderNumber, balance);
                         $('#modalPayment').modal('show');
+                    }
+                });
+
+                // ========================================
+                // BOTÓN DE CONFIRMAR RÁPIDO (Delegación)
+                // ========================================
+                container.addEventListener('click', function(e) {
+                    var btn = e.target.closest('.btn-quick-confirm');
+                    if (btn) {
+                        e.preventDefault();
+                        var orderId = btn.dataset.orderId;
+                        var orderNumber = btn.dataset.orderNumber;
+
+                        if (!confirm('¿Confirmar pedido ' + orderNumber + '?')) return;
+
+                        btn.disabled = true;
+                        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                        fetch('/admin/orders/' + orderId + '/status', {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({ status: 'confirmed' }),
+                        })
+                        .then(function(r) { return r.text(); })
+                        .then(function() {
+                            window.location.reload();
+                        })
+                        .catch(function() {
+                            btn.disabled = false;
+                            btn.innerHTML = '<i class="fas fa-check"></i>';
+                            alert('Error al confirmar el pedido.');
+                        });
                     }
                 });
 

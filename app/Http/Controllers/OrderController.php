@@ -3284,12 +3284,16 @@ class OrderController extends Controller
         $calendarService = app(\App\Services\OrderCalendarReadService::class);
         $data = $calendarService->getCalendarData($start, $end);
 
-        // Transformar contrato canónico → formato FullCalendar
+        // Transformar contrato canónico → formato FullCalendar (barras multi-día)
         $fcEvents = collect($data['events'])->map(function (array $event) {
+            // FullCalendar: end es exclusivo en dayGrid → sumar 1 día para incluir promised_date
+            $endDate = \Carbon\Carbon::parse($event['promised_date'])->addDay()->format('Y-m-d');
+
             return [
                 'id' => $event['order_id'],
                 'title' => $event['order_number'],
-                'start' => $event['promised_date'],
+                'start' => $event['production_start_date'],
+                'end' => $endDate,
                 'allDay' => true,
                 'extendedProps' => $event,
                 'backgroundColor' => $this->calendarStatusColor($event['status']),

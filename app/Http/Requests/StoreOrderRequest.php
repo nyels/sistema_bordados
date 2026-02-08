@@ -617,7 +617,7 @@ class StoreOrderRequest extends FormRequest
 
         // Calcular IVA si aplica
         $subtotalAfterDiscount = max(0, $subtotal - $discount);
-        $iva = $requiresInvoice ? $subtotalAfterDiscount * Order::IVA_RATE : 0;
+        $iva = $requiresInvoice ? $subtotalAfterDiscount * (Order::getDefaultTaxRate() / 100) : 0;
         $total = $subtotalAfterDiscount + $iva;
 
         // Validar que descuento no exceda subtotal

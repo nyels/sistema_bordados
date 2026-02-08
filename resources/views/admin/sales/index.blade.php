@@ -132,7 +132,6 @@
                     <thead class="thead-dark">
                         <tr>
                             <th>Fecha</th>
-                            <th>Hora</th>
                             <th>Folio</th>
                             <th>Origen</th>
                             <th>Cliente</th>
@@ -160,8 +159,7 @@
                                 data-vendedor="{{ $vendedor }}"
                                 data-origen="{{ $origen }}"
                                 data-cliente="{{ $clienteNombre }}">
-                                <td>{{ $fechaVenta?->format('d/m/Y') ?? '--' }}</td>
-                                <td>{{ $fechaVenta?->format('H:i') ?? '--' }}</td>
+                                <td>{{ $fechaVenta?->format('d/m/Y H:i') ?? '--' }}</td>
                                 <td>
                                     <a href="{{ route('admin.sales.show', $sale) }}" class="font-weight-bold">
                                         {{ $sale->order_number }}
@@ -215,7 +213,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="13" class="text-center text-muted py-4">
+                                <td colspan="12" class="text-center text-muted py-4">
                                     No hay ventas registradas.
                                 </td>
                             </tr>
@@ -231,7 +229,7 @@
                                 $totalCobrado = $sales->sum('total');
                             @endphp
                             <tr>
-                                <td colspan="6" class="text-right">TOTALES:</td>
+                                <td colspan="5" class="text-right">TOTALES:</td>
                                 <td class="text-right">${{ number_format($totalSubtotal, 2) }}</td>
                                 <td class="text-right text-danger">-${{ number_format($totalDescuento, 2) }}</td>
                                 <td class="text-right text-primary">${{ number_format($totalVentaNeta, 2) }}</td>
@@ -386,7 +384,23 @@
                 "searching": true, // Necesario para que funcionen los filtros personalizados
                 "order": [[0, 'desc']],
                 "columnDefs": [
-                    { "orderable": false, "targets": [12] }
+                    {
+                        targets: 0,
+                        type: 'date',
+                        render: function(data, type) {
+                            if (type === 'sort' || type === 'type') {
+                                var tmp = document.createElement('div');
+                                tmp.innerHTML = data || '';
+                                var text = (tmp.textContent || tmp.innerText || '').trim();
+                                if (!text || text === '--') return '';
+                                var parts = text.match(/(\d{2})\/(\d{2})\/(\d{4})\s*(\d{2}:\d{2})?/);
+                                if (parts) return parts[3] + '-' + parts[2] + '-' + parts[1] + ' ' + (parts[4] || '00:00');
+                                return text;
+                            }
+                            return data;
+                        }
+                    },
+                    { "orderable": false, "targets": [11] }
                 ],
                 buttons: [
                     {

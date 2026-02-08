@@ -189,6 +189,15 @@
                             </a>
                         @endif
 
+                        {{-- Botón confirmar rápido: Solo DRAFT --}}
+                        @if ($order->status === \App\Models\Order::STATUS_DRAFT)
+                            <button type="button" class="btn btn-sm btn-primary btn-quick-confirm"
+                                data-order-id="{{ $order->id }}" data-order-number="{{ $order->order_number }}"
+                                title="Confirmar pedido">
+                                <i class="fas fa-check"></i>
+                            </button>
+                        @endif
+
                         {{-- Botón pago rápido: Solo ventas (NO stock_production), en CONFIRMED, IN_PRODUCTION o READY --}}
                         @if ($order->balance > 0 && !$order->isStockProduction() && in_array($order->status, [\App\Models\Order::STATUS_CONFIRMED, \App\Models\Order::STATUS_IN_PRODUCTION, \App\Models\Order::STATUS_READY]))
                             <button type="button" class="btn btn-sm btn-success btn-quick-payment"

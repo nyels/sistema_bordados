@@ -113,6 +113,11 @@
         white-space: nowrap;
         opacity: 0.7;
     }
+    .agenda-day.selection-pick {
+        border-color: #27ae60;
+        background: #eafaf1;
+        box-shadow: 0 0 0 2px rgba(39,174,96,0.3);
+    }
 
     /* Nav mes */
     .agenda-nav-btn {
@@ -173,7 +178,7 @@
         <div class="modal-content" style="border: none; box-shadow: 0 8px 30px rgba(0,0,0,0.15);">
             <div class="modal-header py-2" style="background: #1a5276; color: white;">
                 <h5 class="modal-title mb-0">
-                    <i class="fas fa-calendar-alt mr-2"></i> Agenda de Produccion
+                    <i class="fas fa-calendar-alt mr-2"></i> <span id="agendaModalTitle">Agenda de Produccion</span>
                 </h5>
                 <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">
                     <span aria-hidden="true">&times;</span>
@@ -203,7 +208,10 @@
 
                 {{-- Detalle dia seleccionado + disclaimer --}}
                 <div class="agenda-day-detail mt-3" id="agendaDayDetail" style="display: none;">
-                    <div id="agendaDayDetailContent"></div>
+                    <div>
+                        <div id="agendaDayDetailContent"></div>
+                        <div id="agendaDateValidation" class="mt-1" style="display: none; font-size: 14px;"></div>
+                    </div>
                     <div class="agenda-detail-disclaimer">
                         <i class="fas fa-lock mr-1"></i>
                         Fecha validada por el sistema al guardar.
@@ -211,11 +219,11 @@
                 </div>
             </div>
             <div class="modal-footer py-2" style="border-top: 1px solid #d5dbdf;">
-                <a href="{{ url('admin/production/calendar') }}" target="_blank" rel="noopener"
-                    class="btn btn-outline-primary btn-sm">
-                    <i class="fas fa-external-link-alt mr-1"></i> Abrir calendario completo
-                </a>
-                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary btn-sm" id="agendaConfirmDate"
+                    style="display: none;" disabled>
+                    <i class="fas fa-check mr-1"></i> Confirmar fecha
+                </button>
             </div>
         </div>
     </div>
