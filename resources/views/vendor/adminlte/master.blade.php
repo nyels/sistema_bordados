@@ -173,6 +173,55 @@
                     }
                 }, { once: true, passive: true });
             });
+
+            // ============================================
+            // GLOBAL OVERLAY CLEANUP
+            // Limpia overlays huérfanos tras sesión expirada,
+            // suspensión de equipo, o bfcache del navegador.
+            // ============================================
+            function cleanOrphanOverlays() {
+                // 1. Preloader atascado
+                hidePreloader();
+
+                // 2. Modal backdrops de Bootstrap
+                document.querySelectorAll('.modal-backdrop').forEach(function(el) {
+                    el.remove();
+                });
+
+                // 3. SweetAlert2 overlays y body lock
+                document.querySelectorAll('.swal2-container').forEach(function(el) {
+                    el.remove();
+                });
+
+                // 4. Limpiar clases del body que bloquean interacción
+                document.body.classList.remove(
+                    'modal-open', 'swal2-shown', 'swal2-toast-shown', 'swal2-height-auto'
+                );
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+                if (document.body.style.position === 'fixed') {
+                    document.body.style.position = '';
+                    document.body.style.width = '';
+                }
+            }
+
+            // Ejecutar al cargar (carga normal)
+            document.addEventListener('DOMContentLoaded', cleanOrphanOverlays);
+
+            // Ejecutar en pageshow (bfcache — navegador restaura página del cache)
+            window.addEventListener('pageshow', function(e) {
+                if (e.persisted) {
+                    cleanOrphanOverlays();
+                }
+            });
+
+            // Ejecutar cuando el usuario regresa a la pestaña (resume de suspensión)
+            document.addEventListener('visibilitychange', function() {
+                if (!document.hidden) {
+                    // Esperar un frame para que el DOM se estabilice
+                    requestAnimationFrame(cleanOrphanOverlays);
+                }
+            });
         })();
     </script>
 

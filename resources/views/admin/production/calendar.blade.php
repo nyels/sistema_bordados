@@ -609,8 +609,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }), {
                 headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
             })
-            .then(r => r.json())
+            .then(r => {
+                if (r.redirected || !r.ok || !r.headers.get('content-type')?.includes('json')) {
+                    window.location.reload();
+                    return;
+                }
+                return r.json();
+            })
             .then(data => {
+                if (!data) return;
                 weekCapacities = data.week_capacities || {};
                 successCallback(data.events || []);
                 requestAnimationFrame(() => paintCapacityIndicators());
@@ -824,8 +831,16 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             body: JSON.stringify({ new_promised_date: newDate }),
         })
-        .then(r => r.json().then(data => ({ ok: r.ok, data })))
-        .then(({ ok, data }) => {
+        .then(r => {
+            if (r.redirected || !r.headers.get('content-type')?.includes('json')) {
+                window.location.reload();
+                return null;
+            }
+            return r.json().then(data => ({ ok: r.ok, data }));
+        })
+        .then(result => {
+            if (!result) return;
+            const { ok, data } = result;
             showLoader(false);
 
             if (ok && data.success) {
